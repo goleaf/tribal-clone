@@ -5,6 +5,9 @@ class BuildingConfigManager {
     private $conn;
     private $buildingConfigs = []; // Cache for building configurations
     private $buildingRequirements = []; // Cache for requirements lookups
+    private array $costCache = [];
+    private array $timeCache = [];
+    private ?string $configVersion = null;
 
     public function __construct($conn) {
         $this->conn = $conn;
@@ -98,16 +101,22 @@ class BuildingConfigManager {
         }
 
         // Cost for level $currentLevel + 1
-        $nextLevel = $currentLevel + 1;
+        if (isset($this->costCache[$internalName][$currentLevel])) {
+            return $this->costCache[$internalName][$currentLevel];
+        }
+
+        $nextLevel = $currentLevel + 1; // kept for readability if/when level-specific logic is expanded
         $costWood = round($config['cost_wood_initial'] * ($config['cost_factor'] ** $currentLevel));
         $costClay = round($config['cost_clay_initial'] * ($config['cost_factor'] ** $currentLevel));
         $costIron = round($config['cost_iron_initial'] * ($config['cost_factor'] ** $currentLevel));
 
-        return [
+        $costs = [
             'wood' => $costWood,
             'clay' => $costClay,
             'iron' => $costIron
         ];
+        $this->costCache[$internalName][$currentLevel] = $costs;
+        return $costs;
     }
 
     // Calculate build/upgrade time to the next level
@@ -135,6 +144,11 @@ class BuildingConfigManager {
         $worldSpeed = $wm->getWorldSpeed();
         $buildSpeed = $wm->getBuildSpeed();
 
+        $cacheKey = implode('|', [$currentLevel, max(0, $mainBuildingLevel), $worldSpeed, $buildSpeed]);
+        if (isset($this->timeCache[$internalName][$cacheKey])) {
+            return $this->timeCache[$internalName][$cacheKey];
+        }
+
         // Headquarters (main_building) reduces build time by 2% per level: divide by (1 + 0.02 * level)
         $hqBonus = 1 + (max(0, $mainBuildingLevel) * (defined('MAIN_BUILDING_TIME_REDUCTION_PER_LEVEL') ? MAIN_BUILDING_TIME_REDUCTION_PER_LEVEL : 0.02));
         $effectiveTime = $baseTime / max(0.1, $worldSpeed * $buildSpeed * $hqBonus);
@@ -154,7 +168,9 @@ class BuildingConfigManager {
         }
 
         // Minimal build time (e.g., 1 second)
-        return (int)max(1, (int)ceil($effectiveTime));
+        $finalTime = (int)max(1, (int)ceil($effectiveTime));
+        $this->timeCache[$internalName][$cacheKey] = $finalTime;
+        return $finalTime;
     }
 
      /**
@@ -197,6 +213,33 @@ class BuildingConfigManager {
         // Fallback to config for any other producing building types
         $baseProduction = $config['production_initial'] * ($config['production_factor'] ** ($level - 1));
         return $baseProduction * $worldSpeed * $buildSpeed;
+    }
+
+    /**
+     * Return a deterministic version string for current building configs.
+     * Useful for API/cache headers so clients can bust cached curves on change.
+     */
+    public function getConfigVersion(): string
+    {
+        if ($this->configVersion !== null) {
+            return $this->configVersion;
+        }
+        $configs = $this->getAllBuildingConfigs();
+        // Stable hash over config content; short prefix keeps payload light
+        $this->configVersion = substr(md5(json_encode($configs)), 0, 12);
+        return $this->configVersion;
+    }
+
+    /**
+     * Clear cached configs/costs/times; call after config changes.
+     */
+    public function invalidateCache(): void
+    {
+        $this->buildingConfigs = [];
+        $this->buildingRequirements = [];
+        $this->costCache = [];
+        $this->timeCache = [];
+        $this->configVersion = null;
     }
     
     // Calculate warehouse capacity for a given level

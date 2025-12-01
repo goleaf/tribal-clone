@@ -1970,7 +1970,8 @@ class BattleManager
                 ],
                 'loyalty' => $loyalty_report,
                 'overstack' => $overstack,
-                'last_village_protected' => ($defenderVillageCount !== null && $defenderVillageCount <= 1)
+                'last_village_protected' => ($defenderVillageCount !== null && $defenderVillageCount <= 1),
+                'capture_cooldown_until' => $captureCooldownUntil
             ];
             $report_data_json = json_encode($details);
             $attacker_won_int = $attacker_win ? 1 : 0;

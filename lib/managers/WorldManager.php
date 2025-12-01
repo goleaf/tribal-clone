@@ -201,6 +201,31 @@ class WorldManager
         return true;
     }
 
+    public function isDecayEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        $settings = $this->getSettings($worldId);
+        if (array_key_exists('resource_decay_enabled', $settings)) {
+            return (bool)$settings['resource_decay_enabled'];
+        }
+        return defined('RESOURCE_DECAY_ENABLED') ? (bool)RESOURCE_DECAY_ENABLED : false;
+    }
+
+    public function isPlunderDrEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        if (defined('PLUNDER_DR_ENABLED')) {
+            return (bool)PLUNDER_DR_ENABLED;
+        }
+        return true;
+    }
+
+    public function isEmpireSurchargeEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        if (defined('EMPIRE_SURCHARGE_ENABLED')) {
+            return (bool)EMPIRE_SURCHARGE_ENABLED;
+        }
+        return false;
+    }
+
     public function getWorldSpeed(int $worldId = CURRENT_WORLD_ID): float
     {
         $settings = $this->getSettings($worldId);
