@@ -100,10 +100,11 @@ class BuildingConfigManager {
 
         // Global world speed
         $worldSpeed = defined('WORLD_SPEED') ? max(0.1, WORLD_SPEED) : 1.0;
+        $buildSpeed = defined('BUILD_SPEED_MULTIPLIER') ? max(0.1, BUILD_SPEED_MULTIPLIER) : 1.0;
 
         // Headquarters (main_building) reduces build time by 2% per level: divide by (1 + 0.02 * level)
         $hqBonus = 1 + (max(0, $mainBuildingLevel) * (defined('MAIN_BUILDING_TIME_REDUCTION_PER_LEVEL') ? MAIN_BUILDING_TIME_REDUCTION_PER_LEVEL : 0.02));
-        $effectiveTime = $baseTime / max(0.1, $worldSpeed * $hqBonus);
+        $effectiveTime = $baseTime / max(0.1, $worldSpeed * $buildSpeed * $hqBonus);
 
         // Minimal build time (e.g., 1 second)
         return (int)max(1, (int)ceil($effectiveTime));

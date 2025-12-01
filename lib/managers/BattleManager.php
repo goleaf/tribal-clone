@@ -8,6 +8,7 @@ class BattleManager
     private $villageManager;
     private $buildingManager; // BuildingManager dependency
     private $reportManager; // Generic report log
+    private $tribeWarManager; // Tribe war tracking
 
     private const RANDOM_VARIANCE = 0.25; // +/- 25% luck
     private const FAITH_DEFENSE_PER_LEVEL = 0.05; // 5% per church level
@@ -40,6 +41,10 @@ class BattleManager
             require_once __DIR__ . '/ReportManager.php';
         }
         $this->reportManager = new ReportManager($conn);
+        if (!class_exists('TribeWarManager')) {
+            require_once __DIR__ . '/TribeWarManager.php';
+        }
+            $this->tribeWarManager = new TribeWarManager($conn);
     }
     
     /**
@@ -1150,6 +1155,16 @@ class BattleManager
             }
 
             $this->conn->commit();
+
+            // Tribe war scoring (only for hostile attacks, not support)
+            if ($attack['attack_type'] !== 'support') {
+                $attackerTribeId = $this->getUserTribeId($attacker_user_id);
+                $defenderTribeId = $this->getUserTribeId($defender_user_id);
+                if ($attackerTribeId && $defenderTribeId && $attackerTribeId !== $defenderTribeId) {
+                    $this->tribeWarManager->recordBattleResult($attackerTribeId, $defenderTribeId, $attacker_win, $attack_id);
+                }
+            }
+
             return [ 'success' => true ];
         } catch (Exception $e) {
             $this->conn->rollback();
@@ -1923,6 +1938,25 @@ class BattleManager
         $res = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         return $res['name'] ?? '';
+    }
+
+    /**
+     * Helper: get tribe id for a user (null if none).
+     */
+    private function getUserTribeId(int $userId): ?int
+    {
+        $stmt = $this->conn->prepare("SELECT tribe_id FROM tribe_members WHERE user_id = ? LIMIT 1");
+        if ($stmt === false) {
+            return null;
+        }
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $res = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$res || !$res['tribe_id']) {
+            return null;
+        }
+        return (int)$res['tribe_id'];
     }
 
     /**

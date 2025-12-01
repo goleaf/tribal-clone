@@ -22,10 +22,17 @@ define('WAREHOUSE_BASE_CAPACITY', 1000); // Capacity of the warehouse at level 1
 define('WAREHOUSE_CAPACITY_FACTOR', 1.227); // Capacity multiplier for subsequent warehouse levels
 
 // Global speed/balance knobs
-define('WORLD_SPEED', 1.0); // Higher values speed up all construction times proportionally
+// WORLD_SPEED affects global pacing, while the specific multipliers below fine-tune sub-systems.
+define('WORLD_SPEED', 1.0); // General world pace multiplier
 define('BUILD_TIME_LEVEL_FACTOR', 1.18); // base_time * factor^level for construction scaling
 define('MAIN_BUILDING_TIME_REDUCTION_PER_LEVEL', 0.02); // HQ reduces build times by 2% per level
 define('FARM_GROWTH_FACTOR', 1.172); // Farm capacity scaling per level
+
+// Dedicated speed multipliers (per-world balance knobs)
+define('UNIT_SPEED_MULTIPLIER', 1.0);       // Multiplies unit travel speed (lower = slower arrival)
+define('BUILD_SPEED_MULTIPLIER', 1.0);      // Additional multiplier applied to building times
+define('UNIT_TRAINING_MULTIPLIER', 1.0);    // Multiplier for recruitment times
+define('RESEARCH_SPEED_MULTIPLIER', 1.0);   // Multiplier for research times
 
 // Paths and game constants
 define('BASE_URL', 'http://localhost:8000/'); // Change to the appropriate URL if the project is not in the htdocs root
@@ -35,4 +42,9 @@ define('INACTIVE_TO_BARBARIAN_DAYS', 30); // Days of inactivity before a player 
 
 // Default world ID
 define('INITIAL_WORLD_ID', 1);
+
+// Newbie protection settings
+define('NEWBIE_PROTECTION_DAYS_MIN', 3);    // Minimum days of protection from registration
+define('NEWBIE_PROTECTION_DAYS_MAX', 7);    // Maximum days of protection
+define('NEWBIE_PROTECTION_POINTS_CAP', 200); // Protection auto-ends above this point total
 ?>
