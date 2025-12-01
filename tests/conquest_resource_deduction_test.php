@@ -30,6 +30,9 @@ $conn->query("DELETE FROM users WHERE id = $testUserId");
 $conn->query("DELETE FROM village_units WHERE village_id = $testVillageId");
 $conn->query("DELETE FROM unit_queue WHERE village_id = $testVillageId");
 
+// Ensure conquest units are enabled for the test world
+$conn->query("UPDATE worlds SET conquest_units_enabled = 1 WHERE id = $testWorldId");
+
 // Create test user
 $conn->query("INSERT INTO users (id, username, email, password, world_id) 
               VALUES ($testUserId, 'test_conquest_user', 'test@conquest.com', 'hash', $testWorldId)");
@@ -39,6 +42,24 @@ $conn->query("INSERT INTO villages (id, user_id, world_id, name, x_coord, y_coor
               wood, clay, iron, farm_capacity, noble_coins, standards) 
               VALUES ($testVillageId, $testUserId, $testWorldId, 'Test Village', 500, 500, 
               10000, 10000, 10000, 1000, 5, 3)");
+
+// Set CURRENT_WORLD_ID constant for UnitManager
+if (!defined('CURRENT_WORLD_ID')) {
+    define('CURRENT_WORLD_ID', $testWorldId);
+}
+
+// Create required buildings for conquest units
+// Get building type IDs
+$academyResult = $conn->query("SELECT id FROM building_types WHERE internal_name = 'academy' LIMIT 1");
+$academyRow = $academyResult ? $academyResult->fetch_assoc() : null;
+$academyId = $academyRow ? (int)$academyRow['id'] : null;
+
+if ($academyId) {
+    // Create academy building at level 10 for the test village
+    $conn->query("INSERT INTO village_buildings (village_id, building_type_id, level) 
+                  VALUES ($testVillageId, $academyId, 10) 
+                  ON DUPLICATE KEY UPDATE level = 10");
+}
 
 // Get unit type IDs for conquest units
 $nobleResult = $conn->query("SELECT id FROM unit_types WHERE internal_name IN ('noble', 'nobleman') LIMIT 1");
@@ -106,12 +127,13 @@ if ($nobleId) {
     // Attempt to train 2 nobles (should fail)
     $response = $unitManager->recruitUnits($testVillageId, $nobleId, 2, 10);
     
-    if (!$response['success'] && $response['code'] === 'ERR_RES') {
+    if (!$response['success'] && isset($response['code']) && $response['code'] === 'ERR_RES') {
         echo "  ✓ PASS: Training rejected with ERR_RES\n";
         echo "  ✓ PASS: Error message: " . $response['error'] . "\n";
         $testsPassed++;
     } else {
         echo "  ✗ FAIL: Should have rejected training with ERR_RES\n";
+        echo "  Response: " . json_encode($response) . "\n";
         $testsFailed++;
     }
     
@@ -178,12 +200,13 @@ if ($standardId) {
     // Attempt to train 1 standard bearer (should fail)
     $response = $unitManager->recruitUnits($testVillageId, $standardId, 1, 10);
     
-    if (!$response['success'] && $response['code'] === 'ERR_RES') {
+    if (!$response['success'] && isset($response['code']) && $response['code'] === 'ERR_RES') {
         echo "  ✓ PASS: Training rejected with ERR_RES\n";
         echo "  ✓ PASS: Error message: " . $response['error'] . "\n";
         $testsPassed++;
     } else {
         echo "  ✗ FAIL: Should have rejected training with ERR_RES\n";
+        echo "  Response: " . json_encode($response) . "\n";
         $testsFailed++;
     }
     
