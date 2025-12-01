@@ -233,6 +233,7 @@ Status markers:
 - Combat sims: batch-run common comps to validate RPS multipliers and mantlet/aura/healer effects at scale; measure resolver perf impact.
 - Seasonal/event lifecycle: soak tests for start/end toggles and mass sunset conversions; confirm no orphaned units and perf is stable.
 - Telemetry volume: assess telemetry emission for recruit attempts/cap hits/aura usage under load; ensure logging doesn’t degrade gameplay paths.
+- Gate/path toggles: verify per-world feature flags (seasonal units, healers, conquest units) under load and ensure disabled features reject actions cheaply.
 
 ## Rollout Checklist
 - [x] Feature flags per world for elite/seasonal units, auras/healers, and mantlet effects; defaults aligned to archetypes (hardcore vs casual). _(UnitManager now respects per-world conquest/seasonal/healer toggles via WorldManager; paladin/archer toggles already applied)_

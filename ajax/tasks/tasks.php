@@ -3,14 +3,10 @@ declare(strict_types=1);
 
 require_once '../../init.php';
 require_once __DIR__ . '/../../lib/managers/TaskManager.php';
+require_once __DIR__ . '/../../lib/managers/VillageManager.php';
+require_once __DIR__ . '/../../lib/managers/WorldManager.php';
 
 header('Content-Type: application/json');
-
-if (!defined('FEATURE_TASKS_ENABLED') || FEATURE_TASKS_ENABLED !== true) {
-    http_response_code(404);
-    echo json_encode(['error' => 'Tasks are disabled on this world.']);
-    exit();
-}
 
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
@@ -19,6 +15,15 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $userId = (int)$_SESSION['user_id'];
+$villageManager = new VillageManager($conn);
+$firstVillage = $villageManager->getFirstVillage($userId);
+$worldId = isset($firstVillage['world_id']) ? (int)$firstVillage['world_id'] : (defined('CURRENT_WORLD_ID') ? (int)CURRENT_WORLD_ID : 1);
+$worldManager = new WorldManager($conn);
+if (!defined('FEATURE_TASKS_ENABLED') || FEATURE_TASKS_ENABLED !== true || !$worldManager->areTasksEnabled($worldId)) {
+    http_response_code(404);
+    echo json_encode(['error' => 'Tasks are disabled on this world.']);
+    exit();
+}
 $taskManager = new TaskManager($conn);
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $type = isset($_GET['type']) ? strtolower((string)$_GET['type']) : 'daily';
