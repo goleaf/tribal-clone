@@ -108,25 +108,17 @@ class BuildingUpgradeValidationTest {
         $this->testVillageId = $this->db->insert_id;
         $stmt->close();
         
-        // Initialize village buildings
-        $stmt = $this->db->prepare("
-            INSERT INTO village_buildings (village_id, building_type_id, level)
-            SELECT ?, id, 0 FROM building_types
-        ");
-        $stmt->bind_param("i", $this->testVillageId);
-        $stmt->execute();
-        $stmt->close();
-        
-        // Set main_building to level 5
-        $stmt = $this->db->prepare("
-            UPDATE village_buildings 
-            SET level = 5 
-            WHERE village_id = ? 
-            AND building_type_id = (SELECT id FROM building_types WHERE internal_name = 'main_building')
-        ");
-        $stmt->bind_param("i", $this->testVillageId);
-        $stmt->execute();
-        $stmt->close();
+        // Initialize village buildings - use a simpler approach
+        $result = $this->db->query("SELECT id, internal_name FROM building_types");
+        while ($row = $result->fetch_assoc()) {
+            $buildingTypeId = $row['id'];
+            $level = ($row['internal_name'] === 'main_building') ? 10 : 0;
+            
+            $stmt = $this->db->prepare("INSERT INTO village_buildings (village_id, building_type_id, level) VALUES (?, ?, ?)");
+            $stmt->bind_param("iii", $this->testVillageId, $buildingTypeId, $level);
+            $stmt->execute();
+            $stmt->close();
+        }
     }
     
     private function cleanupTestData() {
@@ -161,25 +153,20 @@ class BuildingUpgradeValidationTest {
     }
     
     private function testMaxLevelCap() {
+        // Get building type IDs
+        $mainBuildingTypeId = $this->db->query("SELECT id FROM building_types WHERE internal_name = 'main_building'")->fetch_assoc()['id'];
+        $barracksTypeId = $this->db->query("SELECT id FROM building_types WHERE internal_name = 'barracks'")->fetch_assoc()['id'];
+        $barracksMaxLevel = $this->db->query("SELECT max_level FROM building_types WHERE internal_name = 'barracks'")->fetch_assoc()['max_level'];
+        
         // Ensure main_building is at sufficient level
-        $stmt = $this->db->prepare("
-            UPDATE village_buildings 
-            SET level = 10 
-            WHERE village_id = ? 
-            AND building_type_id = (SELECT id FROM building_types WHERE internal_name = 'main_building')
-        ");
-        $stmt->bind_param("i", $this->testVillageId);
+        $stmt = $this->db->prepare("UPDATE village_buildings SET level = 10 WHERE village_id = ? AND building_type_id = ?");
+        $stmt->bind_param("ii", $this->testVillageId, $mainBuildingTypeId);
         $stmt->execute();
         $stmt->close();
         
         // Set barracks to max level
-        $stmt = $this->db->prepare("
-            UPDATE village_buildings 
-            SET level = (SELECT max_level FROM building_types WHERE internal_name = 'barracks')
-            WHERE village_id = ? 
-            AND building_type_id = (SELECT id FROM building_types WHERE internal_name = 'barracks')
-        ");
-        $stmt->bind_param("i", $this->testVillageId);
+        $stmt = $this->db->prepare("UPDATE village_buildings SET level = ? WHERE village_id = ? AND building_type_id = ?");
+        $stmt->bind_param("iii", $barracksMaxLevel, $this->testVillageId, $barracksTypeId);
         $stmt->execute();
         $stmt->close();
         
