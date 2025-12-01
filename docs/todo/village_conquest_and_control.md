@@ -99,7 +99,7 @@
 ## Implementation TODOs
 - [x] Implement allegiance calculation service: per-wave allegiance drop resolution, regen tick, anti-snipe floor, and post-capture reset. _(spec below)_
 - [x] Persistence: schema for allegiance value per village, last_allegiance_update, and capture_cooldown_until. _(columns added via add_allegiance_columns migration + sqlite schema updated)_
-- [ ] Combat hook: apply allegiance drop only if attackers win and at least one Standard Bearer survives; respect wall-based reduction.
+ - [x] Combat hook: apply allegiance drop only if attackers win and at least one Standard Bearer survives; respect wall-based reduction. _(hooked into allegiance service prerequisites)_
 - [ ] Standard Bearer config: costs, speed, pop, min building level, max per command, and daily mint limits.
 - [ ] Regen rules: configurable per-world base regen/hour; tribe tech/items modifiers; pause during anti-snipe; cap at 100.
 - [ ] Capture aftermath: set starting allegiance to configurable low value; optional random building loss; grace period before further drops.
@@ -170,6 +170,7 @@
 - For control/uptime worlds vs allegiance-drop worlds, can the same resolver be parameterized, or do we maintain two distinct code paths?
 - Should anti-snipe floors block control gain entirely or just floor the minimum (e.g., cannot drop below 10 but can still gain)? Clarify to avoid exploits.
 - What are default distance/wall modifiers for allegiance drop, and are they world-specific? Need documented defaults for UI.
+- How should tribe handover mode be exposed in UI (opt-in toggle per target vs tribe policy), and what cooldowns prevent abuse?
 
 ## Acceptance Criteria
 - Allegiance resolver applies drops, regen, and floors correctly across configs; clamps [0,100]; captures only on win + bearer survival.

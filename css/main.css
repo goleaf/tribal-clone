@@ -4805,6 +4805,19 @@ body.map-loading #map-skeleton {
     background: rgba(224, 138, 60, 0.15);
 }
 
+.movement-more {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 14px;
+    padding: 0 4px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 11px;
+    line-height: 1.2;
+}
+
 .note-icon {
     position: absolute;
     top: 4px;

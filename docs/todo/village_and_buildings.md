@@ -149,6 +149,13 @@
 - Outposts expire correctly, block creation when hostile commands inbound, and clean up queues/markers on expiry.
 - Wall damage/repair queues apply expected level changes; optional decay toggles on/off per world.
 
+## QA & Tests
+- Queue validation: prereq/pop/resource caps return correct reason codes; reorder/cancel refunds match spec; parallel queue rules enforced per world.
+- Watchtower: detection radius/noble flag per level; warnings surface in overlays and respect intel freshness hooks.
+- Hospital: wounded pool/recovery applied per level; reports show recovered counts; capped per config; disabled worlds hide hospital flows.
+- Outposts: creation blocked when hostile commands inbound; expiry cleans temp slots/queues/markers.
+- Wall: siege damage reduces levels; repair queue restores; decay toggle obeys world config.
+- Cache/versioning: client receives cost/time version; cache bust verified on config change.
 ## Open Questions
 - Should parallel construction be globally allowed (resource + military) or world-configurable, and how to message when blocked?
 - Do hospitals recover wounded after all battles or only defenses? Define to avoid free sustain for attackers.

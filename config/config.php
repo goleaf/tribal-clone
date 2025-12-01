@@ -64,6 +64,9 @@ define('COIN_COST_IRON', 20000);
 define('NOBLE_MIN_DROP', 20);
 define('NOBLE_MAX_DROP', 35);
 
+// Feature flags
+define('FEATURE_TASKS_ENABLED', true); // Daily/weekly tasks/challenges
+
 // Default world ID
 define('INITIAL_WORLD_ID', 1);
 
@@ -74,6 +77,8 @@ define('NEWBIE_PROTECTION_POINTS_CAP', 200); // Protection auto-ends above this 
 
 // Command rate limiting
 define('ATTACK_SEND_COOLDOWN_MS', 700); // minimum ms between attack/command sends per user
+define('ATTACK_PAIR_WINDOW_SEC', 30); // sliding window for per-attacker->target caps
+define('ATTACK_PAIR_LIMIT_PER_WINDOW', 5); // max commands per attacker->target per window
 
 // Overstack defense penalty (optional)
 define('OVERSTACK_ENABLED', false); // set true to enable defense penalties for overstacked villages

@@ -9,10 +9,10 @@
 - [x] **Data freshness:** Add ETag/Last-Modified to map/command endpoints; clients poll with conditional requests and respect `max-age`. _(map_data.php now emits ETag/Last-Modified + short revalidate cache-control)_
 - [x] **Rate Limits:** Throttle marker drops and command-visualization fetches per user; return `ERR_RATE_LIMITED` with retry-after. _(per-user map fetch limiter added)_
 - [x] **Accessibility:** Provide high-contrast palette for diplomacy/overlays, keyboard navigation for selection/filter toggles, and reduced-motion mode for command lines. _(high-contrast + reduced-motion toggles live on map toolbar; arrow keys now pan the map)_
+- [x] **Metrics:** Track map request rate, cache hit %, average payload size, and client render time; alert on spikes in payload or render latency. _(server logs map_metrics; client render time now posted via ajax/telemetry/map_perf.php sampling)_
 - **Batching:** Collapse incoming command updates into 1s batches per village; send deltas instead of full lists. Batch marker updates similarly.
 - **Pagination:** Paginate command lists (incoming/outgoing/support/trade/scout) for selected areas; lazy-load on scroll.
-- **Skeletons:** Implement skeleton states for zoom levels while tiles/commands load; avoid jarring redraws on pan/zoom.
-- [x] **Metrics:** Track map request rate, cache hit %, average payload size, and client render time; alert on spikes in payload or render latency. _(server logs map_metrics; client render time now posted via ajax/telemetry/map_perf.php sampling)_
+- [x] **Skeletons:** Implement skeleton states for zoom levels while tiles/commands load; avoid jarring redraws on pan/zoom. _(map loading shimmer + overlay)_
 - **Testing:** Simulate 500+ concurrent commands on a sector; assert p95 render < 200ms on mid-tier mobile and server responses < 200ms with caching enabled.
 
 ## Additional Fixes
@@ -39,6 +39,7 @@
 - How aggressive can delta compression be without harming low-end devices? Need benchmarks for JSON vs binary.
 - What is the acceptable retry-after window for rate limiting map fetches without hurting UX (e.g., 500ms vs 2s)?
 - **Cold-start cache:** Pre-warm tiles/overlays for current continent/sector after login; store in-memory/LRU to reduce first-pan jank, with capped memory budget.
+- Should offline mode allow basic actions (bookmark drops) while offline, and how to resolve conflicts when coming back online?
 
 ## Progress
 - Added an AJAX travel-time endpoint (`ajax/map/travel_time.php`) so map/Rally interactions can fetch distance/ETA server-side using world speed modifiers (reduces client-side recompute and keeps timings consistent).
@@ -54,3 +55,9 @@
 - Front-end: capture performance profiles on low/mid/high devices with 500–1000 commands + overlays; record main-thread time, memory, and dropped frames; compare with/without clustering and fallback mode.
 - Backend: benchmark map endpoints under concurrent load with conditional requests vs full; log p50/p95 latency and payload sizes; verify ETag/cache hit ratios.
 - Payloads: test JSON vs binary delta payloads for size and CPU cost; choose defaults per world type; document thresholds to auto-switch.
+
+## Rollout Checklist
+- [ ] Feature flags per world for batching/pagination/clustering/fallback mode; enable gradually by archetype.
+- [ ] Schema/config changes (if any) for map settings validated with rollback; ensure new settings are read with sane defaults when absent.
+- [ ] Backward compatibility: maintain legacy map endpoints/fields while new deltas/clustering roll out; version responses to avoid client breaks.
+- [ ] Release comms/help: explain new map performance modes (conditional requests, clustering, fallback) and how to toggle high-contrast/reduced-motion.

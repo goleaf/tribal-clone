@@ -21,11 +21,15 @@ class BattleManager
     private const RAID_LOOT_FACTOR = 0.6; // raids cap loot to 60% of stored resources
     private const FAKE_TURNBACK_RATIO = 0.8; // fake attacks turn back after 80% of the path
     private const WALL_BONUS_PER_LEVEL = 0.08;
+    private const OVERSTACK_ENABLED_DEFAULT = false;
+    private const OVERSTACK_MIN_MULTIPLIER_DEFAULT = 0.4;
+    private const OVERSTACK_PENALTY_RATE_DEFAULT = 0.1;
+    private const OVERSTACK_THRESHOLD_DEFAULT = 30000;
     private const BEGINNER_PROTECTION_POINTS = 200;
     private const WORLD_UNIT_SPEED = 1.0; // fields per hour baseline
     private const TARGET_COMMAND_CAP = 200; // Max concurrent incoming commands per target village
     private const SIEGE_UNIT_INTERNALS = ['ram', 'catapult', 'trebuchet'];
-    private const LOYALTY_UNIT_INTERNALS = ['noble', 'chieftain', 'senator', 'chief'];
+    private const LOYALTY_UNIT_INTERNALS = ['noble', 'chieftain', 'senator', 'chief', 'envoy', 'standard_bearer'];
     private const FAKE_THROTTLE_THRESHOLD = 20; // zero-siege sub-50-pop commands in window before delaying
     private const FAKE_THROTTLE_WINDOW_SEC = 3600; // 60 minutes
     private const FAKE_THROTTLE_DELAY_SEC = 300; // 5 minutes per excess send
@@ -35,6 +39,8 @@ class BattleManager
     private const SITTER_MAX_OUTGOING_PER_HOUR = 10; // sitter cannot exceed this command count per hour
     private const MAX_LOYALTY_UNITS_PER_COMMAND = 1; // nobles/standard bearers per command
     private const MANTLET_RANGED_REDUCTION = 0.4; // 40% reduction to ranged defense vs escorted siege
+    private const PLUNDER_DR_WINDOW_SEC = 7200; // 2h diminishing returns window
+    private const PLUNDER_DR_STEPS = [1.0, 0.75, 0.5, 0.25]; // multipliers by streak index
     private const PHASE_ORDER = ['infantry', 'cavalry', 'archer'];
     private const RESEARCH_BONUS_PER_LEVEL = 0.10; // +10% per smithy level
     private const LOYALTY_MIN = 0;
@@ -1372,8 +1378,8 @@ class BattleManager
         $defenderAlive = array_sum(array_column($defending_units, 'count')) > 0;
 
         // Overstack penalty (optional world rule)
-        $overstackMultiplier = $this->getOverstackMultiplier($defending_units);
-        $defense_multiplier *= $overstackMultiplier;
+        $overstack = $this->getOverstackMultiplier($defending_units);
+        $defense_multiplier *= $overstack['multiplier'];
 
         $attackPowerFinal = $this->sumPower($attacking_units, 'attack') * $morale * $attack_random;
         $defensePowerFinal = $this->sumPower($defending_units, 'defense') * $defense_multiplier;
@@ -1431,6 +1437,7 @@ class BattleManager
         $vaultPct = 0.0;
         $vaultProtected = ['wood' => 0, 'clay' => 0, 'iron' => 0];
         $availableAfterProtection = null;
+        $plunderDrMultiplier = 1.0;
         if ($attacker_win && !empty($remaining_attacking_units)) {
             $attack_capacity = 0;
             foreach ($remaining_attacking_units as $unit_type_id => $count) {
@@ -1472,6 +1479,11 @@ class BattleManager
                 if ($isRaid) {
                     $max_available = floor($max_available * self::RAID_LOOT_FACTOR);
                 }
+                $plunderDrMultiplier = $this->getPlunderDiminishingReturnsMultiplier(
+                    (int)$attacker_user_id,
+                    (int)$attack['target_village_id']
+                );
+                $max_available = (int)floor($max_available * $plunderDrMultiplier);
                 $total_loot = min($attack_capacity, $max_available);
                 if ($total_loot > 0) {
                     $share = (int)floor($total_loot / 3);
@@ -1735,6 +1747,8 @@ class BattleManager
                     'weather_attack_multiplier' => $this->getEnvMultiplier('weather_attack_multiplier'),
                     'weather_defense_multiplier' => $this->getEnvMultiplier('weather_defense_multiplier'),
                 ],
+                'overstack' => $overstack,
+                'plunder_dr_multiplier' => $plunderDrMultiplier,
                 'attacker_points' => $attacker_points,
                 'defender_points' => $defender_points,
                 'attack_type' => $attack['attack_type'],
@@ -1756,7 +1770,8 @@ class BattleManager
                     'attacker' => $attackerResearch,
                     'defender' => $defenderResearch
                 ],
-                'loyalty' => $loyalty_report
+                'loyalty' => $loyalty_report,
+                'overstack' => $overstack
             ];
             $report_data_json = json_encode($details);
             $attacker_won_int = $attacker_win ? 1 : 0;
@@ -2539,6 +2554,49 @@ class BattleManager
         $this->conn->query("CREATE INDEX IF NOT EXISTS idx_abuse_flags_user_time ON attack_abuse_flags(user_id, created_at)");
     }
 
+    private function hasInternalUnit(array $units, string $internal): bool
+    {
+        $needle = strtolower($internal);
+        foreach ($units as $unit) {
+            if (isset($unit['internal_name']) && strtolower($unit['internal_name']) === $needle && ($unit['count'] ?? 0) > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Calculate diminishing returns multiplier for repeated plunder of the same target within a window.
+     */
+    private function getPlunderDiminishingReturnsMultiplier(int $attackerUserId, int $targetVillageId): float
+    {
+        if ($attackerUserId <= 0 || $targetVillageId <= 0) {
+            return 1.0;
+        }
+        $windowStart = time() - self::PLUNDER_DR_WINDOW_SEC;
+        $stmt = $this->conn->prepare("
+            SELECT COUNT(*) AS cnt
+            FROM battle_reports br
+            JOIN attacks a ON br.attack_id = a.id
+            WHERE br.attacker_user_id = ?
+              AND br.target_village_id = ?
+              AND br.attacker_won = 1
+              AND a.attack_type IN ('attack','raid')
+              AND UNIX_TIMESTAMP(br.battle_time) >= ?
+        ");
+        if (!$stmt) {
+            return 1.0;
+        }
+        $stmt->bind_param("iii", $attackerUserId, $targetVillageId, $windowStart);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        $count = (int)($row['cnt'] ?? 0);
+        // First raid in window gets index 0 (1.0), then step down.
+        $index = min($count, count(self::PLUNDER_DR_STEPS) - 1);
+        return self::PLUNDER_DR_STEPS[$index] ?? 1.0;
+    }
+
     private function enforceSitterHourlyLimit(int $ownerId)
     {
         if ($ownerId <= 0 || self::SITTER_MAX_OUTGOING_PER_HOUR <= 0) {
@@ -2873,6 +2931,60 @@ class BattleManager
         }
 
         return max(1, $effectiveDefense);
+    }
+
+    /**
+     * Optional overstack penalty: reduces defense when population exceeds threshold.
+     */
+    private function getOverstackMultiplier(array $defendingUnits): array
+    {
+        $enabled = defined('OVERSTACK_ENABLED') ? (bool)OVERSTACK_ENABLED : self::OVERSTACK_ENABLED_DEFAULT;
+        $threshold = defined('OVERSTACK_POP_THRESHOLD') ? max(0, (int)OVERSTACK_POP_THRESHOLD) : self::OVERSTACK_THRESHOLD_DEFAULT;
+        $penaltyRate = defined('OVERSTACK_PENALTY_RATE') ? (float)OVERSTACK_PENALTY_RATE : self::OVERSTACK_PENALTY_RATE_DEFAULT;
+        $minMultiplier = defined('OVERSTACK_MIN_MULTIPLIER') ? (float)OVERSTACK_MIN_MULTIPLIER : self::OVERSTACK_MIN_MULTIPLIER_DEFAULT;
+
+        if (!$enabled || $threshold <= 0 || $penaltyRate <= 0) {
+            return [
+                'enabled' => false,
+                'multiplier' => 1.0,
+                'population' => 0,
+                'threshold' => $threshold,
+                'penalty_rate' => $penaltyRate,
+                'min_multiplier' => $minMultiplier
+            ];
+        }
+
+        $totalPop = 0;
+        foreach ($defendingUnits as $unit) {
+            $pop = (int)($unit['population'] ?? 0);
+            $cnt = (int)($unit['count'] ?? 0);
+            $totalPop += $pop * $cnt;
+        }
+
+        if ($totalPop <= $threshold) {
+            return [
+                'enabled' => true,
+                'multiplier' => 1.0,
+                'population' => $totalPop,
+                'threshold' => $threshold,
+                'penalty_rate' => $penaltyRate,
+                'min_multiplier' => $minMultiplier
+            ];
+        }
+
+        $over = $totalPop - $threshold;
+        $steps = $over / $threshold; // how many thresholds above cap
+        $multiplier = 1 - ($penaltyRate * $steps);
+        $multiplier = max($minMultiplier, $multiplier);
+
+        return [
+            'enabled' => true,
+            'multiplier' => $multiplier,
+            'population' => $totalPop,
+            'threshold' => $threshold,
+            'penalty_rate' => $penaltyRate,
+            'min_multiplier' => $minMultiplier
+        ];
     }
 
     /**

@@ -157,7 +157,8 @@ Status markers:
 - [x] Aura/stacking rules: define Banner Guard stacking (cap/overwrite) and Healer recovery caps per battle to prevent runaway buffs; encode in resolver and docs. _(stacking spec below)_
 - [ ] World archetype gates: disable or tighten seasonal/elite units on hardcore worlds; expose per-archetype overrides in admin UI with audit trail.
 - [x] Add mantlet unit data: stats/cost/speed added to units.json for siege-cover role (effect still to wire into combat).
-- [x] Validation: recruit endpoint now rejects zero/negative counts and missing training building level with reason codes.
+- [x] Validation: recruit endpoint now rejects zero/negative counts, missing training building level, and insufficient farm capacity (ERR_POP) using current + queued population vs cap.
+- [x] Enforce per-village siege cap (ram/catapult variants) on recruitment; returns ERR_CAP with current count and cap.
 - [ ] Tests: unit tests for RPS multipliers, caps, mantlet reduction, aura/healer caps, and conquest-unit limits; integration sims for common compositions vs walls/terrain to validate expected losses.
 - [ ] Anti-abuse: detect repeat exploit patterns (e.g., training beyond caps via concurrent requests), block, and log with reason codes; enforce per-account and per-village caps atomically.
 
@@ -169,6 +170,12 @@ Status markers:
 - Sunset handling removes/locks expired event units cleanly; conversions/logging validated.
 - Stacking rules for auras/healers enforced and visible; archetype gates per world applied and auditable.
 - Anti-abuse: concurrent training requests cannot bypass caps; duplicate/replay attempts rejected with reason codes and logged.
+
+## QA & Tests
+- Seasonal/event lifecycle: start/end toggles, cap enforcement, and sunset conversions; ensure expired units are locked/converted and reports handle missing units.
+- Recruit API: prerequisites/caps/res checks return correct reason codes; concurrent recruits cannot exceed caps; per-world archetype overrides honored.
+- Combat integration: verify mantlet reduction, aura/healer caps, and RPS multipliers fire in battle reports and match expected loss patterns in sims.
+- Gate checks: hardcore world disables/tightens seasonal/elite units as configured; attempts to train blocked with audited errors.
 
 ### Aura & Healer Stacking Spec
 - **Banner Guard Aura:** Does not stack additively. Use highest-level aura in a battle (based on Banner Guard tier/upgrade). Additional Banner Guards beyond first grant no extra buff but still fight normally. Aura applies to defender only; attacker aura applies to attacker side if world enables offensive banners.
@@ -191,3 +198,9 @@ Status markers:
 - Combat sims: batch-run common comps to validate RPS multipliers and mantlet/aura/healer effects at scale; measure resolver perf impact.
 - Seasonal/event lifecycle: soak tests for start/end toggles and mass sunset conversions; confirm no orphaned units and perf is stable.
 - Telemetry volume: assess telemetry emission for recruit attempts/cap hits/aura usage under load; ensure logging doesn’t degrade gameplay paths.
+
+## Rollout Checklist
+- [ ] Feature flags per world for elite/seasonal units, auras/healers, and mantlet effects; defaults aligned to archetypes (hardcore vs casual).
+- [ ] Schema/data migrations (units.json/DB seeds) tested with rollback; ensure indexes for caps/limits if stored in DB.
+- [ ] Backward-compatible recruit APIs and battle reports while new fields roll out; version reports to avoid client breakage.
+- [ ] Release comms/help updates covering unit caps, event unit availability, aura/healer rules, and mantlet effects; include examples.

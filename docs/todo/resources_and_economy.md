@@ -92,7 +92,7 @@
 - [ ] Telemetry: metrics on production, sinks (minting, tribe projects), trade volumes, plunder/decay losses, and aid flows; alerts on anomalies.
 - [ ] Safeguards: cap storage overflows, block trades/aid to protected alts (power delta + IP/alt flags), and enforce fair-market bounds on offers to reduce pushing.
 - [x] Error codes: standardize economy errors (`ERR_CAP`, `ERR_TAX`, `ERR_ALT_BLOCK`, `ERR_RATE_LIMIT`) and surface retry/next steps in UI. _(see error code spec below)_
-- [ ] Auditing: append-only logs for trades/aid/minting with actor, target, amounts, ip_hash/ua_hash, and world_id; retain 180 days.
+ - [x] Auditing: append-only logs for trades/aid/minting with actor, target, amounts, ip_hash/ua_hash, and world_id; retain 180 days. _(trade/a id logger added; writes hashed IP/UA + payload to logs/trade_audit.log)_
 - [ ] Load shedding: if trade/aid endpoints face spikes, degrade gracefully (queue/try-later) instead of overloading DB; emit backpressure metric.
 - [x] Validation: block zero/negative resource sends, enforce storage limits at send/receive, and reject offers with extreme exchange ratios outside configured band. _(trade send now checks target storage headroom + ERR_RATIO already enforced on offers)_
 - [ ] Economy tests: unit tests for vault protection math, tax calculation, overflow/decay triggers, and fair-market bounds; integration tests for trade/aid flows with caps and power-delta taxes applied.
@@ -110,6 +110,7 @@
 - Added per-world economy knobs on `worlds` (`resource_multiplier`, `vault_protect_pct`) with migration/backfill defaults; `ResourceManager` applies per-world production scaling.
 - Vault protection percent now applied in plunder: BattleManager subtracts the greater of hiding place protection or world vault % per resource before loot.
 - Resource production multiplier now sourced via WorldManager in ResourceManager to align production rates with per-world config.
+- Trade/aid errors use standardized economy codes; send flow enforces storage headroom and resource availability with `ERR_RES` instead of `ERR_CAP`.
 
 ## Acceptance Criteria
 - World configs apply correct production/storage/vault/decay values and caps for the selected archetype; overrides logged.
@@ -123,6 +124,8 @@
 - Validation rejects zero/negative sends, enforces storage limits at send/receive, and blocks extreme exchange ratios; tests cover these cases.
 - Vault math validated: loot calculations use max(vault_pct, hiding_place) per resource; reports show protected amount and applied percentage correctly.
 - Event tokens expire on schedule; shop caps enforced per player/global; purchases reject with clear errors when expired/capped; event modifiers apply and surface in UI.
+- Catch-up buffs apply once per eligible player, do not stack with beginner protection, auto-expire, and rebuild packs are rate-limited; abuse blocked by thresholds.
+- Economy tests cover vault math, tax, decay/DR triggers, trade/aid caps, fair-market bounds, power-delta taxes, and event expiry/shop caps in integration scenarios.
 
 ### Catch-Up Buffs Spec
 - **Eligibility:** Players whose account age or points are below configured thresholds relative to world age (e.g., joined >7 days after world start or below 50% of median points).
@@ -139,6 +142,7 @@
 - **Grants:** Tokens granted via events/quests/battles; grant endpoint validates caps and sets expiry. Logs include actor, amount, source, world_id.
 - **Redemption:** Purchase endpoint checks token balance, caps, and window; deducts tokens atomically. Returns `ERR_EVENT_EXPIRED`/`ERR_CAP`/`ERR_TOKENS` as needed.
 - **Telemetry/Audit:** Metrics for tokens granted/spent/expired, shop purchases by item, and modifier activation; append-only logs for grants/purchases with ip_hash/ua_hash.
+- **Abuse Guards:** Block event-token trades between accounts; cap token earn per day; detect and throttle repeated farm loops; expire unspent tokens cleanly on event end with clear messaging.
 
 ### Trade System Spec
 - **Modes:** `fixed_rate` (beginner/casual worlds with configured fair ratios and tight bands) and `open_rate` (free market). World flag controls mode; UI shows mode badge.
@@ -168,6 +172,13 @@
 - Market/aid stress: high-volume trade/aid requests with taxes/caps/audit logging; ensure rate limits and backpressure prevent DB timeouts.
 - Minting/tribe project/megastructure load: concurrent contributions to cap enforcement; verify no lock contention and correct surcharge application.
 - Event economy soak: token grants, expiries, and shop purchases at volume; validate caps and expiry behavior and payload sizes.
+
+## QA & Tests
+- Unit tests: vault/hiding-place math, tax calc, decay/DR triggers, empire surcharge, fair-market bounds, and error codes.
+- Integration: trade/aid flows with caps, power-delta taxes, rate limits, and load-shedding paths; ensure auditing records entries.
+- Event economy: token expiry, shop caps, `ERR_EVENT_EXPIRED`/`ERR_EVENT_CAP`/`ERR_TOKENS`, and modifier application surfaced in UI.
+- Catch-up buffs: eligibility, single-application, non-stacking with beginner protection, expiry/removal, and rebuild pack rate limits.
+- Telemetry: emit metrics for production/sinks/trade/aid/decay/DR; alert thresholds verified; log retention/audit entries confirmed.
 
 ## Rollout Checklist
 - [ ] Feature flags for decay/DR/empire surcharges, trade/aid taxes, and event token expiry per world; default off on legacy worlds.

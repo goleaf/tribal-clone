@@ -12,6 +12,8 @@ class AjaxResponse
     public const ERR_RATE_LIMIT = 'ERR_RATE_LIMIT';
     public const ERR_RATIO = 'ERR_RATIO';
     public const ERR_VALIDATION = 'ERR_VALIDATION';
+    public const ERR_PROTECTED = 'ERR_PROTECTED';
+    public const ERR_INPUT = 'ERR_INPUT';
 
     /**
      * Send a success JSON response

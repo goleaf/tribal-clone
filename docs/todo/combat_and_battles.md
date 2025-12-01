@@ -97,7 +97,7 @@
 - [x] Conquest integration: hook allegiance drop after combat win with surviving conquest units; enforce cooldowns and reason codes on failures. _(see allegiance service spec; requires attack win + surviving conquest unit, respects anti-snipe floor and reports reason codes)_
 - [x] Command ordering: deterministic tick ordering for simultaneous arrivals; include support if timestamp <= attack; log ordering for reports/audit. _(ordering spec below)_
 - [x] Fake/min-pop rules: enforce minimum payload for attack commands; tag fakes for reporting/intel filters; throttle sub-50-pop spam server-side. _(rate-limit spec added; fake tags surfaced for intel filters)_
-- [x] Overstack/penalties: optional world rule to apply diminishing defense past population threshold; ensure performance on large stacks. _(see overstack spec below)_
+- [x] Overstack/penalties: optional world rule to apply diminishing defense past population threshold; ensure performance on large stacks. _(config + multiplier applied; reported in battle details)_
 - [x] Night/terrain/weather flags: world-configurable toggles and modifiers; expose in battle report and UI. _(env modifier spec below; engine reads terrain/weather multipliers from world config)_
 - [x] Rate limits/backpressure: cap command creation per player/target/time window; apply friendly error codes; prevent laggy floods from degrading ticks. _(generic + scout-specific burst caps implemented in BattleManager)_
 - [x] Reporting: generate battle reports with full context (modifiers, casualties, siege, plunder, allegiance change); redact intel when scouts die; support tribe sharing. _(report spec below)_
@@ -166,6 +166,7 @@
 - Should casualty proportionality be linear or tuned per unit class (e.g., siege attrition different)? Decide before implementation.
 - How to seed luck for fairness (per-battle fixed seed vs per-round variance) to prevent variance stacking abuse?
 - What is the exact min-pop rule for fakes across worlds (uniform vs world-specific)? Document and expose to UI.
+- How should raid vs standard attack plunder caps differ, and are they percent-based or fixed per world? Need defaults for reports/UI.
 
 ## Profiling & Load Plan
 - Benchmark combat resolver under load: 1k/5k/10k battles per tick with mixed unit comps and siege; record p50/p95/p99 latency and CPU/memory.

@@ -6,6 +6,12 @@ require_once __DIR__ . '/../../lib/managers/TaskManager.php';
 
 header('Content-Type: application/json');
 
+if (!defined('FEATURE_TASKS_ENABLED') || FEATURE_TASKS_ENABLED !== true) {
+    http_response_code(404);
+    echo json_encode(['error' => 'Tasks are disabled on this world.']);
+    exit();
+}
+
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
     echo json_encode(['error' => 'Not authorized']);
@@ -17,6 +23,7 @@ $taskManager = new TaskManager($conn);
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $type = isset($_GET['type']) ? strtolower((string)$_GET['type']) : 'daily';
 $type = in_array($type, ['daily', 'weekly'], true) ? $type : 'daily';
+$ttl = $type === 'weekly' ? 168 : 24;
 
 // Simple seed tasks if none exist (placeholder definitions)
 $seedDefs = [
@@ -26,12 +33,13 @@ $seedDefs = [
 ];
 
 if ($method === 'GET') {
-    $tasks = $taskManager->getTasks($userId, $type);
-    if (empty($tasks)) {
-        $taskManager->upsertTasks($userId, $seedDefs, $type, $type === 'weekly' ? 168 : 24);
-        $tasks = $taskManager->getTasks($userId, $type);
-    }
-    echo json_encode(['success' => true, 'tasks' => $tasks]);
+    $tasks = $taskManager->refreshTasks($userId, $type, $seedDefs, $ttl, 3);
+    echo json_encode([
+        'success' => true,
+        'tasks' => $tasks,
+        'expires_at' => $tasks ? $tasks[0]['expires_at'] ?? null : null,
+        'type' => $type
+    ]);
     exit();
 }
 

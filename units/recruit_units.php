@@ -66,6 +66,10 @@ if (!$conn) {
 
 $unitManager = new UnitManager($conn);
 $villageManager = new VillageManager($conn);
+$seasonalEnabled = defined('FEATURE_SEASONAL_UNITS') ? (bool)FEATURE_SEASONAL_UNITS : true;
+$healerEnabled = defined('FEATURE_HEALER_ENABLED') ? (bool)FEATURE_HEALER_ENABLED : true;
+$seasonalUnits = ['tempest_knight', 'event_knight'];
+$healerUnits = ['war_healer', 'healer'];
 
 try {
     $conn->begin_transaction();
@@ -184,6 +188,14 @@ $stmt_check_queue->execute();
         
         $unit = $result_unit->fetch_assoc();
         $stmt_unit->close();
+
+        $internalName = strtolower($unit['internal_name']);
+        if (!$seasonalEnabled && in_array($internalName, $seasonalUnits, true)) {
+            throw new RecruitmentException('Seasonal units are disabled on this world.', 'SEASONAL_DISABLED');
+        }
+        if (!$healerEnabled && in_array($internalName, $healerUnits, true)) {
+            throw new RecruitmentException('Healer units are disabled on this world.', 'HEALER_DISABLED');
+        }
         
         // Ensure the building level is high enough
         if ($building_level < $unit['required_building_level']) {

@@ -85,6 +85,7 @@ $centerX = isset($_GET['x']) ? (int)$_GET['x'] : 0;
 $centerY = isset($_GET['y']) ? (int)$_GET['y'] : 0;
 $size = isset($_GET['size']) ? max(7, min(31, (int)$_GET['size'])) : 15;
 $lowPerfMode = !empty($_GET['lowperf']);
+$suppressCommands = !empty($_GET['suppress_commands']);
 
 $radius = (int)floor(($size - 1) / 2);
 $centerX = max(0, min($worldSize - 1, $centerX));
@@ -236,7 +237,8 @@ if (($ifNoneMatch && trim($ifNoneMatch) === $etag) || ($ifModifiedSinceTs && $if
 }
 
 $movementAttackIds = [];
-if (!$lowPerfMode) {
+$movementLimitPerVillage = 50;
+if (!$lowPerfMode && !$suppressCommands) {
     // Fetch active movements (attacks/support/return) intersecting the viewport
     $movementsStmt = $conn->prepare("
         SELECT 
@@ -372,6 +374,29 @@ if (!$lowPerfMode && !empty($movementAttackIds)) {
         }
     }
 }
+
+// Trim movement lists per village to limit payload size
+foreach ($villages as &$v) {
+    if (empty($v['movements'])) {
+        $v['movements_truncated'] = false;
+        $v['movement_summary']['omitted'] = 0;
+        continue;
+    }
+    usort($v['movements'], static function ($a, $b) {
+        return ($a['arrival'] ?? 0) <=> ($b['arrival'] ?? 0);
+    });
+    $total = count($v['movements']);
+    if ($total > $movementLimitPerVillage) {
+        $v['movements'] = array_slice($v['movements'], 0, $movementLimitPerVillage);
+        $omitted = $total - $movementLimitPerVillage;
+        $v['movements_truncated'] = true;
+        $v['movement_summary']['omitted'] = $omitted;
+    } else {
+        $v['movements_truncated'] = false;
+        $v['movement_summary']['omitted'] = 0;
+    }
+}
+unset($v);
 
 // Fetch tribes/alliances if the table exists (optional)
 $allies = [];

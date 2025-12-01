@@ -7,6 +7,8 @@ class UnitManager
     private $conn;
     private $unit_types_cache = [];
     private WorldManager $worldManager;
+    private const SIEGE_CAP_PER_VILLAGE = 200;
+    private const SIEGE_INTERNALS = ['ram', 'battering_ram', 'catapult', 'stone_hurler'];
 
     /**
      * Constructor
@@ -28,6 +30,10 @@ class UnitManager
     {
         $result = $this->conn->query("SELECT * FROM unit_types WHERE is_active = 1");
         $conquestEnabled = defined('FEATURE_CONQUEST_UNIT_ENABLED') ? (bool)FEATURE_CONQUEST_UNIT_ENABLED : true;
+        $seasonalEnabled = defined('FEATURE_SEASONAL_UNITS') ? (bool)FEATURE_SEASONAL_UNITS : true;
+        $healerEnabled = defined('FEATURE_HEALER_ENABLED') ? (bool)FEATURE_HEALER_ENABLED : true;
+        $seasonalUnits = ['tempest_knight', 'event_knight'];
+        $healerUnits = ['war_healer', 'healer'];
 
         if ($result) {
             while ($row = $result->fetch_assoc()) {
@@ -45,6 +51,12 @@ class UnitManager
                     !$conquestEnabled &&
                     in_array($internal, ['noble', 'nobleman', 'standard_bearer', 'envoy'], true)
                 ) {
+                    continue;
+                }
+                if (!$seasonalEnabled && in_array($internal, $seasonalUnits, true)) {
+                    continue;
+                }
+                if (!$healerEnabled && in_array($internal, $healerUnits, true)) {
                     continue;
                 }
                 $this->unit_types_cache[$row['id']] = $row;
@@ -363,6 +375,21 @@ class UnitManager
         $unit = $this->unit_types_cache[$unit_type_id];
         $building_type = $unit['building_type'];
         $unitPop = (int)($unit['population'] ?? 0);
+        $internal = $unit['internal_name'] ?? '';
+
+        // Siege cap per village (counts existing + queued)
+        if (self::SIEGE_CAP_PER_VILLAGE > 0 && in_array($internal, self::SIEGE_INTERNALS, true)) {
+            $siegeCount = $this->getVillageUnitCountWithQueue($village_id, self::SIEGE_INTERNALS);
+            if (($siegeCount + $count) > self::SIEGE_CAP_PER_VILLAGE) {
+                return [
+                    'success' => false,
+                    'error' => 'Siege cap reached for this village.',
+                    'code' => 'ERR_CAP',
+                    'cap' => self::SIEGE_CAP_PER_VILLAGE,
+                    'current' => $siegeCount
+                ];
+            }
+        }
 
         // Population cap check (farm capacity)
         $farmCapacity = $this->getFarmCapacity($village_id);
@@ -570,6 +597,54 @@ class UnitManager
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         return isset($row['farm_capacity']) ? (int)$row['farm_capacity'] : 0;
+    }
+
+    /**
+     * Get total count of specified unit internals in village (existing + queued).
+     */
+    private function getVillageUnitCountWithQueue(int $villageId, array $internalNames): int
+    {
+        if (empty($internalNames)) {
+            return 0;
+        }
+        $placeholders = implode(',', array_fill(0, count($internalNames), '?'));
+        $types = str_repeat('s', count($internalNames));
+
+        // Existing units
+        $existing = 0;
+        $sqlExisting = "
+            SELECT COALESCE(SUM(vu.count), 0) AS cnt
+            FROM village_units vu
+            JOIN unit_types ut ON ut.id = vu.unit_type_id
+            WHERE vu.village_id = ? AND ut.internal_name IN ($placeholders)
+        ";
+        $stmt = $this->conn->prepare($sqlExisting);
+        if ($stmt) {
+            $stmt->bind_param('i' . $types, $villageId, ...$internalNames);
+            $stmt->execute();
+            $row = $stmt->get_result()->fetch_assoc();
+            $existing = (int)($row['cnt'] ?? 0);
+            $stmt->close();
+        }
+
+        // Queued units
+        $queued = 0;
+        $sqlQueued = "
+            SELECT COALESCE(SUM((uq.count - uq.count_finished)), 0) AS cnt
+            FROM unit_queue uq
+            JOIN unit_types ut ON ut.id = uq.unit_type_id
+            WHERE uq.village_id = ? AND ut.internal_name IN ($placeholders)
+        ";
+        $stmtQ = $this->conn->prepare($sqlQueued);
+        if ($stmtQ) {
+            $stmtQ->bind_param('i' . $types, $villageId, ...$internalNames);
+            $stmtQ->execute();
+            $rowQ = $stmtQ->get_result()->fetch_assoc();
+            $queued = (int)($rowQ['cnt'] ?? 0);
+            $stmtQ->close();
+        }
+
+        return $existing + $queued;
     }
 
     /**

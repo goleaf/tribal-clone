@@ -92,7 +92,9 @@ Players manage villages to grow resources, build and upgrade structures, train a
 ## Implementation TODOs
 - [x] Instrument loop metrics: queue uptime, raids per day, scout runs, support sent, task completion, and tribe ops participation by segment (casual/mid/hardcore). _(added metric plan below)_
 - [x] Build “next best action” nudges for empty queues, stale intel, near-cap resources, and expiring tasks; localize copy; add dismiss duration. _(idle build/recruit + near-cap nudges live; extend to intel/tasks next)_
-- [ ] Daily/weekly hooks: backend for tasks/challenges with reroll logic, reset timers, and claim states; emit telemetry.
+- [x] Daily/weekly hooks: backend for tasks/challenges with reroll logic, reset timers, and claim states; emit telemetry. _(TaskManager + ajax/tasks/tasks.php now refresh tasks with expiries/rerolls; telemetry TBD)_
+- [x] Feature flags per world for tasks/challenges (enable/disable tasks endpoint via `FEATURE_TASKS_ENABLED` in config).
+- [x] Telemetry: task events logged server-side (seed/claim/reroll) to `logs/tasks.log` for monitoring.
 - [x] Notification system: opt-in web/mobile push for attacks, builds/recruits done, task resets; respect quiet hours/night bonus windows. _(server notification feed + unread counts wired)_
 - [ ] Catch-up buffs: late-joiner production boosts and rebuild packs after wipes; ensure anti-abuse caps and expiries.
 - [ ] Sitter/role delegation (if enabled): permissions for sending support/attacks; audit actions; optional per-world enable.
@@ -139,7 +141,7 @@ Players manage villages to grow resources, build and upgrade structures, train a
 - **Safety/Abuse Signals:** Protection abuse (high send/receive during beginner), sitter/role actions count, rate-limit hits on commands/aid/scouts.
 - **Instrumentation Notes:** Emit via telemetry client (game + backend), tag by player segment (casual/mid/hardcore), world id, and session. Alert on drops in queue uptime or spikes in rate-limit hits.
 - [x] Anti-burnout: add DND/quiet-hour scheduling with auto-snooze on flood (attack waves) and post-war cooldown reminders; log usage to tune defaults.
-- ✅ Safety checks: block PvP sends while under beginner protection; return `ERR_PROTECTED` with guidance; guard against zero-pop sends and duplicate commands on resend. (Beginner block returns ERR_PROTECTED; min-pop enforced; duplicate command guard added)
+- ✅ Safety checks: block PvP sends while under beginner protection; return `ERR_PROTECTED` with guidance; guard against zero-pop sends and duplicate commands on resend. _(ERR_PROTECTED now returned from BattleManager; UI surfacing still pending)_ (Beginner block returns ERR_PROTECTED; min-pop enforced; duplicate command guard added)
 - [ ] Telemetry: per-loop funnel (scout → raid → queue update), time-in-state (building, attacking, idle), and drop-off points; alerts on churn spikes after wipes/war losses.
 - [ ] Recovery flows: one-click rebuild suggestions after wipes (walls/storage), guided “stabilize economy” preset, and capped aid request flow that respects anti-push rules.
 - [ ] Loop pacing knobs: per-world settings for queue slot unlocks, task cadence, event frequency; exposed in admin UI with audit to tune casual vs hardcore worlds.

@@ -626,6 +626,20 @@ INSERT OR IGNORE INTO achievements (internal_name, name, description, category, 
 ('recruiter_50', 'Drill Sergeant', 'Train a total of 50 units.', 'military', 'units_trained', 'any', 50, 300, 300, 200, 3),
 ('recruiter_200', 'Army Quartermaster', 'Train a total of 200 units.', 'military', 'units_trained', 'any', 200, 600, 600, 400, 5);
 
+CREATE TABLE IF NOT EXISTS map_perf_telemetry (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    world_id INTEGER NOT NULL,
+    request_rate REAL DEFAULT NULL,
+    cache_hit_pct REAL DEFAULT NULL,
+    payload_bytes INTEGER DEFAULT NULL,
+    render_ms REAL DEFAULT NULL,
+    dropped_frames INTEGER DEFAULT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_mpt_user_time ON map_perf_telemetry(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_mpt_world_time ON map_perf_telemetry(world_id, created_at);
+
 -- Guides / documentation
 CREATE TABLE IF NOT EXISTS guides (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -643,3 +657,8 @@ CREATE TABLE IF NOT EXISTS guides (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Envoy conquest unit
+
+INSERT INTO unit_types (internal_name, name, description, attack_power, defense_power, speed, carry_capacity, population_cost, building_type, required_building_level, cost_wood, cost_clay, cost_iron)
+VALUES ('envoy', 'Envoy', 'Control unit for conquest', 30, 40, 35, 0, 80, 'academy', 1, 15000, 20000, 25000);

@@ -559,6 +559,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (details.loyalty && details.loyalty.drop) {
             chips.push(`<span class="chip">Loyalty: ${details.loyalty.before} → ${details.loyalty.after}</span>`);
         }
+        if (details.overstack && details.overstack.enabled && details.overstack.multiplier !== undefined) {
+            const pct = Math.round(details.overstack.multiplier * 100);
+            chips.push(`<span class="chip">Overstack defense: ${pct}%</span>`);
+        }
         return chips.length ? `<div class="report-chips">${chips.join('')}</div>` : '';
     }
 

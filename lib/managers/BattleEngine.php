@@ -104,8 +104,10 @@ class BattleEngine
         // Calculate morale
         $morale = $this->calculateMorale($defenderPoints, $attackerPoints);
         
+        $defenderClassShares = $this->getClassShares($defenderUnits);
+
         // Calculate total offense
-        $totalOff = $this->calculateTotalOffense($attackerUnits) * $luck * $morale;
+        $totalOff = $this->calculateTotalOffense($attackerUnits, $defenderClassShares) * $luck * $morale;
         
         // Calculate effective defense
         $effectiveDef = $this->calculateEffectiveDefense($defenderUnits, $attackerUnits);
@@ -206,13 +208,16 @@ class BattleEngine
     /**
      * Calculate total offensive power
      */
-    private function calculateTotalOffense(array $units): float
+    private function calculateTotalOffense(array $units, array $defenderClassShares = []): float
     {
         $totalOff = 0;
         
         foreach ($units as $unitType => $count) {
             if ($count > 0 && isset($this->unitData[$unitType])) {
-                $totalOff += $this->unitData[$unitType]['off'] * $count;
+                $baseOff = $this->unitData[$unitType]['off'];
+                $class = self::UNIT_CLASSES[$unitType] ?? 'infantry';
+                $mult = $this->getClassAttackMultiplier($class, $defenderClassShares);
+                $totalOff += ($baseOff * $mult) * $count;
             }
         }
         
@@ -258,6 +263,44 @@ class BattleEngine
         }
         
         return $classes;
+    }
+
+    /**
+     * Get share of defender unit classes to drive RPS bonuses.
+     */
+    private function getClassShares(array $units): array
+    {
+        $counts = $this->countUnitsByClass($units);
+        $total = array_sum($counts);
+        if ($total <= 0) {
+            return ['infantry' => 0.0, 'cavalry' => 0.0, 'archer' => 0.0];
+        }
+        return [
+            'infantry' => $counts['infantry'] / $total,
+            'cavalry' => $counts['cavalry'] / $total,
+            'archer' => $counts['archer'] / $total,
+        ];
+    }
+
+    /**
+     * Apply simple RPS multipliers: cav > ranged, ranged > infantry, spears (infantry class) get more vs cav.
+     */
+    private function getClassAttackMultiplier(string $attackerClass, array $defenderShares): float
+    {
+        $infShare = $defenderShares['infantry'] ?? 0.0;
+        $cavShare = $defenderShares['cavalry'] ?? 0.0;
+        $rngShare = $defenderShares['archer'] ?? 0.0;
+        $mult = 1.0;
+
+        if ($attackerClass === 'cavalry' && $rngShare > 0) {
+            $mult += 0.25 * $rngShare; // Cav better into ranged in open
+        } elseif ($attackerClass === 'archer' && $infShare > 0) {
+            $mult += 0.15 * $infShare; // Ranged better into infantry blobs
+        } elseif ($attackerClass === 'infantry' && $cavShare > 0) {
+            $mult += 0.10 * $cavShare; // Spears/pikes blunt cav
+        }
+
+        return $mult;
     }
     
     /**

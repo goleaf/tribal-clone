@@ -108,6 +108,9 @@ require '../header.php';
                     <label><input type="checkbox" id="filter-commands-support" checked> Support</label>
                 </div>
                 <div class="filter-row secondary-filters">
+                    <label><input type="checkbox" id="filter-low-perf"> Low performance mode (hide movements)</label>
+                </div>
+                <div class="filter-row secondary-filters">
                     <label for="filter-activity" style="font-weight:600;">Activity</label>
                     <select id="filter-activity">
                         <option value="any">Any</option>
@@ -316,6 +319,7 @@ let worldBounds = null;
 const mapPollMs = 15000;
 const MAP_FETCH_DEBOUNCE_MS = 180;
 const MAP_SKELETON_DELAY_MS = 120;
+const MAP_LOAD_TIMEOUT_MS = 6000;
 let mapLoadTimer = null;
 let lastQueuedRequest = null;
 let mapAbortController = null;
@@ -323,8 +327,24 @@ const HIGH_CONTRAST_KEY = 'map_high_contrast';
 const REDUCED_MOTION_KEY = 'map_reduced_motion';
 let mapHighContrast = false;
 let mapReducedMotion = false;
+const MAP_PERF_SAMPLE_RATE = 0.1; // 10% sampling to limit noise
 let lastMapPayloadBytes = null;
-const PERF_SAMPLE_RATE = 0.1;
+let lastMapFetchMs = null;
+let mapCacheStatus = 'miss';
+let frameDropCount = 0;
+let lastFrameTs = null;
+
+function trackFrameDrops(ts) {
+    if (lastFrameTs !== null) {
+        const delta = ts - lastFrameTs;
+        if (delta > 50) {
+            frameDropCount += 1;
+        }
+    }
+    lastFrameTs = ts;
+    requestAnimationFrame(trackFrameDrops);
+}
+requestAnimationFrame(trackFrameDrops);
 const filters = {
     barbarians: true,
     players: true,
@@ -345,10 +365,12 @@ const mapLoadingEl = document.getElementById('map-loading');
 const mapSkeletonEl = document.getElementById('map-skeleton');
 const highContrastToggle = document.getElementById('high-contrast-toggle');
 const reducedMotionToggle = document.getElementById('reduced-motion-toggle');
+const lowPerfToggle = document.getElementById('filter-low-perf');
 let mapSkeletonTimer = null;
 const movementsWarningEl = document.getElementById('movements-warning');
 const mapRateWarningEl = document.getElementById('map-rate-warning');
 const interactiveSelectors = ['input', 'textarea', 'select', 'button', '[contenteditable="true"]'];
+let lowPerfMode = false;
 
 function setMapLoading(isLoading) {
     if (mapLoadingEl) {
@@ -588,9 +610,34 @@ document.addEventListener('DOMContentLoaded', () => {
             filters.commands.incoming = cmdIn ? cmdIn.checked : true;
             filters.commands.outgoing = cmdOut ? cmdOut.checked : true;
             filters.commands.support = cmdSup ? cmdSup.checked : true;
+            if (lowPerfToggle) {
+                lowPerfMode = !!lowPerfToggle.checked;
+                try {
+                    localStorage.setItem('tw_map_lowperf', lowPerfMode ? '1' : '0');
+                } catch (e) {
+                    // ignore
+                }
+            }
             renderMap();
         });
     });
+    if (lowPerfToggle) {
+        try {
+            lowPerfMode = localStorage.getItem('tw_map_lowperf') === '1';
+            lowPerfToggle.checked = lowPerfMode;
+        } catch (e) {
+            lowPerfMode = false;
+        }
+        lowPerfToggle.addEventListener('change', () => {
+            lowPerfMode = !!lowPerfToggle.checked;
+            try {
+                localStorage.setItem('tw_map_lowperf', lowPerfMode ? '1' : '0');
+            } catch (e) {
+                // ignore
+            }
+            requestMapLoad(mapState.center.x, mapState.center.y, mapState.size);
+        });
+    }
 
     const bookmarkForm = document.getElementById('bookmark-search-form');
     const bookmarkInput = document.getElementById('bookmark-search-input');
@@ -850,7 +897,7 @@ function movementVisible(move) {
 }
 
 async function fetchMapData(targetX, targetY, targetSize, controller) {
-    const url = `map_data.php?x=${encodeURIComponent(targetX)}&y=${encodeURIComponent(targetY)}&size=${encodeURIComponent(targetSize)}`;
+    const url = `map_data.php?x=${encodeURIComponent(targetX)}&y=${encodeURIComponent(targetY)}&size=${encodeURIComponent(targetSize)}&lowperf=${lowPerfMode ? 1 : 0}`;
     const headers = {};
     if (window.__mapETag) {
         headers['If-None-Match'] = window.__mapETag;
@@ -858,7 +905,10 @@ async function fetchMapData(targetX, targetY, targetSize, controller) {
     if (window.__mapLastModified) {
         headers['If-Modified-Since'] = window.__mapLastModified;
     }
-    const response = await fetch(url, { credentials: 'same-origin', headers, signal: controller?.signal });
+    const abortController = controller || new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), MAP_LOAD_TIMEOUT_MS);
+    const response = await fetch(url, { credentials: 'same-origin', headers, signal: abortController.signal });
+    clearTimeout(timeoutId);
     if (response.status === 429) {
         const retryAfter = parseInt(response.headers.get('Retry-After') || '1', 10);
         const err = new Error('Rate limited');
@@ -964,6 +1014,7 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
     }
     mapAbortController = new AbortController();
     mapFetchInFlight = true;
+    let lastErrorCode = null;
     setMapLoading(true);
     try {
         const size = normalizeSize(targetSize);
@@ -974,7 +1025,10 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
             return;
         }
         if (movementsWarningEl) {
-            movementsWarningEl.style.display = data.movements_truncated ? 'block' : 'none';
+            movementsWarningEl.style.display = (data.movements_truncated || data.low_perf) ? 'block' : 'none';
+            movementsWarningEl.textContent = data.low_perf
+                ? 'Low performance mode enabled: movements hidden for speed.'
+                : 'Movements capped; zoom in or adjust filters to see more.';
         }
         mapState.center = data.center || { x: targetX, y: targetY };
         mapState.size = data.size || size;
@@ -1002,10 +1056,14 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
             center_y: mapState.center.y,
             ts: Date.now()
         });
+        if (mapRateWarningEl) {
+            mapRateWarningEl.style.display = 'none';
+        }
     } catch (error) {
         if (error.name === 'AbortError') {
             // ignore
         } else if (error.code === 'RATE_LIMIT') {
+            lastErrorCode = 'RATE_LIMIT';
             if (mapRateWarningEl) {
                 mapRateWarningEl.style.display = 'block';
             }
@@ -1020,7 +1078,7 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
     } finally {
         mapFetchInFlight = false;
         setMapLoading(false);
-        if (mapRateWarningEl && error?.code !== 'RATE_LIMIT') {
+        if (mapRateWarningEl && lastErrorCode !== 'RATE_LIMIT') {
             mapRateWarningEl.style.display = 'none';
         }
         if (!mapLoadTimer && lastQueuedRequest) {
@@ -1207,6 +1265,15 @@ function renderMap() {
                             }
                             movementStack.appendChild(icon);
                         });
+                        const hiddenCount = visibleMoves.length - renderLimit;
+                        const omitted = village.movement_summary ? (village.movement_summary.omitted || 0) : 0;
+                        const moreCount = Math.max(0, hiddenCount) + Math.max(0, omitted);
+                        if (moreCount > 0) {
+                            const more = document.createElement('span');
+                            more.classList.add('movement-more');
+                            more.textContent = `+${moreCount}`;
+                            movementStack.appendChild(more);
+                        }
                         tile.appendChild(movementStack);
                     }
                 }
@@ -1274,18 +1341,20 @@ let lastTelemetrySend = 0;
 function maybeSendMapTelemetry(renderMs) {
     const now = Date.now();
     // Sample 1 in 20 renders and throttle to once per 30s.
-    if (Math.random() > 0.05) return;
+    if (Math.random() > PERF_SAMPLE_RATE) return;
     if (now - lastTelemetrySend < 30000) return;
     lastTelemetrySend = now;
+    const drops = frameDropCount;
+    frameDropCount = 0;
     fetch('../ajax/telemetry/map_perf.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             render_ms: renderMs,
-            payload_bytes: mapState.lastPayloadBytes || null,
+            payload_bytes: lastMapPayloadBytes || null,
             cache_hit_pct: null,
             request_rate: null,
-            dropped_frames: null
+            dropped_frames: drops
         })
     }).catch(() => {
         // ignore telemetry failures

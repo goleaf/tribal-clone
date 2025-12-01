@@ -304,6 +304,22 @@ CREATE TABLE market_offers (
 )");
 ensureIndex($db, 'idx_market_village', 'market_offers(village_id)');
 
+// Map performance telemetry (optional)
+ensureTable($db, 'map_perf_telemetry', "
+CREATE TABLE map_perf_telemetry (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    world_id INTEGER NOT NULL,
+    request_rate REAL DEFAULT NULL,
+    cache_hit_pct REAL DEFAULT NULL,
+    payload_bytes INTEGER DEFAULT NULL,
+    render_ms REAL DEFAULT NULL,
+    dropped_frames INTEGER DEFAULT NULL,
+    created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+)");
+ensureIndex($db, 'idx_mpt_user_time', 'map_perf_telemetry(user_id, created_at)');
+ensureIndex($db, 'idx_mpt_world_time', 'map_perf_telemetry(world_id, created_at)');
+
 // ---- Seed data ----
 seedIfEmpty($db, 'world_config', function (Database $db) {
     $db->execute("INSERT INTO world_config (world_name, world_size, unit_speed, build_speed, research_speed, beginner_protection_points) VALUES (?, ?, ?, ?, ?, ?)", [

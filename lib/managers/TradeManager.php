@@ -170,7 +170,7 @@ class TradeManager {
         }
 
         if ($village['wood'] < $resources['wood'] || $village['clay'] < $resources['clay'] || $village['iron'] < $resources['iron']) {
-            return ['success' => false, 'message' => 'Not enough resources in this village.', 'code' => EconomyError::ERR_CAP];
+            return ['success' => false, 'message' => 'Not enough resources in this village.', 'code' => EconomyError::ERR_RES];
         }
 
         $targetVillage = $this->getVillageByCoords($targetX, $targetY);
@@ -256,6 +256,16 @@ class TradeManager {
             $stmt->close();
 
             $this->conn->commit();
+
+            $this->logTradeAudit('send_resources', [
+                'actor_user_id' => $userId,
+                'source_village_id' => $villageId,
+                'target_village_id' => (int)$targetVillage['id'],
+                'target_coords' => [$targetX, $targetY],
+                'resources' => $resources,
+                'traders_used' => $tradersNeeded
+            ]);
+
             return [
                 'success' => true,
                 'route_id' => $routeId,
@@ -603,6 +613,15 @@ class TradeManager {
 
             $this->conn->commit();
 
+            $this->logTradeAudit('create_offer', [
+                'actor_user_id' => $userId,
+                'source_village_id' => $villageId,
+                'offer_id' => $offerId,
+                'offered' => $offerResources,
+                'requested' => $requestResources,
+                'traders_reserved' => $tradersNeeded
+            ]);
+
             // Optional report entry for the offer owner
             if (!class_exists('ReportManager')) {
                 require_once __DIR__ . '/ReportManager.php';
@@ -765,6 +784,25 @@ class TradeManager {
             return ['success' => false, 'message' => 'Not enough resources to accept this offer.', 'code' => EconomyError::ERR_CAP];
         }
 
+        // Prevent overflow at the receiving ends before creating routes
+        $headroomAcceptor = $this->checkStorageHeadroom($acceptingVillage, [
+            'wood' => (int)$offer['offered_wood'],
+            'clay' => (int)$offer['offered_clay'],
+            'iron' => (int)$offer['offered_iron'],
+        ]);
+        if ($headroomAcceptor !== true) {
+            return $headroomAcceptor;
+        }
+
+        $headroomSource = $this->checkStorageHeadroom($sourceVillage, [
+            'wood' => (int)$offer['requested_wood'],
+            'clay' => (int)$offer['requested_clay'],
+            'iron' => (int)$offer['requested_iron'],
+        ]);
+        if ($headroomSource !== true) {
+            return $headroomSource;
+        }
+
         // Distance calculations
         $distance = calculateDistance(
             (float)$offer['source_x'],
@@ -842,6 +880,27 @@ class TradeManager {
             $stmt->close();
 
             $this->conn->commit();
+
+            $this->logTradeAudit('accept_offer', [
+                'actor_user_id' => $userId,
+                'offer_id' => $offerId,
+                'source_village_id' => $acceptingVillageId,
+                'offer_village_id' => $offer['source_village_id'],
+                'requested' => [
+                    'wood' => $offer['requested_wood'],
+                    'clay' => $offer['requested_clay'],
+                    'iron' => $offer['requested_iron']
+                ],
+                'offered' => [
+                    'wood' => $offer['offered_wood'],
+                    'clay' => $offer['offered_clay'],
+                    'iron' => $offer['offered_iron']
+                ],
+                'traders_used' => [
+                    'offer_side' => $offer['merchants_required'],
+                    'acceptor_side' => $tradersNeededAcceptor
+                ]
+            ]);
 
             return [
                 'success' => true,
@@ -1108,5 +1167,33 @@ class TradeManager {
             $stmt->close();
         }
     }
+
+    /**
+     * Append trade/a id audit log (append-only).
+     */
+    private function logTradeAudit(string $action, array $payload): void
+    {
+        $logDir = __DIR__ . '/../../logs';
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0775, true);
+        }
+        $logFile = $logDir . '/trade_audit.log';
+        $entry = [
+            'ts' => date('c'),
+            'action' => $action,
+            'world_id' => defined('CURRENT_WORLD_ID') ? CURRENT_WORLD_ID : null,
+            'ip_hash' => $this->hashValue($_SERVER['REMOTE_ADDR'] ?? ''),
+            'ua_hash' => $this->hashValue($_SERVER['HTTP_USER_AGENT'] ?? ''),
+            'data' => $payload
+        ];
+        $line = json_encode($entry, JSON_UNESCAPED_SLASHES);
+        if ($line !== false) {
+            @file_put_contents($logFile, $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+        }
+    }
+
+    private function hashValue(string $value): string
+    {
+        return $value !== '' ? hash('sha256', $value) : '';
+    }
 }
-        require_once __DIR__ . '/../utils/EconomyError.php';

@@ -142,6 +142,13 @@
 - Differentiation proof doc published comparing unique mechanics vs legacy games; legal/IP review signed off.
 - UX tone guide adopted in string linting/localization; audits show removal of legacy jargon in tooltips/reports/tutorials.
 
+## Rollout Checklist
+- [ ] Feature flags for preset application and KPI dashboards per world type; gradual enablement.
+- [ ] CI string linting for banned terms (ip-glossary) with reports to owners; block releases on critical violations.
+- [ ] Config/migration tests for preset defaults and KPI collection with rollback; safe defaults when absent.
+- [ ] Backward compatibility: older clients handle missing manifesto/links gracefully; new links gated by version checks.
+- [ ] Release comms: publish manifesto/pillars and preset defaults; reiterate anti-P2W stance in help/marketing.
+
 ### Vision KPI Spec
 - **Fairness:** Track protection hits (`ERR_PROTECTED`), rate-limit hits, push/aid caps hit, vault/plunder DR activations; alert on spikes. Segment by world type.
 - **Social:** Ops participation (commands tagged to ops), tribe chat/forum messages, shared reports/markers, sitter/role actions; weekly active tribes metric.
@@ -155,3 +162,4 @@
 - Which legacy terms are still risky for IP overlap and need renaming first? (list candidates and owners)
 - How frequently should the vision/pillar audit be revisited (per season, per major release)?
 - Do archetype presets need hard enforcement or are they templates with warnings on divergence?
+- Which KPIs best indicate fairness/social/pacing regressions, and what thresholds trigger action? Define ownership for responding to alerts.
