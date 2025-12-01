@@ -34,8 +34,8 @@
   - **Property 20: Unit data completeness**
   - **Validates: Requirements 13.1, 13.3**
 
-- [-] 2. Extend UnitManager with new functionality
-- [x] 2.1 Implement getUnitCategory() method
+- [x] 2. Extend UnitManager with new functionality
+- [-] 2.1 Implement getUnitCategory() method
   - Return category based on unit internal name or building type
   - Categories: 'infantry', 'cavalry', 'ranged', 'siege', 'scout', 'support', 'conquest'
   - _Requirements: 1.4, 3.3, 8.4_
