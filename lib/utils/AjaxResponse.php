@@ -6,6 +6,11 @@ declare(strict_types=1);
  */
 class AjaxResponse 
 {
+    public const ERR_CAP = 'ERR_CAP';
+    public const ERR_TAX = 'ERR_TAX';
+    public const ERR_ALT_BLOCK = 'ERR_ALT_BLOCK';
+    public const ERR_RATE_LIMIT = 'ERR_RATE_LIMIT';
+
     /**
      * Send a success JSON response
      *

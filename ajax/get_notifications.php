@@ -27,9 +27,11 @@ if ($notifications !== false) {
         'data' => [
             'notifications' => $notifications,
             'unread_count' => $unread_count
-        ]
+        ],
+        'timestamp' => time()
     ]);
 } else {
+    http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Failed to fetch notifications.']);
 }
 

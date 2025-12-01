@@ -103,3 +103,12 @@
 - [ ] World presets: document archetype defaults (casual/classic/hardcore/experimental/seasonal) consistent with this vision.
 - [ ] Vision KPIs: track fairness (protection/rate-limit hits), social engagement (ops, chat), progression pacing (time to 2nd village), and spend-parity metrics.
 - [ ] Player-facing manifesto: in-game/help page with vision/pillars and anti-P2W stance; keep in sync with marketing copy.
+- [ ] Differentiation proof: document unique mechanics (influence-based conquest, weather fronts, beacon networks, intel decay/misdirection) with comparisons to legacy games to support IP defensibility.
+- [ ] UX tone guide: codify voice/tone for tooltips/warnings/reports aligned with pillars (clear, fair, tribe-first) and ban legacy jargon; share with localization.
+
+## Acceptance Criteria
+- Pillar audit completed with documented gaps and owners; tracked to closure.
+- Lexicon/glossary updated and applied across UI/tutorials/marketing; no legacy tribal-war terms remain in shipped strings.
+- World preset docs published with defaults and rationale; used in world creation flows.
+- Vision KPIs wired to telemetry/dashboard with weekly review; alerts on fairness/social/pacing regressions.
+- Manifesto page live in help/marketing; updated when vision changes; clearly states anti-P2W stance.

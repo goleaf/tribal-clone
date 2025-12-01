@@ -611,7 +611,7 @@ class TradeManager {
     public function acceptOffer(int $userId, int $acceptingVillageId, int $offerId): array
     {
         if (!$this->hasTradeOffersTable()) {
-            return ['success' => false, 'message' => 'Trading offers are not supported by this world yet.'];
+            return ['success' => false, 'message' => 'Trading offers are not supported by this world yet.', 'code' => 'ERR_CAP'];
         }
 
         $offerStmt = $this->conn->prepare("
@@ -629,24 +629,24 @@ class TradeManager {
         $offerStmt->close();
 
         if (!$offer) {
-            return ['success' => false, 'message' => 'Offer not available anymore.'];
+            return ['success' => false, 'message' => 'Offer not available anymore.', 'code' => 'ERR_CAP'];
         }
 
         $acceptingVillage = $this->getVillageWithOwner($acceptingVillageId);
         if (!$acceptingVillage || (int)$acceptingVillage['user_id'] !== $userId) {
-            return ['success' => false, 'message' => 'You do not control this village.'];
+            return ['success' => false, 'message' => 'You do not control this village.', 'code' => 'ERR_ALT_BLOCK'];
         }
         if ((int)$acceptingVillage['id'] === (int)$offer['source_village_id']) {
-            return ['success' => false, 'message' => 'You cannot accept your own offer.'];
+            return ['success' => false, 'message' => 'You cannot accept your own offer.', 'code' => 'ERR_ALT_BLOCK'];
         }
         if ((int)$offer['source_user_id'] === $userId) {
-            return ['success' => false, 'message' => 'You cannot accept your own offer from another village.'];
+            return ['success' => false, 'message' => 'You cannot accept your own offer from another village.', 'code' => 'ERR_ALT_BLOCK'];
         }
 
         // Market level check for the accepting village
         $marketLevel = $this->getMarketLevel($acceptingVillageId);
         if ($marketLevel <= 0) {
-            return ['success' => false, 'message' => 'Build a market before accepting offers.'];
+            return ['success' => false, 'message' => 'Build a market before accepting offers.', 'code' => 'ERR_CAP'];
         }
 
         // Resources + trader availability for the accepting village (to send requested goods)
@@ -659,13 +659,13 @@ class TradeManager {
 
         $availability = $this->getTraderAvailability($acceptingVillageId);
         if ($availability['available'] < $tradersNeededAcceptor) {
-            return ['success' => false, 'message' => 'Not enough traders available to accept this offer.'];
+            return ['success' => false, 'message' => 'Not enough traders available to accept this offer.', 'code' => 'ERR_CAP'];
         }
 
         if ($acceptingVillage['wood'] < $requiredFromAcceptor['wood'] ||
             $acceptingVillage['clay'] < $requiredFromAcceptor['clay'] ||
             $acceptingVillage['iron'] < $requiredFromAcceptor['iron']) {
-            return ['success' => false, 'message' => 'Not enough resources to accept this offer.'];
+            return ['success' => false, 'message' => 'Not enough resources to accept this offer.', 'code' => 'ERR_CAP'];
         }
 
         // Distance calculations

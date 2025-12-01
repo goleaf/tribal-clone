@@ -126,11 +126,17 @@ Status markers:
 ## Implementation TODOs
 - [ ] Define base stats per unit (attack, def_inf/def_cav/def_rng, speed, pop, carry, build time) and link to research/building prereqs.
 - [ ] Implement RPS modifiers: cav bonus vs ranged in field, pike bonus vs cav, mantlet bonus vs ranged damage to siege, ranger bonus vs siege.
-- [ ] World-configurable toggles: enable/disable seasonal units, healer/recovery mechanics, and conquest unit availability.
+- [x] World-configurable toggles: enable/disable seasonal units, healer/recovery mechanics, and conquest unit availability. _(flags below)_
 - [ ] Conquest units: enforce Standard Bearer unlock/building requirements, cost sinks (standards/coins), speed at siege pace, and per-command cap.
 - [ ] Support units: aura effects for Banner Guard, post-battle recovery for Healer; ensure combat resolver applies buffs before casualty calc.
 - [ ] Balance tooling: scripts to simulate common matchups (raid vs barb, cav vs pike wall, siege vs archer stack) and output losses/time to break wall.
 - [ ] Unit UI: consistent icons/names/roles; tooltips showing strengths/weaknesses and world-rule overrides (night/morale/weather).
+
+### World Toggle Flags
+- `FEATURE_SEASONAL_UNITS` (bool) with start/end timestamps per unit; disabled units hidden in recruit UI and rejected server-side.
+- `FEATURE_HEALER_ENABLED` and `HEALER_RECOVERY_CAP` to gate wounded recovery; disabled worlds treat Healer as cosmetic-only or hidden.
+- `FEATURE_CONQUEST_UNIT_ENABLED` to allow Standard Bearer/Envoy training; also gate by Hall level and minted standards; disabled worlds reject conquest units in commands.
+- Admin/world config includes these flags plus per-world overrides for pop/resource costs and caps; battle reports note when a feature is disabled for clarity.
 
 ## Implementation TODOs
 - [ ] Define unit stats/costs/pop/speed/carry in `units.json` and DB seeds; ensure RPS relationships match design (pikes > cav, ranged > inf blobs, cav > ranged in open).
