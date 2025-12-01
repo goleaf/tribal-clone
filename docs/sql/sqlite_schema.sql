@@ -33,6 +33,15 @@ DROP TABLE IF EXISTS worlds;
 CREATE TABLE IF NOT EXISTS worlds (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
+    world_speed REAL NOT NULL DEFAULT 1.0,
+    troop_speed REAL NOT NULL DEFAULT 1.0,
+    enable_archer INTEGER NOT NULL DEFAULT 1,
+    enable_paladin INTEGER NOT NULL DEFAULT 1,
+    enable_paladin_weapons INTEGER NOT NULL DEFAULT 1,
+    tech_mode TEXT NOT NULL DEFAULT 'normal',
+    tribe_member_limit INTEGER DEFAULT NULL,
+    victory_type TEXT DEFAULT NULL,
+    victory_value INTEGER DEFAULT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -60,6 +69,19 @@ CREATE TABLE IF NOT EXISTS tribes (
     points INTEGER NOT NULL DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (founder_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS account_sittings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_user_id INTEGER NOT NULL,
+    sitter_user_id INTEGER NOT NULL,
+    starts_at TEXT NOT NULL,
+    ends_at TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    revoked_at TEXT DEFAULT NULL,
+    UNIQUE(owner_user_id, sitter_user_id),
+    FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (sitter_user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS achievements (
@@ -105,6 +127,8 @@ CREATE TABLE IF NOT EXISTS villages (
     population INTEGER DEFAULT 100,
     farm_capacity INTEGER DEFAULT 0,
     loyalty INTEGER NOT NULL DEFAULT 100,
+    last_loyalty_update TEXT DEFAULT CURRENT_TIMESTAMP,
+    coins INTEGER NOT NULL DEFAULT 0,
     points INTEGER DEFAULT 0,
     last_resource_update TEXT DEFAULT CURRENT_TIMESTAMP,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,

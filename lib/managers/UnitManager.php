@@ -6,6 +6,7 @@ class UnitManager
 {
     private $conn;
     private $unit_types_cache = [];
+    private WorldManager $worldManager;
 
     /**
      * Constructor
@@ -15,6 +16,8 @@ class UnitManager
     public function __construct($conn)
     {
         $this->conn = $conn;
+        require_once __DIR__ . '/WorldManager.php';
+        $this->worldManager = new WorldManager($conn);
         $this->loadUnitTypes();
     }
 
@@ -27,6 +30,13 @@ class UnitManager
 
         if ($result) {
             while ($row = $result->fetch_assoc()) {
+                $internal = $row['internal_name'] ?? '';
+                if (!$this->worldManager->isArcherEnabled() && in_array($internal, ['archer', 'marcher'], true)) {
+                    continue;
+                }
+                if (!$this->worldManager->isPaladinEnabled() && $internal === 'paladin') {
+                    continue;
+                }
                 $this->unit_types_cache[$row['id']] = $row;
             }
         }
@@ -40,6 +50,11 @@ class UnitManager
     public function getAllUnitTypes()
     {
         return $this->unit_types_cache;
+    }
+
+    public function getUnitById(int $id): ?array
+    {
+        return $this->unit_types_cache[$id] ?? null;
     }
 
     /**
@@ -81,7 +96,9 @@ class UnitManager
         // Higher building level -> faster recruitment (5% per level)
         $time = $base_time * pow(0.95, $building_level - 1);
 
-        $worldSpeed = defined('WORLD_SPEED') ? max(0.1, (float)WORLD_SPEED) : 1.0;
+        require_once __DIR__ . '/WorldManager.php';
+        $wm = new WorldManager($this->conn);
+        $worldSpeed = $wm->getWorldSpeed();
         $trainMultiplier = defined('UNIT_TRAINING_MULTIPLIER') ? max(0.1, (float)UNIT_TRAINING_MULTIPLIER) : 1.0;
 
         return (int)floor($time / ($worldSpeed * $trainMultiplier));
@@ -161,11 +178,11 @@ class UnitManager
             $research = $result->fetch_assoc();
             $stmt->close();
 
-            if ($research['level'] < $unit['required_tech_level']) {
-                return [
-                    'can_recruit' => false,
-                    'reason' => 'tech_level_too_low',
-                    'required_tech' => $unit['required_tech'],
+        if ($research['level'] < $unit['required_tech_level']) {
+            return [
+                'can_recruit' => false,
+                'reason' => 'tech_level_too_low',
+                'required_tech' => $unit['required_tech'],
                     'required_tech_level' => $unit['required_tech_level'],
                     'current_tech_level' => $research['level']
                 ];
@@ -173,6 +190,42 @@ class UnitManager
         }
 
         return ['can_recruit' => true];
+    }
+
+    /**
+     * Count total nobles a user owns across all villages.
+     */
+    public function countUserNobles(int $userId): int
+    {
+        $stmt = $this->conn->prepare("
+            SELECT COALESCE(SUM(vu.count), 0) AS nobles
+            FROM village_units vu
+            JOIN villages v ON vu.village_id = v.id
+            JOIN unit_types ut ON vu.unit_type_id = ut.id
+            WHERE v.user_id = ? AND ut.internal_name IN ('noble','nobleman','nobleman_unit')
+        ");
+        if (!$stmt) {
+            return 0;
+        }
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return (int)($row['nobles'] ?? 0);
+    }
+
+    public function getMaxNoblesForUser(int $userId): int
+    {
+        $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM villages WHERE user_id = ?");
+        if (!$stmt) {
+            return 1;
+        }
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        $villages = (int)($row['cnt'] ?? 1);
+        return max(1, (int)floor($villages / 3) + 1);
     }
 
     /**

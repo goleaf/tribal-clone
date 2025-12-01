@@ -279,7 +279,9 @@ class ResearchManager {
         $time_reduction_factor = 0.05;
         $time_with_building = floor($time_for_level / (1 + ($buildingLevel * $time_reduction_factor)));
 
-        $worldSpeed = defined('WORLD_SPEED') ? max(0.1, (float)WORLD_SPEED) : 1.0;
+        require_once __DIR__ . '/WorldManager.php';
+        $wm = new WorldManager($this->conn);
+        $worldSpeed = $wm->getWorldSpeed();
         $researchMultiplier = defined('RESEARCH_SPEED_MULTIPLIER') ? max(0.1, (float)RESEARCH_SPEED_MULTIPLIER) : 1.0;
         $time_with_building = (int)floor($time_with_building / ($worldSpeed * $researchMultiplier));
         

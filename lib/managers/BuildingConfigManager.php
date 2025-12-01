@@ -98,8 +98,10 @@ class BuildingConfigManager {
         $levelFactor = defined('BUILD_TIME_LEVEL_FACTOR') ? BUILD_TIME_LEVEL_FACTOR : 1.18;
         $baseTime = round($config['base_build_time_initial'] * ($levelFactor ** $currentLevel));
 
-        // Global world speed
-        $worldSpeed = defined('WORLD_SPEED') ? max(0.1, WORLD_SPEED) : 1.0;
+        // Global world speed (per-world)
+        require_once __DIR__ . '/WorldManager.php';
+        $wm = new WorldManager($this->conn);
+        $worldSpeed = $wm->getWorldSpeed();
         $buildSpeed = defined('BUILD_SPEED_MULTIPLIER') ? max(0.1, BUILD_SPEED_MULTIPLIER) : 1.0;
 
         // Headquarters (main_building) reduces build time by 2% per level: divide by (1 + 0.02 * level)

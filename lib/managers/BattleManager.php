@@ -7,6 +7,7 @@ class BattleManager
     private $conn;
     private $villageManager;
     private $buildingManager; // BuildingManager dependency
+    private $notificationManager; // Persistent in-game notifications
     private $reportManager; // Generic report log
     private $tribeWarManager; // Tribe war tracking
 
@@ -37,6 +38,10 @@ class BattleManager
         $this->conn = $conn;
         $this->villageManager = $villageManager;
         $this->buildingManager = $buildingManager;
+        if (!class_exists('NotificationManager')) {
+            require_once __DIR__ . '/NotificationManager.php';
+        }
+        $this->notificationManager = new NotificationManager($conn);
         // Lazy-load ReportManager if available
         if (!class_exists('ReportManager')) {
             require_once __DIR__ . '/ReportManager.php';
@@ -247,9 +252,12 @@ class BattleManager
         }
 
         // Calculate travel time in seconds (distance in fields, speed in fields/hour -> seconds)
-        $worldSpeed = defined('WORLD_UNIT_SPEED') ? max(0.1, (float)WORLD_UNIT_SPEED) : self::WORLD_UNIT_SPEED;
+        require_once __DIR__ . '/WorldManager.php';
+        $wm = new WorldManager($this->conn);
+        $worldSpeed = $wm->getWorldSpeed();
+        $troopSpeed = $wm->getTroopSpeed();
         $unitSpeedMultiplier = defined('UNIT_SPEED_MULTIPLIER') ? max(0.1, (float)UNIT_SPEED_MULTIPLIER) : 1.0;
-        $effectiveSpeed = $worldSpeed * $unitSpeedMultiplier;
+        $effectiveSpeed = self::WORLD_UNIT_SPEED * $worldSpeed * $troopSpeed * $unitSpeedMultiplier;
         $travel_time = (int)ceil(($distance * $slowest_speed / $effectiveSpeed) * 3600);
         $start_time = time();
         $arrival_time = $start_time + $travel_time;
@@ -287,6 +295,25 @@ class BattleManager
             $stmt_add_attack->execute();
             $attack_id = $stmt_add_attack->insert_id;
             $stmt_add_attack->close();
+
+            // Notify defender of incoming attack (warning)
+            if (!empty($villages['target_user_id']) && $villages['target_user_id'] != $villages['source_user_id']) {
+                $arrivalDate = date('Y-m-d H:i:s', $arrival_time);
+                $msg = sprintf(
+                    'Incoming %s from %s (%d|%d) arriving at %s.',
+                    ucfirst($attack_type),
+                    $villages['source_name'],
+                    $villages['source_x'],
+                    $villages['source_y'],
+                    $arrivalDate
+                );
+                $this->notificationManager->addNotification(
+                    (int)$villages['target_user_id'],
+                    $msg,
+                    'warning',
+                    '/game/game.php'
+                );
+            }
             
             // Add unit records to attack_units
             foreach ($units_sent as $unit_type_id => $count) {
@@ -743,6 +770,17 @@ class BattleManager
             $stmtUpdate->close();
 
             $this->conn->commit();
+
+            // Notify owner that troops have returned
+            $owner = $this->villageManager->getVillageInfo((int)$attack['target_village_id']);
+            if ($owner && !empty($owner['user_id'])) {
+                $this->notificationManager->addNotification(
+                    (int)$owner['user_id'],
+                    'Your troops have returned to ' . ($owner['name'] ?? 'village') . '.',
+                    'info',
+                    '/game/game.php'
+                );
+            }
         } catch (\Throwable $e) {
             $this->conn->rollback();
             error_log('Return arrival failed: ' . $e->getMessage());
@@ -857,6 +895,8 @@ class BattleManager
             ];
         }
         $stmt_get_attack_units->close();
+        // Paladin weapon bonuses (attacker)
+        $this->applyPaladinWeaponBonuses($attacking_units, 'attacker');
 
         // Fetch defending units and apply tech bonuses
         $stmt_get_defense_units = $this->conn->prepare("
@@ -885,6 +925,8 @@ class BattleManager
             ];
         }
         $stmt_get_defense_units->close();
+        // Paladin weapon bonuses (defender)
+        $this->applyPaladinWeaponBonuses($defending_units, 'defender');
 
         // --- RANDOMNESS, MORALE & WALL/FAITH ---
         $attack_random = $this->rollRandomFactor(self::RANDOM_VARIANCE);
@@ -1101,10 +1143,24 @@ class BattleManager
         $villageConquered = false;
         $loyalty_before = $this->getVillageLoyalty($attack['target_village_id']);
         $loyalty_after = $loyalty_before;
-        if ($attacker_win && $this->hasNobleUnit($attacking_units)) {
-            $drop = random_int(self::LOYALTY_DROP_MIN, self::LOYALTY_DROP_MAX);
-            $loyalty_after = max(self::LOYALTY_MIN, $loyalty_before - $drop);
-            $villageConquered = $loyalty_after <= self::LOYALTY_MIN;
+        if ($attacker_win && $this->hasNobleUnit($attacking_units) && !$defenderAlive) {
+            $dropMin = defined('NOBLE_MIN_DROP') ? (int)NOBLE_MIN_DROP : self::LOYALTY_DROP_MIN;
+            $dropMax = defined('NOBLE_MAX_DROP') ? (int)NOBLE_MAX_DROP : self::LOYALTY_DROP_MAX;
+            $drop = random_int($dropMin, $dropMax);
+            $loyalty_floor = $this->getEffectiveLoyaltyFloor($attacking_units);
+            $loyalty_after = max($loyalty_floor, $loyalty_before - $drop);
+            $villageConquered = ($loyalty_floor === self::LOYALTY_MIN) && $loyalty_after <= self::LOYALTY_MIN;
+
+            // Enforce conquest point-range gate (50%-150%) when not barbarian
+            $defender_points = $this->getVillagePointsWithFallback($attack['target_village_id']);
+            $attacker_points = $this->getVillagePointsWithFallback($attack['source_village_id']);
+            if ($attacker_points > 0 && $defender_points > 0) {
+                $ratio = $defender_points / $attacker_points;
+                if ($ratio < 0.5 || $ratio > 1.5) {
+                    $villageConquered = false; // Loyalty can drop, but cannot capture out-of-range targets
+                }
+            }
+
             if ($villageConquered) {
                 $loyalty_after = self::LOYALTY_MAX;
             }
@@ -1112,7 +1168,8 @@ class BattleManager
                 'before' => $loyalty_before,
                 'after' => $loyalty_after,
                 'drop' => $drop,
-                'conquered' => $villageConquered
+                'conquered' => $villageConquered,
+                'floor' => $loyalty_floor
             ];
         }
 
@@ -1270,6 +1327,24 @@ class BattleManager
                     $defenderTitle,
                     $details,
                     $attack_id
+                );
+            }
+
+            // Notifications for battle outcome
+            if ($attacker_user_id) {
+                $this->notificationManager->addNotification(
+                    $attacker_user_id,
+                    $attacker_win ? "Your attack on {$this->getVillageName($attack['target_village_id'])} succeeded." : "Your attack on {$this->getVillageName($attack['target_village_id'])} failed.",
+                    $attacker_win ? 'success' : 'error',
+                    '/messages/reports.php?report_id=' . $attack_id
+                );
+            }
+            if ($defender_user_id) {
+                $this->notificationManager->addNotification(
+                    $defender_user_id,
+                    $attacker_win ? "Your village {$this->getVillageName($attack['target_village_id'])} was attacked and lost." : "You defended {$this->getVillageName($attack['target_village_id'])} successfully.",
+                    $attacker_win ? 'error' : 'success',
+                    '/messages/reports.php?report_id=' . $attack_id
                 );
             }
 
@@ -2150,6 +2225,65 @@ class BattleManager
     }
 
     /**
+     * Detect paladin presence in an army.
+     */
+    private function hasPaladin(array $units): bool
+    {
+        foreach ($units as $unit) {
+            if (($unit['count'] ?? 0) > 0 && in_array(strtolower($unit['internal_name'] ?? ''), ['paladin', 'knight'], true)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Apply paladin weapon bonuses to a side if applicable.
+     */
+    private function applyPaladinWeaponBonuses(array &$units, string $side): void
+    {
+        if (!$this->hasPaladin($units)) {
+            return;
+        }
+
+        $weapon = $this->getPaladinWeapon();
+        if ($weapon === 'bonfire') {
+            $mult = defined('PALADIN_WEAPON_BONFIRE_MULTIPLIER') ? PALADIN_WEAPON_BONFIRE_MULTIPLIER : 1.5;
+            foreach ($units as &$unit) {
+                if (($unit['internal_name'] ?? '') === 'catapult') {
+                    $unit['attack'] *= $mult;
+                    $unit['defense'] *= $mult;
+                }
+            }
+        }
+    }
+
+    /**
+     * Determine effective loyalty floor for an attack (e.g., Vasco's Scepter).
+     */
+    private function getEffectiveLoyaltyFloor(array $attackingUnits): int
+    {
+        if ($this->hasPaladin($attackingUnits) && $this->getPaladinWeapon() === 'vascos_scepter') {
+            return 30;
+        }
+        return self::LOYALTY_MIN;
+    }
+
+    /**
+     * Current world paladin weapon (global).
+     */
+    private function getPaladinWeapon(): string
+    {
+        if (!defined('FEATURE_PALADIN_ENABLED') || !FEATURE_PALADIN_ENABLED) {
+            return 'none';
+        }
+        if (!defined('PALADIN_WEAPON')) {
+            return 'none';
+        }
+        return strtolower((string)PALADIN_WEAPON);
+    }
+
+    /**
      * Ensure loyalty column exists in villages table.
      */
     private function ensureLoyaltyColumn(): void
@@ -2189,7 +2323,7 @@ class BattleManager
 
     private function updateVillageLoyalty(int $villageId, int $loyalty): void
     {
-        $stmt = $this->conn->prepare("UPDATE villages SET loyalty = ? WHERE id = ?");
+        $stmt = $this->conn->prepare("UPDATE villages SET loyalty = ?, last_loyalty_update = CURRENT_TIMESTAMP WHERE id = ?");
         if ($stmt === false) {
             return;
         }
@@ -2201,7 +2335,7 @@ class BattleManager
 
     private function transferVillageOwnership(int $villageId, int $newUserId, int $loyaltyAfter): void
     {
-        $stmt = $this->conn->prepare("UPDATE villages SET user_id = ?, loyalty = ? WHERE id = ?");
+        $stmt = $this->conn->prepare("UPDATE villages SET user_id = ?, loyalty = ?, last_loyalty_update = CURRENT_TIMESTAMP WHERE id = ?");
         if ($stmt === false) {
             return;
         }
