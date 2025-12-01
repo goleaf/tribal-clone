@@ -235,26 +235,41 @@ class DeltaCalculator
      */
     private function getModifiedVillages(int $worldId, int $lastTimestamp, array $currentVillages): array
     {
-        $query = "SELECT v.id, v.x, v.y, v.name, v.user_id, v.points,
-                         CASE WHEN v.user_id IS NULL THEN 1 ELSE 0 END as is_barbarian,
-                         u.tribe_id
-                  FROM villages v
-                  LEFT JOIN users u ON v.user_id = u.id
-                  WHERE v.world_id = ? AND v.updated_at > ? AND v.created_at <= ?";
-        
-        $results = $this->db->fetchAll($query, [$worldId, $lastTimestamp, $lastTimestamp]);
-        
-        return array_map(function($row) {
-            return [
-                'id' => (int)$row['id'],
-                'coords' => ['x' => (int)$row['x'], 'y' => (int)$row['y']],
-                'name' => $row['name'],
-                'playerId' => $row['user_id'] ? (int)$row['user_id'] : null,
-                'tribeId' => $row['tribe_id'] ? (int)$row['tribe_id'] : null,
-                'points' => (int)$row['points'],
-                'isBarbarian' => (bool)$row['is_barbarian']
-            ];
-        }, $results);
+        try {
+            $query = "SELECT v.id, v.x, v.y, v.name, v.user_id, v.points,
+                             CASE WHEN v.user_id IS NULL THEN 1 ELSE 0 END as is_barbarian,
+                             u.tribe_id
+                      FROM villages v
+                      LEFT JOIN users u ON v.user_id = u.id
+                      WHERE v.world_id = ? AND v.updated_at > ? AND v.created_at <= ?";
+            
+            $stmt = $this->db->prepare($query);
+            if (!$stmt) {
+                return [];
+            }
+            
+            $stmt->bind_param("iii", $worldId, $lastTimestamp, $lastTimestamp);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            $results = [];
+            while ($row = $result->fetch_assoc()) {
+                $results[] = [
+                    'id' => (int)$row['id'],
+                    'coords' => ['x' => (int)$row['x'], 'y' => (int)$row['y']],
+                    'name' => $row['name'],
+                    'playerId' => $row['user_id'] ? (int)$row['user_id'] : null,
+                    'tribeId' => $row['tribe_id'] ? (int)$row['tribe_id'] : null,
+                    'points' => (int)$row['points'],
+                    'isBarbarian' => (bool)$row['is_barbarian']
+                ];
+            }
+            
+            $stmt->close();
+            return $results;
+        } catch (Exception $e) {
+            return [];
+        }
     }
     
     /**
@@ -263,12 +278,26 @@ class DeltaCalculator
     private function getRemovedVillages(int $worldId, int $lastTimestamp, array $currentVillages): array
     {
         // Villages are rarely deleted, but we check for soft deletes or world resets
-        $query = "SELECT id FROM villages 
-                  WHERE world_id = ? AND deleted_at > ? AND deleted_at IS NOT NULL";
-        
         try {
-            $results = $this->db->fetchAll($query, [$worldId, $lastTimestamp]);
-            return array_map(fn($row) => ['id' => (int)$row['id']], $results);
+            $query = "SELECT id FROM villages 
+                      WHERE world_id = ? AND deleted_at > ? AND deleted_at IS NOT NULL";
+            
+            $stmt = $this->db->prepare($query);
+            if (!$stmt) {
+                return [];
+            }
+            
+            $stmt->bind_param("ii", $worldId, $lastTimestamp);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            $results = [];
+            while ($row = $result->fetch_assoc()) {
+                $results[] = ['id' => (int)$row['id']];
+            }
+            
+            $stmt->close();
+            return $results;
         } catch (Exception $e) {
             // If deleted_at column doesn't exist, return empty array
             return [];
@@ -280,22 +309,30 @@ class DeltaCalculator
      */
     private function getAddedCommands(int $worldId, int $lastTimestamp, array $currentCommands): array
     {
-        $query = "SELECT c.id, c.type, c.source_village_id, c.target_village_id,
-                         c.arrival_time, c.user_id,
-                         sv.x as source_x, sv.y as source_y,
-                         tv.x as target_x, tv.y as target_y,
-                         u.tribe_id
-                  FROM commands c
-                  JOIN villages sv ON c.source_village_id = sv.id
-                  JOIN villages tv ON c.target_village_id = tv.id
-                  LEFT JOIN users u ON c.user_id = u.id
-                  WHERE c.world_id = ? AND c.created_at > ? AND c.status = 'active'";
-        
         try {
-            $results = $this->db->fetchAll($query, [$worldId, $lastTimestamp]);
+            $query = "SELECT c.id, c.type, c.source_village_id, c.target_village_id,
+                             c.arrival_time, c.user_id,
+                             sv.x as source_x, sv.y as source_y,
+                             tv.x as target_x, tv.y as target_y,
+                             u.tribe_id
+                      FROM commands c
+                      JOIN villages sv ON c.source_village_id = sv.id
+                      JOIN villages tv ON c.target_village_id = tv.id
+                      LEFT JOIN users u ON c.user_id = u.id
+                      WHERE c.world_id = ? AND c.created_at > ? AND c.status = 'active'";
             
-            return array_map(function($row) {
-                return [
+            $stmt = $this->db->prepare($query);
+            if (!$stmt) {
+                return [];
+            }
+            
+            $stmt->bind_param("ii", $worldId, $lastTimestamp);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            $results = [];
+            while ($row = $result->fetch_assoc()) {
+                $results[] = [
                     'id' => (int)$row['id'],
                     'type' => $row['type'],
                     'sourceVillageId' => (int)$row['source_village_id'],
@@ -306,7 +343,10 @@ class DeltaCalculator
                     'playerId' => (int)$row['user_id'],
                     'tribeId' => $row['tribe_id'] ? (int)$row['tribe_id'] : null
                 ];
-            }, $results);
+            }
+            
+            $stmt->close();
+            return $results;
         } catch (Exception $e) {
             // If commands table doesn't exist or has different schema, return empty
             return [];
@@ -331,10 +371,18 @@ class DeltaCalculator
                       LEFT JOIN users u ON c.user_id = u.id
                       WHERE c.world_id = ? AND c.updated_at > ? AND c.created_at <= ? AND c.status = 'active'";
             
-            $results = $this->db->fetchAll($query, [$worldId, $lastTimestamp, $lastTimestamp]);
+            $stmt = $this->db->prepare($query);
+            if (!$stmt) {
+                return [];
+            }
             
-            return array_map(function($row) {
-                return [
+            $stmt->bind_param("iii", $worldId, $lastTimestamp, $lastTimestamp);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            $results = [];
+            while ($row = $result->fetch_assoc()) {
+                $results[] = [
                     'id' => (int)$row['id'],
                     'type' => $row['type'],
                     'sourceVillageId' => (int)$row['source_village_id'],
@@ -345,7 +393,10 @@ class DeltaCalculator
                     'playerId' => (int)$row['user_id'],
                     'tribeId' => $row['tribe_id'] ? (int)$row['tribe_id'] : null
                 ];
-            }, $results);
+            }
+            
+            $stmt->close();
+            return $results;
         } catch (Exception $e) {
             return [];
         }
@@ -366,16 +417,23 @@ class DeltaCalculator
                           OR (arrival_time < ? AND arrival_time > ?)
                       )";
             
-            $currentTime = time();
-            $results = $this->db->fetchAll($query, [
-                $worldId, 
-                $lastTimestamp, 
-                $lastTimestamp,
-                $currentTime,
-                $lastTimestamp
-            ]);
+            $stmt = $this->db->prepare($query);
+            if (!$stmt) {
+                return [];
+            }
             
-            return array_map(fn($row) => ['id' => (int)$row['id']], $results);
+            $currentTime = time();
+            $stmt->bind_param("iiiii", $worldId, $lastTimestamp, $lastTimestamp, $currentTime, $lastTimestamp);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            $results = [];
+            while ($row = $result->fetch_assoc()) {
+                $results[] = ['id' => (int)$row['id']];
+            }
+            
+            $stmt->close();
+            return $results;
         } catch (Exception $e) {
             return [];
         }
