@@ -681,3 +681,15 @@ ALTER TABLE users ADD COLUMN catchup_multiplier REAL NOT NULL DEFAULT 1.0;
 -- Diminishing returns toggle per world
 
 ALTER TABLE worlds ADD COLUMN plunder_dr_enabled INTEGER NOT NULL DEFAULT 1;
+
+-- Building/feature toggles per world
+
+ALTER TABLE worlds ADD COLUMN parallel_queues_enabled INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE worlds ADD COLUMN watchtower_enabled INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE worlds ADD COLUMN hospital_enabled INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE worlds ADD COLUMN outpost_enabled INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE worlds ADD COLUMN wall_decay_enabled INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE worlds ADD COLUMN map_batching_enabled INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE worlds ADD COLUMN map_clustering_enabled INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE worlds ADD COLUMN map_delta_enabled INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE worlds ADD COLUMN map_fallback_enabled INTEGER NOT NULL DEFAULT 0;

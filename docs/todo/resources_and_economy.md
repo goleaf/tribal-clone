@@ -194,6 +194,7 @@
 - [ ] Release comms: explain decay/DR/taxes and fair-play safeguards; UI tooltips updated with formulas/examples.
 - [ ] Monitoring: dashboards for economy metrics (production/sinks, trade/aid volume, cap hits, decay/DR events); alerts on anomalies with runbooks/owners.
 - [ ] Guardrail logging: emit metrics/logs when dynamic cost scalers/event modifiers hit min/max bounds or conquest cost scaling applies; surface in admin dashboards to catch misconfigurations.
+- [ ] QA passes: economy unit/integration tests run; trade/aid load tests with rate limits/load shedding; event token expiry/shop caps validated before rollout.
 
 ## Monitoring Plan
 - Track economy tick latency, decay/DR application counts, and empire surcharge hits; alert on spikes or missed applications.

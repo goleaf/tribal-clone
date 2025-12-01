@@ -163,10 +163,12 @@ class WorldManager
                                     $defaults[$key] = (float)$val;
                                 } elseif ($key === 'tribe_member_limit' || $key === 'victory_value' || $key === 'overstack_pop_threshold' || $key === 'min_attack_pop') {
                                     $defaults[$key] = $val === null ? null : (int)$val;
-                                } elseif (in_array($key, ['enable_archer', 'enable_paladin', 'enable_paladin_weapons', 'night_bonus_enabled', 'resource_decay_enabled', 'overstack_enabled', 'min_attack_pop_enabled', 'weather_enabled', 'plunder_dr_enabled', 'parallel_queues_enabled', 'watchtower_enabled', 'hospital_enabled', 'outpost_enabled', 'wall_decay_enabled', 'map_batching_enabled', 'map_clustering_enabled', 'map_delta_enabled', 'map_fallback_enabled', 'enable_nudges', 'enable_notifications', 'enable_tasks', 'enable_catchup_buffs'], true)) {
+                                } elseif (in_array($key, ['enable_archer', 'enable_paladin', 'enable_paladin_weapons', 'night_bonus_enabled', 'resource_decay_enabled', 'overstack_enabled', 'min_attack_pop_enabled', 'weather_enabled', 'plunder_dr_enabled', 'parallel_queues_enabled', 'watchtower_enabled', 'hospital_enabled', 'outpost_enabled', 'wall_decay_enabled', 'map_batching_enabled', 'map_clustering_enabled', 'map_delta_enabled', 'map_fallback_enabled', 'enable_nudges', 'enable_notifications', 'enable_tasks', 'enable_catchup_buffs', 'loyalty_regen_pause_antisnipe'], true)) {
                                     $defaults[$key] = (bool)$val;
                                 } elseif (in_array($key, ['night_start_hour', 'night_end_hour'], true)) {
                                     $defaults[$key] = (int)$val;
+                                } elseif (in_array($key, ['loyalty_regen_pct_per_day'], true)) {
+                                    $defaults[$key] = (float)$val;
                                 } else {
                                     $defaults[$key] = $val;
                                 }
@@ -556,6 +558,8 @@ class WorldManager
             'resource_production_multiplier' => 1.0,
             'vault_protection_percent' => 0.0,
             'resource_decay_enabled' => 0,
+            'loyalty_regen_pct_per_day' => 5.0,
+            'loyalty_regen_pause_antisnipe' => 1,
             'map_batching_enabled' => 0,
             'map_clustering_enabled' => 0,
             'map_delta_enabled' => 0,

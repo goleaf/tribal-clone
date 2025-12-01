@@ -159,6 +159,39 @@ function computeActivityBucket(?int $lastActivityTs): string
     return 'stale';
 }
 
+/**
+ * Batch movements into 1-second buckets per village/direction to reduce payload size.
+ */
+function addMovementBatch(array &$batches, array &$attackMap, int $attackId, int $villageId, string $direction, int $arrivalTs, array $meta = []): void
+{
+    $bucket = $arrivalTs > 0 ? $arrivalTs : time();
+    if (!isset($batches[$villageId])) {
+        $batches[$villageId] = [];
+    }
+    $key = $bucket . ':' . $direction;
+    if (!isset($batches[$villageId][$key])) {
+        $batches[$villageId][$key] = [
+            'village_id' => $villageId,
+            'direction' => $direction,
+            'bucket' => $bucket,
+            'count' => 0,
+            'has_noble' => false,
+            'sample_coords' => []
+        ];
+    }
+    $batches[$villageId][$key]['count']++;
+    if (!empty($meta['coord']) && is_array($meta['coord'])) {
+        $coordKey = ($meta['coord']['x'] ?? 0) . ':' . ($meta['coord']['y'] ?? 0);
+        if (!isset($batches[$villageId][$key]['sample_coords'][$coordKey]) && count($batches[$villageId][$key]['sample_coords']) < 3) {
+            $batches[$villageId][$key]['sample_coords'][$coordKey] = [
+                'x' => (int)($meta['coord']['x'] ?? 0),
+                'y' => (int)($meta['coord']['y'] ?? 0)
+            ];
+        }
+    }
+    $attackMap[$attackId][] = [$villageId, $key];
+}
+
 // Fetch villages with owner info inside the viewport
 $stmt = $conn->prepare("
     SELECT v.id, v.x_coord, v.y_coord, v.name, v.user_id, v.points, u.username, u.ally_id, u.is_protected, u.created_at, u.last_activity_at
@@ -267,6 +300,8 @@ if (($ifNoneMatch && trim($ifNoneMatch) === $etag) || ($ifModifiedSinceTs && $if
 
 $movementAttackIds = [];
 $movementLimitPerVillage = 50;
+$movementBatches = [];
+$movementBatchAttackMap = [];
 if (!$lowPerfMode && !$suppressCommands) {
     // Fetch active movements (attacks/support/return) intersecting the viewport
     $movementsStmt = $conn->prepare("

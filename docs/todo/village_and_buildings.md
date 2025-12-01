@@ -183,7 +183,7 @@
 - Wall damage/repair: batch siege events and repairs to profile state updates and ensure decay toggle checks are cheap.
 
 ## Rollout Checklist
-- [ ] Feature flags per world for parallel queues, watchtower intel, hospital recovery, and outposts/decay; defaults aligned to archetypes.
+- [x] Feature flags per world for parallel queues, watchtower intel, hospital recovery, and outposts/decay; defaults aligned to archetypes. _(worlds table now carries `parallel_queues_enabled`, `watchtower_enabled`, `hospital_enabled`, `outpost_enabled`, `wall_decay_enabled`, and map perf toggles)_
 - [ ] Migrations/config changes for building caps/queue rules tested with rollback; sane defaults when settings absent.
 - [x] Backward-compatible building endpoints (cost/queue) while new fields roll out; version responses to avoid client breakage. _(building queue/status endpoints now include `config_version` hash for cache-busting while keeping legacy fields intact)_
 - [ ] Release comms/help: explain queue rules, watchtower intel, hospital recovery, and outpost behavior; include examples/tooltips.
