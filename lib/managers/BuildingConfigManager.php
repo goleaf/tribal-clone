@@ -135,7 +135,7 @@ class BuildingConfigManager {
          // Capacity model: initial * (factor ^ level)
          $capacity = $config['production_initial'] * ($config['production_factor'] ** $level);
          
-         return round($capacity);
+         return (int) round($capacity);
     }
     
     // Calculate maximum population for a given farm level
@@ -149,7 +149,7 @@ class BuildingConfigManager {
         // Farm capacity
         $capacity = $config['production_initial'] * ($config['production_factor'] ** ($level - 1));
         
-        return round($capacity);
+        return (int) round($capacity);
     }
 
     /**
