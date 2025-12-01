@@ -158,6 +158,14 @@
             }
             return updated;
         }
+
+        clear() {
+            const count = this.drafts.length;
+            this.drafts = [];
+            this.persist();
+            emitTelemetry('drafts_cleared', { count });
+            return count;
+        }
     }
 
     window.OfflineDraftQueue = OfflineDraftQueue;

@@ -343,20 +343,31 @@ function setGameMessage(string $message, string $type = 'info'): void {
  * Terminates script with 403 if invalid.
  */
 function validateCSRF(): void {
-    $is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
-
-    if (empty($_SESSION['csrf_token']) || empty($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
-        error_log("CSRF validation failed. Session token: " . ($_SESSION['csrf_token'] ?? 'none') . ", Post token: " . ($_POST['csrf_token'] ?? 'none'));
-
-        if ($is_ajax) {
-            header('Content-Type: application/json');
-            echo json_encode(['error' => 'CSRF validation failed. Refresh the page and try again.']);
-        } else {
-            setGameMessage('CSRF validation failed. Refresh the page and try again.', 'error');
-            header("Location: index.php");
-        }
-        exit();
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
     }
+    $is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    $sessionToken = $_SESSION['csrf_token'] ?? '';
+    $headerToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($_SERVER['HTTP_X_XSRF_TOKEN'] ?? '');
+    $bodyToken = $_POST['csrf_token'] ?? '';
+    $incomingToken = $bodyToken ?: $headerToken;
+
+    $isValid = $sessionToken && $incomingToken && hash_equals($sessionToken, $incomingToken);
+
+    if ($isValid) {
+        return;
+    }
+
+    error_log("CSRF validation failed. Session token: " . ($sessionToken ?: 'none') . ", Incoming token: " . ($incomingToken ?: 'none'));
+
+    if ($is_ajax || (isset($_SERVER['HTTP_ACCEPT']) && stripos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)) {
+        header('Content-Type: application/json', true, 403);
+        echo json_encode(['error' => 'CSRF validation failed. Refresh the page and try again.']);
+    } else {
+        setGameMessage('CSRF validation failed. Refresh the page and try again.', 'error');
+        header("Location: index.php");
+    }
+    exit();
 }
 
 /**

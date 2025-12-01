@@ -8,6 +8,7 @@ require_once __DIR__ . '/../lib/managers/UnitManager.php';
 require_once __DIR__ . '/../lib/managers/BattleManager.php';
 require_once __DIR__ . '/../lib/managers/ResearchManager.php';
 require_once __DIR__ . '/../lib/managers/NotificationManager.php';
+require_once __DIR__ . '/../lib/managers/EndgameManager.php';
 require_once __DIR__ . '/../lib/functions.php';
 
 // Instantiate managers
@@ -19,6 +20,7 @@ $unitManager = new UnitManager($conn);
 $battleManager = new BattleManager($conn, $villageManager, $buildingManager);
 $researchManager = new ResearchManager($conn);
 $notificationManager = new NotificationManager($conn);
+$endgameManager = new EndgameManager($conn);
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: /auth/login.php");
@@ -85,6 +87,8 @@ $village_background_image = ($current_hour >= $day_start_hour && $current_hour <
 
 $free_population = max(0, ($village['farm_capacity'] ?? 0) - ($village['population'] ?? 0));
 $storage_capacity = $village['warehouse_capacity'] ?? 0;
+$dominanceSnapshot = $endgameManager->getTribeDominanceSnapshot();
+$showDominanceBanner = $endgameManager->shouldShowDominanceWarning($dominanceSnapshot);
 
 require '../header.php';
 ?>
@@ -110,6 +114,25 @@ require '../header.php';
             <?php if (!empty($message)): ?>
                 <div class="game-message accent">
                     <?= $message ?>
+                </div>
+            <?php endif; ?>
+            <?php if ($showDominanceBanner && isset($dominanceSnapshot['top'])): ?>
+                <?php
+                    $top = $dominanceSnapshot['top'];
+                    $topSharePercent = round(($top['share'] ?? 0) * 100, 1);
+                ?>
+                <div class="game-message warning">
+                    <strong>Endgame alert:</strong> Tribe <?= htmlspecialchars($top['name']) ?> controls <?= $topSharePercent ?>% of world tribe points.
+                    Contest objectives now or the world may lock soon.
+                    <?php if (!empty($dominanceSnapshot['leaders'])): ?>
+                        <div class="mini-leaderboard">
+                            <?php foreach ($dominanceSnapshot['leaders'] as $idx => $leader): ?>
+                                <span class="badge">
+                                    #<?= $idx + 1 ?> <?= htmlspecialchars($leader['name']) ?> (<?= formatNumber($leader['points']) ?> pts)
+                                </span>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </div>

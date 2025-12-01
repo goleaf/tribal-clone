@@ -666,6 +666,20 @@ if (!$is_ajax) {
             if (attackForm) {
                 attackForm.addEventListener('submit', function(e) {
                     e.preventDefault();
+
+                    const formDataCheck = new FormData(this);
+                    const attackType = (formDataCheck.get('attack_type') || 'attack').toString();
+                    const offensiveTypes = ['attack', 'raid', 'spy', 'fake'];
+                    if (offensiveTypes.includes(attackType)) {
+                        const targetSelect = this.querySelector('select[name="target_village"]');
+                        const targetLabel = targetSelect && targetSelect.selectedOptions.length > 0
+                            ? targetSelect.selectedOptions[0].textContent.trim()
+                            : 'the selected village';
+                        const confirmMsg = `Send ${attackType} to ${targetLabel}?\\nOffensive commands can trigger retaliation and may end protection.`;
+                        if (!window.confirm(confirmMsg)) {
+                            return;
+                        }
+                    }
                     
                     const formData = new FormData(this);
                     formData.append('ajax', 1);

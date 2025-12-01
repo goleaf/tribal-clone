@@ -454,13 +454,21 @@ CREATE TABLE IF NOT EXISTS tribe_diplomacy (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tribe_id INTEGER NOT NULL,
     target_tribe_id INTEGER NOT NULL,
-    status TEXT NOT NULL,
-    created_by INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'neutral',
+    is_pending INTEGER NOT NULL DEFAULT 0,
+    starts_at INTEGER DEFAULT NULL,
+    ends_at INTEGER DEFAULT NULL,
+    requested_by_user_id INTEGER DEFAULT NULL,
+    accepted_by_user_id INTEGER DEFAULT NULL,
+    reason TEXT DEFAULT '',
+    cooldown_until INTEGER NOT NULL DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(tribe_id, target_tribe_id),
     FOREIGN KEY (tribe_id) REFERENCES tribes(id) ON DELETE CASCADE,
     FOREIGN KEY (target_tribe_id) REFERENCES tribes(id) ON DELETE CASCADE,
-    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (requested_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (accepted_by_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS tribe_forum_threads (

@@ -36,7 +36,7 @@ function getCsrfToken() {
 
 // Update all timers on the page
 function updateTimers() {
-    if (document.hidden) return;
+    if (document.hidden || window.appOffline) return;
 
     const timers = document.querySelectorAll('[data-ends-at]');
     const currentTime = Math.floor(Date.now() / 1000); // Current Unix time

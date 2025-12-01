@@ -1439,6 +1439,42 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     color: var(--color-text-light);
 }
 
+.offline-indicator {
+    display: none;
+    margin-left: auto;
+    padding: 6px 10px;
+    border-radius: 12px;
+    background: #402020;
+    color: #fbe5e5;
+    font-size: 13px;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid rgba(255, 107, 107, 0.4);
+}
+
+.offline-indicator .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ff6b6b;
+    display: inline-block;
+    box-shadow: 0 0 6px rgba(255, 107, 107, 0.8);
+}
+
+.body-offline .offline-indicator {
+    display: inline-flex;
+}
+
+.body-offline #resource-bar,
+.body-offline .resource-bar {
+    opacity: 0.75;
+}
+
+.disabled-offline {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
 .mobile-nav-toggle {
     display: none;
     align-items: center;
@@ -3730,6 +3766,31 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     color: var(--color-primary);
     border-color: var(--color-primary);
     background-color: #f7e7cf;
+}
+
+.offline-badge {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    background: #fff4e5;
+    border: 1px solid #f2c38b;
+    color: #8d5c2c;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin: 12px 0;
+    font-size: 14px;
+}
+
+.offline-badge.visible {
+    display: flex;
+}
+
+.offline-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #d1431f;
+    box-shadow: 0 0 0 4px rgba(209, 67, 31, 0.15);
 }
 
 .report-details {

@@ -163,7 +163,10 @@ Detailed documentation of the code and database can be found in the `docs/` dire
 - Combat Anti-Abuse & Safety Rails: `docs/combat-anti-abuse.md`
 - Units & Roles: `docs/units-and-roles.md`
 - Scouting & Intel: `docs/scouting-and-intel.md`
+- Scouting & Intel — Fog of War: `docs/scouting-and-intel-fog.md`
+- Scouting & Intel — Countermeasures: `docs/scouting-and-intel-countermeasures.md`
 - World Map & Navigation: `docs/world-map-and-navigation.md`
+- World Map & Navigation (Advanced): `docs/world-map-and-navigation-advanced.md`
 - Village Conquest & Control: `docs/village-conquest-and-control.md`
 - Core Game Vision: `docs/core-game-vision.md`
 - Performance & Scaling: `docs/performance-and-scaling.md`
@@ -176,12 +179,20 @@ Detailed documentation of the code and database can be found in the `docs/` dire
 - Fair Monetization Design: `docs/monetization-fair-design.md`
 - IP Safeguards Checklist: `docs/ip-safeguards.md`
 - AI Assistants & Automation Limits: `docs/ai-assistants-limits.md`
+- AI Assistants & Scripting TODOs: `docs/ai-assistants-limits-todos.md`
 - Fair Play & Anti-Griefing: `docs/fair-play-and-anti-griefing.md`
 - Notifications & Reports: `docs/notifications-and-reports.md`
 - UI/UX Main Screens: `docs/ui-main-screens.md`
 - Live Ops & Incident Response: `docs/live-ops-incident-response.md`
 - Offline & Poor-Connection Support: `docs/offline-support.md`
 - Events, Quests, and Daily Systems: `docs/events-and-quests.md`
+- New Player Experience: `docs/new-player-experience.md`
+- Live Ops Incident Response TODOs: `docs/live-ops-incident-response-todos.md`
+- Victory Conditions & Endgame: `docs/victory-and-endgame.md`
+- QA & Release Checklist: `docs/qa-release-checklist.md`
+- Worlds & Progression Configuration: `docs/worlds-and-progression.md`
+- Tribes & Diplomacy Systems: `docs/tribes-and-diplomacy-systems.md`
+- Security Monitoring & Alerting: `docs/security-monitoring.md`
 
 ## Further Development
 

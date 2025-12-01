@@ -27,7 +27,8 @@ class WorldManager
         'victory_type' => "TEXT DEFAULT NULL",
         'victory_value' => "INTEGER DEFAULT NULL",
         'winner_tribe_id' => "INTEGER DEFAULT NULL",
-        'victory_at' => "TEXT DEFAULT NULL"
+        'victory_at' => "TEXT DEFAULT NULL",
+        'archetype' => "TEXT DEFAULT NULL"
     ];
 
     public function __construct($conn)
@@ -233,7 +234,8 @@ class WorldManager
             'enable_archer' => 1,
             'enable_paladin' => 1,
             'enable_paladin_weapons' => 1,
-            'tech_mode' => 'normal'
+            'tech_mode' => 'normal',
+            'archetype' => null
         ];
         foreach ($defaults as $col => $val) {
             $quotedVal = is_numeric($val) ? $val : ("'" . $this->conn->real_escape_string((string)$val) . "'");
@@ -258,7 +260,7 @@ class WorldManager
             return;
         }
 
-        $stmtInsert = $this->conn->prepare("INSERT INTO worlds (name, world_speed, troop_speed, build_speed, train_speed, research_speed, night_bonus_enabled, night_start_hour, night_end_hour, enable_archer, enable_paladin, enable_paladin_weapons, tech_mode, tribe_member_limit, victory_type, victory_value) VALUES ('World 1', 1.0, 1.0, 1.0, 1.0, 1.0, 0, 22, 6, 1, 1, 1, 'normal', NULL, NULL, NULL)");
+        $stmtInsert = $this->conn->prepare("INSERT INTO worlds (name, world_speed, troop_speed, build_speed, train_speed, research_speed, night_bonus_enabled, night_start_hour, night_end_hour, enable_archer, enable_paladin, enable_paladin_weapons, tech_mode, tribe_member_limit, victory_type, victory_value, archetype) VALUES ('World 1', 1.0, 1.0, 1.0, 1.0, 1.0, 0, 22, 6, 1, 1, 1, 'normal', NULL, NULL, NULL, NULL)");
         if ($stmtInsert) {
             $stmtInsert->execute();
             $stmtInsert->close();
@@ -362,5 +364,156 @@ class WorldManager
             return null;
         }
         return ['tribe_id' => (int)$row['winner_tribe_id'], 'victory_at' => $row['victory_at'] ?? null];
+    }
+
+    /**
+     * Archetype templates for world creation seeding.
+     */
+    public function getArchetypeTemplates(): array
+    {
+        return [
+            'casual' => [
+                'world_speed' => 0.75,
+                'troop_speed' => 1.0,
+                'build_speed' => 0.75,
+                'train_speed' => 0.75,
+                'research_speed' => 0.75,
+                'night_bonus_enabled' => 1,
+                'night_start_hour' => 22,
+                'night_end_hour' => 6,
+                'tribe_member_limit' => 30,
+                'victory_type' => 'domination',
+                'victory_value' => 60,
+                'tech_mode' => 'normal',
+                'archetype' => 'casual'
+            ],
+            'classic' => [
+                'world_speed' => 1.0,
+                'troop_speed' => 1.0,
+                'build_speed' => 1.0,
+                'train_speed' => 1.0,
+                'research_speed' => 1.0,
+                'night_bonus_enabled' => 1,
+                'night_start_hour' => 23,
+                'night_end_hour' => 7,
+                'tribe_member_limit' => 50,
+                'victory_type' => 'domination',
+                'victory_value' => 70,
+                'tech_mode' => 'normal',
+                'archetype' => 'classic'
+            ],
+            'blitz' => [
+                'world_speed' => 3.0,
+                'troop_speed' => 2.5,
+                'build_speed' => 4.0,
+                'train_speed' => 4.0,
+                'research_speed' => 3.0,
+                'night_bonus_enabled' => 0,
+                'night_start_hour' => 0,
+                'night_end_hour' => 0,
+                'tribe_member_limit' => 40,
+                'victory_type' => 'domination',
+                'victory_value' => 70,
+                'tech_mode' => 'normal',
+                'archetype' => 'blitz'
+            ],
+            'hardcore' => [
+                'world_speed' => 1.25,
+                'troop_speed' => 1.0,
+                'build_speed' => 1.5,
+                'train_speed' => 1.5,
+                'research_speed' => 1.25,
+                'night_bonus_enabled' => 0,
+                'night_start_hour' => 0,
+                'night_end_hour' => 0,
+                'tribe_member_limit' => 35,
+                'victory_type' => 'domination',
+                'victory_value' => 75,
+                'tech_mode' => 'normal',
+                'archetype' => 'hardcore'
+            ],
+            'seasonal' => [
+                'world_speed' => 1.5,
+                'troop_speed' => 1.2,
+                'build_speed' => 1.5,
+                'train_speed' => 1.5,
+                'research_speed' => 1.5,
+                'night_bonus_enabled' => 1,
+                'night_start_hour' => 23,
+                'night_end_hour' => 7,
+                'tribe_member_limit' => 45,
+                'victory_type' => 'domination',
+                'victory_value' => 70,
+                'tech_mode' => 'normal',
+                'archetype' => 'seasonal'
+            ],
+            'experimental' => [
+                'world_speed' => 1.0,
+                'troop_speed' => 1.0,
+                'build_speed' => 1.2,
+                'train_speed' => 1.2,
+                'research_speed' => 1.2,
+                'night_bonus_enabled' => 0,
+                'night_start_hour' => 0,
+                'night_end_hour' => 0,
+                'tribe_member_limit' => 40,
+                'victory_type' => 'domination',
+                'victory_value' => 65,
+                'tech_mode' => 'normal',
+                'archetype' => 'experimental'
+            ]
+        ];
+    }
+
+    /**
+     * Applies a world archetype template to an existing world row.
+     */
+    public function applyArchetypeToWorld(int $worldId, string $archetype): array
+    {
+        $templates = $this->getArchetypeTemplates();
+        $key = strtolower(trim($archetype));
+        if (!isset($templates[$key])) {
+            return ['success' => false, 'message' => 'Unknown archetype.'];
+        }
+
+        $this->ensureSchema();
+        $template = $templates[$key];
+        $columns = $this->getWorldColumns();
+        $applicable = array_intersect(array_keys($template), $columns);
+        if (empty($applicable)) {
+            return ['success' => false, 'message' => 'No columns to update for archetype.'];
+        }
+
+        $sets = [];
+        $types = '';
+        $values = [];
+        foreach ($applicable as $col) {
+            $sets[] = "{$col} = ?";
+            $val = $template[$col];
+            if (is_float($val)) {
+                $types .= 'd';
+            } elseif (is_int($val)) {
+                $types .= 'i';
+            } else {
+                $types .= 's';
+            }
+            $values[] = $val;
+        }
+        $types .= 'i';
+        $values[] = $worldId;
+
+        $sql = "UPDATE worlds SET " . implode(', ', $sets) . " WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return ['success' => false, 'message' => 'Failed to prepare archetype update.'];
+        }
+        $stmt->bind_param($types, ...$values);
+        $ok = $stmt->execute();
+        $stmt->close();
+
+        // Clear cache
+        unset($this->settingsCache[$worldId]);
+
+        return $ok ? ['success' => true, 'message' => "Applied '{$key}' archetype to world {$worldId}."] : ['success' => false, 'message' => 'Failed to apply archetype.'];
     }
 }

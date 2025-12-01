@@ -27,6 +27,9 @@ class BattleManager
     private const TARGET_COMMAND_CAP = 200; // Max concurrent incoming commands per target village
     private const SIEGE_UNIT_INTERNALS = ['ram', 'catapult', 'trebuchet'];
     private const LOYALTY_UNIT_INTERNALS = ['noble', 'chieftain', 'senator', 'chief'];
+    private const FAKE_THROTTLE_THRESHOLD = 20; // zero-siege sub-50-pop commands in window before delaying
+    private const FAKE_THROTTLE_WINDOW_SEC = 3600; // 60 minutes
+    private const FAKE_THROTTLE_DELAY_SEC = 300; // 5 minutes per excess send
     private const PHASE_ORDER = ['infantry', 'cavalry', 'archer'];
     private const RESEARCH_BONUS_PER_LEVEL = 0.10; // +10% per smithy level
     private const LOYALTY_MIN = 0;
@@ -36,7 +39,15 @@ class BattleManager
     private const LOYALTY_FAIL_DROP_MIN = 5;
     private const LOYALTY_FAIL_DROP_MAX = 10;
     private const OFFENSIVE_ATTACK_TYPES = ['attack', 'raid', 'spy', 'fake'];
+    private const MAX_COMMANDS_PER_MINUTE = 20;
+    private const MAX_COMMANDS_PER_HOUR = 200;
+    private const MAX_SCOUTS_PER_MINUTE = 10; // dedicated scout spam cap
+    private const MAX_SCOUTS_PER_TARGET_PER_WINDOW = 5; // per attacker/target 15-minute window
+    private const SCOUT_TARGET_WINDOW_SECONDS = 900;
     private const MAX_ATTACKS_PER_TARGET_PER_DAY = 10; // generic cap for any matchup
+    private const MAX_COMMANDS_PER_WINDOW = 30; // soft anti-bot burst cap
+    private const COMMAND_RATE_WINDOW_SECONDS = 60;
+    private const MAX_SCOUT_COMMANDS_PER_WINDOW = 15;
     private const LOW_POWER_ATTACK_CAP_POINTS = 500; // applies stricter caps to defenders at/below this score
     private const LOW_POWER_ATTACKS_PER_ATTACKER_PER_DAY = 5;
     private const LOW_POWER_ATTACKS_PER_TRIBE_PER_DAY = 20;
@@ -112,6 +123,15 @@ class BattleManager
         $attacker_user_id = (int)$villages['source_user_id'];
         $defender_user_id = (int)$villages['target_user_id'];
         $target_is_barb = $defender_user_id === -1;
+
+        // Global rate limit per attacker to deter automation/burst spam
+        $rateLimitCheck = $this->enforceCommandRateLimit($attacker_user_id, $attack_type, $defender_user_id);
+        if ($rateLimitCheck !== true) {
+            return [
+                'success' => false,
+                'error' => is_string($rateLimitCheck) ? $rateLimitCheck : 'RATE_CAP: Too many commands sent recently.'
+            ];
+        }
         $attackerTribeId = $this->getUserTribeId($attacker_user_id);
         $defenderTribeId = $this->getUserTribeId($defender_user_id);
         $attacker_points = $this->getUserPoints($attacker_user_id);
@@ -119,11 +139,23 @@ class BattleManager
         $attacker_protected = $this->isBeginnerProtected($attacker_points);
         $targetProtection = $this->getUserProtectionState($defender_user_id);
         $defender_protected = $targetProtection['protected'] ?? false;
+        $rateCheck = $this->enforceCommandRateLimit($attacker_user_id);
+        if ($attack_type === 'spy') {
+            $rateCheck = $rateCheck === true ? $this->enforceScoutRateLimit($attacker_user_id) : $rateCheck;
+        }
+        if ($rateCheck !== true) {
+            return [
+                'success' => false,
+                'error' => is_string($rateCheck) ? $rateCheck : 'Command rate limit reached. Please wait a moment.',
+                'code' => 'RATE_LIMIT'
+            ];
+        }
         $capCheck = $this->enforceAttackCap($attacker_user_id, $defender_user_id, $defender_points, $attackerTribeId);
         if ($capCheck !== true) {
             return [
                 'success' => false,
-                'error' => is_string($capCheck) ? $capCheck : 'Attack limit reached for this target.'
+                'error' => is_string($capCheck) ? $capCheck : 'Attack limit reached for this target.',
+                'code' => 'ATTACK_CAP'
             ];
         }
 
@@ -131,7 +163,8 @@ class BattleManager
             if ($attacker_protected && !$defender_protected) {
                 return [
                     'success' => false,
-                    'error' => 'You are under beginner protection and cannot attack stronger players yet.'
+                    'error' => 'You are under beginner protection and cannot attack stronger players yet.',
+                    'code' => 'BEGINNER_ATTACKER'
                 ];
             }
         }
@@ -140,7 +173,8 @@ class BattleManager
         if ($villages['source_user_id'] === $villages['target_user_id'] && $attack_type !== 'support') {
             return [
                 'success' => false,
-                'error' => 'You cannot attack your own villages.'
+                'error' => 'You cannot attack your own villages.',
+                'code' => 'SELF_ATTACK'
             ];
         }
 
@@ -150,14 +184,16 @@ class BattleManager
                 if ($attackerTribeId === $defenderTribeId && !$allowFriendlyFireOverride) {
                     return [
                         'success' => false,
-                        'error' => 'Attacks against your own tribe members are blocked.'
+                        'error' => 'Attacks against your own tribe members are blocked.',
+                        'code' => 'FRIENDLY_FIRE'
                     ];
                 }
                 $dipStatus = $this->getDiplomacyStatus($attackerTribeId, $defenderTribeId);
                 if (in_array($dipStatus, ['ally', 'nap'], true) && !$allowFriendlyFireOverride) {
                     return [
                         'success' => false,
-                        'error' => 'Attacks against allied/NAP tribes are blocked. Request a leadership override to proceed.'
+                        'error' => 'Attacks against allied/NAP tribes are blocked. Request a leadership override to proceed.',
+                        'code' => 'ALLY_OVERRIDE_REQUIRED'
                     ];
                 }
                 if ($allowFriendlyFireOverride && in_array($dipStatus, ['ally', 'nap'], true)) {
@@ -180,7 +216,8 @@ class BattleManager
             if (!$protectionCheck['allowed']) {
                 return [
                     'success' => false,
-                    'error' => $protectionCheck['error'] ?? 'Attack blocked due to beginner protection.'
+                    'error' => $protectionCheck['error'] ?? 'Attack blocked due to beginner protection.',
+                    'code' => 'BEGINNER_BLOCK'
                 ];
             }
         }
@@ -215,62 +252,8 @@ class BattleManager
             if (!isset($available_units[$unit_type_id]) || $available_units[$unit_type_id] < $count) {
                 return [
                     'success' => false,
-                    'error' => 'You do not have enough units to perform this attack.'
-                ];
-            }
-        }
-
-        // Require at least one unit to be sent
-        $total_units = 0;
-        $total_pop = 0;
-        $hasSiege = false;
-        $hasLoyaltyUnit = false;
-        foreach ($units_sent as $count) {
-            $total_units += $count;
-        }
-        
-        if ($total_units === 0) {
-            return [
-                'success' => false,
-                'error' => 'You must send at least one unit.'
-            ];
-        }
-
-        // Enforce minimum payload anti-abuse rule: 5 pop or any siege unit.
-        foreach ($units_sent as $unit_type_id => $count) {
-            if (!isset($unit_meta[$unit_type_id])) {
-                continue;
-            }
-            $total_pop += ((int)$unit_meta[$unit_type_id]['population']) * $count;
-            $internal = $unit_meta[$unit_type_id]['internal_name'];
-            if ($count > 0 && in_array($internal, self::SIEGE_UNIT_INTERNALS, true)) {
-                $hasSiege = true;
-            }
-            if ($count > 0 && in_array($internal, self::LOYALTY_UNIT_INTERNALS, true)) {
-                $hasLoyaltyUnit = true;
-            }
-        }
-        if ($total_pop < self::MIN_ATTACK_POP && !$hasSiege) {
-            return [
-                'success' => false,
-                'error' => sprintf('Minimum payload is %d population or at least one siege unit.', self::MIN_ATTACK_POP)
-            ];
-        }
-
-        // Beginner shield: block siege/loyalty; allow raids only after 24h account age.
-        if ($defender_protected && $attack_type !== 'support') {
-            $hoursOld = $this->getAccountAgeHours($targetProtection);
-            $raidAllowed = $attack_type === 'raid' && $hoursOld !== null && $hoursOld >= 24;
-            if ($hasSiege || $hasLoyaltyUnit) {
-                return [
-                    'success' => false,
-                    'error' => 'Beginner shield: siege or loyalty attacks are blocked on protected villages.'
-                ];
-            }
-            if (!$raidAllowed) {
-                return [
-                    'success' => false,
-                    'error' => 'This village is under beginner protection. Raids are allowed only after 24 hours of account age.'
+                    'error' => 'You do not have enough units to perform this attack.',
+                    'code' => 'INSUFFICIENT_UNITS'
                 ];
             }
         }
@@ -304,6 +287,65 @@ class BattleManager
             }
         }
 
+        // Require at least one unit to be sent
+        $total_units = 0;
+        $total_pop = 0;
+        $hasSiege = false;
+        $hasLoyaltyUnit = false;
+        foreach ($units_sent as $count) {
+            $total_units += $count;
+        }
+        
+        if ($total_units === 0) {
+            return [
+                'success' => false,
+                'error' => 'You must send at least one unit.',
+                'code' => 'MIN_UNITS'
+            ];
+        }
+
+        // Enforce minimum payload anti-abuse rule: 5 pop or any siege unit.
+        foreach ($units_sent as $unit_type_id => $count) {
+            if (!isset($unit_meta[$unit_type_id])) {
+                continue;
+            }
+            $total_pop += ((int)$unit_meta[$unit_type_id]['population']) * $count;
+            $internal = $unit_meta[$unit_type_id]['internal_name'];
+            if ($count > 0 && in_array($internal, self::SIEGE_UNIT_INTERNALS, true)) {
+                $hasSiege = true;
+            }
+            if ($count > 0 && in_array($internal, self::LOYALTY_UNIT_INTERNALS, true)) {
+                $hasLoyaltyUnit = true;
+            }
+        }
+        if ($total_pop < self::MIN_ATTACK_POP && !$hasSiege) {
+            return [
+                'success' => false,
+                'error' => sprintf('Minimum payload is %d population or at least one siege unit.', self::MIN_ATTACK_POP),
+                'code' => 'MIN_PAYLOAD'
+            ];
+        }
+
+        // Beginner shield: block siege/loyalty; allow raids only after 24h account age.
+        if ($defender_protected && $attack_type !== 'support') {
+            $hoursOld = $this->getAccountAgeHours($targetProtection);
+            $raidAllowed = $attack_type === 'raid' && $hoursOld !== null && $hoursOld >= 24;
+            if ($hasSiege || $hasLoyaltyUnit) {
+                return [
+                    'success' => false,
+                    'error' => 'Beginner shield: siege or loyalty attacks are blocked on protected villages.',
+                    'code' => 'BEGINNER_SIEGE_BLOCK'
+                ];
+            }
+            if (!$raidAllowed) {
+                return [
+                    'success' => false,
+                    'error' => 'This village is under beginner protection. Raids are allowed only after 24 hours of account age.',
+                    'code' => 'BEGINNER_SHIELD'
+                ];
+            }
+        }
+
         // Calculate distance and travel time
         $distance = $this->calculateDistance(
             $villages['source_x'], $villages['source_y'],
@@ -333,7 +375,8 @@ class BattleManager
                         'Target command cap reached for this village (%d/%d). Try again later.',
                         $incomingCount,
                         self::TARGET_COMMAND_CAP
-                    )
+                    ),
+                    'code' => 'TARGET_CAP_REACHED'
                 ];
             }
         }
@@ -378,10 +421,22 @@ class BattleManager
         $unitSpeedMultiplier = defined('UNIT_SPEED_MULTIPLIER') ? max(0.1, (float)UNIT_SPEED_MULTIPLIER) : 1.0;
         $effectiveSpeed = self::WORLD_UNIT_SPEED * $worldSpeed * $troopSpeed * $unitSpeedMultiplier;
         $travel_time = (int)ceil(($distance * $slowest_speed / $effectiveSpeed) * 3600);
+        $throttleDelay = 0;
         $start_time = time();
         // Fake attacks should turn around before hitting the target.
         if ($attack_type === 'fake') {
             $travel_time = max(1, (int)floor($travel_time * self::FAKE_TURNBACK_RATIO));
+        }
+        // Fake throttling for low-payload spam.
+        if ($attack_type !== 'support' && !$hasSiege && $total_pop < 50) {
+            $recentCount = $this->countRecentLowPayloadCommands($target_village_id);
+            if ($recentCount >= self::FAKE_THROTTLE_THRESHOLD) {
+                $excess = $recentCount - self::FAKE_THROTTLE_THRESHOLD + 1;
+                $throttleDelay = max($throttleDelay, $excess * self::FAKE_THROTTLE_DELAY_SEC);
+            }
+        }
+        if ($throttleDelay > 0) {
+            $start_time += $throttleDelay;
         }
         $arrival_time = $start_time + $travel_time;
         
@@ -485,6 +540,7 @@ class BattleManager
                 'units_sent' => $units_sent,
                 'distance' => $distance,
                 'travel_time' => $travel_time,
+                'throttle_delay' => $throttleDelay,
                 'arrival_time' => $arrival_time,
                 'arrival_date' => $arrival_date
             ];
@@ -2113,6 +2169,159 @@ class BattleManager
         return true;
     }
 
+    /**
+     * Simple burst rate limit across commands sent by a user within a short window.
+     */
+    private function enforceCommandRateLimit(int $userId)
+    {
+        if (self::MAX_COMMANDS_PER_WINDOW <= 0 || $userId <= 0) {
+            return true;
+        }
+
+        $windowStart = time() - self::COMMAND_RATE_WINDOW_SECONDS;
+        $sql = "
+            SELECT COUNT(*) AS cnt
+            FROM attacks a
+            JOIN villages v ON a.source_village_id = v.id
+            WHERE v.user_id = ?
+              AND a.is_canceled = 0
+              AND UNIX_TIMESTAMP(a.start_time) >= ?
+        ";
+        $stmt = $this->conn->prepare($sql);
+        if ($stmt === false) {
+            return true; // fail open if DB error
+        }
+        $stmt->bind_param("ii", $userId, $windowStart);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        $count = (int)($row['cnt'] ?? 0);
+        if ($count >= self::MAX_COMMANDS_PER_WINDOW) {
+            return sprintf('Rate limit reached: max %d commands per %d seconds.', self::MAX_COMMANDS_PER_WINDOW, self::COMMAND_RATE_WINDOW_SECONDS);
+        }
+        return true;
+    }
+
+    /**
+     * Scout-specific burst cap to reduce spammy probing.
+     */
+    private function enforceScoutRateLimit(int $userId)
+    {
+        if (self::MAX_SCOUT_COMMANDS_PER_WINDOW <= 0 || $userId <= 0) {
+            return true;
+        }
+
+        $windowStart = time() - self::COMMAND_RATE_WINDOW_SECONDS;
+        $sql = "
+            SELECT COUNT(*) AS cnt
+            FROM attacks a
+            JOIN villages v ON a.source_village_id = v.id
+            WHERE v.user_id = ?
+              AND a.is_canceled = 0
+              AND a.attack_type = 'spy'
+              AND UNIX_TIMESTAMP(a.start_time) >= ?
+        ";
+        $stmt = $this->conn->prepare($sql);
+        if ($stmt === false) {
+            return true;
+        }
+        $stmt->bind_param("ii", $userId, $windowStart);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        $count = (int)($row['cnt'] ?? 0);
+        if ($count >= self::MAX_SCOUT_COMMANDS_PER_WINDOW) {
+            return sprintf('Scout rate limit reached: max %d scout commands per %d seconds.', self::MAX_SCOUT_COMMANDS_PER_WINDOW, self::COMMAND_RATE_WINDOW_SECONDS);
+        }
+        return true;
+    }
+
+    /**
+     * Rate limit outgoing offensive commands per attacker (burst + sustained).
+     */
+    private function enforceCommandRateLimit(int $attackerUserId, string $attackType, ?int $defenderUserId = null)
+    {
+        if ($attackerUserId <= 0) {
+            return true;
+        }
+        if (!in_array($attackType, self::OFFENSIVE_ATTACK_TYPES, true)) {
+            return true;
+        }
+        $now = time();
+        $minuteWindow = $now - 60;
+        $hourWindow = $now - 3600;
+
+        $sql = "
+            SELECT
+                SUM(CASE WHEN UNIX_TIMESTAMP(a.start_time) >= ? THEN 1 ELSE 0 END) AS last_minute,
+                SUM(CASE WHEN UNIX_TIMESTAMP(a.start_time) >= ? THEN 1 ELSE 0 END) AS last_hour
+            FROM attacks a
+            JOIN villages sv ON a.source_village_id = sv.id
+            WHERE sv.user_id = ?
+              AND a.is_canceled = 0
+              AND a.attack_type IN ('attack','raid','spy','fake')
+        ";
+        $stmt = $this->conn->prepare($sql);
+        if ($stmt === false) {
+            return true; // fail open to avoid false positives on DB errors
+        }
+        $stmt->bind_param("iii", $minuteWindow, $hourWindow, $attackerUserId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        $lastMinute = (int)($row['last_minute'] ?? 0);
+        $lastHour = (int)($row['last_hour'] ?? 0);
+
+        $isScout = ($attackType === 'spy');
+        $minuteCap = $isScout ? self::MAX_SCOUTS_PER_MINUTE : self::MAX_COMMANDS_PER_MINUTE;
+        $hourCap = self::MAX_COMMANDS_PER_HOUR;
+
+        if ($lastMinute >= $minuteCap) {
+            return sprintf('RATE_CAP: Too many %s commands in the last minute (%d/%d).', $isScout ? 'scout' : 'commands', $lastMinute, $minuteCap);
+        }
+        if ($lastHour >= $hourCap) {
+            return sprintf('RATE_CAP: Too many commands in the last hour (%d/%d).', $lastHour, $hourCap);
+        }
+
+        // Per target cap for scouts in short window
+        if ($isScout && $defenderUserId && self::MAX_SCOUTS_PER_TARGET_PER_WINDOW > 0) {
+            $targetWindowStart = $now - self::SCOUT_TARGET_WINDOW_SECONDS;
+            $sqlTarget = "
+                SELECT COUNT(*) AS cnt
+                FROM attacks a
+                JOIN villages sv ON a.source_village_id = sv.id
+                JOIN villages tv ON a.target_village_id = tv.id
+                WHERE sv.user_id = ?
+                  AND tv.user_id = ?
+                  AND a.is_canceled = 0
+                  AND a.attack_type = 'spy'
+                  AND UNIX_TIMESTAMP(a.start_time) >= ?
+            ";
+            $stmtTarget = $this->conn->prepare($sqlTarget);
+            if ($stmtTarget) {
+                $stmtTarget->bind_param("iii", $attackerUserId, $defenderUserId, $targetWindowStart);
+                $stmtTarget->execute();
+                $tRow = $stmtTarget->get_result()->fetch_assoc();
+                $stmtTarget->close();
+                $targetCnt = (int)($tRow['cnt'] ?? 0);
+                if ($targetCnt >= self::MAX_SCOUTS_PER_TARGET_PER_WINDOW) {
+                    $retryIn = max(1, self::SCOUT_TARGET_WINDOW_SECONDS - ($now - $targetWindowStart));
+                    return sprintf(
+                        'SCOUT_RATE_LIMITED: Too many scouts to this target in the last %d minutes (%d/%d). Retry in ~%d seconds.',
+                        (int)(self::SCOUT_TARGET_WINDOW_SECONDS / 60),
+                        $targetCnt,
+                        self::MAX_SCOUTS_PER_TARGET_PER_WINDOW,
+                        $retryIn
+                    );
+                }
+            }
+        }
+        return true;
+    }
+
     private function isUnderProtection(array $userRow, DateTimeImmutable $now, array $config): bool
     {
         if (isset($userRow['is_protected']) && (int)$userRow['is_protected'] === 0) {
@@ -2333,6 +2542,46 @@ class BattleManager
         }
         $seconds = max(0, time() - $created);
         return $seconds / 3600;
+    }
+
+    /**
+     * Count low-payload (pop < 50, no siege) commands to a target in the recent window.
+     */
+    private function countRecentLowPayloadCommands(int $targetVillageId): int
+    {
+        if ($targetVillageId <= 0) {
+            return 0;
+        }
+        $thresholdTs = time() - self::FAKE_THROTTLE_WINDOW_SEC;
+        // strftime works on SQLite; UNIX_TIMESTAMP works on MySQL. Use both.
+        $sql = "
+            SELECT COUNT(*) AS cnt FROM (
+                SELECT 
+                    a.id,
+                    SUM(au.count * ut.population) AS pop,
+                    SUM(CASE WHEN ut.internal_name IN ('ram','catapult','trebuchet') THEN au.count ELSE 0 END) AS siege_count
+                FROM attacks a
+                JOIN attack_units au ON au.attack_id = a.id
+                JOIN unit_types ut ON ut.id = au.unit_type_id
+                WHERE a.target_village_id = ?
+                  AND a.is_canceled = 0
+                  AND a.is_completed = 0
+                  AND COALESCE(strftime('%s', a.start_time), UNIX_TIMESTAMP(a.start_time)) >= ?
+                  AND a.attack_type IN ('attack','raid','fake','spy')
+                GROUP BY a.id
+                HAVING pop < 50 AND siege_count = 0
+            ) AS t
+        ";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return 0;
+        }
+        $stmt->bind_param("ii", $targetVillageId, $thresholdTs);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = $res ? $res->fetch_assoc() : null;
+        $stmt->close();
+        return isset($row['cnt']) ? (int)$row['cnt'] : 0;
     }
 
     /**

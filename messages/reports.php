@@ -140,6 +140,10 @@ require '../header.php';
                  <!-- <a href="reports.php?type=support" class="tab">Support reports</a> -->
                  <!-- <a href="reports.php?type=other" class="tab">Other reports</a> -->
             </div>
+            <div class="offline-badge" id="offline-badge" aria-live="polite">
+                <span class="offline-dot"></span>
+                <span>Offline mode: showing cached reports when available (up to 50 stored).</span>
+            </div>
 
             <?php if (!empty($reports)): ?>
                 <div class="reports-container">
@@ -207,6 +211,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     let unreadCount = <?= (int)$unreadCount ?>;
     const unreadCountEl = document.querySelector('[data-unread-count]');
+    const offlineBadge = document.getElementById('offline-badge');
+    const REPORT_LIST_CACHE_KEY = 'tw_offline_reports_list';
+    const REPORT_DETAIL_CACHE_KEY = 'tw_offline_reports_details';
+    const REPORT_CACHE_LIMIT = 50;
+    const STAR_QUEUE_KEY = 'tw_offline_star_queue_v1';
 
     function formatDateTime(datetimeString) {
         const date = new Date(datetimeString);
@@ -230,6 +239,148 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function setOfflineBadge(isOffline) {
+        if (offlineBadge) {
+            offlineBadge.classList.toggle('visible', isOffline);
+        }
+    }
+
+    function loadCachedDetails() {
+        try {
+            return JSON.parse(localStorage.getItem(REPORT_DETAIL_CACHE_KEY) || '{}') || {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function saveCachedDetails(cache) {
+        try {
+            localStorage.setItem(REPORT_DETAIL_CACHE_KEY, JSON.stringify(cache));
+        } catch (e) {
+            // Ignore quota errors
+        }
+    }
+
+    function trimDetailCache(cache) {
+        const entries = Object.entries(cache);
+        if (entries.length <= REPORT_CACHE_LIMIT) {
+            return cache;
+        }
+        entries.sort((a, b) => ((a[1]?.cachedAt || 0) - (b[1]?.cachedAt || 0)));
+        const trimmed = entries.slice(entries.length - REPORT_CACHE_LIMIT);
+        const next = {};
+        trimmed.forEach(([id, data]) => {
+            next[id] = data;
+        });
+        return next;
+    }
+
+    function cacheReportDetail(report) {
+        if (!report || !report.id) return;
+        const cache = loadCachedDetails();
+        cache[report.id] = { ...report, cachedAt: Date.now() };
+        const trimmed = trimDetailCache(cache);
+        saveCachedDetails(trimmed);
+    }
+
+    function renderCachedReport(reportId) {
+        const cache = loadCachedDetails();
+        const cached = cache[reportId];
+        if (!cached) {
+            reportDetailsArea.innerHTML = '<p class="error-message">Offline: this report was not cached yet.</p>';
+            return false;
+        }
+        renderReportDetails({ report: cached });
+        markListItemRead(reportId);
+        return true;
+    }
+
+    function loadCachedList() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(REPORT_LIST_CACHE_KEY) || '{}');
+            return parsed && Array.isArray(parsed.items) ? parsed : { items: [] };
+        } catch (e) {
+            return { items: [] };
+        }
+    }
+
+    function saveCachedList(items) {
+        if (!items || !items.length) return;
+        try {
+            localStorage.setItem(REPORT_LIST_CACHE_KEY, JSON.stringify({
+                updatedAt: Date.now(),
+                items: items.slice(0, REPORT_CACHE_LIMIT)
+            }));
+        } catch (e) {
+            // Ignore quota errors
+        }
+    }
+
+    function loadStarQueue() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(STAR_QUEUE_KEY) || '[]');
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveStarQueue(queue) {
+        try {
+            localStorage.setItem(STAR_QUEUE_KEY, JSON.stringify(queue.slice(0, REPORT_CACHE_LIMIT)));
+        } catch (e) {
+            // Ignore quota errors
+        }
+    }
+
+    function enqueueStarAction(reportId, shouldStar) {
+        const queue = loadStarQueue();
+        queue.push({ id: parseInt(reportId, 10), starred: !!shouldStar, ts: Date.now() });
+        saveStarQueue(queue);
+    }
+
+    function cacheReportListFromDOM() {
+        if (!reportsList) return;
+        const items = Array.from(reportsList.querySelectorAll('.report-item')).map(item => {
+            const id = parseInt(item.dataset.reportId || '0', 10);
+            if (!id) return null;
+            return {
+                id,
+                title: item.querySelector('.report-name')?.textContent.trim() || '',
+                villages: item.querySelector('.report-villages')?.textContent.trim() || '',
+                date: item.querySelector('.report-date')?.textContent.trim() || '',
+                icon: item.querySelector('.report-icon')?.textContent.trim() || '',
+                is_starred: item.dataset.starred === '1',
+                is_read: item.dataset.read === '1'
+            };
+        }).filter(Boolean);
+        if (items.length) {
+            saveCachedList(items);
+        }
+    }
+
+    function renderCachedListIfNeeded() {
+        if (!reportsList) return false;
+        if (reportsList.children.length > 0) return false;
+        const cached = loadCachedList();
+        if (!cached.items.length) return false;
+        const html = cached.items.map(item => `
+            <div class="report-item ${item.is_read ? '' : 'unread'} ${item.is_starred ? 'starred' : ''}" data-report-id="${item.id}" data-read="${item.is_read ? '1' : '0'}" data-starred="${item.is_starred ? '1' : '0'}">
+                <div class="report-title">
+                    <span class="report-icon">${item.icon || ''}</span>
+                    <span class="report-name">${escapeHTML(item.title)}</span>
+                    <button type="button" class="report-star${item.is_starred ? ' active' : ''}" data-report-id="${item.id}" data-starred="${item.is_starred ? '1' : '0'}" aria-pressed="${item.is_starred ? 'true' : 'false'}" title="${item.is_starred ? 'Starred report' : 'Mark as important'}">
+                        ${item.is_starred ? '★' : '☆'}
+                    </button>
+                </div>
+                <div class="report-villages">${escapeHTML(item.villages)}</div>
+                <div class="report-date">${escapeHTML(item.date)}</div>
+            </div>
+        `).join('');
+        reportsList.innerHTML = html;
+        return true;
+    }
+
     function markListItemRead(reportId) {
         if (!reportsList) return;
         const item = reportsList.querySelector(`.report-item[data-report-id="${reportId}"]`);
@@ -238,6 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
             item.classList.remove('unread');
             unreadCount = Math.max(0, unreadCount - 1);
             updateUnreadDisplay();
+            cacheReportListFromDOM();
         }
     }
 
@@ -260,9 +412,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (starBtn) {
             setStarButtonState(starBtn, isStarred);
         }
+        cacheReportListFromDOM();
     }
 
     function toggleStar(reportId, shouldStar) {
+        if (!navigator.onLine) {
+            enqueueStarAction(reportId, shouldStar);
+            return Promise.resolve(true);
+        }
+
         const payload = new URLSearchParams();
         payload.set('report_id', reportId);
         payload.set('starred', shouldStar ? '1' : '0');
@@ -287,6 +445,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 throw new Error(data.message || 'Could not update star.');
             });
+    }
+
+    async function processStarQueue() {
+        const queue = loadStarQueue();
+        if (!queue.length || !navigator.onLine) return;
+        const remaining = [];
+        for (const item of queue) {
+            if (!item || !item.id) continue;
+            try {
+                await toggleStar(item.id, item.starred);
+            } catch (e) {
+                remaining.push(item); // keep for next retry
+            }
+        }
+        saveStarQueue(remaining);
     }
 
     function renderUnitsTable(units) {
@@ -513,6 +686,15 @@ document.addEventListener('DOMContentLoaded', () => {
         reportDetailsArea.innerHTML = '<p>Loading report...</p>';
         reportDetailsArea.classList.add('loading');
 
+        if (!navigator.onLine) {
+            const ok = renderCachedReport(reportId);
+            reportDetailsArea.classList.remove('loading');
+            if (!ok) {
+                reportDetailsArea.innerHTML = '<p class="error-message">Offline: report not available in cache yet.</p>';
+            }
+            return;
+        }
+
         fetch(`reports.php?report_id=${reportId}`, {
             method: 'GET',
             headers: {
@@ -531,6 +713,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.success) {
                     renderReportDetails(data);
                     if (data.report && data.report.id) {
+                        cacheReportDetail(data.report);
+                        cacheReportListFromDOM();
                         markListItemRead(data.report.id);
                         syncListStar(data.report.id, !!data.report.is_starred);
                     }
@@ -592,6 +776,28 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
+
+    // Cache current list for offline use
+    cacheReportListFromDOM();
+
+    // Offline/online indicators
+    const isInitiallyOffline = !navigator.onLine;
+    setOfflineBadge(isInitiallyOffline);
+    if (isInitiallyOffline) {
+        renderCachedListIfNeeded();
+    } else {
+        processStarQueue();
+    }
+
+    window.addEventListener('online', () => {
+        setOfflineBadge(false);
+        processStarQueue();
+    });
+
+    window.addEventListener('offline', () => {
+        setOfflineBadge(true);
+        renderCachedListIfNeeded();
+    });
 });
 </script>
 

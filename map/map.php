@@ -93,7 +93,7 @@ require '../header.php';
                 <div class="filter-row">
                     <label><input type="checkbox" id="filter-own" checked> My villages</label>
                     <label><input type="checkbox" id="filter-tribe" checked> Tribe</label>
-                    <label><input type="checkbox" id="filter-allies" checked> Allies / NAP</label>
+                    <label><input type="checkbox" id="filter-allies" checked> Allies / NAP / Truce</label>
                     <label><input type="checkbox" id="filter-enemies" checked> Enemies</label>
                     <label><input type="checkbox" id="filter-neutral" checked> Neutral</label>
                     <label><input type="checkbox" id="filter-barbs" checked> Barbarians</label>
@@ -131,6 +131,8 @@ require '../header.php';
                 <div class="legend-row"><img src="../img/tw_map/map_v2.png" alt="Barbarian"> <span>Barbarian village</span></div>
                 <div class="legend-row"><span class="legend-dot relation-own"></span> <span>Your tribe</span></div>
                 <div class="legend-row"><span class="legend-dot relation-ally"></span> <span>Ally</span></div>
+                <div class="legend-row"><span class="legend-dot relation-nap"></span> <span>NAP</span></div>
+                <div class="legend-row"><span class="legend-dot relation-truce"></span> <span>Truce/Ceasefire</span></div>
                 <div class="legend-row"><span class="legend-dot relation-enemy"></span> <span>Enemy</span></div>
                 <div class="legend-row"><span class="legend-dot relation-neutral"></span> <span>Neutral</span></div>
                 <div class="legend-row"><img src="../img/tw_map/reserved_player.png" alt="Reserved"> <span>Reserved (self)</span></div>
@@ -246,6 +248,7 @@ const mapState = {
     myTribeId: currentUserAllyId || null
 };
 let annotations = loadAnnotations();
+trimAnnotations(50);
 let mapFetchInFlight = false;
 let mapPollInterval = null;
 let worldBounds = null;
@@ -279,9 +282,21 @@ function saveAnnotations() {
     }
 }
 
+function trimAnnotations(limit = 50) {
+    const entries = Object.entries(annotations || {});
+    if (entries.length <= limit) return;
+    entries.sort((a, b) => ((a[1]?.saved_at || 0) - (b[1]?.saved_at || 0)));
+    const trimmed = entries.slice(entries.length - limit);
+    annotations = {};
+    trimmed.forEach(([id, data]) => {
+        annotations[id] = data;
+    });
+    saveAnnotations();
+}
+
 function setAnnotation(villageId, data) {
     const existing = annotations[villageId] || { note: '', reserved: '' };
-    const updated = { ...existing, ...data };
+    const updated = { ...existing, ...data, saved_at: Date.now() };
 
     // Normalize reserved flag to '', 'self', or 'tribe'
     if (updated.reserved !== 'self' && updated.reserved !== 'tribe') {
@@ -293,6 +308,7 @@ function setAnnotation(villageId, data) {
         delete annotations[villageId];
     }
     saveAnnotations();
+    trimAnnotations(50);
 }
 
 function getAnnotation(villageId) {
@@ -521,8 +537,10 @@ function getVillageRelation(village) {
 
     const dipStatus = player && player.ally_id && mapState.tribeDiplomacy ? mapState.tribeDiplomacy[player.ally_id] : null;
     const normalizedDip = typeof dipStatus === 'string' ? dipStatus.toLowerCase() : dipStatus;
-    if (normalizedDip === 'ally' || normalizedDip === 'nap') return 'ally';
-    if (normalizedDip === 'enemy') return 'enemy';
+    if (normalizedDip === 'ally' || normalizedDip === 'alliance') return 'ally';
+    if (normalizedDip === 'nap') return 'nap';
+    if (normalizedDip === 'truce' || normalizedDip === 'ceasefire') return 'truce';
+    if (normalizedDip === 'enemy' || normalizedDip === 'war') return 'enemy';
 
     return 'neutral';
 }
@@ -558,7 +576,7 @@ function shouldRenderVillage(village, annotation = {}) {
     if (relation === 'own') return filters.own;
     if (relation === 'tribe') return filters.tribe;
     if (!filters.players) return false;
-    if (relation === 'ally') return filters.allies;
+    if (relation === 'ally' || relation === 'nap' || relation === 'truce') return filters.allies;
     if (relation === 'enemy') return filters.enemies;
     if (relation === 'neutral') return filters.neutral;
 
@@ -570,6 +588,8 @@ function getVillageRelationClass(village) {
     if (relation === 'barbarian') return 'relation-barb';
     if (relation === 'own') return 'relation-own';
     if (relation === 'tribe' || relation === 'ally') return 'relation-ally';
+    if (relation === 'nap') return 'relation-nap';
+    if (relation === 'truce') return 'relation-truce';
     if (relation === 'enemy') return 'relation-enemy';
     return 'relation-neutral';
 }

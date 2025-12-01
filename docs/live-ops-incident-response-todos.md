@@ -15,6 +15,13 @@
 - **Postmortems:** Blameless templates with timeline, impact, contributing factors, fixes, and owners. Track action items to completion with due dates.
 - **Game Integrity Checks:** Automated canaries on combat resolution, economy sinks/sources, and map updates each deploy; alert on drift from expected ranges.
 
+## Drills & Tooling
+- **Chaos/Fire Drills:** Monthly simulated incidents (auth outage, tick backlog, bad flag) with time-to-detect/time-to-mitigate metrics; capture learnings.
+- **Shadow Deploy & Canary:** Deploy to canary world with automatic rollback on SLO breach; health gate before full rollout.
+- **One-Click Mitigations:** Scripts for disabling events, pausing payments, or freezing attacks; ensure they log actors/reason and are permission-guarded.
+- **State Diffing:** Tool to diff player/village state pre/post deploy; fast scope assessment for rollbacks.
+- **Incident Timeline Bot:** Chat bot to collect timeline entries, decisions, and links; exports to postmortem template.
+
 ## Acceptance Criteria
 - On-call schedule and paging runbooks published; alerts link to owners and playbooks.
 - Feature flags exist for core systems with documented owners and rollback expectations.

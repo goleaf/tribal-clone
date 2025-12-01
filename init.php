@@ -35,6 +35,12 @@ require_once 'lib/functions.php';
 require_once 'lib/utils/ErrorHandler.php';
 ErrorHandler::initialize();
 
+// Enforce CSRF validation for mutating requests (POST/PUT/DELETE) on web traffic
+$requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+if (!$IS_CLI && in_array($requestMethod, ['POST', 'PUT', 'DELETE'], true)) {
+    validateCSRF();
+}
+
 // Global sanitization of GET/POST was removed.
 // Validation and sanitization should happen at the point of use.
 // $_GET = sanitizeInput($_GET);

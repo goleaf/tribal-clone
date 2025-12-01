@@ -19,6 +19,7 @@ class TribeDiplomacyManager
     ];
     private const WAR_PREP_HOURS = 12;
     private const WAR_DECLARATION_COOLDOWN_HOURS = 24;
+    private const STATE_CHANGE_COOLDOWN_HOURS = 6;
 
     public function __construct($conn)
     {
@@ -67,6 +68,21 @@ class TribeDiplomacyManager
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             ");
         }
+
+        // Change log table (SQLite/MySQL compatible DDL)
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS tribe_diplomacy_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tribe_a_id INTEGER NOT NULL,
+                tribe_b_id INTEGER NOT NULL,
+                actor_user_id INTEGER NULL,
+                from_state TEXT,
+                to_state TEXT,
+                reason TEXT NULL,
+                created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+            )
+        ");
+        $this->conn->query("CREATE INDEX IF NOT EXISTS idx_tribe_diplomacy_logs_pair ON tribe_diplomacy_logs(tribe_a_id, tribe_b_id)");
     }
 
     /**
@@ -155,15 +171,18 @@ class TribeDiplomacyManager
         $ok = $stmt->execute();
         $stmt->close();
 
-        return $ok
-            ? ['success' => true, 'pending_start' => $startAt]
-            : ['success' => false, 'message' => 'Failed to declare war.'];
+        if ($ok) {
+            $this->logChange($a, $b, $relation['state'] ?? null, 'pending_war', $sourceTribeId, $reason);
+            return ['success' => true, 'pending_start' => $startAt];
+        }
+
+        return ['success' => false, 'message' => 'Failed to declare war.'];
     }
 
     /**
      * Immediately set a relation state (admin/back-office or mutual agreement).
      */
-    public function setState(int $tribeIdA, int $tribeIdB, string $state, ?string $reason = null): array
+    public function setState(int $tribeIdA, int $tribeIdB, string $state, ?string $reason = null, ?int $actorUserId = null): array
     {
         $state = strtolower($state);
         if (!in_array($state, self::STATES, true)) {
@@ -176,25 +195,50 @@ class TribeDiplomacyManager
         }
         $this->createNeutralRelation($a, $b);
 
+        $current = $this->getRelation($a, $b);
+        $now = time();
+
+        if ($current) {
+            $minUntilTs = !empty($current['min_duration_until']) ? strtotime((string)$current['min_duration_until']) : 0;
+            $cooldownTs = !empty($current['cooldown_until']) ? strtotime((string)$current['cooldown_until']) : 0;
+            if ($state !== ($current['state'] ?? null)) {
+                if ($minUntilTs > $now) {
+                    return ['success' => false, 'message' => 'Current state minimum duration not met.'];
+                }
+                if ($cooldownTs > $now) {
+                    return ['success' => false, 'message' => 'Diplomacy cooldown active.'];
+                }
+            }
+            if (($current['state'] ?? null) === $state && empty($current['pending_state'])) {
+                return ['success' => true, 'state' => $state, 'message' => 'State unchanged.'];
+            }
+        }
+
         $minHours = self::MIN_DURATION_HOURS[$state] ?? 0;
         $now = time();
         $minUntil = $minHours > 0 ? date('Y-m-d H:i:s', $now + ($minHours * 3600)) : null;
         $reason = $reason ? substr($reason, 0, 255) : null;
+        $cooldownUntil = date('Y-m-d H:i:s', $now + self::STATE_CHANGE_COOLDOWN_HOURS * 3600);
 
         $stmt = $this->conn->prepare("
             UPDATE tribe_diplomacy
             SET state = ?, pending_state = NULL, pending_at = NULL,
                 active_from = CURRENT_TIMESTAMP,
                 min_duration_until = ?,
+                cooldown_until = ?,
                 reason = ?
             WHERE tribe_a_id = ? AND tribe_b_id = ?
         ");
         if ($stmt === false) {
             return ['success' => false, 'message' => 'Failed to set state (prepare).'];
         }
-        $stmt->bind_param("sssii", $state, $minUntil, $reason, $a, $b);
+        $stmt->bind_param("ssssii", $state, $minUntil, $cooldownUntil, $reason, $a, $b);
         $ok = $stmt->execute();
         $stmt->close();
+
+        if ($ok && $current) {
+            $this->logChange($a, $b, $current['state'] ?? null, $state, $actorUserId, $reason);
+        }
 
         return $ok ? ['success' => true, 'state' => $state] : ['success' => false, 'message' => 'Failed to update state.'];
     }
@@ -237,6 +281,7 @@ class TribeDiplomacyManager
                 $update->bind_param("si", $minUntil, $row['id']);
                 if ($update->execute()) {
                     $processed[] = (int)$row['id'];
+                    $this->logChange((int)$row['tribe_a_id'], (int)$row['tribe_b_id'], 'pending_war', 'war', null, null);
                 }
                 $update->close();
             }
@@ -283,6 +328,25 @@ class TribeDiplomacyManager
         $stmt->close();
 
         return $ok ? ['success' => true, 'state' => 'truce', 'truce_until' => $truceUntil] : ['success' => false, 'message' => 'Failed to end war.'];
+    }
+
+    /**
+     * Persist a state change for auditing/diagnostics.
+     */
+    private function logChange(int $tribeA, int $tribeB, ?string $fromState, ?string $toState, ?int $actorUserId, ?string $reason): void
+    {
+        [$a, $b] = $this->normalizePair($tribeA, $tribeB);
+        $stmt = $this->conn->prepare("
+            INSERT INTO tribe_diplomacy_logs (tribe_a_id, tribe_b_id, actor_user_id, from_state, to_state, reason, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ");
+        if ($stmt === false) {
+            return;
+        }
+        $reason = $reason ? substr($reason, 0, 255) : null;
+        $stmt->bind_param("iiisss", $a, $b, $actorUserId, $fromState, $toState, $reason);
+        $stmt->execute();
+        $stmt->close();
     }
 
     private function createNeutralRelation(int $tribeA, int $tribeB): void
