@@ -1,12 +1,12 @@
 # Implementation Plan
 
 - [x] 1. Set up database schema and data structures
-- [-] 1.1 Create database migration for new tables (seasonal_units, elite_unit_caps)
+- [x] 1.1 Create database migration for new tables (seasonal_units, elite_unit_caps)
   - Add seasonal_units table with event windows and caps
   - Add elite_unit_caps table for per-account tracking
   - _Requirements: 10.1, 10.2, 9.2_
 
-- [x] 1.2 Create database migration for worlds table extensions
+- [-] 1.2 Create database migration for worlds table extensions
   - Add feature flag columns (conquest_units_enabled, seasonal_units_enabled, healer_enabled)
   - Add training multiplier columns (train_multiplier_inf, train_multiplier_cav, train_multiplier_rng, train_multiplier_siege)
   - Add healer_recovery_cap column
