@@ -7,6 +7,7 @@ declare(strict_types=1);
  * Tests cache key generation, ETag generation, and cache invalidation logic
  */
 
+// Use the singleton Database from root
 require_once __DIR__ . '/../Database.php';
 require_once __DIR__ . '/../lib/MapCacheManager.php';
 
@@ -19,8 +20,35 @@ class MapCacheManagerTest
     
     public function __construct()
     {
+        // Use singleton Database instance
         $this->db = Database::getInstance();
         $this->cacheManager = new MapCacheManager($this->db);
+        
+        // Ensure cache_versions table exists
+        $this->ensureCacheVersionsTable();
+    }
+    
+    private function ensureCacheVersionsTable(): void
+    {
+        // Check if table exists
+        $result = $this->db->fetchOne(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='cache_versions'"
+        );
+        
+        if (!$result) {
+            // Create table if it doesn't exist
+            $this->db->execute("
+                CREATE TABLE cache_versions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    world_id INTEGER NOT NULL UNIQUE,
+                    data_version INTEGER NOT NULL DEFAULT 0,
+                    diplomacy_version INTEGER NOT NULL DEFAULT 0,
+                    updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+                )
+            ");
+            
+            $this->db->execute("CREATE INDEX idx_cache_versions_world ON cache_versions(world_id)");
+        }
     }
     
     public function run(): void

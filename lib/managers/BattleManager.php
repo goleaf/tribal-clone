@@ -11,6 +11,8 @@ class BattleManager
     private $reportManager; // Generic report log
     private $tribeWarManager; // Tribe war tracking
     private $intelManager; // Scouting/intel logging
+    private $plunderCalculator; // Stateless plunder helper
+    private ?array $plunderUnitData = null;
     private string $conquestLogFile;
     private string $commandAnomalyLogFile;
     private ?array $worldSettings = null;
@@ -103,6 +105,10 @@ class BattleManager
             require_once __DIR__ . '/IntelManager.php';
         }
         $this->intelManager = new IntelManager($conn);
+        if (!class_exists('PlunderCalculator')) {
+            require_once __DIR__ . '/PlunderCalculator.php';
+        }
+        $this->plunderCalculator = new PlunderCalculator($this->loadUnitDataForPlunder());
         $logDir = __DIR__ . '/../../logs';
         if (!is_dir($logDir)) {
             @mkdir($logDir, 0777, true);
@@ -1579,13 +1585,18 @@ class BattleManager
         $vaultProtected = ['wood' => 0, 'clay' => 0, 'iron' => 0];
         $availableAfterProtection = null;
         $plunderDrMultiplier = 1.0;
+        $plunderDetails = null;
         if ($attacker_win && !empty($remaining_attacking_units)) {
-            $attack_capacity = 0;
+            // Map surviving attackers by internal name for carry calculations.
+            $survivorInternals = [];
             foreach ($remaining_attacking_units as $unit_type_id => $count) {
-                if (isset($attacking_units[$unit_type_id])) {
-                    $attack_capacity += ($attacking_units[$unit_type_id]['carry_capacity'] ?? 0) * $count;
+                $internal = $attacking_units[$unit_type_id]['internal_name'] ?? null;
+                if ($internal !== null) {
+                    $survivorInternals[$internal] = ($survivorInternals[$internal] ?? 0) + $count;
                 }
             }
+
+            $attack_capacity = $this->plunderCalculator->calculateCarryCapacity($survivorInternals);
             if ($attack_capacity > 0) {
                 $stmt_res = $this->conn->prepare("SELECT wood, clay, iron FROM villages WHERE id = ?");
                 $stmt_res->bind_param("i", $attack['target_village_id']);
@@ -1603,32 +1614,50 @@ class BattleManager
                         $vaultPct = (float)$wm->getVaultProtectionPercent();
                     }
                 }
-                $protection = self::computeLootableResources($res, $hiddenPerResource, $vaultPct);
-                $vaultProtected = $protection['protected'];
-                $available = $protection['available'];
-                $availableAfterProtection = $available;
 
-                $max_available = $available['wood'] + $available['clay'] + $available['iron'];
-                $raidFactorApplied = $isRaid ? self::RAID_LOOT_FACTOR : 1.0;
-                if ($isRaid) {
-                    $max_available = floor($max_available * self::RAID_LOOT_FACTOR);
-                }
                 $plunderDrMultiplier = $this->getPlunderDiminishingReturnsMultiplier(
                     (int)$attacker_user_id,
                     (int)$attack['target_village_id']
                 );
-                $max_available = (int)floor($max_available * $plunderDrMultiplier);
-                $total_loot = min($attack_capacity, $max_available);
-                if ($total_loot > 0) {
-                    $share = (int)floor($total_loot / 3);
-                    $loot['wood'] = min($available['wood'], $share);
-                    $loot['clay'] = min($available['clay'], $share);
-                    $loot['iron'] = min($available['iron'], $total_loot - $loot['wood'] - $loot['clay']);
+
+                $lootableResult = $this->plunderCalculator->calculateAvailableLoot(
+                    $res,
+                    $hiddenPerResource,
+                    $vaultPct,
+                    null,
+                    $plunderDrMultiplier
+                );
+                $vaultProtected = $lootableResult['protected'];
+                $availableAfterProtection = $lootableResult['available'];
+                $lootable = $lootableResult['lootable'];
+
+                // Optional raid cap applied to the post-protection lootable pool.
+                $raidCapTotal = null;
+                if ($isRaid) {
+                    $raidCapTotal = (int)floor(array_sum($lootable) * self::RAID_LOOT_FACTOR);
                 }
-                $stmt_update = $this->conn->prepare("UPDATE villages SET wood = wood - ?, clay = clay - ?, iron = iron - ? WHERE id = ?");
-                $stmt_update->bind_param("iiii", $loot['wood'], $loot['clay'], $loot['iron'], $attack['target_village_id']);
-                $stmt_update->execute();
-                $stmt_update->close();
+
+                $capacityForLoot = $raidCapTotal !== null ? min($attack_capacity, $raidCapTotal) : $attack_capacity;
+                $distribution = $this->plunderCalculator->distributePlunder($lootable, $capacityForLoot);
+                $loot = $distribution['loot'];
+
+                if (array_sum($loot) > 0) {
+                    $stmt_update = $this->conn->prepare("UPDATE villages SET wood = wood - ?, clay = clay - ?, iron = iron - ? WHERE id = ?");
+                    $stmt_update->bind_param("iiii", $loot['wood'], $loot['clay'], $loot['iron'], $attack['target_village_id']);
+                    $stmt_update->execute();
+                    $stmt_update->close();
+                }
+
+                $plunderDetails = [
+                    'lootable_after_protection' => $lootable,
+                    'carry_capacity' => $attack_capacity,
+                    'carry_used' => $distribution['carry_used'],
+                    'carry_unused' => $distribution['carry_unused'],
+                    'raid_cap_total' => $raidCapTotal,
+                    'diminishing_returns' => $plunderDrMultiplier,
+                    'cap_applied' => $lootableResult['cap_applied'],
+                    'cap_value' => $lootableResult['cap_value'],
+                ];
             }
         }
 
@@ -1963,6 +1992,7 @@ class BattleManager
                 'vault_protection_percent' => $vaultPct,
                 'vault_protected' => $vaultProtected,
                 'available_after_protection' => $availableAfterProtection,
+                'plunder_details' => $plunderDetails,
                 'capture_aftermath' => $captureAftermath ?? null,
                 'report_version' => self::REPORT_VERSION,
                 'correlation_id' => $correlationId,
@@ -2977,6 +3007,28 @@ class BattleManager
             'available' => $available,
             'protected' => $protected,
         ];
+    }
+
+    /**
+     * Load unit data keyed by internal name for plunder calculations.
+     */
+    private function loadUnitDataForPlunder(): array
+    {
+        if ($this->plunderUnitData !== null) {
+            return $this->plunderUnitData;
+        }
+
+        $jsonPath = __DIR__ . '/../../data/units.json';
+        if (file_exists($jsonPath)) {
+            $data = json_decode(file_get_contents($jsonPath), true);
+            if (is_array($data)) {
+                $this->plunderUnitData = $data;
+                return $this->plunderUnitData;
+            }
+        }
+
+        $this->plunderUnitData = [];
+        return $this->plunderUnitData;
     }
 
     /**
