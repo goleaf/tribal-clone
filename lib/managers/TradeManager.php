@@ -1187,6 +1187,184 @@ class TradeManager {
         return true;
     }
 
+    private function isUserProtectedForTrades(array $profile, int $protectedThreshold): bool
+    {
+        $points = (int)($profile['points'] ?? 0);
+        $isFlagProtected = $this->userColumnExists('is_protected') && !empty($profile['is_protected']);
+        $timeProtected = false;
+        $hours = defined('BEGINNER_PROTECTION_HOURS') ? (int)BEGINNER_PROTECTION_HOURS : 72;
+        if ($hours > 0 && isset($profile['created_at'])) {
+            $raw = $profile['created_at'];
+            $createdTs = is_numeric($raw) ? (int)$raw : strtotime((string)$raw);
+            if ($createdTs) {
+                $timeProtected = (time() - $createdTs) < ($hours * 3600);
+            }
+        }
+
+        return $isFlagProtected || $points < $protectedThreshold || $timeProtected;
+    }
+
+    private function getAltFlaggedUserId(array $sourceProfile, array $targetProfile): ?int
+    {
+        $col = $this->getAltFlagColumn();
+        if ($col === null) {
+            return null;
+        }
+        if (!empty($sourceProfile[$col])) {
+            return isset($sourceProfile['id']) ? (int)$sourceProfile['id'] : null;
+        }
+        if (!empty($targetProfile[$col])) {
+            return isset($targetProfile['id']) ? (int)$targetProfile['id'] : null;
+        }
+        return null;
+    }
+
+    private function isAltLinkSuspicious(array $sourceProfile, array $targetProfile): bool
+    {
+        if (!defined('TRADE_ALT_IP_BLOCK_ENABLED') || !TRADE_ALT_IP_BLOCK_ENABLED) {
+            return false;
+        }
+        $sourceFingerprint = $this->getProfileFingerprint($sourceProfile);
+        $targetFingerprint = $this->getProfileFingerprint($targetProfile);
+        return $sourceFingerprint !== null
+            && $sourceFingerprint !== ''
+            && $sourceFingerprint === $targetFingerprint;
+    }
+
+    private function getProfileFingerprint(array $profile): ?string
+    {
+        foreach ($this->getIdentityColumns() as $col) {
+            if (!empty($profile[$col])) {
+                return (string)$profile[$col];
+            }
+        }
+        return null;
+    }
+
+    private function getUserProfile(int $userId): ?array
+    {
+        if ($userId <= 0) {
+            return null;
+        }
+        if (array_key_exists($userId, $this->userProfileCache)) {
+            return $this->userProfileCache[$userId];
+        }
+
+        $columns = ['id'];
+        if ($this->userColumnExists('points')) {
+            $columns[] = 'points';
+        }
+        if ($this->userColumnExists('created_at')) {
+            $columns[] = 'created_at';
+        }
+        $altCol = $this->getAltFlagColumn();
+        if ($altCol !== null) {
+            $columns[] = $altCol;
+        }
+        foreach ($this->getIdentityColumns() as $col) {
+            $columns[] = $col;
+        }
+        if ($this->userColumnExists('is_protected')) {
+            $columns[] = 'is_protected';
+        }
+        $columns = array_unique($columns);
+
+        $select = implode(', ', array_map([$this, 'quoteIdentifier'], $columns));
+        $stmt = $this->conn->prepare("SELECT {$select} FROM users WHERE id = ? LIMIT 1");
+        if ($stmt === false) {
+            return $this->userProfileCache[$userId] = null;
+        }
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        $this->userProfileCache[$userId] = $row ?: null;
+        return $this->userProfileCache[$userId];
+    }
+
+    private function getIdentityColumns(): array
+    {
+        if ($this->identityColumns !== null) {
+            return $this->identityColumns;
+        }
+        $candidates = ['ip_hash', 'last_ip_hash', 'last_ip', 'fingerprint'];
+        $cols = [];
+        foreach ($candidates as $col) {
+            if ($this->userColumnExists($col)) {
+                $cols[] = $col;
+            }
+        }
+        $this->identityColumns = $cols;
+        return $cols;
+    }
+
+    private function getAltFlagColumn(): ?string
+    {
+        if ($this->altFlagColumn === '') {
+            return null;
+        }
+        if ($this->altFlagColumn !== null) {
+            return $this->altFlagColumn;
+        }
+        foreach (['is_flagged_alt', 'alt_flag', 'is_alt'] as $candidate) {
+            if ($this->userColumnExists($candidate)) {
+                $this->altFlagColumn = $candidate;
+                return $this->altFlagColumn;
+            }
+        }
+        $this->altFlagColumn = '';
+        return null;
+    }
+
+    private function userColumnExists(string $column): bool
+    {
+        if (isset($this->userColumnExistsCache[$column])) {
+            return $this->userColumnExistsCache[$column];
+        }
+
+        $exists = false;
+        try {
+            if ($this->isSqlite()) {
+                $stmt = $this->conn->prepare("PRAGMA table_info(users)");
+                if ($stmt && $stmt->execute()) {
+                    $res = $stmt->get_result();
+                    if ($res) {
+                        while ($row = $res->fetch_assoc()) {
+                            if (isset($row['name']) && $row['name'] === $column) {
+                                $exists = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if ($stmt) {
+                    $stmt->close();
+                }
+            } else {
+                $stmt = $this->conn->prepare("SHOW COLUMNS FROM users LIKE ?");
+                if ($stmt) {
+                    $stmt->bind_param("s", $column);
+                    $stmt->execute();
+                    $res = $stmt->get_result();
+                    $exists = $res && $res->num_rows > 0;
+                    $stmt->close();
+                }
+            }
+        } catch (Throwable $e) {
+            $exists = false;
+        }
+
+        $this->userColumnExistsCache[$column] = $exists;
+        return $exists;
+    }
+
+    private function quoteIdentifier(string $identifier): string
+    {
+        $safe = str_replace('`', '``', $identifier);
+        return "`{$safe}`";
+    }
+
     /**
      * Validate that incoming resources will not exceed target storage capacity.
      */

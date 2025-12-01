@@ -68,22 +68,8 @@ class ResourceManager {
 
         if (!isset($building_map[$resource_type])) {
             // Invalid resource type, return 0
-        return 0.0;
-    }
-
-    private function getUserIdByVillage(int $villageId): ?int
-    {
-        $stmt = $this->conn->prepare("SELECT user_id FROM villages WHERE id = ? LIMIT 1");
-        if (!$stmt) {
-            return null;
+            return 0.0;
         }
-        $stmt->bind_param("i", $villageId);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $row = $res ? $res->fetch_assoc() : null;
-        $stmt->close();
-        return $row && isset($row['user_id']) ? (int)$row['user_id'] : null;
-    }
 
         $building_internal_name = $building_map[$resource_type];
 
@@ -226,6 +212,20 @@ class ResourceManager {
         
         // Return the updated village array
         return $village;
+    }
+
+    private function getUserIdByVillage(int $villageId): ?int
+    {
+        $stmt = $this->conn->prepare("SELECT user_id FROM villages WHERE id = ? LIMIT 1");
+        if (!$stmt) {
+            return null;
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = $res ? $res->fetch_assoc() : null;
+        $stmt->close();
+        return $row && isset($row['user_id']) ? (int)$row['user_id'] : null;
     }
 
     /**

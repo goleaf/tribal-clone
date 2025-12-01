@@ -1794,6 +1794,24 @@ class BattleManager
                 'vault_protected' => $vaultProtected,
                 'available_after_protection' => $availableAfterProtection,
                 'report_version' => self::REPORT_VERSION,
+                'modifiers' => [
+                    'wall_level' => $wall_level,
+                    'effective_wall_level' => $effective_wall_level,
+                    'wall_bonus' => $wall_bonus,
+                    'morale' => $morale,
+                    'luck' => [
+                        'attack' => $attack_random,
+                        'defense' => $defense_random
+                    ],
+                    'environment' => [
+                        'night' => $this->isNightTimeWorldConfig(),
+                        'terrain_attack_multiplier' => $this->getEnvMultiplier('terrain_attack_multiplier'),
+                        'terrain_defense_multiplier' => $this->getEnvMultiplier('terrain_defense_multiplier'),
+                        'weather_attack_multiplier' => $this->getEnvMultiplier('weather_attack_multiplier'),
+                        'weather_defense_multiplier' => $this->getEnvMultiplier('weather_defense_multiplier'),
+                    ],
+                    'overstack' => $overstack
+                ],
                 'attack_power' => $attackPowerFinal,
                 'defense_power' => $defensePowerFinal,
                 'phase_reports' => $phaseReports,

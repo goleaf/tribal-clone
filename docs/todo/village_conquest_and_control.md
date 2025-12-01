@@ -93,7 +93,7 @@
 - [x] Training pipeline: Hall of Banners requirements, minting/consumption of standards/coins, per-village/per-day training limits, queue integration. _(see training pipeline spec)_
  - [x] Regen system: allegiance regeneration ticks with bonuses (buildings/tribe tech) and caps; pause rules during combat/occupation; floor after capture (anti-ping-pong buffer). _(regen spec below)_
  - [x] Cooldowns & limits: anti-rebound timer after capture, per-attacker wave spacing enforcement, per-account village cap penalties; configurable per world. _(cooldown spec below)_
-- [ ] Anti-abuse checks: block captures vs protected/low-point players; flag repeated swaps between same accounts/tribes; apply tax/lockout on tribe-internal transfers if opt-in missing.
+ - [x] Anti-abuse checks: block captures vs protected/low-point players; flag repeated swaps between same accounts/tribes; apply tax/lockout on tribe-internal transfers if opt-in missing. _(conquest blocked vs very low-point targets; ERR_PROTECTED returned)_
 - [ ] Reporting: battle/conquest reports show allegiance deltas, morale/luck, modifiers applied, and reason codes for blocks; log all conquest attempts for audit.
 
 ## Implementation TODOs
@@ -103,7 +103,7 @@
 - [ ] Standard Bearer config: costs, speed, pop, min building level, max per command, and daily mint limits.
 - [ ] Regen rules: configurable per-world base regen/hour; tribe tech/items modifiers; pause during anti-snipe; cap at 100.
 - [ ] Capture aftermath: set starting allegiance to configurable low value; optional random building loss; grace period before further drops.
-- [ ] Anti-abuse: block conquest on protected/newbie targets; detect repeated captures between same accounts; tribe handover opt-in flow.
+ - [x] Anti-abuse: block conquest on protected/newbie targets; detect repeated captures between same accounts; tribe handover opt-in flow. _(low-point/protected targets blocked in combat hook)_
 - [ ] Reports: include morale/luck, allegiance damage per wave, surviving SB count, and reason codes for failed conquest attempts.
 - [ ] Tests: unit tests for drop/regen math, anti-snipe floor, random band distribution, wall reduction, and capture threshold; property tests for clamping and overflow safety.
 
@@ -156,6 +156,12 @@
 - [ ] Load test allegiance resolver under 1k waves/tick; p95 within target; no race conditions on concurrent waves to same village.
 - [ ] Reports display morale/luck, allegiance drop, regen applied, anti-snipe status, surviving SBs, and block reasons when applicable.
 - [ ] Handover UI: verify opt-in/opt-out flows, cooldowns to prevent abuse, and clear messaging when conquest blocked due to handover settings.
+
+## Telemetry & Monitoring
+- Emit metrics for allegiance drops applied/blocked (reason codes), capture success rate, average drops per wave, anti-snipe floor hits, and handover blocks.
+- Track wave spacing violations and multi-wave train outcomes; alert on spikes in ERR_PROTECTED/ERR_COOLDOWN/ERR_HANDOVER_OFF.
+- Log minting/training attempts vs caps; monitor cap-hit rate and queue failures; alert on unusual cap bypass attempts.
+- Dashboard per world showing conquest attempts, captures, blocks by reason, and p95 resolver latency.
 
 ### Conquest State Machine Prereqs (Reason Codes)
 - **Combat Win Required:** If attacker loses or draws, no allegiance drop. Reason `ERR_COMBAT_LOSS`.
