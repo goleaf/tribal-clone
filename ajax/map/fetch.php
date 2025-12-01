@@ -14,7 +14,7 @@ if (!isset($_SESSION['user_id'])) {
 $userId = (int)$_SESSION['user_id'];
 $limiter = new RateLimiter($conn);
 $windowSeconds = 10;
-$maxRequests = 10; // per user per window to curb fetch spam
+$maxRequests = 8; // tighter per-user window to curb fetch spam
 $key = "map_fetch_user_{$userId}";
 
 if (!$limiter->allow($key, $maxRequests, $windowSeconds)) {

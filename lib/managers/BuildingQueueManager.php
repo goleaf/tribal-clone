@@ -145,7 +145,7 @@ class BuildingQueueManager
             return [
                 'success' => false,
                 'message' => $e->getMessage(),
-                'code' => $errorCode
+                'error_code' => $errorCode
             ];
         }
     }

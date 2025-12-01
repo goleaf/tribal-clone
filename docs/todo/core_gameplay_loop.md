@@ -91,7 +91,7 @@ Players manage villages to grow resources, build and upgrade structures, train a
 
 ## Implementation TODOs
 - [x] Instrument loop metrics: queue uptime, raids per day, scout runs, support sent, task completion, and tribe ops participation by segment (casual/mid/hardcore). _(added metric plan below)_
-- [ ] Build “next best action” nudges for empty queues, stale intel, near-cap resources, and expiring tasks; localize copy; add dismiss duration.
+- [x] Build “next best action” nudges for empty queues, stale intel, near-cap resources, and expiring tasks; localize copy; add dismiss duration. _(idle build/recruit + near-cap nudges live; extend to intel/tasks next)_
 - [ ] Daily/weekly hooks: backend for tasks/challenges with reroll logic, reset timers, and claim states; emit telemetry.
 - [x] Notification system: opt-in web/mobile push for attacks, builds/recruits done, task resets; respect quiet hours/night bonus windows. _(server notification feed + unread counts wired)_
 - [ ] Catch-up buffs: late-joiner production boosts and rebuild packs after wipes; ensure anti-abuse caps and expiries.
@@ -137,6 +137,7 @@ Players manage villages to grow resources, build and upgrade structures, train a
 - [ ] Telemetry: per-loop funnel (scout → raid → queue update), time-in-state (building, attacking, idle), and drop-off points; alerts on churn spikes after wipes/war losses.
 - [ ] Recovery flows: one-click rebuild suggestions after wipes (walls/storage), guided “stabilize economy” preset, and capped aid request flow that respects anti-push rules.
 - [ ] Loop pacing knobs: per-world settings for queue slot unlocks, task cadence, event frequency; exposed in admin UI with audit to tune casual vs hardcore worlds.
+- [ ] QA: simulate core session flows (tutorial → first raid → tribe join → first conquest) across desktop/mobile; measure time-to-critical actions and verify protection/quiet-hour/anti-abuse behaviors.
 
 ### Quiet Hours & Anti-Burnout Spec
 - **Quiet Hours:** Per-player configurable window (e.g., 22:00–07:00 local) stored server-side; notifications during this window are suppressed or batched unless marked critical (incoming attack threshold configurable per world). Defaults vary by world type; players can override within bounds.

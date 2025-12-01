@@ -117,6 +117,7 @@ CREATE TABLE villages (
     wood INTEGER NOT NULL DEFAULT 0,
     clay INTEGER NOT NULL DEFAULT 0,
     iron INTEGER NOT NULL DEFAULT 0,
+    wounded_pool INTEGER NOT NULL DEFAULT 0,
     last_update INTEGER NOT NULL DEFAULT (strftime('%s','now')),
     is_barbarian INTEGER NOT NULL DEFAULT 0,
     UNIQUE (x_coord, y_coord)

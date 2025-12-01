@@ -121,6 +121,7 @@
 - Auditing retains append-only logs (trades/aid/minting) for 180 days with actor/target/ip_hash/ua_hash/world_id.
 - Load shedding on trade/aid spikes returns queue/try-later with backpressure metrics; no DB timeouts.
 - Validation rejects zero/negative sends, enforces storage limits at send/receive, and blocks extreme exchange ratios; tests cover these cases.
+- Vault math validated: loot calculations use max(vault_pct, hiding_place) per resource; reports show protected amount and applied percentage correctly.
 
 ### Anti-Hoarding & Anti-Inflation Spec
 - **Overflow/Decay:** Optional per-world `RESOURCE_DECAY_ENABLED` with `DECAY_THRESHOLD_PCT` (default 80%) and `DECAY_RATE_PER_HOUR` (e.g., 1–3% of amount above threshold). Applied in resource tick; decay logged to telemetry; disabled on casual worlds.

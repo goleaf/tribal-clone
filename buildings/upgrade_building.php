@@ -77,14 +77,16 @@ try {
 
     $canUpgradeResult = $buildingManager->canUpgradeBuilding($village_id, $internal_name, $user_id);
     if (!$canUpgradeResult['success']) {
-        throw new Exception($canUpgradeResult['message']);
+        $errorCode = $canUpgradeResult['code'] ?? 'ERR_UPGRADE';
+        throw new Exception(json_encode(['message' => $canUpgradeResult['message'], 'code' => $errorCode]));
     }
 
     // Use the new queue manager to enqueue the build
     $result = $queueManager->enqueueBuild($village_id, $internal_name, $user_id);
     
     if (!$result['success']) {
-        throw new Exception($result['message']);
+        $errorCode = $result['error_code'] ?? 'ERR_QUEUE';
+        throw new Exception(json_encode(['message' => $result['message'], 'code' => $errorCode]));
     }
 
     $response = [
@@ -122,10 +124,20 @@ try {
     echo json_encode($response);
 
 } catch (Exception $e) {
-    error_log("DEBUG: upgrade_building.php - Error: " . $e->getMessage());
-    
+    $payload = ['status' => 'error', 'message' => 'Building upgrade failed.'];
+    $decoded = json_decode($e->getMessage(), true);
+    if (is_array($decoded) && isset($decoded['message'])) {
+        $payload['message'] = "Building upgrade failed: " . $decoded['message'];
+        if (isset($decoded['code'])) {
+            $payload['code'] = $decoded['code'];
+        }
+    } else {
+        $payload['message'] = "Building upgrade failed: " . $e->getMessage();
+    }
+
+    error_log("DEBUG: upgrade_building.php - Error: " . ($payload['message'] ?? $e->getMessage()));
     header('Content-Type: application/json');
-    echo json_encode(['status' => 'error', 'message' => "Building upgrade failed: " . $e->getMessage()]);
+    echo json_encode($payload);
     exit();
 }
 ?>

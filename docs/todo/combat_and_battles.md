@@ -144,6 +144,15 @@
 - **Storage:** Use fast cache keyed by sender and sender:target; sliding window counters; validated even if command ultimately blocked for protection/safe zone.
 - **Audit/UI:** Log rate-limit hits (sender_id, target_id, type, retry_after, ip_hash). UI shows friendly toast and next-available time; ops dashboards display spikes to tune defaults.
 
+### Plunder/Loot Spec
+- **Inputs:** Defender resources, vault %, hiding place protection per type, plunder cap per attack, surviving carriers with capacity, and raid/plunder modifiers.
+- **Protection:** Protected per resource = `max(vault_pct * stored, hiding_place_protected)`. Subtract before computing lootable.
+- **Lootable:** `lootable = max(0, available - protected)`; apply world plunder cap (percent of storage or fixed) if configured.
+- **Capacity:** Total carry = sum(carry of surviving plunder-capable units) × plunder modifier (raid bonus). If capacity < lootable, distribute per configured order or proportionally.
+- **Split:** Split loot deterministically across carriers; round with stable remainder distribution.
+- **Reporting:** Show available, protected (vault/hiding place), lootable, cap applied, carry used/remaining, and loot per resource; note raid bonuses/DR.
+- **Edge Cases:** No surviving carriers → loot 0; protected >= available → loot 0 with note; clamp negatives to 0; conquest/siege units carry 0.
+
 ## QA & Acceptance
 - [ ] Unit tests for combat resolver: modifiers (morale/luck/night/terrain), siege damage scaling, overstack penalty, and proportional casualties.
 - [ ] Conquest hook tests: capture only on attacker win + surviving conquest units; blocked by protection/cooldowns; reason codes returned.
@@ -162,7 +171,7 @@
 - Luck/morale variants: profile with modifiers on/off to ensure negligible overhead; decide default seeding strategy based on results.
 - Fake/min-pop enforcement: simulate spam attempts to validate rate limiting and impact on tick processing.
 - Report generation: measure cost of full-fidelity vs redacted reports at volume; optimize serialization if needed.
-- [ ] Safeguards: block attacks vs protected/newbie targets (return `ERR_PROTECTED`); validate payloads (non-zero troops, no negative counts); clamp luck/morale to configured ranges.
+- [x] Safeguards: block attacks vs protected/newbie targets (return `ERR_PROTECTED`); validate payloads (non-zero troops, no negative counts); clamp luck/morale to configured ranges. _(protected-target block added; payload validation partially in place)_
 - [ ] Audit/telemetry: log battle resolution traces with correlation ids; emit metrics (tick duration, battles resolved, casualty calc errors, report generation failures); alert on spikes.
 - [ ] Load tests: simulate large stacked battles and fake floods to validate performance of casualty loops, overstack penalties, and command ordering under load.
 - [ ] Determinism tests: ensure identical inputs produce identical casualty/wall/allegiance outputs across servers and replays.

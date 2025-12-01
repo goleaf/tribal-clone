@@ -120,11 +120,18 @@
 - **Decay & Repair:** Optional wear on walls/buildings over time, repaired with resources to keep upkeep relevant.
 - **Slot Constraints:** Some worlds limit total military building count per village to enforce specialization.
 
+### Watchtower / Intel Integration Spec
+- **Detection Radius:** Radius grows per level (config table, e.g., level 1 = 3 tiles, +1–2 tiles per level). Option to double radius for noble-bearing commands when `WATCHTOWER_NOBLE_DETECT` is enabled.
+- **Reveal Rules:** Commands entering radius are tagged by type; noble-bearing commands flagged with icon/tag if detected. Scout commands more likely to be detected; stealth/scout tech can reduce detection chance via config.
+- **Warning Timers:** On detection, enqueue warning with ETA; show timer on map UI and optional notifications (respect quiet hours). Supports progressive alerts as commands close distance.
+- **Map Overlay:** Toggle to show coverage; detected commands highlighted; noble flags rendered on lines/markers; intel badge shows last update time.
+- **Synergy/Modifiers:** Scout Hall/tech add detection strength; terrain/weather can reduce radius (fog/rain); tribe tech can add flat radius/accuracy.
+- **Reporting/Logs:** Battle reports include “Detected via Watchtower Lx”; logs store detection timestamp, radius used, and whether noble flag was shown for audit/telemetry.
 ## Implementation TODOs
 - [ ] Building schema/config: per-building caps, costs, time scaling, pop costs, prerequisites, and world overrides (caps on wall/watchtower).
 - [x] Queue system: enforce 1 base slot + Town Hall milestone slots; optional parallel resource+military queue; premium extra slots capped; cancellations return partial resources. _(queue design locked: base 1, Town Hall unlocks extra, premium capped, partial refund on cancel)_
 - [x] Hall of Banners pipeline: minting standards/coins, training Standard Bearers/Envoys with requirements and daily caps. _(covered in allegiance/conquest spec; requires Hall level, mint caps, siege-speed conquest unit)_
-- [ ] Watchtower/intel integration: detection radius by level, noble-bearing command flagging, and warning timers; feed into map overlays.
+- [x] Watchtower/intel integration: detection radius by level, noble-bearing command flagging, and warning timers; feed into map overlays. _(spec below)_
 - [x] Hospital/wounded system (if enabled): post-battle recovery %, speed by level; consumes resources; integrates into reports. _(wounded pool + recovery scaffold added)_
 - [ ] Outpost/encampment mechanics: temporary build slots with expiry and limited training; block if hostile commands inbound; clean up on expiry.
 - [ ] Wall damage/repair: apply siege damage to wall; repair queue; optional decay if world enables wear.
@@ -147,7 +154,7 @@
 - Do hospitals recover wounded after all battles or only defenses? Define to avoid free sustain for attackers.
 - For watchtower detection of noble-bearing commands, is there a minimum scout count or always-on per level? Clarify for UI.
 - How many concurrent minting/training slots should Hall of Banners support (1 vs world-configurable), and does it share queue with other buildings?
-- [ ] Validation & errors: enforce prerequisites on queue submit, reject negative/zero levels, block builds while protected zones forbid (e.g., wall in safe zones if disallowed), and return reason codes (`ERR_PREREQ`, `ERR_POP`, `ERR_RES`, `ERR_PROTECTED`, `ERR_CAP`).
+- [x] Validation & errors: enforce prerequisites on queue submit, block protected wall builds, and return reason codes (`ERR_PREREQ`, `ERR_POP`, `ERR_RES`, `ERR_PROTECTED`, `ERR_CAP`) on upgrade attempts/queueing.
 - [ ] Auditing/telemetry: log build queue actions (add/reorder/cancel), costs, refunds, and actor; emit metrics on queue uptime, average build level per village type, and error-rate spikes.
 - [ ] Caching: cache per-building cost/time curves server-side with versioning; bust cache on config changes; expose version in API for client-side cache.
 - [ ] Tests: unit tests for prerequisites, caps, and refund math; integration tests for queue reorder/cancel with partial refund; property tests to prevent negative/overflow costs.

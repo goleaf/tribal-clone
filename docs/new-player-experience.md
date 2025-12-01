@@ -82,6 +82,7 @@
 - **Attack Safeguard:** Before sending first PvP attack, show modal summarizing protection status and expected retaliation risk; require explicit acknowledgment.
 - **Queue Safety:** Prevent queuing troops that exceed population; highlight how to build Farm/Granary.
 - **Shield on Devastation:** If player loses >50% troops in early game PvE (rare), give a one-time recovery pack and short shield.
+- **Protected Target Block:** Attempts to attack protected players return a clear `ERR_PROTECTED` and guidance; surfaced in send form and reports.
 
 ## Accessibility & Clarity
 - **Tooltips:** Inline for morale, loyalty/allegiance, wall effects, resource production, timers. Dismissable; “learn more” opens help page.
@@ -103,4 +104,3 @@
 - **25:00–35:00:** Quest nudges to upgrade Wall 2 and place map bookmarks. Player adds two bookmarks and names them.
 - **35:00–45:00:** Chat prompt appears with canned “Hi! New here.” Player sends; receives friendly response. Tribe suggestions pop up; player applies to “Green Shire.”
 - **45:00–60:00:** While waiting for tribe response, player sets another build (Town Hall 2) and recruits more Spears. Tutorial reminds: “Protection ends in 71h; you can relocate once.” Summary modal recaps learned systems and suggests advanced tutorials. Player logs off with queues running and a small login-bonus token scheduled for next day.
-

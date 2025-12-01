@@ -395,9 +395,9 @@ class BuildingManager {
         }
 
         $stmt_resources = $this->conn->prepare("SELECT wood, clay, iron FROM villages WHERE id = ?");
-         if ($stmt_resources === false) {
-              error_log("Prepare failed for resource check: " . $this->conn->error);
-              return ['success' => false, 'message' => 'Server error while fetching resources.'];
+        if ($stmt_resources === false) {
+             error_log("Prepare failed for resource check: " . $this->conn->error);
+              return ['success' => false, 'message' => 'Server error while fetching resources.', 'code' => 'ERR_SERVER'];
          }
         $stmt_resources->bind_param("i", $villageId);
         $stmt_resources->execute();
@@ -405,18 +405,18 @@ class BuildingManager {
         $stmt_resources->close();
         
         if (!$resources) {
-             return ['success' => false, 'message' => 'Cannot fetch village resources.'];
+             return ['success' => false, 'message' => 'Cannot fetch village resources.', 'code' => 'ERR_SERVER'];
         }
 
         if ($resources['wood'] < $upgradeCosts['wood'] || 
             $resources['clay'] < $upgradeCosts['clay'] || 
             $resources['iron'] < $upgradeCosts['iron']) {
-            return ['success' => false, 'message' => 'Not enough resources.'];
+            return ['success' => false, 'message' => 'Not enough resources.', 'code' => 'ERR_RES'];
         }
         
         $requirementsCheck = $this->checkBuildingRequirements($internalName, $villageId);
         if (!$requirementsCheck['success']) {
-            return $requirementsCheck;
+            return $requirementsCheck + ['code' => 'ERR_PREREQ'];
         }
         
         // Check population availability (apply on completion, so check future state)

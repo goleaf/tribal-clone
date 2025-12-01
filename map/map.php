@@ -133,6 +133,9 @@ require '../header.php';
                 <div id="bookmark-search-status" class="filter-hint"></div>
             </div>
         </section>
+        <div class="map-alert" id="movements-warning" style="display:none;">
+            Movement view is limited to prevent slowdowns. Zoom closer or apply filters to see more details.
+        </div>
 
             <div class="map-wrapper">
                 <div class="map-grid-shell">
@@ -198,6 +201,17 @@ require '../header.php';
                     <button id="popup-support" class="btn-secondary">Quick support</button>
                     <button id="popup-send-units" class="btn-ghost">Open command</button>
                     <a id="popup-open-village" class="btn-ghost" href="#">Open profile</a>
+                </div>
+                <div class="travel-card">
+                    <div class="travel-row">
+                        <label for="travel-unit-select">Travel from home:</label>
+                        <select id="travel-unit-select"></select>
+                    </div>
+                    <div class="travel-meta">
+                        <span id="travel-time-display">–</span>
+                        <span id="travel-distance-display"></span>
+                    </div>
+                    <div class="travel-error" id="travel-error" style="display:none;"></div>
                 </div>
                 <div class="note-card">
                     <div class="reserve-row">
@@ -283,7 +297,8 @@ const mapState = {
     players: {},
     tribes: {},
     tribeDiplomacy: {},
-    myTribeId: currentUserAllyId || null
+    myTribeId: currentUserAllyId || null,
+    unitSpeeds: {}
 };
 let annotations = loadAnnotations();
 trimAnnotations(50);
@@ -321,6 +336,7 @@ const mapSkeletonEl = document.getElementById('map-skeleton');
 const highContrastToggle = document.getElementById('high-contrast-toggle');
 const reducedMotionToggle = document.getElementById('reduced-motion-toggle');
 let mapSkeletonTimer = null;
+const movementsWarningEl = document.getElementById('movements-warning');
 
 function setMapLoading(isLoading) {
     if (mapLoadingEl) {
@@ -589,6 +605,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (travelUnitSelect) {
+        travelUnitSelect.addEventListener('change', triggerTravelEstimate);
+    }
+
     document.addEventListener('click', (event) => {
         const popup = document.getElementById('map-popup');
         const isClickInsidePopup = popup.contains(event.target);
@@ -816,7 +836,7 @@ function movementVisible(move) {
     return true;
 }
 
-async function fetchMapData(targetX, targetY, targetSize) {
+async function fetchMapData(targetX, targetY, targetSize, controller) {
     const url = `map_data.php?x=${encodeURIComponent(targetX)}&y=${encodeURIComponent(targetY)}&size=${encodeURIComponent(targetSize)}`;
     const headers = {};
     if (window.__mapETag) {
@@ -825,7 +845,7 @@ async function fetchMapData(targetX, targetY, targetSize) {
     if (window.__mapLastModified) {
         headers['If-Modified-Since'] = window.__mapLastModified;
     }
-    const response = await fetch(url, { credentials: 'same-origin', headers });
+    const response = await fetch(url, { credentials: 'same-origin', headers, signal: controller?.signal });
     if (response.status === 304) {
         if (window.__mapCache) {
             // Reuse cached payload; adjust center/size to requested params
@@ -836,7 +856,7 @@ async function fetchMapData(targetX, targetY, targetSize) {
             };
         }
         // No cache available; fallback to fresh fetch without conditionals
-        const refetch = await fetch(url, { credentials: 'same-origin' });
+        const refetch = await fetch(url, { credentials: 'same-origin', signal: controller?.signal });
         if (!refetch.ok) {
             throw new Error(`Map fetch failed with status ${refetch.status}`);
         }
@@ -845,6 +865,10 @@ async function fetchMapData(targetX, targetY, targetSize) {
         window.__mapLastModified = refetch.headers.get('Last-Modified') || null;
         window.__mapCache = freshData;
         return freshData;
+    }
+    if (response.status === 429) {
+        const retryAfter = parseInt(response.headers.get('Retry-After') || '1', 10);
+        throw new Error(`RATE_LIMIT:${isNaN(retryAfter) ? 1 : retryAfter}`);
     }
     if (!response.ok) {
         throw new Error(`Map fetch failed with status ${response.status}`);
@@ -907,11 +931,18 @@ function requestMapLoad(targetX, targetY, targetSize, options = {}) {
 
 async function loadMap(targetX, targetY, targetSize, options = {}) {
     const { skipUrl = false } = options;
+    if (mapAbortController) {
+        mapAbortController.abort();
+    }
+    mapAbortController = new AbortController();
     mapFetchInFlight = true;
     setMapLoading(true);
     try {
         const size = normalizeSize(targetSize);
-        const data = await fetchMapData(targetX, targetY, size);
+        const data = await fetchMapData(targetX, targetY, size, mapAbortController);
+        if (!data) {
+            return;
+        }
         mapState.center = data.center || { x: targetX, y: targetY };
         mapState.size = data.size || size;
         mapState.players = indexPlayers(data.players || []);
@@ -919,6 +950,7 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
         mapState.byCoord = indexVillages(data.villages || [], mapState.players);
         mapState.tribeDiplomacy = data.diplomacy || data.tribeDiplomacy || {};
         mapState.myTribeId = data.my_tribe_id || currentUserAllyId || null;
+        mapState.unitSpeeds = data.unit_speeds || {};
         worldBounds = data.world_bounds || worldBounds;
         renderMap();
         renderMiniMap();
@@ -927,7 +959,9 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
             updateUrl(mapState.center.x, mapState.center.y, mapState.size);
         }
     } catch (error) {
-        console.error('Failed to load map data:', error);
+        if (error.name !== 'AbortError') {
+            console.error('Failed to load map data:', error);
+        }
     } finally {
         mapFetchInFlight = false;
         setMapLoading(false);
@@ -1159,6 +1193,70 @@ function formatArrivalTime(tsSeconds) {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+function populateTravelUnits() {
+    if (!travelUnitSelect) return;
+    travelUnitSelect.innerHTML = '';
+    const speeds = mapState.unitSpeeds || {};
+    const entries = Object.entries(speeds);
+    if (!entries.length) {
+        travelUnitSelect.innerHTML = '<option value="">No unit speeds</option>';
+        travelUnitSelect.disabled = true;
+        return;
+    }
+    travelUnitSelect.disabled = false;
+    const lastChoice = localStorage.getItem('map_travel_unit') || '';
+    entries.forEach(([internal, data]) => {
+        const option = document.createElement('option');
+        option.value = internal;
+        const minutes = data.minutes_per_field ? data.minutes_per_field.toFixed(1) : '';
+        option.textContent = `${internal} (${minutes} min/field)`;
+        if (internal === lastChoice) option.selected = true;
+        travelUnitSelect.appendChild(option);
+    });
+    if (!travelUnitSelect.value && travelUnitSelect.options.length > 0) {
+        travelUnitSelect.value = travelUnitSelect.options[0].value;
+    }
+}
+
+async function triggerTravelEstimate() {
+    if (!travelUnitSelect || !travelTimeDisplay || !travelDistanceDisplay || !travelError) return;
+    const unit = travelUnitSelect.value;
+    if (!unit) return;
+    const speeds = mapState.unitSpeeds || {};
+    const data = speeds[unit];
+    if (!data || !data.fields_per_hour) return;
+    const targetX = parseInt(travelUnitSelect.dataset.targetX || '0', 10);
+    const targetY = parseInt(travelUnitSelect.dataset.targetY || '0', 10);
+    travelTimeDisplay.textContent = '...';
+    travelDistanceDisplay.textContent = '';
+    travelError.style.display = 'none';
+    try {
+        const resp = await fetch(`../ajax/map/travel_time.php?target_x=${targetX}&target_y=${targetY}&unit_speed=${data.fields_per_hour}&grid_type=square&terrain_multiplier=1`);
+        const json = await resp.json();
+        if (json.status === 'success' || json.distance !== undefined) {
+            const dist = json.distance !== undefined ? json.distance : null;
+            if (dist !== null) {
+                travelDistanceDisplay.textContent = `${dist.toFixed(1)} fields`;
+            }
+            const time = json.travel_time_formatted || (json.travel_time_seconds ? secondsToTime(json.travel_time_seconds) : null);
+            if (time) {
+                travelTimeDisplay.textContent = time;
+            } else {
+                travelTimeDisplay.textContent = '–';
+            }
+            localStorage.setItem('map_travel_unit', unit);
+        } else {
+            travelTimeDisplay.textContent = '–';
+            travelError.textContent = json.error || json.message || 'Travel calc failed.';
+            travelError.style.display = 'block';
+        }
+    } catch (e) {
+        travelTimeDisplay.textContent = '–';
+        travelError.textContent = 'Travel calc failed.';
+        travelError.style.display = 'block';
+    }
+}
+
 function jumpToHome() {
     if (homeVillage) {
         requestMapLoad(homeVillage.x, homeVillage.y, mapState.size);
@@ -1190,6 +1288,10 @@ function showVillagePopup(x, y) {
     const popupVillageCoords = document.getElementById('popup-village-coords');
     const popupVillageDistance = document.getElementById('popup-village-distance');
     const popupVillagePoints = document.getElementById('popup-village-points');
+    const travelUnitSelect = document.getElementById('travel-unit-select');
+    const travelTimeDisplay = document.getElementById('travel-time-display');
+    const travelDistanceDisplay = document.getElementById('travel-distance-display');
+    const travelError = document.getElementById('travel-error');
     const popupSendUnitsButton = document.getElementById('popup-send-units');
     const popupAttackButton = document.getElementById('popup-attack');
     const popupSupportButton = document.getElementById('popup-support');
@@ -1235,6 +1337,17 @@ function showVillagePopup(x, y) {
         popupOpenVillage.href = `../player/player.php?id=${village.user_id}`;
     } else {
         popupOpenVillage.style.display = 'none';
+    }
+
+    if (travelUnitSelect && travelTimeDisplay && travelDistanceDisplay && travelError) {
+        travelError.style.display = 'none';
+        travelError.textContent = '';
+        travelDistanceDisplay.textContent = '';
+        travelTimeDisplay.textContent = '–';
+        travelUnitSelect.dataset.targetX = x;
+        travelUnitSelect.dataset.targetY = y;
+        populateTravelUnits();
+        triggerTravelEstimate();
     }
 
     if (village.id === currentVillageId) {
@@ -1910,10 +2023,18 @@ body.map-high-contrast .legend-dot.relation-barb { background: #c0c4cc; border-c
     animation: spin 1s linear infinite;
 }
 
+body.map-reduced-motion .map-loading .spinner {
+    animation: none;
+}
+
 .map-grid.is-loading .map-tile {
     background: linear-gradient(90deg, #e3dacb 25%, #f2ece1 50%, #e3dacb 75%);
     background-size: 200% 100%;
     animation: map-skeleton 1.2s ease-in-out infinite;
+}
+
+body.map-reduced-motion .map-grid.is-loading .map-tile {
+    animation: none;
 }
 
 @keyframes map-skeleton {

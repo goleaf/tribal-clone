@@ -142,7 +142,12 @@ class TradeManager {
         ];
 
         if ($resources['wood'] + $resources['clay'] + $resources['iron'] <= 0) {
-            return ['success' => false, 'message' => 'Select at least one resource to send.', 'code' => 'ERR_INPUT'];
+            return [
+                'success' => false,
+                'message' => 'Select at least one resource to send.',
+                'code' => EconomyError::ERR_VALIDATION,
+                'details' => ['field' => 'resources', 'message' => 'positive_required']
+            ];
         }
 
         if (!preg_match('/^(\d+)\|(\d+)$/', $targetCoords, $matches)) {
@@ -192,6 +197,34 @@ class TradeManager {
         $timeSec = calculateTravelTime($distance, $speed);
         $departure = date('Y-m-d H:i:s');
         $arrival = date('Y-m-d H:i:s', time() + (int)$timeSec);
+
+        // Enforce target storage caps to prevent overflow pushing.
+        $capacity = isset($targetVillage['warehouse_capacity']) ? (int)$targetVillage['warehouse_capacity'] : 0;
+        if ($capacity <= 0) {
+            $capacity = (int)($village['warehouse_capacity'] ?? 0);
+        }
+        if ($capacity > 0) {
+            $projected = [
+                'wood' => (int)$targetVillage['wood'] + $resources['wood'],
+                'clay' => (int)$targetVillage['clay'] + $resources['clay'],
+                'iron' => (int)$targetVillage['iron'] + $resources['iron'],
+            ];
+            foreach ($projected as $resKey => $amt) {
+                if ($amt > $capacity) {
+                    return [
+                        'success' => false,
+                        'message' => 'Target storage capacity exceeded for ' . $resKey . '.',
+                        'code' => EconomyError::ERR_CAP,
+                        'details' => [
+                            'cap_type' => 'storage',
+                            'resource' => $resKey,
+                            'capacity' => $capacity,
+                            'projected' => $projected[$resKey]
+                        ]
+                    ];
+                }
+            }
+        }
 
         $this->conn->begin_transaction();
         try {

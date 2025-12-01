@@ -94,6 +94,8 @@ $maxX = min($worldSize - 1, $centerX + $radius);
 $minY = max(0, $centerY - $radius);
 $maxY = min($worldSize - 1, $centerY + $radius);
 $worldId = CURRENT_WORLD_ID;
+$movementsLimit = defined('MAP_MOVEMENTS_LIMIT') ? (int)MAP_MOVEMENTS_LIMIT : 500;
+$movementsTruncated = false;
 
 $lastModifiedTs = 0;
 function isUnderBeginnerProtection(array $userRow): bool
@@ -248,17 +250,28 @@ $movementsStmt = $conn->prepare("
         (sv.x_coord BETWEEN ? AND ? AND sv.y_coord BETWEEN ? AND ?) OR
         (tv.x_coord BETWEEN ? AND ? AND tv.y_coord BETWEEN ? AND ?)
       )
+    ORDER BY a.arrival_time ASC
+    LIMIT ?
 ");
 $movementAttackIds = [];
 if ($movementsStmt) {
     $movementsStmt->bind_param(
-        'iiiiiiii',
+        'iiiiiiiii',
         $minX, $maxX, $minY, $maxY,
-        $minX, $maxX, $minY, $maxY
+        $minX, $maxX, $minY, $maxY,
+        $movementsLimit + 1
     );
     $movementsStmt->execute();
     $movementsRes = $movementsStmt->get_result();
+    $fetchedMoves = [];
     while ($move = $movementsRes->fetch_assoc()) {
+        $fetchedMoves[] = $move;
+    }
+    if (count($fetchedMoves) > $movementsLimit) {
+        $movementsTruncated = true;
+        $fetchedMoves = array_slice($fetchedMoves, 0, $movementsLimit);
+    }
+    foreach ($fetchedMoves as $move) {
         $sourceId = (int)$move['source_village_id'];
         $targetId = (int)$move['target_village_id'];
         $arrivalTs = strtotime($move['arrival_time']);
@@ -375,6 +388,26 @@ if ($boundsStmt) {
     $boundsStmt->close();
 }
 
+// Unit speed lookup (minutes per field -> fields per hour)
+$unitSpeeds = [];
+$speedStmt = $conn->prepare("SELECT internal_name, speed, is_active FROM unit_types");
+if ($speedStmt) {
+    $speedStmt->execute();
+    $speedRes = $speedStmt->get_result();
+    while ($u = $speedRes->fetch_assoc()) {
+        $internal = strtolower($u['internal_name'] ?? '');
+        $minutesPerField = isset($u['speed']) ? (float)$u['speed'] : null;
+        if ($minutesPerField && $minutesPerField > 0) {
+            $unitSpeeds[$internal] = [
+                'minutes_per_field' => $minutesPerField,
+                'fields_per_hour' => 60 / $minutesPerField,
+                'active' => (bool)($u['is_active'] ?? 1)
+            ];
+        }
+    }
+    $speedStmt->close();
+}
+
 $payload = [
     'center' => ['x' => $centerX, 'y' => $centerY],
     'size' => $size,
@@ -384,7 +417,10 @@ $payload = [
     'tribes' => $allies,
     'world_bounds' => $worldBounds,
     'my_tribe_id' => $userTribeId,
-    'diplomacy' => fetchTribeDiplomacy($conn, $userTribeId)
+    'diplomacy' => fetchTribeDiplomacy($conn, $userTribeId),
+    'unit_speeds' => $unitSpeeds,
+    'movements_truncated' => $movementsTruncated,
+    'movements_limit' => $movementsLimit
 ];
 
 $json = json_encode($payload);

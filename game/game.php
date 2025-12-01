@@ -67,6 +67,7 @@ $buildings_data = $buildingManager->getVillageBuildingsViewData($village_id, $ma
 $production_rates = $resourceManager->getProductionRates($village_id);
 $active_upgrades = array_filter($buildings_data, static fn($b) => !empty($b['is_upgrading']));
 $build_queue_count = $buildingManager->getActivePendingQueueCount($village_id) ?? 0;
+$recruit_queue_count = count($unitManager->getRecruitmentQueues($village_id) ?? []);
 $nearCapResources = [];
 foreach (['wood', 'clay', 'iron'] as $resType) {
     $amount = (float)($village[$resType] ?? 0);
@@ -132,6 +133,11 @@ require '../header.php';
             <?php if ($build_queue_count === 0): ?>
                 <div class="game-message info">
                     Build queue is idle — start an upgrade to keep growing.
+                </div>
+            <?php endif; ?>
+            <?php if ($recruit_queue_count === 0 && ($buildings_data['barracks']['level'] ?? 0) > 0): ?>
+                <div class="game-message info">
+                    Recruitment queue is empty — train troops to avoid idle time.
                 </div>
             <?php endif; ?>
             <?php if ($showDominanceBanner && isset($dominanceSnapshot['top'])): ?>

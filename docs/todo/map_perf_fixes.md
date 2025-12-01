@@ -18,7 +18,7 @@
 ## Additional Fixes
 - **Command line thinning:** Simplify geometry for distant zoom (straight segments, no arrowheads) to reduce draw calls; use instanced rendering where possible.
 - **LOD for markers:** Reduce marker detail/icons at far zoom; cluster markers and commands to avoid thousands of DOM/SVG nodes.
-- **Debounce pan/zoom:** Debounce fetches during rapid pan/zoom; fetch only on idle state with a small delay; cancel in-flight requests.
+- [x] **Debounce pan/zoom:** Debounce fetches during rapid pan/zoom; fetch only on idle state with a small delay; cancel in-flight requests. _(debounce + abortable fetch in map/map.php)_
 - **Delta compression:** Compress command deltas (binary/MessagePack) to shrink payloads for high-volume worlds.
 - **Server-side culling:** Curb returned commands/markers outside viewport + padding; enforce max payload size with continuation tokens.
 - **Client perf logging:** Log render duration and dropped frames on map interactions (sampled); ship to telemetry for regression tracking.

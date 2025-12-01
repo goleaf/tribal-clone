@@ -103,6 +103,9 @@ class BattleManager
         $attack_type = in_array($attack_type, ['attack', 'raid', 'support', 'spy', 'fake'], true) ? $attack_type : 'attack';
         $missionType = is_string($options['mission_type'] ?? null) ? $options['mission_type'] : 'light_scout';
         $allowFriendlyFireOverride = !empty($options['allow_friendly_fire']);
+        if (!isset($_SESSION['attack_target_rate'])) {
+            $_SESSION['attack_target_rate'] = [];
+        }
 
         // Ensure both villages exist
         $stmt_check_villages = $this->conn->prepare("
@@ -138,6 +141,31 @@ class BattleManager
                 'error' => is_string($rateLimitCheck) ? $rateLimitCheck : 'RATE_CAP: Too many commands sent recently.'
             ];
         }
+
+        // Pair (attacker->target) burst cap in session to deter rapid resend spam
+        if (!isset($_SESSION['attack_target_rate'])) {
+            $_SESSION['attack_target_rate'] = [];
+        }
+        $pairKey = $attacker_user_id . ':' . $defender_user_id;
+        $now = microtime(true);
+        $windowSec = 30;
+        $maxPerWindow = 5;
+        $bucket = $_SESSION['attack_target_rate'][$pairKey] ?? [];
+        $bucket = array_values(array_filter($bucket, function ($ts) use ($now, $windowSec) {
+            return ($ts + $windowSec) > $now;
+        }));
+        if (count($bucket) >= $maxPerWindow) {
+            $retryAfter = max(1, (int)ceil(($bucket[0] + $windowSec) - $now));
+            return [
+                'success' => false,
+                'error' => 'Too many commands to this target in a short window. Try again shortly.',
+                'code' => AjaxResponse::ERR_RATE_LIMIT,
+                'retry_after' => $retryAfter
+            ];
+        }
+        $bucket[] = $now;
+        $_SESSION['attack_target_rate'][$pairKey] = $bucket;
+
         $attackerTribeId = $this->getUserTribeId($attacker_user_id);
         $defenderTribeId = $this->getUserTribeId($defender_user_id);
         $sitterContext = $this->getSitterContext();
@@ -172,6 +200,13 @@ class BattleManager
                 return [
                     'success' => false,
                     'error' => 'You are under beginner protection and cannot attack stronger players yet.',
+                    'code' => AjaxResponse::ERR_PROTECTED
+                ];
+            }
+            if ($defender_protected && !$attacker_protected) {
+                return [
+                    'success' => false,
+                    'error' => 'This target is under beginner protection.',
                     'code' => AjaxResponse::ERR_PROTECTED
                 ];
             }
@@ -320,9 +355,20 @@ class BattleManager
         }
 
         // Enforce minimum payload anti-abuse rule: 5 pop or any siege unit.
+        $hasUnits = false;
         foreach ($units_sent as $unit_type_id => $count) {
             if (!isset($unit_meta[$unit_type_id])) {
                 continue;
+            }
+            if ($count < 0) {
+                return [
+                    'success' => false,
+                    'error' => 'Invalid troop counts provided.',
+                    'code' => 'ERR_INVALID_PAYLOAD'
+                ];
+            }
+            if ($count > 0) {
+                $hasUnits = true;
             }
             $total_pop += ((int)$unit_meta[$unit_type_id]['population']) * $count;
             $internal = $unit_meta[$unit_type_id]['internal_name'];
@@ -332,6 +378,13 @@ class BattleManager
             if ($count > 0 && in_array($internal, self::LOYALTY_UNIT_INTERNALS, true)) {
                 $hasLoyaltyUnit = true;
             }
+        }
+        if (!$hasUnits) {
+            return [
+                'success' => false,
+                'error' => 'You must send at least one unit.',
+                'code' => 'MIN_PAYLOAD'
+            ];
         }
         if ($total_pop < self::MIN_ATTACK_POP && !$hasSiege) {
             return [

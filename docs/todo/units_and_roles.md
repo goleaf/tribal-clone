@@ -149,6 +149,7 @@ Status markers:
 - [x] Aura/stacking rules: define Banner Guard stacking (cap/overwrite) and Healer recovery caps per battle to prevent runaway buffs; encode in resolver and docs. _(stacking spec below)_
 - [ ] World archetype gates: disable or tighten seasonal/elite units on hardcore worlds; expose per-archetype overrides in admin UI with audit trail.
 - [x] Add mantlet unit data: stats/cost/speed added to units.json for siege-cover role (effect still to wire into combat).
+- [x] Validation: recruit endpoint now rejects zero/negative counts and missing training building level with reason codes.
 - [ ] Tests: unit tests for RPS multipliers, caps, mantlet reduction, aura/healer caps, and conquest-unit limits; integration sims for common compositions vs walls/terrain to validate expected losses.
 - [ ] Anti-abuse: detect repeat exploit patterns (e.g., training beyond caps via concurrent requests), block, and log with reason codes; enforce per-account and per-village caps atomically.
 
@@ -175,3 +176,9 @@ Status markers:
 - [x] Balance hooks: world-configurable multipliers per archetype (inf/cav/ranged/siege) and per-unit overrides for special worlds; expose in admin UI with audit. _(worlds now carry per-archetype train multipliers; UnitManager applies them in recruitment time calc)_
 - [ ] Validation: recruit endpoint rejects zero/negative counts, enforces pop/resource availability, and respects per-village/per-account caps with reason codes.
 - [ ] Telemetry: emit recruit attempts, cap hits, and aura/mantlet/healer usage; alert on cap-hit spikes or disabled unit training errors.
+
+## Profiling & Load Plan
+- Recruit load: simulate high-volume recruitment with caps and world multipliers applied; ensure endpoints stay within p95 latency and caps hold under concurrency.
+- Combat sims: batch-run common comps to validate RPS multipliers and mantlet/aura/healer effects at scale; measure resolver perf impact.
+- Seasonal/event lifecycle: soak tests for start/end toggles and mass sunset conversions; confirm no orphaned units and perf is stable.
+- Telemetry volume: assess telemetry emission for recruit attempts/cap hits/aura usage under load; ensure logging doesn’t degrade gameplay paths.

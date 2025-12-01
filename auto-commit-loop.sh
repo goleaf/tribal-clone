@@ -9,8 +9,19 @@ SLEEP_SECONDS="${SLEEP_SECONDS:-60}"
 command -v git >/dev/null 2>&1 || { echo "git is required on PATH"; exit 1; }
 command -v codex >/dev/null 2>&1 || { echo "codex CLI is required on PATH"; exit 1; }
 
+run_codex() {
+  local prompt="$1"
+
+  if command -v script >/dev/null 2>&1; then
+    # script allocates a pseudo-TTY so codex does not complain about stdout.
+    script -q /dev/null -- codex "$prompt"
+  else
+    codex "$prompt"
+  fi
+}
+
 generate_message() {
-  local staged_diff prompt
+  local staged_diff prompt raw
   staged_diff="$(git -C "$REPO_DIR" diff --cached)"
 
   prompt=$(
@@ -22,7 +33,9 @@ $staged_diff
 EOF
   )
 
-  codex "$prompt" | head -n1 | tr -d '\r'
+  raw="$(run_codex "$prompt" || true)"
+  raw="${raw//$'\r'/}"
+  echo "${raw%%$'\n'*}"
 }
 
 while true; do

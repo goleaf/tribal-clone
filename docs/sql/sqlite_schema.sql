@@ -145,6 +145,7 @@ CREATE TABLE IF NOT EXISTS villages (
     capture_cooldown_until TEXT DEFAULT NULL,
     anti_snipe_until TEXT DEFAULT NULL,
     allegiance_floor INTEGER NOT NULL DEFAULT 0,
+    wounded_pool INTEGER NOT NULL DEFAULT 0,
     is_capital INTEGER NOT NULL DEFAULT 0,
     conquered_at TEXT DEFAULT NULL,
     coins INTEGER NOT NULL DEFAULT 0,

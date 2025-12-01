@@ -90,7 +90,7 @@
 ## Implementation TODOs
 - [x] Conquest resolver: compute allegiance drop per surviving Standard Bearer with modifiers (wall level, escort size, repeated attacks, distance penalty if used), and capture when threshold <= 0. _(see allegiance calculation service spec)_
 - [x] State machine: enforce prerequisites (combat win, bearer survival, cooldowns, safe zones, protection status, tribe handover mode); return reason codes for failed conquest attempts. _(prereq checklist below)_
-- [ ] Training pipeline: Hall of Banners requirements, minting/consumption of standards/coins, per-village/per-day training limits, queue integration.
+- [x] Training pipeline: Hall of Banners requirements, minting/consumption of standards/coins, per-village/per-day training limits, queue integration. _(see training pipeline spec)_
 - [ ] Regen system: allegiance regeneration ticks with bonuses (buildings/tribe tech) and caps; pause rules during combat/occupation; floor after capture (anti-ping-pong buffer).
 - [ ] Cooldowns & limits: anti-rebound timer after capture, per-attacker wave spacing enforcement, per-account village cap penalties; configurable per world.
 - [ ] Anti-abuse checks: block captures vs protected/low-point players; flag repeated swaps between same accounts/tribes; apply tax/lockout on tribe-internal transfers if opt-in missing.
@@ -126,6 +126,14 @@
 - **Post-Capture Reset:** On capture, set allegiance to `post_capture_start` (e.g., 25–35), reset last_update timestamp, start anti-snipe timer, and emit capture event for reports/logs.
 - **Outputs:** new allegiance value, capture flag, applied drop amount, regen applied, timestamps for next tick, and current floor/grace state for UI/reporting.
 
+### Training Pipeline (Hall of Banners / Envoys)
+- **Prereqs:** Hall of Banners level N (configurable); require research node `conquest_training` and minted standards/crests in inventory. World flag `FEATURE_CONQUEST_UNIT_ENABLED` must be on.
+- **Minting:** Standards/crests minted at Hall of Banners; rising costs per mint; daily per-account and per-village mint caps; consumes wood/clay/iron + tribe token sink if enabled. Minting queue is separate from build queue.
+- **Training Limits:** Per-village queue cap (e.g., 1 active SB/Envoy batch), per-command cap, and per-day training cap per account. Attempting over cap returns `ERR_CONQUEST_CAP`.
+- **Costs/Speed:** Siege-paced training time; costs pulled from config per world. Training blocked if standards/coins not present; consumes on start, not completion, to prevent double-spend on cancel.
+- **Queue Integration:** Hall of Banners exposes a training queue; cancels return partial resource refund but no standards; reorder disabled. Queue enforces prereqs on submit and logs actor.
+- **Validation/Errors:** On recruit, validate prereqs, inventory, caps, pop/resources; return reason codes (`ERR_PREREQ`, `ERR_RES`, `ERR_POP`, `ERR_CAP`, `ERR_FEATURE_OFF`). Log attempts for audit.
+
 ## QA & Acceptance
 - [ ] Unit tests for allegiance drops across wall levels, SB counts, anti-snipe floor active/inactive, and regen pauses; ensure clamp [0,100].
 - [ ] Integration tests for conquest attempts blocked by protection/safe zones/tribe handover; assert reason codes.
@@ -147,3 +155,9 @@
 - For control/uptime worlds vs allegiance-drop worlds, can the same resolver be parameterized, or do we maintain two distinct code paths?
 - Should anti-snipe floors block control gain entirely or just floor the minimum (e.g., cannot drop below 10 but can still gain)? Clarify to avoid exploits.
 - What are default distance/wall modifiers for allegiance drop, and are they world-specific? Need documented defaults for UI.
+
+## Profiling & Load Plan
+- Conquest resolver soak: simulate 1k+ waves/tick with varying SB counts and wall levels; measure p50/p95/p99 latency and capture correctness under concurrency.
+- Regen/anti-snipe tick: stress regen processing across many villages; ensure floors/cooldowns applied without race conditions.
+- Training/minting load: high-volume Standard Bearer/Envoy minting/training under caps; verify limits and queue stability.
+- Reporting load: generate conquest reports at scale; measure serialization cost; ensure reason codes and allegiance deltas included without regressions.
