@@ -146,12 +146,7 @@ require '../header.php';
             <div class="map-wrapper">
                 <div class="map-grid-shell">
                     <div id="map-grid" class="map-grid" role="grid" aria-label="World map"></div>
-                    <div id="map-skeleton" class="map-skeleton" aria-hidden="true">
-                        <div class="skeleton-row"></div>
-                        <div class="skeleton-row"></div>
-                        <div class="skeleton-row"></div>
-                        <div class="skeleton-row"></div>
-                    </div>
+                    <div id="map-skeleton" class="map-skeleton" aria-hidden="true"></div>
                     <div id="map-loading" class="map-loading" aria-live="polite">
                         <span class="spinner"></span>
                         <span>Loading map…</span>
@@ -323,6 +318,7 @@ const MAP_LOAD_TIMEOUT_MS = 6000;
 let mapLoadTimer = null;
 let lastQueuedRequest = null;
 let mapAbortController = null;
+let lastSkeletonSize = null;
 const HIGH_CONTRAST_KEY = 'map_high_contrast';
 const REDUCED_MOTION_KEY = 'map_reduced_motion';
 let mapHighContrast = false;
@@ -372,15 +368,37 @@ const mapRateWarningEl = document.getElementById('map-rate-warning');
 const interactiveSelectors = ['input', 'textarea', 'select', 'button', '[contenteditable="true"]'];
 let lowPerfMode = false;
 
-function setMapLoading(isLoading) {
+function syncSkeletonGrid(size) {
+    if (!mapSkeletonEl) return;
+    const normalized = normalizeSize(size || mapState.size || initialSize);
+    const expected = normalized * normalized;
+    if (lastSkeletonSize === normalized && mapSkeletonEl.childElementCount === expected) {
+        return;
+    }
+    lastSkeletonSize = normalized;
+    mapSkeletonEl.innerHTML = '';
+    mapSkeletonEl.style.gridTemplateColumns = `repeat(${normalized}, var(--tile-width))`;
+    mapSkeletonEl.style.gridTemplateRows = `repeat(${normalized}, var(--tile-height))`;
+    const fragment = document.createDocumentFragment();
+    for (let i = 0; i < expected; i += 1) {
+        const cell = document.createElement('div');
+        cell.className = 'skeleton-cell';
+        fragment.appendChild(cell);
+    }
+    mapSkeletonEl.appendChild(fragment);
+}
+
+function setMapLoading(isLoading, options = {}) {
+    const skeletonSizeHint = options.size || mapState.size || initialSize;
     if (mapLoadingEl) {
         mapLoadingEl.style.display = isLoading ? 'flex' : 'none';
     }
     if (mapSkeletonEl) {
         if (isLoading) {
+            syncSkeletonGrid(skeletonSizeHint);
             clearTimeout(mapSkeletonTimer);
             mapSkeletonTimer = setTimeout(() => {
-                mapSkeletonEl.style.display = 'block';
+                mapSkeletonEl.style.display = 'grid';
             }, MAP_SKELETON_DELAY_MS);
         } else {
             clearTimeout(mapSkeletonTimer);

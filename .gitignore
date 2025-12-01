@@ -1,0 +1,9 @@
+.codex-autocommit/
+# Local Node/Lint caches
+.eslintcache
+.stylelintcache
+/.parcel-cache
+/.turbo
+
+# PHPStorm/IDEA
+.idea/

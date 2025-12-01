@@ -139,6 +139,7 @@
 
 ## Progress
 - Queue system design enforced (single active slot with cap errors; Town Hall milestones specced), Hall of Banners pipeline specced, hospital scaffold added; next focus: watchtower intel integration and wall repair flow.
+- Combat/raid plunder now respects world vault percent and hiding place; BattleManager reports protected amounts for clarity.
 
 ## Acceptance Criteria
 - Building caps, costs, times, pop, and prerequisites load correctly per world overrides; wall/watchtower caps respected.

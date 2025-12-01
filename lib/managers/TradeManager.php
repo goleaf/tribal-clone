@@ -1088,6 +1088,51 @@ class TradeManager {
     }
 
     /**
+     * Block resource pushes from strong to protected/low-point players.
+     */
+    private function enforceAntiPush(int $senderUserId, int $targetUserId)
+    {
+        if ($senderUserId <= 0 || $targetUserId <= 0 || $senderUserId === $targetUserId) {
+            return true;
+        }
+
+        $stmt = $this->conn->prepare("SELECT id, points, is_protected FROM users WHERE id IN (?, ?)");
+        if (!$stmt) {
+            return true;
+        }
+        $stmt->bind_param("ii", $senderUserId, $targetUserId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $users = [];
+        while ($row = $res->fetch_assoc()) {
+            $users[(int)$row['id']] = $row;
+        }
+        $stmt->close();
+
+        $sender = $users[$senderUserId] ?? null;
+        $target = $users[$targetUserId] ?? null;
+        if (!$sender || !$target) {
+            return true;
+        }
+
+        $cap = defined('NEWBIE_PROTECTION_POINTS_CAP') ? (int)NEWBIE_PROTECTION_POINTS_CAP : 200;
+        $senderPts = (int)$sender['points'];
+        $targetPts = (int)$target['points'];
+        $targetProtected = ((int)($target['is_protected'] ?? 0) === 1) || $targetPts < $cap;
+        $ratio = $targetPts > 0 ? $senderPts / max(1, $targetPts) : ($senderPts > 0 ? INF : 1);
+
+        if ($targetProtected && $senderPts > $cap && $ratio >= self::PUSH_POINTS_RATIO) {
+            return [
+                'success' => false,
+                'message' => 'Sending resources to protected/low-point players is blocked to prevent pushing.',
+                'code' => EconomyError::ERR_ALT_BLOCK
+            ];
+        }
+
+        return true;
+    }
+
+    /**
      * Validate that incoming resources will not exceed target storage capacity.
      */
     private function checkStorageHeadroom(array $village, array $incoming)

@@ -118,7 +118,7 @@
 - **Comparison framing:** Documented in differentiation memo (internal) with side-by-side table vs legacy mechanics to show originality for legal/IP review.
 
 ### Pillar Audit (Systems → Pillars & Gaps)
-- **Combat/Conquest:** Counterplay (fakes, counter-scout, overstack penalties), Fairness (morale/protection/rate limits), Clarity (report modifiers). **Gap:** battle reports still missing full modifier disclosure → action: add env/overstack flags to reports.
+- **Combat/Conquest:** Counterplay (fakes, counter-scout, overstack penalties), Fairness (morale/protection/rate limits), Clarity (report modifiers). **Update:** battle reports now include environment multipliers and overstack details; continue to surface remaining modifiers.
 - **Tribes/Social:** Tribe-first (roles, shared intel/markers), Recovery (aid/rebuild suggestions), Variety (ops planner, tribe quests). **Gap:** sitter/role delegation not enforced server-side → action: ship permission checks.
 - **Economy/Progression:** Fairness (anti-push caps, no P2W), Recovery (catch-up buffs), Variety (event economies). **Gap:** catch-up buffs not implemented → action: define per-world buffs + anti-abuse caps.
 - **Map/Intel:** Clarity (filters/overlays, intel freshness), Counterplay (fog/misdirection), Tribe-first (shared markers). **Gap:** activity heatmap/intel freshness overlays not yet live → action: build overlays.

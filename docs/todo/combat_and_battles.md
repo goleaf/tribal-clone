@@ -167,6 +167,7 @@
 - How to seed luck for fairness (per-battle fixed seed vs per-round variance) to prevent variance stacking abuse?
 - What is the exact min-pop rule for fakes across worlds (uniform vs world-specific)? Document and expose to UI.
 - How should raid vs standard attack plunder caps differ, and are they percent-based or fixed per world? Need defaults for reports/UI.
+- For siege hold/occupy (if enabled), should occupying troops suffer attrition or upkeep changes, and how is loot handled during occupation?
 
 ## Profiling & Load Plan
 - Benchmark combat resolver under load: 1k/5k/10k battles per tick with mixed unit comps and siege; record p50/p95/p99 latency and CPU/memory.
@@ -188,3 +189,9 @@
 - [ ] Integration sims: end-to-end scenarios covering fakes + clears + conquest waves + overstack penalties + night/weather; compare against golden reports.
 - [ ] Anti-cheat signals: flag impossible command patterns (sub-100ms repeated sends bypassing fake throttles), duplicate command ids, and tampered payloads; resolver must reject with reason codes and log for audit.
 - [ ] Plunder math tests: verify vault protection vs hiding place, plunder caps, and loot split across surviving carriers; ensure report matches calculations.
+
+## Monitoring Plan
+- Track combat resolver metrics (battles/tick, p50/p95/p99 latency, queue depth) with alerts on regressions after release.
+- Monitor validation error rates (`ERR_PROTECTED`, `ERR_MIN_POP`, `ERR_RATE_LIMIT`) and fake/throttle hits to catch misconfigurations.
+- Measure report generation time and payload size deltas per deployment; alert on >20% increases.
+- Use canary worlds with tighter thresholds to detect issues before global rollout.

@@ -182,6 +182,7 @@ class BattleManager
         $attacker_protected = $this->isBeginnerProtected($attacker_points);
         $targetProtection = $this->getUserProtectionState($defender_user_id);
         $defender_protected = $targetProtection['protected'] ?? false;
+        $conquestEnabled = defined('FEATURE_CONQUEST_UNIT_ENABLED') ? (bool)FEATURE_CONQUEST_UNIT_ENABLED : true;
         $rateCheck = $this->enforceCommandRateLimit($attacker_user_id);
         if ($attack_type === 'spy') {
             $rateCheck = $rateCheck === true ? $this->enforceScoutRateLimit($attacker_user_id) : $rateCheck;
@@ -408,6 +409,13 @@ class BattleManager
                 'success' => false,
                 'error' => sprintf('Only %d conquest unit(s) may be sent per command.', self::MAX_LOYALTY_UNITS_PER_COMMAND),
                 'code' => 'CONQUEST_CAP'
+            ];
+        }
+        if ($hasLoyaltyUnit && !$conquestEnabled) {
+            return [
+                'success' => false,
+                'error' => 'Conquest units are disabled on this world.',
+                'code' => 'CONQUEST_DISABLED'
             ];
         }
 
@@ -1591,6 +1599,7 @@ class BattleManager
 
         $loyalty_floor = $this->getEffectiveLoyaltyFloor($attacking_units, (int)$attack['target_village_id']);
         $noblePresent = $this->hasNobleUnit($attacking_units);
+        $defenderVillageCount = $defender_user_id ? $this->getVillageCountForUser((int)$defender_user_id) : null;
 
         if ($noblePresent) {
             $dropMin = defined('NOBLE_MIN_DROP') ? (int)NOBLE_MIN_DROP : self::LOYALTY_DROP_MIN;
@@ -1613,6 +1622,10 @@ class BattleManager
                     if ($ratio < 0.5 || $ratio > 1.5) {
                         $villageConquered = false; // Loyalty can drop, but cannot capture out-of-range targets
                     }
+                }
+                // Last-village protection: cannot conquer defender's final village.
+                if ($defenderVillageCount !== null && $defenderVillageCount <= 1) {
+                    $villageConquered = false;
                 }
 
                 if ($villageConquered) {
