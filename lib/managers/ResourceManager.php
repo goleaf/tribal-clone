@@ -134,21 +134,29 @@ class ResourceManager {
         // Warehouse capacity based on the current warehouse level
         $warehouse_level = $this->buildingManager->getBuildingLevel($village_id, 'warehouse');
         $warehouse_capacity = $this->buildingManager->getWarehouseCapacityByLevel($warehouse_level);
-        
-        // Apply 2% buffer for overflow tolerance before clamping to display
-        $warehouse_cap_with_buffer = $warehouse_capacity * 1.02;
 
-        // Track if we hit cap this tick (before buffer)
+        // Track cap hits and overflow losses
         $hitCap = [
-            'wood' => ($village['wood'] < $warehouse_capacity) && ($village['wood'] + $gained_wood >= $warehouse_capacity),
-            'clay' => ($village['clay'] < $warehouse_capacity) && ($village['clay'] + $gained_clay >= $warehouse_capacity),
-            'iron' => ($village['iron'] < $warehouse_capacity) && ($village['iron'] + $gained_iron >= $warehouse_capacity),
+            'wood' => false,
+            'clay' => false,
+            'iron' => false,
         ];
+        $overflowLoss = ['wood' => 0.0, 'clay' => 0.0, 'iron' => 0.0];
 
-        // Apply gains with buffer, then round down for display
-        $village['wood'] = min($village['wood'] + $gained_wood, $warehouse_cap_with_buffer);
-        $village['clay'] = min($village['clay'] + $gained_clay, $warehouse_cap_with_buffer);
-        $village['iron'] = min($village['iron'] + $gained_iron, $warehouse_cap_with_buffer);
+        // Apply gains with hard cap; anything above capacity is lost
+        foreach (['wood', 'clay', 'iron'] as $res) {
+            $gain = ${'gained_' . $res};
+            $current = $village[$res];
+            $potential = $current + $gain;
+            if ($potential >= $warehouse_capacity && $current < $warehouse_capacity) {
+                $hitCap[$res] = true;
+            }
+            if ($potential > $warehouse_capacity) {
+                $overflowLoss[$res] = $potential - $warehouse_capacity;
+                $potential = $warehouse_capacity;
+            }
+            $village[$res] = $potential;
+        }
 
         // Optional decay for hoarded resources above threshold
         $decayEnabled = $worldConfig['resource_decay_enabled'] ?? (defined('RESOURCE_DECAY_ENABLED') ? (bool)RESOURCE_DECAY_ENABLED : false);
@@ -202,16 +210,20 @@ class ResourceManager {
                             $resourceList[] = ucfirst($res);
                         }
                     }
-                    $msg = sprintf(
-                        'Warehouse full for %s in %s.',
-                        implode(', ', $resourceList),
-                        $ownerData['name'] ?? 'village'
-                    );
+                    $overflowText = '';
+                    $totalOverflow = array_sum($overflowLoss);
+                    if ($totalOverflow > 0) {
+                        $overflowText = sprintf(' Overflow loss: ~%d resources.', (int)$totalOverflow);
+                    }
+                    $msg = sprintf('Warehouse full for %s in %s.%s', implode(', ', $resourceList), $ownerData['name'] ?? 'village', $overflowText);
                     $notificationManager->addNotification((int)$ownerData['user_id'], $msg, 'warning', '/game/game.php');
                 }
             }
         }
         
+        // Surface overflow info for downstream consumers (UI/telemetry)
+        $village['overflow_loss'] = $overflowLoss;
+
         // Return the updated village array
         return $village;
     }

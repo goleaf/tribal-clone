@@ -153,12 +153,24 @@ while true; do
   git add -A
 
   msg="$(generate_message)"
-  msg="${msg//$'\n'/ }"
   if [[ -z "$msg" ]]; then
     msg="chore: automated commit"
   fi
 
-  if git commit -m "$msg"; then
+  subject="${msg%%$'\n'*}"
+  body=""
+  if [[ "$msg" == *$'\n'* ]]; then
+    body="${msg#"$subject"}"
+    body="${body#$'\n'}"
+  fi
+
+  if [[ -n "$body" ]]; then
+    commit_cmd=(git commit -m "$subject" -m "$body")
+  else
+    commit_cmd=(git commit -m "$subject")
+  fi
+
+  if "${commit_cmd[@]}"; then
     branch="$(git rev-parse --abbrev-ref HEAD)"
     if ! git push origin "$branch"; then
       echo "Push failed; will retry after sleeping."

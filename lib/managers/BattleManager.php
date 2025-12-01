@@ -1640,6 +1640,7 @@ class BattleManager
 
         $loyalty_floor = $this->getEffectiveLoyaltyFloor($attacking_units, (int)$attack['target_village_id']);
         $noblePresent = $this->hasNobleUnit($attacking_units);
+        $survivingNobles = $this->countNobleUnits($attacking_units);
         $defenderVillageCount = $defender_user_id ? $this->getVillageCountForUser((int)$defender_user_id) : null;
 
         $conquestReason = $noblePresent ? 'attempt' : 'no_noble_present';
@@ -1699,7 +1700,8 @@ class BattleManager
                 'floor' => $loyalty_floor,
                 'cap' => $loyalty_cap,
                 'drop_multiplier' => $dropMultiplier,
-                'reason' => $conquestReason
+                'reason' => $conquestReason,
+                'surviving_nobles' => $survivingNobles
             ];
 
             $logPath = __DIR__ . '/../../logs/conquest_attempts.log';
@@ -1717,7 +1719,8 @@ class BattleManager
                 'drop_base' => $dropBase,
                 'conquered' => $villageConquered,
                 'reason' => $conquestReason,
-                'defender_village_count' => $defenderVillageCount
+                'defender_village_count' => $defenderVillageCount,
+                'surviving_nobles' => $survivingNobles
             ];
             @file_put_contents($logPath, json_encode($logPayload) . PHP_EOL, FILE_APPEND);
         }
@@ -3391,6 +3394,21 @@ class BattleManager
             }
         }
         return false;
+    }
+
+    /**
+     * Count surviving nobles in the attacking army.
+     */
+    private function countNobleUnits(array $attackingUnits): int
+    {
+        $nobleNames = ['noble', 'nobleman', 'nobleman_unit'];
+        $total = 0;
+        foreach ($attackingUnits as $unit) {
+            if (in_array(strtolower($unit['internal_name'] ?? ''), $nobleNames, true)) {
+                $total += (int)($unit['count'] ?? 0);
+            }
+        }
+        return $total;
     }
 
     /**

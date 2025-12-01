@@ -200,6 +200,16 @@ class TradeManager {
             return ['success' => false, 'message' => 'Cannot send resources to the same village.', 'code' => 'ERR_INPUT'];
         }
 
+        // Load shedding: if too many in-flight routes, ask client to retry later
+        if ($this->isTradeSystemOverloaded()) {
+            return [
+                'success' => false,
+                'message' => 'Trade system is busy. Please try again shortly.',
+                'code' => EconomyError::ERR_RATE_LIMIT,
+                'details' => ['retry_after_sec' => 30]
+            ];
+        }
+
         // Anti-push: block sending to linked/flagged accounts or extreme power gaps on protected targets
         $pushCheck = $this->enforceAntiPush((int)$village['user_id'], (int)$targetVillage['user_id']);
         if ($pushCheck !== true) {
@@ -589,6 +599,15 @@ class TradeManager {
         $marketLevel = $this->getMarketLevel($villageId);
         if ($marketLevel <= 0) {
             return ['success' => false, 'message' => 'Build a market before creating offers.', 'code' => EconomyError::ERR_CAP];
+        }
+
+        if ($this->isTradeSystemOverloaded()) {
+            return [
+                'success' => false,
+                'message' => 'Trade system is busy. Please try again shortly.',
+                'code' => EconomyError::ERR_RATE_LIMIT,
+                'details' => ['retry_after_sec' => 30]
+            ];
         }
 
         $tradersNeeded = $this->calculateTradersNeeded($offerResources);
