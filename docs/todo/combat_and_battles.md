@@ -161,6 +161,7 @@
 - [ ] Timing tests: simultaneous arrivals ordering, support inclusion, and anti-sniping spacing enforcement.
 - [ ] Rate-limit tests: command creation caps and fake/min-pop enforcement return correct errors; no tick degradation under spam.
 - [ ] Report validation: reports show correct deltas, modifiers, plunder, allegiance change, and redact intel when scouts die; tribe sharing works with permissions.
+- [ ] Plunder validation: protected amounts vs vault/hiding place, DR factors, caps, and carry splits match spec; reports reflect exact loot math; raid vs standard caps covered.
 
 ## Open Questions
 - Should casualty proportionality be linear or tuned per unit class (e.g., siege attrition different)? Decide before implementation.

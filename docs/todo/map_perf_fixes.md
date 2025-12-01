@@ -12,7 +12,7 @@
 - [x] **Metrics:** Track map request rate, cache hit %, average payload size, and client render time; alert on spikes in payload or render latency. _(server logs map_metrics; client render time now posted via ajax/telemetry/map_perf.php sampling)_
 - **Batching:** Collapse incoming command updates into 1s batches per village; send deltas instead of full lists. Batch marker updates similarly.
 - **Pagination:** Paginate command lists (incoming/outgoing/support/trade/scout) for selected areas; lazy-load on scroll.
-- [x] **Skeletons:** Implement skeleton states for zoom levels while tiles/commands load; avoid jarring redraws on pan/zoom. _(map loading shimmer + overlay)_
+- [x] **Skeletons:** Implement skeleton states for zoom levels while tiles/commands load; avoid jarring redraws on pan/zoom. _(skeleton grid scales to requested map size and stays visible during fetch/render)_
 - **Testing:** Simulate 500+ concurrent commands on a sector; assert p95 render < 200ms on mid-tier mobile and server responses < 200ms with caching enabled.
 
 ## Additional Fixes

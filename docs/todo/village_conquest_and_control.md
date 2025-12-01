@@ -190,3 +190,9 @@
 - [ ] Schema migrations for allegiance fields and capture cooldowns with rollback tested; indexes for frequent queries (village_id, last_update).
 - [ ] Backward-compatible reports/API: include versioning when adding control/uptime fields; ensure old clients degrade gracefully.
 - [ ] Release comms: patch notes explain new conquest rules (modes, floors, wave spacing) with examples; UI help updated.
+
+## Monitoring Plan
+- Track conquest resolver latency (p50/p95/p99), waves/tick, and regen tick duration; alert on regressions after rollout.
+- Monitor conquest validation errors (`ERR_PROTECTED`, `ERR_HANDOVER_REQUIRED`, `ERR_COOLDOWN`, `ERR_MIN_POP`) to catch misconfigs or abuse.
+- Dashboard capture outcomes: successful/failed conquest attempts, anti-snipe floor hits, tribe handover activations, and report generation time/payload size.
+- Canary worlds: apply tighter thresholds and early alerts for conquest anomalies before global enablement.

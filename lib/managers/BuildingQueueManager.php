@@ -15,12 +15,18 @@ class BuildingQueueManager
     private $conn;
     private BuildingConfigManager $configManager;
     private int $maxQueueItems;
+    private int $baseSlots;
+    private int $hqMilestoneStep;
+    private int $maxSlots;
 
     public function __construct($conn, BuildingConfigManager $configManager)
     {
         $this->conn = $conn;
         $this->configManager = $configManager;
         $this->maxQueueItems = defined('BUILDING_QUEUE_MAX_ITEMS') ? (int)BUILDING_QUEUE_MAX_ITEMS : 10;
+        $this->baseSlots = defined('BUILDING_BASE_QUEUE_SLOTS') ? (int)BUILDING_BASE_QUEUE_SLOTS : 1;
+        $this->hqMilestoneStep = defined('BUILDING_HQ_MILESTONE_STEP') ? (int)BUILDING_HQ_MILESTONE_STEP : 5;
+        $this->maxSlots = defined('BUILDING_MAX_QUEUE_SLOTS') ? (int)BUILDING_MAX_QUEUE_SLOTS : 3;
     }
 
     /**
@@ -74,9 +80,14 @@ class BuildingQueueManager
 
             // Check queue capacity (active + pending)
             $queueCount = $this->getQueueCount($villageId);
+            $slotLimit = $this->getQueueSlotLimit($hqLevel);
             if ($queueCount >= $this->maxQueueItems) {
                 $errorCode = 'ERR_CAP';
                 throw new Exception("Build queue is full (max {$this->maxQueueItems}).");
+            }
+            if ($queueCount >= $slotLimit) {
+                $errorCode = 'ERR_QUEUE_CAP';
+                throw new Exception("No free building queue slots. Increase Town Hall level to unlock more slots.");
             }
 
             // Check resources
