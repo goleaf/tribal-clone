@@ -1159,6 +1159,7 @@ class TribeManager
         $res = $stmt->get_result();
         $relations = [];
         while ($row = $res->fetch_assoc()) {
+            $row['canonical_status'] = $this->canonicalDiplomacyStatus($row['status'] ?? 'neutral');
             $relations[] = $row;
         }
         $stmt->close();
@@ -1175,14 +1176,14 @@ class TribeManager
         $now = time();
         $existing = $this->getDiplomacyRow($tribeId, $targetTribeId);
         $pendingKey = 'pending_' . $type;
+        $existingStatus = $this->canonicalDiplomacyStatus($existing['status'] ?? 'neutral');
 
         if ($existing && (int)($existing['cooldown_until'] ?? 0) > $now) {
             $remaining = $this->formatRemainingSeconds((int)$existing['cooldown_until'] - $now);
             return ['success' => false, 'message' => 'Cooldown active. Wait ' . $remaining . ' before changing diplomacy.'];
         }
-        if ($existing && (int)($existing['is_pending'] ?? 0) === 0 && ($existing['status'] ?? '') !== 'neutral' && ($existing['status'] ?? '') !== $type) {
-            $normalized = $existing['status'] === 'enemy' ? 'war' : ($existing['status'] === 'ally' ? 'alliance' : $existing['status']);
-            $minDuration = $this->getMinDurationSeconds($normalized);
+        if ($existing && (int)($existing['is_pending'] ?? 0) === 0 && $existingStatus !== 'neutral' && $existingStatus !== $type) {
+            $minDuration = $this->getMinDurationSeconds($existingStatus);
             $start = (int)($existing['starts_at'] ?? 0);
             if ($start === 0 && !empty($existing['created_at'])) {
                 $start = strtotime((string)$existing['created_at']) ?: 0;
@@ -1192,7 +1193,7 @@ class TribeManager
                 return ['success' => false, 'message' => 'Minimum duration not met. Wait ' . $remaining . '.'];
             }
         }
-        if ($existing && ($existing['status'] ?? '') === $type && (int)($existing['is_pending'] ?? 0) === 0) {
+        if ($existing && $existingStatus === $type && (int)($existing['is_pending'] ?? 0) === 0) {
             return ['success' => true, 'message' => 'Already in ' . $type . ' state.'];
         }
 
@@ -1270,12 +1271,7 @@ class TribeManager
             return ['success' => true, 'message' => 'Already neutral.'];
         }
 
-        $status = $current['status'] ?? 'neutral';
-        if ($status === 'enemy') {
-            $status = 'war';
-        } elseif ($status === 'ally') {
-            $status = 'alliance';
-        }
+        $status = $this->canonicalDiplomacyStatus($current['status'] ?? 'neutral');
         $start = (int)($current['starts_at'] ?? 0);
         if ($start === 0 && !empty($current['created_at'])) {
             $start = strtotime((string)$current['created_at']) ?: 0;
@@ -1318,6 +1314,16 @@ class TribeManager
         };
     }
 
+    private function canonicalDiplomacyStatus(?string $status): string
+    {
+        $status = strtolower((string)($status ?? 'neutral'));
+        return match ($status) {
+            'ally' => 'alliance',
+            'enemy' => 'war',
+            default => ($status !== '' ? $status : 'neutral'),
+        };
+    }
+
     private function getDiplomacyRow(int $tribeId, int $targetTribeId): ?array
     {
         $stmt = $this->conn->prepare("
@@ -1356,6 +1362,12 @@ class TribeManager
             'cooldown_until' => (int)($data['cooldown_until'] ?? 0),
             'updated_at' => $now,
         ];
+        $statusToStore = $payload['status'];
+        if ($statusToStore === 'alliance') {
+            $statusToStore = 'ally';
+        } elseif ($statusToStore === 'war') {
+            $statusToStore = 'enemy';
+        }
 
         $existing = $this->getDiplomacyRow($tribeId, $targetTribeId);
         if ($existing) {
@@ -1367,7 +1379,7 @@ class TribeManager
             if ($stmt) {
                 $stmt->bind_param(
                     "siiiiisiiii",
-                    $payload['status'],
+                    $statusToStore,
                     $payload['is_pending'],
                     $payload['starts_at'],
                     $payload['ends_at'],
@@ -1395,7 +1407,7 @@ class TribeManager
                 "iisiiiiiisii",
                 $tribeId,
                 $targetTribeId,
-                $payload['status'],
+                $statusToStore,
                 $payload['requested_by_user_id'],
                 $payload['is_pending'],
                 $payload['starts_at'],

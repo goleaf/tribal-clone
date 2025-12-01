@@ -134,3 +134,21 @@
 - Anti-push flags on trades/resource donations during events; taxed if sender power >> receiver outside tribe.
 - PvE rewards nerfed after X clears/day to prevent bot-friendly farming.
 
+## Implementation TODOs
+- Build daily/weekly task service with per-player power scaling and reroll cooldown; expose API for progress updates and reward claims with server validation.
+- Add event flagging in combat/trade logs to separate event-driven actions for scoring; ensure combat events use normalized scores (attacker/defender strength) to prevent farming weak targets.
+- Implement quest progress caps per reset window and per-action throttles (e.g., max 1 progression tick per 60s for repeated raids on same target).
+- Add tribe contribution tracking for cooperative quests with minimum thresholds; show personal contribution in UI to discourage freeloading.
+- Instrument events/quests: emit metrics for completion rates, reroll usage, average time-to-complete, and exploit-flag hits; alert on abnormal spikes in event currency gain.
+
+## Implementation Hooks / Next Steps
+- [ ] Add daily/weekly task tables (player_tasks, tribe_tasks) with templates, reroll counter, and progress columns.
+- [ ] Add event modifiers table and a lightweight scheduler to attach active modifiers (scout speed, build cost) to world config.
+- [ ] Implement contribution tracking for tribe quests (per user, per quest) to gate tribe rewards.
+- [ ] Add anti-abuse tax hook for event trades/donations using sender/receiver power delta.
+- [ ] Wire UI surfaces: tasks panel with reset timers, progress bars, reroll button, and reward claim states.
+- [ ] Add reroll logic (1 free/day, cooldown on manual reroll); store reroll count/timestamp per player.
+- [ ] Implement make-up token system for daily streaks; tokens drop from quests and can cover missed days up to a cap.
+- [ ] Normalize scaling formulas for task targets by player power and world age; log actual targets for QA.
+- [ ] Add event shop backend (token balance, purchasable cosmetics, caps per item, start/end times).
+- [ ] Emit telemetry for task completion, rerolls, streak progression, event shop purchases; build dashboard for completion rates and reroll frequency.

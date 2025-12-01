@@ -1,7 +1,23 @@
 <?php
 declare(strict_types=1);
-// Start the session only if it is not already active
+// Start the session only if it is not already active and harden cookie settings
 if (session_status() !== PHP_SESSION_ACTIVE) {
+    $isHttps = (
+        (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+        (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+    );
+    $cookieDefaults = session_get_cookie_params();
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => $cookieDefaults['path'] ?? '/',
+        'domain' => $cookieDefaults['domain'] ?? '',
+        'secure' => $isHttps,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_secure', $isHttps ? '1' : '0');
+    ini_set('session.cookie_samesite', 'Lax');
     session_start();
 }
 $IS_CLI = (php_sapi_name() === 'cli');

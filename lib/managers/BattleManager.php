@@ -36,7 +36,10 @@ class BattleManager
     private const LOYALTY_FAIL_DROP_MIN = 5;
     private const LOYALTY_FAIL_DROP_MAX = 10;
     private const OFFENSIVE_ATTACK_TYPES = ['attack', 'raid', 'spy', 'fake'];
-    private const MAX_ATTACKS_PER_TARGET_PER_DAY = 10;
+    private const MAX_ATTACKS_PER_TARGET_PER_DAY = 10; // generic cap for any matchup
+    private const LOW_POWER_ATTACK_CAP_POINTS = 500; // applies stricter caps to defenders at/below this score
+    private const LOW_POWER_ATTACKS_PER_ATTACKER_PER_DAY = 5;
+    private const LOW_POWER_ATTACKS_PER_TRIBE_PER_DAY = 20;
 
     /**
      * @param mysqli $conn Database connection
@@ -109,20 +112,20 @@ class BattleManager
         $attacker_user_id = (int)$villages['source_user_id'];
         $defender_user_id = (int)$villages['target_user_id'];
         $target_is_barb = $defender_user_id === -1;
+        $attackerTribeId = $this->getUserTribeId($attacker_user_id);
+        $defenderTribeId = $this->getUserTribeId($defender_user_id);
         $attacker_points = $this->getUserPoints($attacker_user_id);
         $defender_points = $this->getUserPoints($defender_user_id);
         $attacker_protected = $this->isBeginnerProtected($attacker_points);
         $targetProtection = $this->getUserProtectionState($defender_user_id);
         $defender_protected = $targetProtection['protected'] ?? false;
-        $capCheck = $this->enforceAttackCap($attacker_user_id, $defender_user_id);
+        $capCheck = $this->enforceAttackCap($attacker_user_id, $defender_user_id, $defender_points, $attackerTribeId);
         if ($capCheck !== true) {
             return [
                 'success' => false,
                 'error' => is_string($capCheck) ? $capCheck : 'Attack limit reached for this target.'
             ];
         }
-        $attackerTribeId = $this->getUserTribeId($attacker_user_id);
-        $defenderTribeId = $this->getUserTribeId($defender_user_id);
 
         if (!$target_is_barb && $attack_type !== 'support') {
             if ($attacker_protected && !$defender_protected) {
@@ -239,8 +242,12 @@ class BattleManager
                 continue;
             }
             $total_pop += ((int)$unit_meta[$unit_type_id]['population']) * $count;
-            if (in_array($unit_meta[$unit_type_id]['internal_name'], self::SIEGE_UNIT_INTERNALS, true) && $count > 0) {
+            $internal = $unit_meta[$unit_type_id]['internal_name'];
+            if ($count > 0 && in_array($internal, self::SIEGE_UNIT_INTERNALS, true)) {
                 $hasSiege = true;
+            }
+            if ($count > 0 && in_array($internal, self::LOYALTY_UNIT_INTERNALS, true)) {
+                $hasLoyaltyUnit = true;
             }
         }
         if ($total_pop < self::MIN_ATTACK_POP && !$hasSiege) {
@@ -248,6 +255,24 @@ class BattleManager
                 'success' => false,
                 'error' => sprintf('Minimum payload is %d population or at least one siege unit.', self::MIN_ATTACK_POP)
             ];
+        }
+
+        // Beginner shield: block siege/loyalty; allow raids only after 24h account age.
+        if ($defender_protected && $attack_type !== 'support') {
+            $hoursOld = $this->getAccountAgeHours($targetProtection);
+            $raidAllowed = $attack_type === 'raid' && $hoursOld !== null && $hoursOld >= 24;
+            if ($hasSiege || $hasLoyaltyUnit) {
+                return [
+                    'success' => false,
+                    'error' => 'Beginner shield: siege or loyalty attacks are blocked on protected villages.'
+                ];
+            }
+            if (!$raidAllowed) {
+                return [
+                    'success' => false,
+                    'error' => 'This village is under beginner protection. Raids are allowed only after 24 hours of account age.'
+                ];
+            }
         }
 
         // Load unit metadata for validation and speed calculation
@@ -2009,7 +2034,7 @@ class BattleManager
      * Enforce per-attacker->defender daily attack cap for offensive missions.
      * Returns true if allowed, otherwise an error message string.
      */
-    private function enforceAttackCap(int $attackerUserId, int $defenderUserId)
+    private function enforceAttackCap(int $attackerUserId, int $defenderUserId, ?int $defenderPoints = null, ?int $attackerTribeId = null)
     {
         if (self::MAX_ATTACKS_PER_TARGET_PER_DAY <= 0) {
             return true;
@@ -2039,9 +2064,51 @@ class BattleManager
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        $count = (int)($row['cnt'] ?? 0);
-        if ($count >= self::MAX_ATTACKS_PER_TARGET_PER_DAY) {
+        $attackerCount = (int)($row['cnt'] ?? 0);
+        if ($attackerCount >= self::MAX_ATTACKS_PER_TARGET_PER_DAY) {
             return sprintf('Attack limit reached: max %d attacks to this player per 24h.', self::MAX_ATTACKS_PER_TARGET_PER_DAY);
+        }
+
+        // Stricter caps for low-power defenders (anti-griefing)
+        $defPts = $defenderPoints ?? $this->getUserPoints($defenderUserId);
+        if ($defPts !== null && $defPts <= self::LOW_POWER_ATTACK_CAP_POINTS) {
+            if ($attackerCount >= self::LOW_POWER_ATTACKS_PER_ATTACKER_PER_DAY) {
+                return sprintf(
+                    'Attack limit reached for low-power target: %d/%d attacks in the last 24h.',
+                    $attackerCount,
+                    self::LOW_POWER_ATTACKS_PER_ATTACKER_PER_DAY
+                );
+            }
+
+            if ($attackerTribeId) {
+                $sqlTribe = "
+                    SELECT COUNT(*) AS cnt
+                    FROM attacks a
+                    JOIN villages sv ON a.source_village_id = sv.id
+                    JOIN tribe_members tm ON sv.user_id = tm.user_id
+                    JOIN villages tv ON a.target_village_id = tv.id
+                    WHERE tm.tribe_id = ?
+                      AND tv.user_id = ?
+                      AND a.is_canceled = 0
+                      AND a.attack_type IN ('attack','raid','spy','fake')
+                      AND UNIX_TIMESTAMP(a.start_time) >= ?
+                ";
+                $stmtTribe = $this->conn->prepare($sqlTribe);
+                if ($stmtTribe) {
+                    $stmtTribe->bind_param("iii", $attackerTribeId, $defenderUserId, $windowStart);
+                    $stmtTribe->execute();
+                    $tribeRow = $stmtTribe->get_result()->fetch_assoc();
+                    $stmtTribe->close();
+                    $tribeCount = (int)($tribeRow['cnt'] ?? 0);
+                    if ($tribeCount >= self::LOW_POWER_ATTACKS_PER_TRIBE_PER_DAY) {
+                        return sprintf(
+                            'Tribe attack cap reached for low-power target: %d/%d tribe attacks in the last 24h.',
+                            $tribeCount,
+                            self::LOW_POWER_ATTACKS_PER_TRIBE_PER_DAY
+                        );
+                    }
+                }
+            }
         }
         return true;
     }
@@ -2220,6 +2287,52 @@ class BattleManager
         $res = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         return isset($res['points']) ? (int)$res['points'] : 0;
+    }
+
+    /**
+     * Fetch protection state for a user (beginner shield).
+     */
+    private function getUserProtectionState(int $userId): array
+    {
+        if ($userId <= 0) {
+            return ['protected' => false];
+        }
+        $stmt = $this->conn->prepare("SELECT points, is_protected, created_at FROM users WHERE id = ? LIMIT 1");
+        if (!$stmt) {
+            return ['protected' => false];
+        }
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = $res ? $res->fetch_assoc() : null;
+        $stmt->close();
+        if (!$row) {
+            return ['protected' => false];
+        }
+        $points = (int)($row['points'] ?? 0);
+        $explicit = isset($row['is_protected']) ? (int)$row['is_protected'] === 1 : false;
+        $protected = $explicit || $this->isBeginnerProtected($points);
+        return [
+            'protected' => $protected,
+            'created_at' => $row['created_at'] ?? null,
+            'points' => $points
+        ];
+    }
+
+    /**
+     * Calculate account age in hours using created_at, if available.
+     */
+    private function getAccountAgeHours(array $protectionState): ?float
+    {
+        if (empty($protectionState['created_at'])) {
+            return null;
+        }
+        $created = strtotime($protectionState['created_at']);
+        if ($created <= 0) {
+            return null;
+        }
+        $seconds = max(0, time() - $created);
+        return $seconds / 3600;
     }
 
     /**

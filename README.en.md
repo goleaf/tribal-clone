@@ -179,6 +179,9 @@ Detailed documentation of the code and database can be found in the `docs/` dire
 - Fair Play & Anti-Griefing: `docs/fair-play-and-anti-griefing.md`
 - Notifications & Reports: `docs/notifications-and-reports.md`
 - UI/UX Main Screens: `docs/ui-main-screens.md`
+- Live Ops & Incident Response: `docs/live-ops-incident-response.md`
+- Offline & Poor-Connection Support: `docs/offline-support.md`
+- Events, Quests, and Daily Systems: `docs/events-and-quests.md`
 
 ## Further Development
 

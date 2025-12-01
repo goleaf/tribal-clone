@@ -121,6 +121,7 @@ header('Content-Security-Policy: ' . implode('; ', $csp));
 <script src="/js/resources.js?<?= $assetVersion ?>" defer></script>
 <script src="/js/notifications.js?<?= $assetVersion ?>" defer></script>
     <?php endif; ?>
+    <script src="/js/offline.js" defer></script>
     <script src="/js/main.js" defer></script>
 </head>
 <body>
@@ -201,6 +202,10 @@ header('Content-Security-Policy: ' . implode('; ', $csp));
                 <span class="world-pill">x<?= number_format((float)($currentWorldSettings['world_speed'] ?? 1), 2) ?> / troops x<?= number_format((float)($currentWorldSettings['troop_speed'] ?? 1), 2) ?></span>
             </div>
         <?php endif; ?>
+        <div id="offline-indicator" class="offline-indicator" style="display:none;">
+            <span class="dot"></span>
+            <span class="offline-text">Offline — actions paused until connection returns.</span>
+        </div>
     </header>
     
     <?php if (isset($_SESSION['user_id']) && isset($currentRes) && $currentRes !== null): ?>
