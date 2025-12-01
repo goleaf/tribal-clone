@@ -22,7 +22,7 @@ This task list bridges the gap between the current BattleEngine/BattleManager im
 
 ---
 
-- [-] 1. Refactor and enhance core battle resolution components
+- [x] 1. Refactor and enhance core battle resolution components
   - Extract stateless calculation logic from BattleEngine
   - Implement missing modifiers (overstack, terrain, weather)
   - Add comprehensive input validation
