@@ -83,10 +83,16 @@ require '../header.php';
             </div>
             <aside class="map-legend">
                 <h4>Legend</h4>
-                <div class="legend-row"><img src="../img/tw_map/v6.png" alt="Own"> <span>Your village</span></div>
-                <div class="legend-row"><img src="../img/tw_map/v4.png" alt="Player"> <span>Player village</span></div>
-                <div class="legend-row"><img src="../img/tw_map/b3.png" alt="Barbarian"> <span>Barbarian village</span></div>
-                <div class="legend-row"><img src="../img/tw_map/gras2.png" alt="Empty"> <span>Unsettled lands</span></div>
+                <div class="legend-row"><img src="../img/tw_map/map_v6.png" alt="Own"> <span>Your village</span></div>
+                <div class="legend-row"><img src="../img/tw_map/map_v4.png" alt="Player"> <span>Player village</span></div>
+                <div class="legend-row"><img src="../img/tw_map/map_v2.png" alt="Barbarian"> <span>Barbarian village</span></div>
+                <div class="legend-row"><img src="../img/tw_map/reserved_player.png" alt="Reserved"> <span>Reserved (self)</span></div>
+                <div class="legend-row"><img src="../img/tw_map/reserved_team.png" alt="Team reservation"> <span>Reserved (tribe)</span></div>
+                <div class="legend-row"><img src="../img/tw_map/incoming_attack.png" alt="Incoming"> <span>Incoming attack</span></div>
+                <div class="legend-row"><img src="../img/tw_map/attack.png" alt="Outgoing"> <span>Outgoing command</span></div>
+                <div class="legend-row"><img src="../img/tw_map/return.png" alt="Return"> <span>Returning command</span></div>
+                <div class="legend-row"><img src="../img/tw_map/village_notes.png" alt="Note"> <span>Village note</span></div>
+                <div class="legend-row"><img src="../img/tw_map/map_free.png" alt="Empty"> <span>Unsettled lands</span></div>
             </aside>
         </div>
 
@@ -119,9 +125,32 @@ const forestTiles = [
 ];
 const bergTiles = [`${assetBase}/berg1.png`, `${assetBase}/berg2.png`, `${assetBase}/berg3.png`, `${assetBase}/berg4.png`];
 const overlayIcons = {
+    tiers: [
+        null,
+        `${assetBase}/map_v1.png`,
+        `${assetBase}/map_v2.png`,
+        `${assetBase}/map_v3.png`,
+        `${assetBase}/map_v4.png`,
+        `${assetBase}/map_v5.png`,
+        `${assetBase}/map_v6.png`
+    ],
     own: `${assetBase}/map_v6.png`,
-    player: `${assetBase}/map_v4.png`,
-    barbarian: `${assetBase}/map_v2.png`
+    reservedPlayer: `${assetBase}/reserved_player.png`,
+    reservedTeam: `${assetBase}/reserved_team.png`,
+    incoming: `${assetBase}/incoming_attack.png`,
+    attack: `${assetBase}/attack.png`,
+    return: `${assetBase}/return.png`,
+    axeAttack: `${assetBase}/axe_attack.png`,
+    axeReturn: `${assetBase}/axe_return.png`,
+    note: `${assetBase}/village_notes.png`,
+    free: `${assetBase}/map_free.png`
+};
+const movementIcons = {
+    incoming: overlayIcons.incoming,
+    attack: overlayIcons.attack,
+    return: overlayIcons.return,
+    axe_attack: overlayIcons.axeAttack,
+    axe_return: overlayIcons.axeReturn
 };
 const tileSize = { width: 53, height: 38 };
 const pointBrackets = [0, 300, 1000, 3000, 9000, 12000];
@@ -245,13 +274,17 @@ function getVillageSprite(village) {
 }
 
 function getOverlayIcon(village) {
-    if (currentVillageId && village.id === currentVillageId) {
+    if (village.reserved_by) {
+        return overlayIcons.reservedPlayer;
+    }
+    if (village.reserved_team) {
+        return overlayIcons.reservedTeam;
+    }
+    if (village.is_own || (currentVillageId && village.id === currentVillageId)) {
         return overlayIcons.own;
     }
-    if (village.type === 'barbarian') {
-        return overlayIcons.barbarian;
-    }
-    return overlayIcons.player;
+    const level = getVillageLevel(village.points || 0);
+    return overlayIcons.tiers[level] || overlayIcons.tiers[overlayIcons.tiers.length - 1];
 }
 
 function indexVillages(villages) {
@@ -320,12 +353,38 @@ function renderMap() {
                 overlay.alt = 'Village marker';
                 tile.appendChild(overlay);
 
+                if (Array.isArray(village.movements) && village.movements.length > 0) {
+                    const movementStack = document.createElement('div');
+                    movementStack.classList.add('movement-stack');
+                    village.movements.slice(0, 3).forEach(move => {
+                        const icon = document.createElement('img');
+                        icon.classList.add('movement-icon');
+                        icon.src = movementIcons[move.type] || overlayIcons.incoming;
+                        icon.alt = move.type;
+                        movementStack.appendChild(icon);
+                    });
+                    tile.appendChild(movementStack);
+                }
+
+                if (village.note) {
+                    const noteIcon = document.createElement('img');
+                    noteIcon.classList.add('note-icon');
+                    noteIcon.src = overlayIcons.note;
+                    noteIcon.alt = 'Note';
+                    tile.appendChild(noteIcon);
+                }
+
                 const label = document.createElement('div');
                 label.classList.add('village-label');
                 label.textContent = village.name;
                 tile.appendChild(label);
             } else {
                 tile.classList.add('empty');
+                const freeIcon = document.createElement('img');
+                freeIcon.classList.add('overlay-icon');
+                freeIcon.src = overlayIcons.free;
+                freeIcon.alt = 'Empty';
+                tile.appendChild(freeIcon);
             }
 
             const coordsEl = document.createElement('div');
@@ -641,6 +700,27 @@ function hideVillagePopup() {
     left: 3px;
     width: 18px;
     height: 18px;
+}
+
+.movement-stack {
+    position: absolute;
+    left: 4px;
+    bottom: 4px;
+    display: flex;
+    gap: 2px;
+}
+
+.movement-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.note-icon {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 16px;
+    height: 16px;
 }
 
 .village-label {
