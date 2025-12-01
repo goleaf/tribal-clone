@@ -176,6 +176,9 @@ Detailed documentation of the code and database can be found in the `docs/` dire
 - Fair Monetization Design: `docs/monetization-fair-design.md`
 - IP Safeguards Checklist: `docs/ip-safeguards.md`
 - AI Assistants & Automation Limits: `docs/ai-assistants-limits.md`
+- Fair Play & Anti-Griefing: `docs/fair-play-and-anti-griefing.md`
+- Notifications & Reports: `docs/notifications-and-reports.md`
+- UI/UX Main Screens: `docs/ui-main-screens.md`
 
 ## Further Development
 

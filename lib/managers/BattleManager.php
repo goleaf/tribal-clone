@@ -112,7 +112,8 @@ class BattleManager
         $attacker_points = $this->getUserPoints($attacker_user_id);
         $defender_points = $this->getUserPoints($defender_user_id);
         $attacker_protected = $this->isBeginnerProtected($attacker_points);
-        $defender_protected = $this->isBeginnerProtected($defender_points);
+        $targetProtection = $this->getUserProtectionState($defender_user_id);
+        $defender_protected = $targetProtection['protected'] ?? false;
         $capCheck = $this->enforceAttackCap($attacker_user_id, $defender_user_id);
         if ($capCheck !== true) {
             return [
@@ -128,12 +129,6 @@ class BattleManager
                 return [
                     'success' => false,
                     'error' => 'You are under beginner protection and cannot attack stronger players yet.'
-                ];
-            }
-            if ($defender_protected && !$attacker_protected) {
-                return [
-                    'success' => false,
-                    'error' => 'This target is under beginner protection.'
                 ];
             }
         }
@@ -226,6 +221,7 @@ class BattleManager
         $total_units = 0;
         $total_pop = 0;
         $hasSiege = false;
+        $hasLoyaltyUnit = false;
         foreach ($units_sent as $count) {
             $total_units += $count;
         }
