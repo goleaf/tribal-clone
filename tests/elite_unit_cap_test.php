@@ -34,14 +34,24 @@ function testEliteUnitCap() {
     
     // Test 2: Manually insert a warden unit type for testing
     echo "Test 2: Creating test elite unit (warden)\n";
-    $conn->query("
+    $insertResult = $conn->query("
         INSERT INTO unit_types (internal_name, name, building_type, required_building_level, 
                                 cost_wood, cost_clay, cost_iron, population, attack, 
                                 defense_infantry, defense_cavalry, defense_ranged, 
                                 speed, carry, training_time_base, category, is_active)
         VALUES ('warden', 'Warden', 'barracks', 10, 200, 150, 100, 3, 50, 80, 80, 80, 20, 15, 7200, 'infantry', 1)
     ");
+    if (!$insertResult) {
+        echo "ERROR: Failed to insert warden unit: " . $conn->error . "\n";
+        cleanup($conn, $testUserId);
+        return false;
+    }
     $wardenUnit = getUnitByInternal($conn, 'warden');
+    if (!$wardenUnit) {
+        echo "ERROR: Failed to retrieve warden unit after insert\n";
+        cleanup($conn, $testUserId);
+        return false;
+    }
     echo "✓ Created warden unit (ID: {$wardenUnit['id']})\n\n";
     
     // Test 3: Check cap with no existing units
@@ -133,12 +143,13 @@ function createTestUser($conn) {
 function createTestVillage($conn, $userId, $name) {
     $x = rand(100, 200);
     $y = rand(100, 200);
+    $worldId = 1; // Default world
     
     $stmt = $conn->prepare("
-        INSERT INTO villages (user_id, name, x, y, farm_capacity, wood, clay, iron)
-        VALUES (?, ?, ?, ?, 1000, 10000, 10000, 10000)
+        INSERT INTO villages (user_id, world_id, name, x_coord, y_coord, farm_capacity, wood, clay, iron)
+        VALUES (?, ?, ?, ?, ?, 1000, 10000, 10000, 10000)
     ");
-    $stmt->bind_param("isii", $userId, $name, $x, $y);
+    $stmt->bind_param("iisii", $userId, $worldId, $name, $x, $y);
     $stmt->execute();
     $villageId = $stmt->insert_id;
     $stmt->close();
