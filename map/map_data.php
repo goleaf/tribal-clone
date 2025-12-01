@@ -9,6 +9,7 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: public, max-age=15, must-revalidate');
 $metricsStart = microtime(true);
 $mapMetricLog = __DIR__ . '/../logs/map_metrics.log';
+$mapMetricAlertLog = __DIR__ . '/../logs/map_metric_alerts.log';
 if (!is_dir(__DIR__ . '/../logs')) {
     mkdir(__DIR__ . '/../logs', 0777, true);
 }
@@ -29,6 +30,28 @@ function logMapMetric(int $status, int $bytes, string $etag, int $userId, int $c
         $size
     );
     @file_put_contents($logFile, $line, FILE_APPEND);
+}
+
+function maybeAlertMapMetric(int $status, int $bytes, float $durationMs, string $cacheStatus, int $userId, int $centerX, int $centerY, int $size, string $alertLog): void
+{
+    $durationThreshold = defined('MAP_LATENCY_ALERT_MS') ? (int)MAP_LATENCY_ALERT_MS : 500;
+    $payloadThreshold = defined('MAP_PAYLOAD_ALERT_BYTES') ? (int)MAP_PAYLOAD_ALERT_BYTES : 450000;
+    if ($durationMs < $durationThreshold && $bytes < $payloadThreshold) {
+        return;
+    }
+    $line = sprintf(
+        "[%s] ALERT status=%d cache=%s bytes=%d dur_ms=%.2f user=%d center=(%d,%d) size=%d\n",
+        date('Y-m-d H:i:s'),
+        $status,
+        $cacheStatus,
+        $bytes,
+        $durationMs,
+        $userId,
+        $centerX,
+        $centerY,
+        $size
+    );
+    @file_put_contents($alertLog, $line, FILE_APPEND);
 }
 
 if (!isset($_SESSION['user_id'])) {
@@ -65,6 +88,7 @@ if (count($_SESSION['map_rate']) >= $rateMax) {
     ]);
     $durationMs = (microtime(true) - $metricsStart) * 1000;
     logMapMetric(429, 0, 'n/a', (int)($_SESSION['user_id'] ?? 0), 0, 0, 0, $durationMs, 'rate_limit', $mapMetricLog);
+    maybeAlertMapMetric(429, 0, $durationMs, 'rate_limit', (int)($_SESSION['user_id'] ?? 0), 0, 0, 0, $mapMetricAlertLog);
     exit;
 }
 $_SESSION['map_rate'][] = $now;

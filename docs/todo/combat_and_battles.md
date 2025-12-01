@@ -155,6 +155,14 @@
 - **Edge Cases:** No surviving carriers → loot 0; protected >= available → loot 0 with note; clamp negatives to 0; conquest/siege units carry 0.
 - **DR/Band Rules:** If diminishing returns on repeat raids apply, multiply lootable by DR factor per attacker→target window and surface factor in report; ensure DR calculated before capacity split.
 
+### Siege Hold/Occupy Spec (World-Optional)
+- **Enable Flag:** `FEATURE_SIEGE_HOLD_ENABLED` per world; defaults off. If off, attacks always return after combat.
+- **Activation:** Attacker selects "Hold" when sending (if world allows). Hold only possible on win. Occupation timer set per world (e.g., 30–120 minutes).
+- **Effects During Occupation:** Occupying troops remain and defend as garrison; apply optional debuffs to defender (reduced production/recruit speed, blocked builds) and/or buffs to occupants (supply line bonus). Loot typically disabled during occupation (loot on initial battle only) unless world config allows trickle tax.
+- **Attrition/Upkeep:** Optional attrition tick for occupying troops (percent loss/hour) and higher upkeep paid by occupier. If supply breaks (no food/pop), occupation ends early.
+- **Release/Relief:** Occupier can manually end occupation; defender can break it by winning a battle. Occupation auto-ends when timer expires or all occupants die.
+- **Reporting/UI:** Battle/occupation reports show occupation start/end time, remaining timer, attrition applied, debuffs active, and occupancy state. Incoming list marks occupied villages. Reason codes: `ERR_HOLD_DISABLED`, `ERR_HOLD_LOSS`, `ERR_HOLD_TIMER`.
+
 ## QA & Acceptance
 - [ ] Unit tests for combat resolver: modifiers (morale/luck/night/terrain), siege damage scaling, overstack penalty, and proportional casualties.
 - [ ] Conquest hook tests: capture only on attacker win + surviving conquest units; blocked by protection/cooldowns; reason codes returned.
@@ -162,6 +170,7 @@
 - [ ] Rate-limit tests: command creation caps and fake/min-pop enforcement return correct errors; no tick degradation under spam.
 - [x] Report validation: reports show correct deltas, modifiers, plunder, allegiance change, and redact intel when scouts die; tribe sharing works with permissions. _(modifiers block now includes wall/morale/luck/env/overstack)_
 - [x] Plunder validation: protected amounts vs vault/hiding place, DR factors, caps, and carry splits match spec; reports reflect exact loot math; raid vs standard caps covered. _(BattleManager plunder math now applies max(vault %, hiding place) per resource, DR per attacker→target cooldown, raid cap multiplier, and surfaces protected amounts/percent in reports)_
+- [ ] Occupation/hold (if enabled): occupation state set/cleared, attrition/upkeep rules applied, loot rules during occupation enforced, and reports show occupation timers/status.
 
 ## Open Questions
 - Should casualty proportionality be linear or tuned per unit class (e.g., siege attrition different)? Decide before implementation.

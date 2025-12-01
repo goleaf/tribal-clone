@@ -11,6 +11,7 @@ class BattleManager
     private $reportManager; // Generic report log
     private $tribeWarManager; // Tribe war tracking
     private $intelManager; // Scouting/intel logging
+    private string $conquestLogFile;
 
     private const RANDOM_VARIANCE = 0.25; // +/- 25% luck
     private const FAITH_DEFENSE_PER_LEVEL = 0.05; // 5% per church level
@@ -95,6 +96,11 @@ class BattleManager
             require_once __DIR__ . '/IntelManager.php';
         }
         $this->intelManager = new IntelManager($conn);
+        $logDir = __DIR__ . '/../../logs';
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0777, true);
+        }
+        $this->conquestLogFile = $logDir . '/conquest_attempts.log';
     }
     
     /**
@@ -1687,6 +1693,25 @@ class BattleManager
                 'drop_multiplier' => $dropMultiplier,
                 'reason' => $conquestReason
             ];
+
+            $logPath = __DIR__ . '/../../logs/conquest_attempts.log';
+            $logPayload = [
+                'ts' => time(),
+                'attack_id' => $attack_id,
+                'source_village_id' => $attack['source_village_id'],
+                'target_village_id' => $attack['target_village_id'],
+                'attacker_user_id' => $attacker_user_id,
+                'defender_user_id' => $defender_user_id,
+                'attacker_won' => $attacker_win,
+                'loyalty_before' => $loyalty_before,
+                'loyalty_after' => $loyalty_after,
+                'drop' => $dropApplied,
+                'drop_base' => $dropBase,
+                'conquered' => $villageConquered,
+                'reason' => $conquestReason,
+                'defender_village_count' => $defenderVillageCount
+            ];
+            @file_put_contents($logPath, json_encode($logPayload) . PHP_EOL, FILE_APPEND);
         }
 
         // --- TRANSACTION ---

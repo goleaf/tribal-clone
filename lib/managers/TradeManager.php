@@ -199,7 +199,7 @@ class TradeManager {
             return ['success' => false, 'message' => 'Cannot send resources to the same village.', 'code' => 'ERR_INPUT'];
         }
 
-        // Anti-push: block sending to heavily protected/low-point targets when sender is much stronger
+        // Anti-push: block sending to linked/flagged accounts or extreme power gaps on protected targets
         $pushCheck = $this->enforceAntiPush((int)$village['user_id'], (int)$targetVillage['user_id']);
         if ($pushCheck !== true) {
             return $pushCheck;
@@ -799,7 +799,7 @@ class TradeManager {
             return ['success' => false, 'message' => 'You cannot accept your own offer from another village.', 'code' => 'ERR_ALT_BLOCK'];
         }
 
-        // Anti-push: prevent lopsided sends to protected/low-point accounts
+        // Anti-push: prevent linked/flagged or extreme power-gap trades to protected accounts
         $pushCheck = $this->enforceAntiPush($userId, (int)$offer['source_user_id']);
         if ($pushCheck !== true) {
             return $pushCheck;

@@ -124,6 +124,7 @@ class ResourceManager {
         // Get production rates (already includes world_speed and building_speed multipliers)
         $rates = $this->getProductionRates($village_id);
         $rates = $this->applyLateJoinerBonus($rates, $village);
+        $rates = $this->applyLateJoinerBonus($rates, $village);
         
         // Calculate gained resources: prod_eff * dt_hours
         $gained_wood = $rates['wood'] * $dt_hours;
@@ -213,6 +214,62 @@ class ResourceManager {
         
         // Return the updated village array
         return $village;
+    }
+
+    /**
+     * Apply late-joiner production bonus based on account age and points; skips if explicitly protected.
+     */
+    private function applyLateJoinerBonus(array $rates, array $village): array
+    {
+        $userId = isset($village['user_id']) ? (int)$village['user_id'] : 0;
+        if ($userId <= 0) {
+            return $rates;
+        }
+        $bonusEnabled = defined('LATE_JOINER_BONUS_ENABLED') ? (bool)LATE_JOINER_BONUS_ENABLED : true;
+        if (!$bonusEnabled) {
+            return $rates;
+        }
+        $daysWindow = defined('LATE_JOINER_DAYS') ? (int)LATE_JOINER_DAYS : 7;
+        $pointsCap = defined('LATE_JOINER_POINTS_CAP') ? (int)LATE_JOINER_POINTS_CAP : 500;
+        $multiplier = defined('LATE_JOINER_PROD_MULT') ? (float)LATE_JOINER_PROD_MULT : 1.25;
+        if ($daysWindow <= 0 || $multiplier <= 1.0) {
+            return $rates;
+        }
+
+        $stmt = $this->conn->prepare("SELECT created_at, points, is_protected FROM users WHERE id = ? LIMIT 1");
+        if (!$stmt) {
+            return $rates;
+        }
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$row || empty($row['created_at'])) {
+            return $rates;
+        }
+        $createdTs = strtotime($row['created_at']);
+        if ($createdTs <= 0) {
+            return $rates;
+        }
+        $ageDays = (time() - $createdTs) / 86400;
+        if ($ageDays > $daysWindow) {
+            return $rates;
+        }
+        $points = (int)($row['points'] ?? 0);
+        if ($points > $pointsCap) {
+            return $rates;
+        }
+        // Avoid stacking with explicit protection.
+        $isProtected = isset($row['is_protected']) ? (int)$row['is_protected'] === 1 : false;
+        if ($isProtected) {
+            return $rates;
+        }
+
+        foreach (['wood', 'clay', 'iron'] as $res) {
+            $rates[$res] = ($rates[$res] ?? 0) * $multiplier;
+        }
+        return $rates;
     }
 
     private function getUserIdByVillage(int $villageId): ?int

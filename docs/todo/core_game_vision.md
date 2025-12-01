@@ -165,6 +165,12 @@
 - Watch preset usage vs overrides in world creation; alert if divergences exceed threshold without acknowledgment.
 - Survey fairness/social/pacing KPIs weekly; trigger review if crossing predefined thresholds.
 
+## Profiling & Load Plan
+- KPI pipelines: measure dashboard generation time and alert delivery latency under load; ensure p95 within target and alerts not dropped.
+- String linting: benchmark CI lint job duration as glossary grows; keep under target time to avoid pipeline regressions.
+- Preset application: log time to create world with presets vs overrides; monitor DB/query load for preset fetch on world creation.
+- Manifesto/help delivery: ensure help/manifesto pages load quickly on low-end/mobile; measure payload size and cache effectiveness.
+
 ## Open Questions
 - Which legacy terms are still risky for IP overlap and need renaming first? (list candidates and owners)
 - How frequently should the vision/pillar audit be revisited (per season, per major release)?

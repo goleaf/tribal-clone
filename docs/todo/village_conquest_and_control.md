@@ -94,7 +94,7 @@
  - [x] Regen system: allegiance regeneration ticks with bonuses (buildings/tribe tech) and caps; pause rules during combat/occupation; floor after capture (anti-ping-pong buffer). _(regen spec below)_
  - [x] Cooldowns & limits: anti-rebound timer after capture, per-attacker wave spacing enforcement, per-account village cap penalties; configurable per world. _(cooldown spec below)_
  - [x] Anti-abuse checks: block captures vs protected/low-point players; flag repeated swaps between same accounts/tribes; apply tax/lockout on tribe-internal transfers if opt-in missing. _(conquest blocked vs very low-point targets; ERR_PROTECTED returned)_
-- [ ] Reporting: battle/conquest reports show allegiance deltas, morale/luck, modifiers applied, and reason codes for blocks; log all conquest attempts for audit.
+- [x] Reporting: battle/conquest reports show allegiance deltas, morale/luck, modifiers applied, and reason codes for blocks; log all conquest attempts for audit. _(BattleManager now tags loyalty reports with reason codes and appends conquest attempts to `logs/conquest_attempts.log` with attacker/defender ids and drop/capture context)_
 
 ## Implementation TODOs
 - [x] Implement allegiance calculation service: per-wave allegiance drop resolution, regen tick, anti-snipe floor, and post-capture reset. _(spec below)_
