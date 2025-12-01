@@ -39,14 +39,24 @@ $conn->query("DELETE FROM unit_queue WHERE village_id = $testVillageId");
 $conn->query("UPDATE worlds SET conquest_units_enabled = 1 WHERE id = $testWorldId");
 
 // Create test user
-$conn->query("INSERT INTO users (id, username, email, password, world_id) 
+$userInsert = $conn->query("INSERT INTO users (id, username, email, password, world_id) 
               VALUES ($testUserId, 'test_conquest_user', 'test@conquest.com', 'hash', $testWorldId)");
 
+if (!$userInsert) {
+    echo "ERROR: Failed to create test user: " . $conn->error . "\n";
+    exit(1);
+}
+
 // Create test village with resources
-$conn->query("INSERT INTO villages (id, user_id, world_id, name, x_coord, y_coord, 
+$insertResult = $conn->query("INSERT INTO villages (id, user_id, world_id, name, x_coord, y_coord, 
               wood, clay, iron, farm_capacity, noble_coins, standards) 
               VALUES ($testVillageId, $testUserId, $testWorldId, 'Test Village', 500, 500, 
               10000, 10000, 10000, 1000, 5, 3)");
+
+if (!$insertResult) {
+    echo "ERROR: Failed to create test village: " . $conn->error . "\n";
+    exit(1);
+}
 
 // Create required buildings for conquest units
 // Get building type IDs
