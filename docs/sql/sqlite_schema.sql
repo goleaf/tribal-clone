@@ -662,3 +662,8 @@ CREATE TABLE IF NOT EXISTS guides (
 
 INSERT INTO unit_types (internal_name, name, description, attack_power, defense_power, speed, carry_capacity, population_cost, building_type, required_building_level, cost_wood, cost_clay, cost_iron)
 VALUES ('envoy', 'Envoy', 'Control unit for conquest', 30, 40, 35, 0, 80, 'academy', 1, 15000, 20000, 25000);
+
+-- Catch-up buffs columns for users
+
+ALTER TABLE users ADD COLUMN catchup_expires_at DATETIME NULL;
+ALTER TABLE users ADD COLUMN catchup_multiplier REAL NOT NULL DEFAULT 1.0;

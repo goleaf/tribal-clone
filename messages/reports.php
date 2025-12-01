@@ -563,6 +563,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const pct = Math.round(details.overstack.multiplier * 100);
             chips.push(`<span class="chip">Overstack defense: ${pct}%</span>`);
         }
+        if (details.environment && details.environment.night) {
+            chips.push('<span class="chip chip-info">Night bonus active</span>');
+        }
         return chips.length ? `<div class="report-chips">${chips.join('')}</div>` : '';
     }
 
@@ -637,6 +640,35 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p>Wall: ${w.initial_level ?? '?'} → ${w.final_level ?? '?'}</p>
                     </div>
                 `;
+            }
+
+            if (details.environment || details.overstack) {
+                detailsHtml += `<div class="battle-environment">`;
+                if (details.environment) {
+                    const env = details.environment;
+                    const envParts = [];
+                    if (env.night) envParts.push('Night bonus');
+                    if (env.terrain_attack_multiplier && env.terrain_attack_multiplier !== 1) {
+                        envParts.push(`Terrain atk x${env.terrain_attack_multiplier}`);
+                    }
+                    if (env.terrain_defense_multiplier && env.terrain_defense_multiplier !== 1) {
+                        envParts.push(`Terrain def x${env.terrain_defense_multiplier}`);
+                    }
+                    if (env.weather_attack_multiplier && env.weather_attack_multiplier !== 1) {
+                        envParts.push(`Weather atk x${env.weather_attack_multiplier}`);
+                    }
+                    if (env.weather_defense_multiplier && env.weather_defense_multiplier !== 1) {
+                        envParts.push(`Weather def x${env.weather_defense_multiplier}`);
+                    }
+                    if (envParts.length) {
+                        detailsHtml += `<div class="battle-env-section"><h4>Environment</h4><p>${envParts.join(' · ')}</p></div>`;
+                    }
+                }
+                if (details.overstack && details.overstack.enabled && details.overstack.multiplier !== undefined) {
+                    const pct = Math.round(details.overstack.multiplier * 100);
+                    detailsHtml += `<div class="battle-env-section"><h4>Overstack</h4><p>Defense reduced to ${pct}% due to overstack.</p></div>`;
+                }
+                detailsHtml += `</div>`;
             }
 
             detailsHtml += `</div>`;

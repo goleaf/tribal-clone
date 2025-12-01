@@ -65,6 +65,7 @@ class BattleManager
     private const LOW_POWER_ATTACKS_PER_ATTACKER_PER_DAY = 5;
     private const LOW_POWER_ATTACKS_PER_TRIBE_PER_DAY = 20;
     private const MIN_ATTACK_POP = 5;
+    private const CONQUEST_MIN_DEFENDER_POINTS = 500; // block conquest against very low-point targets
 
     /**
      * @param mysqli $conn Database connection
@@ -140,6 +141,7 @@ class BattleManager
         $attacker_user_id = (int)$villages['source_user_id'];
         $defender_user_id = (int)$villages['target_user_id'];
         $target_is_barb = $defender_user_id === -1;
+        $defender_points = $target_is_barb ? null : $this->getUserPoints($defender_user_id);
 
         // Global rate limit per attacker to deter automation/burst spam
         $rateLimitCheck = $this->enforceCommandRateLimit($attacker_user_id, $attack_type, $defender_user_id);
@@ -417,6 +419,20 @@ class BattleManager
                 'error' => 'Conquest units are disabled on this world.',
                 'code' => 'CONQUEST_DISABLED'
             ];
+        }
+
+        // Anti-abuse: block conquest vs very low-point targets even if protection lapsed
+        if ($hasLoyaltyUnit && !$target_is_barb) {
+            $minConquestPoints = defined('CONQUEST_MIN_DEFENDER_POINTS')
+                ? (int)CONQUEST_MIN_DEFENDER_POINTS
+                : self::CONQUEST_MIN_DEFENDER_POINTS;
+            if ($defender_points !== null && $defender_points < $minConquestPoints) {
+                return [
+                    'success' => false,
+                    'error' => 'Conquest attacks are blocked against targets below ' . $minConquestPoints . ' points.',
+                    'code' => 'ERR_PROTECTED'
+                ];
+            }
         }
 
         // Beginner shield: block siege/loyalty; allow raids only after 24h account age.
@@ -1784,7 +1800,8 @@ class BattleManager
                     'defender' => $defenderResearch
                 ],
                 'loyalty' => $loyalty_report,
-                'overstack' => $overstack
+                'overstack' => $overstack,
+                'last_village_protected' => ($defenderVillageCount !== null && $defenderVillageCount <= 1)
             ];
             $report_data_json = json_encode($details);
             $attacker_won_int = $attacker_win ? 1 : 0;
@@ -2576,6 +2593,22 @@ class BattleManager
             }
         }
         return false;
+    }
+
+    private function getVillageCountForUser(int $userId): int
+    {
+        if ($userId <= 0) {
+            return 0;
+        }
+        $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM villages WHERE user_id = ?");
+        if (!$stmt) {
+            return 0;
+        }
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return (int)($row['cnt'] ?? 0);
     }
 
     /**

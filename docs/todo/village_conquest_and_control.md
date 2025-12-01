@@ -155,6 +155,7 @@
 - [ ] Simulate multi-wave train: verify ordering per tick, capture triggers once, post-capture floor set, and reports show deltas/modifiers.
 - [ ] Load test allegiance resolver under 1k waves/tick; p95 within target; no race conditions on concurrent waves to same village.
 - [ ] Reports display morale/luck, allegiance drop, regen applied, anti-snipe status, surviving SBs, and block reasons when applicable.
+- [ ] Handover UI: verify opt-in/opt-out flows, cooldowns to prevent abuse, and clear messaging when conquest blocked due to handover settings.
 
 ### Conquest State Machine Prereqs (Reason Codes)
 - **Combat Win Required:** If attacker loses or draws, no allegiance drop. Reason `ERR_COMBAT_LOSS`.

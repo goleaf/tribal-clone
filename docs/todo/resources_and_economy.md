@@ -90,7 +90,7 @@
 - [x] Event economy: token balances with expiry, event shops with caps, harvest/trade wind modifiers applied per world. _(event economy spec below)_
  - [x] Catch-up buffs: late-joiner production bonuses and protection; ensure non-stacking with beginner protection abuse; expiration rules. _(buff spec below)_
 - [ ] Telemetry: metrics on production, sinks (minting, tribe projects), trade volumes, plunder/decay losses, and aid flows; alerts on anomalies.
-- [ ] Safeguards: cap storage overflows, block trades/aid to protected alts (power delta + IP/alt flags), and enforce fair-market bounds on offers to reduce pushing.
+- [x] Safeguards: cap storage overflows, block trades/aid to protected alts (power delta + IP/alt flags), and enforce fair-market bounds on offers to reduce pushing. _(TradeManager enforces headroom, anti-push to protected targets, and fair ratio bounds)_
 - [x] Error codes: standardize economy errors (`ERR_CAP`, `ERR_TAX`, `ERR_ALT_BLOCK`, `ERR_RATE_LIMIT`) and surface retry/next steps in UI. _(see error code spec below)_
  - [x] Auditing: append-only logs for trades/aid/minting with actor, target, amounts, ip_hash/ua_hash, and world_id; retain 180 days. _(trade/a id logger added; writes hashed IP/UA + payload to logs/trade_audit.log)_
 - [ ] Load shedding: if trade/aid endpoints face spikes, degrade gracefully (queue/try-later) instead of overloading DB; emit backpressure metric.
@@ -185,6 +185,12 @@
 - [ ] Schema migrations for economy caps/logs tested with rollback; ensure indexes for high-churn tables (trade/aid logs).
 - [ ] Backward-compatible API responses for trade/aid/minting while new caps/fields propagate; include versioning.
 - [ ] Release comms: explain decay/DR/taxes and fair-play safeguards; UI tooltips updated with formulas/examples.
+
+## Monitoring Plan
+- Track economy tick latency, decay/DR application counts, and empire surcharge hits; alert on spikes or missed applications.
+- Monitor trade/aid/minting error rates and cap hits; alert on surges indicating misconfigurations or abuse.
+- Watch event token expiries and shop purchase caps; alert if expiries fail or caps are bypassed.
+- Dashboard for trade/aid volumes, average payload sizes, and rate-limit hits to catch regressions.
 
 ### Resource Sink Plan
 - **Minting:** Coins/Seals/Standards crafted in Hall/Academy with rising costs; daily mint cap per account; consumes wood/clay/iron and optional token sink. Required for Standard Bearers.

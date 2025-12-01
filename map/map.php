@@ -1027,17 +1027,17 @@ function requestMapLoad(targetX, targetY, targetSize, options = {}) {
 
 async function loadMap(targetX, targetY, targetSize, options = {}) {
     const { skipUrl = false } = options;
+    const normalizedSize = normalizeSize(targetSize);
     if (mapAbortController) {
         mapAbortController.abort();
     }
     mapAbortController = new AbortController();
     mapFetchInFlight = true;
     let lastErrorCode = null;
-    setMapLoading(true);
+    setMapLoading(true, { size: normalizedSize });
     try {
-        const size = normalizeSize(targetSize);
         const fetchStart = performance.now();
-        const data = await fetchMapData(targetX, targetY, size, mapAbortController);
+        const data = await fetchMapData(targetX, targetY, normalizedSize, mapAbortController);
         const fetchMs = performance.now() - fetchStart;
         if (!data) {
             return;
@@ -1049,7 +1049,7 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
                 : 'Movements capped; zoom in or adjust filters to see more.';
         }
         mapState.center = data.center || { x: targetX, y: targetY };
-        mapState.size = data.size || size;
+        mapState.size = data.size || normalizedSize;
         mapState.players = indexPlayers(data.players || []);
         mapState.tribes = indexTribes(data.tribes || data.allies || []);
         mapState.byCoord = indexVillages(data.villages || [], mapState.players);
@@ -1088,7 +1088,7 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
             const retryAfter = Math.max(500, (error.retryAfterMs || 1000));
             console.warn(`Map fetch rate-limited. Retrying in ${Math.round(retryAfter / 1000)}s.`);
             setTimeout(() => {
-                requestMapLoad(targetX, targetY, targetSize, { ...options, skipUrl: true });
+                requestMapLoad(targetX, targetY, normalizedSize, { ...options, skipUrl: true });
             }, retryAfter);
         } else {
             console.error('Failed to load map data:', error);
@@ -1993,21 +1993,28 @@ body.map-reduced-motion .coords {
     inset: 0;
     pointer-events: none;
     display: none;
-    background: rgba(255, 252, 247, 0.7);
+    background: rgba(255, 252, 247, 0.75);
     z-index: 2;
+    padding: 12px;
+    box-sizing: border-box;
+    gap: 1px;
+    grid-auto-rows: var(--tile-height);
+    grid-auto-columns: var(--tile-width);
+    align-content: start;
+    justify-content: start;
 }
 
-.map-skeleton .skeleton-row {
-    height: 28px;
-    margin: 6px 12px;
-    border-radius: 8px;
+.map-skeleton .skeleton-cell {
+    width: var(--tile-width);
+    height: var(--tile-height);
+    border-radius: 4px;
     background: linear-gradient(90deg, #e6ddcf 25%, #f2ebe1 50%, #e6ddcf 75%);
     background-size: 200% 100%;
     animation: map-skeleton 1.2s ease-in-out infinite;
 }
 
 body.map-reduced-motion .map-grid.is-loading .map-tile,
-body.map-reduced-motion .map-skeleton .skeleton-row {
+body.map-reduced-motion .map-skeleton .skeleton-cell {
     animation: none;
 }
 
@@ -2217,24 +2224,6 @@ body.map-high-contrast .legend-dot.relation-barb { background: #c0c4cc; border-c
     color: #6a4a1f;
 }
 
-.map-skeleton {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    display: none;
-    background: rgba(255, 252, 247, 0.7);
-    z-index: 2;
-}
-
-.map-skeleton .skeleton-row {
-    height: 28px;
-    margin: 6px 12px;
-    border-radius: 8px;
-    background: linear-gradient(90deg, #e6ddcf 25%, #f2ebe1 50%, #e6ddcf 75%);
-    background-size: 200% 100%;
-    animation: map-skeleton 1.2s ease-in-out infinite;
-}
-
 .map-loading {
     position: absolute;
     top: 12px;
@@ -2261,16 +2250,6 @@ body.map-high-contrast .legend-dot.relation-barb { background: #c0c4cc; border-c
 }
 
 body.map-reduced-motion .map-loading .spinner {
-    animation: none;
-}
-
-.map-grid.is-loading .map-tile {
-    background: linear-gradient(90deg, #e3dacb 25%, #f2ece1 50%, #e3dacb 75%);
-    background-size: 200% 100%;
-    animation: map-skeleton 1.2s ease-in-out infinite;
-}
-
-body.map-reduced-motion .map-grid.is-loading .map-tile {
     animation: none;
 }
 

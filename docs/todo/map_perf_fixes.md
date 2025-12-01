@@ -62,3 +62,5 @@
 - [ ] Schema/config changes (if any) for map settings validated with rollback; ensure new settings are read with sane defaults when absent.
 - [ ] Backward compatibility: maintain legacy map endpoints/fields while new deltas/clustering roll out; version responses to avoid client breaks.
 - [ ] Release comms/help: explain new map performance modes (conditional requests, clustering, fallback) and how to toggle high-contrast/reduced-motion.
+- [ ] Monitoring: client perf logging enabled (render time/dropped frames) with alerts on regressions; server map_metrics dashboards up (latency/cache hit/payload).
+- [ ] Low-perf/offline toggles surfaced in UI with state retention per device/session; QA covers toggle on/off and re-entry.

@@ -1119,6 +1119,13 @@ class TradeManager {
         $senderPts = (int)$sender['points'];
         $targetPts = (int)$target['points'];
         $targetProtected = ((int)($target['is_protected'] ?? 0) === 1) || $targetPts < $cap;
+        if ($targetProtected && $senderUserId !== $targetUserId) {
+            return [
+                'success' => false,
+                'message' => 'Target player is under beginner protection and cannot receive aid from others yet.',
+                'code' => AjaxResponse::ERR_PROTECTED
+            ];
+        }
         $ratio = $targetPts > 0 ? $senderPts / max(1, $targetPts) : ($senderPts > 0 ? INF : 1);
 
         if ($targetProtected && $senderPts > $cap && $ratio >= self::PUSH_POINTS_RATIO) {
