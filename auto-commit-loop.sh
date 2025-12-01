@@ -32,10 +32,22 @@ EOF
 
 sanitize_message() {
   # Strip ANSI and control characters, take the first non-empty line.
-  printf '%s' "$1" |
+  local cleaned
+  cleaned="$(printf '%s' "$1" |
     tr -d '\r' |
-    perl -pe 's/\e\[[0-9;]*[A-Za-z]//g; s/\e]0;.*?\a//g; s/[\x00-\x08\x0B-\x1F\x7F]//g' |
-    sed -e '/^$/d' | head -n1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+    perl -pe 's/\e\[[0-9;]*[A-Za-z]//g; s/\e]0;.*?\a//g; s/[\x00-\x08\x0B-\x1F\x7F]//g')"
+
+  # Trim trailing spaces per line, drop leading/trailing blank lines, cap to 10 lines.
+  cleaned="$(printf '%s\n' "$cleaned" | sed 's/[[:space:]]\+$//' | awk '
+    { lines[NR]=$0 }
+    END {
+      start=1; end=NR;
+      while(start<=NR && lines[start]=="") start++;
+      while(end>=start && lines[end]=="") end--;
+      for(i=start;i<=end && i<start+10;i++) print lines[i];
+    }')"
+
+  printf '%s' "$cleaned"
 }
 
 fallback_message() {
@@ -69,8 +81,11 @@ generate_message() {
 
   prompt=$(
     cat <<EOF
-Write a concise git commit summary line (max 72 chars) for the staged changes.
-Reply with one short line only, no quotes or prefixes.
+Write a git commit message for the staged changes with:
+- A concise subject line (<=72 chars).
+- A blank line.
+- Up to 4 bullet points summarizing the key changes.
+Plain text only; no code fences or prefixes.
 
 $staged_diff
 EOF

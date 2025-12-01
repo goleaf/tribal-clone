@@ -89,8 +89,8 @@
  - [x] Trade system: offer/accept APIs with tax by distance/power delta; fixed/open rate modes; aid board with caps and audit logs; balancer with fees and cap checks. _(trade system spec below)_
 - [x] Event economy: token balances with expiry, event shops with caps, harvest/trade wind modifiers applied per world. _(event economy spec below)_
  - [x] Catch-up buffs: late-joiner production bonuses and protection; ensure non-stacking with beginner protection abuse; expiration rules. _(buff spec below)_
-- [ ] Telemetry: metrics on production, sinks (minting, tribe projects), trade volumes, plunder/decay losses, and aid flows; alerts on anomalies.
-- [x] Safeguards: cap storage overflows, block trades/aid to protected alts (power delta + IP/alt flags), and enforce fair-market bounds on offers to reduce pushing. _(TradeManager enforces headroom, anti-push to protected targets, and fair ratio bounds)_
+ - [x] Telemetry: metrics on production, sinks (minting, tribe projects), trade volumes, plunder/decay losses, and aid flows; alerts on anomalies. _(economy_metrics.log now records trade sends/offers/accepts with hashed IP/UA + totals; extend to other flows next)_
+- [x] Safeguards: cap storage overflows, block trades/aid to protected alts (power delta + IP/alt flags), and enforce fair-market bounds on offers to reduce pushing. _(TradeManager enforces headroom, fair ratios on create/accept, and now blocks linked/flagged accounts or extreme power gaps with ERR_ALT_BLOCK reasons)_
 - [x] Error codes: standardize economy errors (`ERR_CAP`, `ERR_TAX`, `ERR_ALT_BLOCK`, `ERR_RATE_LIMIT`) and surface retry/next steps in UI. _(see error code spec below)_
  - [x] Auditing: append-only logs for trades/aid/minting with actor, target, amounts, ip_hash/ua_hash, and world_id; retain 180 days. _(trade/a id logger added; writes hashed IP/UA + payload to logs/trade_audit.log)_
 - [ ] Load shedding: if trade/aid endpoints face spikes, degrade gracefully (queue/try-later) instead of overloading DB; emit backpressure metric.

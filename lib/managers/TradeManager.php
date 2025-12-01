@@ -275,6 +275,16 @@ class TradeManager {
                 'resources' => $resources,
                 'traders_used' => $tradersNeeded
             ]);
+            $this->logEconomyMetric('send_resources', [
+                'actor_user_id' => $userId,
+                'source_village_id' => $villageId,
+                'target_village_id' => (int)$targetVillage['id'],
+                'wood' => $resources['wood'],
+                'clay' => $resources['clay'],
+                'iron' => $resources['iron'],
+                'total' => array_sum($resources),
+                'traders_used' => $tradersNeeded
+            ]);
 
             return [
                 'success' => true,
@@ -631,6 +641,14 @@ class TradeManager {
                 'requested' => $requestResources,
                 'traders_reserved' => $tradersNeeded
             ]);
+            $this->logEconomyMetric('create_offer', [
+                'actor_user_id' => $userId,
+                'source_village_id' => $villageId,
+                'offer_id' => $offerId,
+                'offered_total' => array_sum($offerResources),
+                'requested_total' => array_sum($requestResources),
+                'traders_reserved' => $tradersNeeded
+            ]);
 
             // Optional report entry for the offer owner
             if (!class_exists('ReportManager')) {
@@ -941,6 +959,16 @@ class TradeManager {
                     'offer_side' => $offer['merchants_required'],
                     'acceptor_side' => $tradersNeededAcceptor
                 ]
+            ]);
+            $this->logEconomyMetric('accept_offer', [
+                'actor_user_id' => $userId,
+                'offer_id' => $offerId,
+                'source_village_id' => $acceptingVillageId,
+                'offer_village_id' => $offer['source_village_id'],
+                'offered_total' => $offer['offered_wood'] + $offer['offered_clay'] + $offer['offered_iron'],
+                'requested_total' => $offer['requested_wood'] + $offer['requested_clay'] + $offer['requested_iron'],
+                'traders_used_offer' => $offer['merchants_required'],
+                'traders_used_acceptor' => $tradersNeededAcceptor
             ]);
 
             return [
@@ -1484,5 +1512,26 @@ class TradeManager {
     private function hashValue(string $value): string
     {
         return $value !== '' ? hash('sha256', $value) : '';
+    }
+
+    private function logEconomyMetric(string $action, array $payload): void
+    {
+        $logDir = __DIR__ . '/../../logs';
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0775, true);
+        }
+        $logFile = $logDir . '/economy_metrics.log';
+        $entry = [
+            'ts' => date('c'),
+            'action' => $action,
+            'world_id' => defined('CURRENT_WORLD_ID') ? CURRENT_WORLD_ID : null,
+            'ip_hash' => $this->hashValue($_SERVER['REMOTE_ADDR'] ?? ''),
+            'ua_hash' => $this->hashValue($_SERVER['HTTP_USER_AGENT'] ?? ''),
+            'data' => $payload
+        ];
+        $line = json_encode($entry, JSON_UNESCAPED_SLASHES);
+        if ($line !== false) {
+            @file_put_contents($logFile, $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+        }
     }
 }

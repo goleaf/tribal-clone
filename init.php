@@ -102,6 +102,15 @@ if (isset($_SESSION['user_id'])) {
     $_SESSION['username'] = $user['username'];
     $_SESSION['is_admin'] = $user['is_admin'];
 
+    // Grant catch-up buffs for eligible players (late joiners/rebuilds)
+    if (!class_exists('CatchupManager')) {
+        require_once __DIR__ . '/lib/managers/CatchupManager.php';
+    }
+    if (class_exists('CatchupManager')) {
+        $catchupManager = new CatchupManager($conn);
+        $catchupManager->grant((int)$user_id);
+    }
+
     // Track last activity for inactivity-based systems
     if (dbColumnExists($conn, 'users', 'last_activity_at')) {
         $stmtUpdateActivity = $conn->prepare("UPDATE users SET last_activity_at = NOW() WHERE id = ?");

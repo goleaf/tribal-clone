@@ -36,6 +36,16 @@ if (!isset($_SESSION['user_id'])) {
     echo json_encode(['error' => 'Login required']);
     exit;
 }
+$user_id = (int)$_SESSION['user_id'];
+$userAllyId = null;
+$allyStmt = $conn->prepare("SELECT ally_id FROM users WHERE id = ? LIMIT 1");
+if ($allyStmt) {
+    $allyStmt->bind_param("i", $user_id);
+    $allyStmt->execute();
+    $allyRow = $allyStmt->get_result()->fetch_assoc();
+    $allyStmt->close();
+    $userAllyId = isset($allyRow['ally_id']) ? (int)$allyRow['ally_id'] : null;
+}
 $rateWindow = 10; // seconds
 $rateMax = 15; // max requests per window
 $now = microtime(true);
@@ -58,20 +68,6 @@ if (count($_SESSION['map_rate']) >= $rateMax) {
     exit;
 }
 $_SESSION['map_rate'][] = $now;
-
-$user_id = (int)$_SESSION['user_id'];
-$userTribeId = null;
-$lastModifiedTs = 0;
-if ($user_id) {
-    $stmtUser = $conn->prepare("SELECT ally_id FROM users WHERE id = ? LIMIT 1");
-    if ($stmtUser) {
-        $stmtUser->bind_param("i", $user_id);
-        $stmtUser->execute();
-        $rowUser = $stmtUser->get_result()->fetch_assoc();
-        $stmtUser->close();
-        $userTribeId = isset($rowUser['ally_id']) ? (int)$rowUser['ally_id'] : null;
-    }
-}
 
 $worldSize = defined('WORLD_SIZE') ? (int)WORLD_SIZE : 1000;
 

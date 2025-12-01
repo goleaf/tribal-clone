@@ -161,7 +161,7 @@
 - [ ] Timing tests: simultaneous arrivals ordering, support inclusion, and anti-sniping spacing enforcement.
 - [ ] Rate-limit tests: command creation caps and fake/min-pop enforcement return correct errors; no tick degradation under spam.
 - [x] Report validation: reports show correct deltas, modifiers, plunder, allegiance change, and redact intel when scouts die; tribe sharing works with permissions. _(modifiers block now includes wall/morale/luck/env/overstack)_
-- [ ] Plunder validation: protected amounts vs vault/hiding place, DR factors, caps, and carry splits match spec; reports reflect exact loot math; raid vs standard caps covered.
+- [x] Plunder validation: protected amounts vs vault/hiding place, DR factors, caps, and carry splits match spec; reports reflect exact loot math; raid vs standard caps covered. _(BattleManager plunder math now applies max(vault %, hiding place) per resource, DR per attacker→target cooldown, raid cap multiplier, and surfaces protected amounts/percent in reports)_
 
 ## Open Questions
 - Should casualty proportionality be linear or tuned per unit class (e.g., siege attrition different)? Decide before implementation.

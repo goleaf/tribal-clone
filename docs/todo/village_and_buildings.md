@@ -150,6 +150,14 @@
 - Outposts expire correctly, block creation when hostile commands inbound, and clean up queues/markers on expiry.
 - Wall damage/repair queues apply expected level changes; optional decay toggles on/off per world.
 
+## Monitoring Plan
+- Track build queue latency, failure rates, and refund mismatches; alert on spikes.
+- Monitor minting/training errors and cap hits for Hall of Banners; alert on bypass attempts.
+- Watch watchtower detection events and noble flag rates; alert if detection drops unexpectedly after deployments.
+- Monitor hospital recovery applications and report generation time; alert on anomalies or missing recovery entries.
+- Track outpost creation/expiry events and cleanup jobs; alert on orphaned markers/queues.
+- Monitor wall damage/repair events and decay toggles per world; alert on unexpected level changes or decay when disabled.
+
 ## QA & Tests
 - Queue validation: prereq/pop/resource caps return correct reason codes; reorder/cancel refunds match spec; parallel queue rules enforced per world.
 - Watchtower: detection radius/noble flag per level; warnings surface in overlays and respect intel freshness hooks.

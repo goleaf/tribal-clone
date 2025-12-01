@@ -123,6 +123,7 @@ class ResourceManager {
 
         // Get production rates (already includes world_speed and building_speed multipliers)
         $rates = $this->getProductionRates($village_id);
+        $rates = $this->applyLateJoinerBonus($rates, $village);
         
         // Calculate gained resources: prod_eff * dt_hours
         $gained_wood = $rates['wood'] * $dt_hours;

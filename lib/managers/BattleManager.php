@@ -428,6 +428,11 @@ class BattleManager
                 ? (int)CONQUEST_MIN_DEFENDER_POINTS
                 : self::CONQUEST_MIN_DEFENDER_POINTS;
             if ($defender_points !== null && $defender_points < $minConquestPoints) {
+                $this->logAbuseFlag($attacker_user_id, 'CONQUEST_BLOCK_LOW_POINTS', [
+                    'target_user_id' => $defender_user_id,
+                    'target_points' => $defender_points,
+                    'min_points' => $minConquestPoints
+                ]);
                 return [
                     'success' => false,
                     'error' => 'Conquest attacks are blocked against targets below ' . $minConquestPoints . ' points.',
@@ -441,6 +446,11 @@ class BattleManager
             $hoursOld = $this->getAccountAgeHours($targetProtection);
             $raidAllowed = $attack_type === 'raid' && $hoursOld !== null && $hoursOld >= 24;
             if ($hasSiege || $hasLoyaltyUnit) {
+                if ($hasLoyaltyUnit) {
+                    $this->logAbuseFlag($attacker_user_id, 'CONQUEST_BLOCK_PROTECTED', [
+                        'target_user_id' => $defender_user_id
+                    ]);
+                }
                 return [
                     'success' => false,
                     'error' => 'Beginner shield: siege or loyalty attacks are blocked on protected villages.',
@@ -3517,19 +3527,6 @@ class BattleManager
         }
         $cap = max(self::LOYALTY_MIN, $cap);
         return max(self::LOYALTY_MIN, min($cap, $loyalty));
-    }
-
-    private function getUserPoints(int $userId): ?int
-    {
-        $stmt = $this->conn->prepare("SELECT points FROM users WHERE id = ? LIMIT 1");
-        if ($stmt === false) {
-            return null;
-        }
-        $stmt->bind_param("i", $userId);
-        $stmt->execute();
-        $row = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        return $row && isset($row['points']) ? (int)$row['points'] : null;
     }
 
     /**
