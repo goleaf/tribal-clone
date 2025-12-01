@@ -212,7 +212,9 @@ function seedVillageWithWorld(
     array $buildingLevels,
     int $worldId = 1,
     string $lastUpdateOffset = '-1 hour',
-    ?string $conqueredAt = null
+    ?string $conqueredAt = null,
+    int $xCoord = 500,
+    int $yCoord = 500
 ): void {
     $wood = (int)($resources['wood'] ?? 0);
     $clay = (int)($resources['clay'] ?? 0);
@@ -222,7 +224,7 @@ function seedVillageWithWorld(
 
     $conn->query(
         "INSERT INTO villages (id, name, user_id, world_id, x_coord, y_coord, wood, clay, iron, warehouse_capacity, population, farm_capacity, last_resource_update, conquered_at) VALUES " .
-        "({$villageId}, 'Village {$villageId}', {$userId}, {$worldId}, 500, 500, {$wood}, {$clay}, {$iron}, 1000, 100, 100, '{$lastUpdate}', " . ($conquered ? "'{$conquered}'" : "NULL") . ")"
+        "({$villageId}, 'Village {$villageId}', {$userId}, {$worldId}, {$xCoord}, {$yCoord}, {$wood}, {$clay}, {$iron}, 1000, 100, 100, '{$lastUpdate}', " . ($conquered ? "'{$conquered}'" : "NULL") . ")"
     );
 
     foreach ($buildingLevels as $internalName => $level) {
@@ -316,6 +318,43 @@ $runner->add('Vault protection chooses stronger of vault vs hiding place', funct
     $lootHidden = BattleManager::computeLootableResources($resources, 200, 10.0);
     assertEquals(['wood' => 100, 'clay' => 100, 'iron' => 100], $lootHidden['protected'], 'Vault protection value unchanged');
     assertEquals(['wood' => 800, 'clay' => 800, 'iron' => 800], $lootHidden['available'], 'Available should subtract hiding place when larger than vault');
+});
+
+$runner->add('Occupation tax reduces production for recent conquests', function () {
+    if (!defined('OCCUPATION_TAX_DURATION_HOURS')) {
+        define('OCCUPATION_TAX_DURATION_HOURS', 72);
+    }
+    if (!defined('OCCUPATION_TAX_MULTIPLIER')) {
+        define('OCCUPATION_TAX_MULTIPLIER', 0.8);
+    }
+
+    $conn = new SQLiteAdapter(':memory:');
+    createEconomySchema($conn);
+    $buildingTypeMap = seedBuildingTypesForEconomy($conn);
+
+    $conn->query("INSERT INTO users (id, username, points) VALUES (1, 'captor', 500)");
+    $conn->query("INSERT INTO worlds (id, name) VALUES (1, 'OccWorld')");
+    seedVillageWithWorld(
+        $conn,
+        1,
+        1,
+        $buildingTypeMap,
+        ['wood' => 0, 'clay' => 0, 'iron' => 0],
+        ['sawmill' => 5, 'clay_pit' => 5, 'iron_mine' => 5],
+        1,
+        '-30 minutes',
+        '-6 hours'
+    );
+
+    $bcm = new BuildingConfigManager($conn);
+    $bm = new BuildingManager($conn, $bcm);
+    $rm = new ResourceManager($conn, $bm);
+
+    $rawWood = $bm->getHourlyProduction('sawmill', 5);
+    $rates = $rm->getProductionRates(1);
+
+    assertEquals(0.8, $rates['occupation_multiplier'] ?? null, 'Occupation multiplier should be applied for recent conquests');
+    assertEquals((int)round($rawWood * 0.8), (int)round($rates['wood']), 'Wood rate should be reduced by occupation multiplier');
 });
 
 $runner->add('TradeManager blocks power-delta pushes to protected/low-point targets', function () {

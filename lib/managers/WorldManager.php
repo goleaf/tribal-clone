@@ -328,6 +328,18 @@ class WorldManager
         return !empty($settings['map_pagination_enabled']);
     }
 
+    public function isPresetEnforcementEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        $settings = $this->getSettings($worldId);
+        return !empty($settings['preset_enforcement_enabled']);
+    }
+
+    public function areKpiDashboardsEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        $settings = $this->getSettings($worldId);
+        return !empty($settings['kpi_dashboards_enabled']);
+    }
+
     public function getWorldSpeed(int $worldId = CURRENT_WORLD_ID): float
     {
         $settings = $this->getSettings($worldId);

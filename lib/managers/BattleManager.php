@@ -1497,6 +1497,7 @@ class BattleManager
         }
 
         $phaseReports = [];
+        $captureAftermath = null;
         foreach (self::PHASE_ORDER as $phase) {
             $phaseReports[] = $this->resolveCombatPhase(
                 $phase,
@@ -1810,7 +1811,10 @@ class BattleManager
                 'reason' => $conquestReason,
                 'surviving_nobles' => $survivingNobles,
                 'capture_cooldown_until' => $captureCooldownUntil,
-                'capture_cooldown_active' => $captureImmune
+                'capture_cooldown_active' => $captureImmune,
+                'anti_snipe_until' => $captureAftermath['anti_snipe_until'] ?? null,
+                'allegiance_floor' => $captureAftermath['allegiance_floor'] ?? null,
+                'capture_building_damage' => $captureAftermath['building_damage'] ?? null
             ];
 
             $logPath = __DIR__ . '/../../logs/conquest_attempts.log';
@@ -1962,6 +1966,20 @@ class BattleManager
                 'capture_aftermath' => $captureAftermath ?? null,
                 'report_version' => self::REPORT_VERSION,
                 'correlation_id' => $correlationId,
+                'modifier_summary' => [
+                    'night' => $this->isNightTimeWorldConfig(),
+                    'terrain_attack_multiplier' => $this->getEnvMultiplier('terrain_attack_multiplier'),
+                    'terrain_defense_multiplier' => $this->getEnvMultiplier('terrain_defense_multiplier'),
+                    'weather_attack_multiplier' => $this->getEnvMultiplier('weather_attack_multiplier'),
+                    'weather_defense_multiplier' => $this->getEnvMultiplier('weather_defense_multiplier'),
+                    'morale' => $morale,
+                    'luck_pct' => [
+                        'attack' => round($attack_random * 100, 1),
+                        'defense' => round($defense_random * 100, 1)
+                    ],
+                    'overstack_penalty_pct' => isset($overstack['multiplier']) ? round((1 - $overstack['multiplier']) * 100, 1) : 0,
+                    'plunder_dr_multiplier' => $plunderDrMultiplier
+                ],
                 'modifiers' => [
                     'wall_level' => $wall_level,
                     'effective_wall_level' => $effective_wall_level,
@@ -2466,7 +2484,7 @@ class BattleManager
             return [
                 'success' => false,
                 'error' => 'Command rejected: sending too quickly. Please wait a moment.',
-                'code' => AjaxResponse::ERR_RATE_LIMIT,
+                'code' => 'ERR_SUB_100MS',
                 'retry_after' => 1
             ];
         }

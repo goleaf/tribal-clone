@@ -159,7 +159,7 @@
 - KPI thresholds and owners documented; alert runbooks exist for fairness/social/pacing regressions with review cadence.
 
 ## Rollout Checklist
-- [ ] Feature flags for preset application and KPI dashboards per world type; gradual enablement.
+- [x] Feature flags for preset application and KPI dashboards per world type; gradual enablement. _(worlds table now carries `preset_enforcement_enabled`/`kpi_dashboards_enabled`; WorldManager exposes getters so creation flows can gate per archetype)_
 - [x] CI string linting for banned terms (ip-glossary) with reports to owners; block releases on critical violations. _(workflow `.github/workflows/ip-glossary-lint.yml` now scans tracked code/docs for glossary-banned terms and fails on matches)_
 - [ ] Config/migration tests for preset defaults and KPI collection with rollback; safe defaults when absent.
 - [ ] Backward compatibility: older clients handle missing manifesto/links gracefully; new links gated by version checks.
