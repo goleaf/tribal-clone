@@ -166,6 +166,17 @@ class BuildingQueueManager
 
         } catch (Exception $e) {
             $this->conn->rollback();
+            $this->logQueueEvent('enqueue_failed', [
+                'village_id' => $villageId,
+                'building' => $buildingInternalName,
+                'level' => $currentLevel,
+                'hq_level' => $hqLevel,
+                'slot_limit' => $slotLimit,
+                'queue_count' => $queueCount,
+                'user_id' => $userId,
+                'error' => $e->getMessage(),
+                'code' => $errorCode
+            ]);
             return [
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -195,9 +206,13 @@ class BuildingQueueManager
 
             // Idempotent guard
             if ($item['status'] !== 'active' || strtotime($item['finish_time']) > time()) {
-                $this->conn->rollback();
-                return ['success' => false, 'message' => 'Build not ready or already completed.'];
-            }
+            $this->conn->rollback();
+            $this->logQueueEvent('complete_failed', [
+                'queue_item_id' => $queueItemId,
+                'reason' => 'not_ready'
+            ]);
+            return ['success' => false, 'message' => 'Build not ready or already completed.'];
+        }
 
             // Apply effect: increment building level
             $stmt = $this->conn->prepare("UPDATE village_buildings SET level = level + 1 WHERE id = ? AND village_id = ?");

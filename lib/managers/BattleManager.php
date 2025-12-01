@@ -43,6 +43,7 @@ class BattleManager
     private const MANTLET_RANGED_REDUCTION = 0.4; // 40% reduction to ranged defense vs escorted siege
     private const PLUNDER_DR_WINDOW_SEC = 7200; // 2h diminishing returns window
     private const PLUNDER_DR_STEPS = [1.0, 0.75, 0.5, 0.25]; // multipliers by streak index
+    private const CONQUEST_IMMUNITY_HOURS = 168; // 7 days conquest immunity after capture
     private const PHASE_ORDER = ['infantry', 'cavalry', 'archer'];
     private const RESEARCH_BONUS_PER_LEVEL = 0.10; // +10% per smithy level
     private const LOYALTY_MIN = 0;

@@ -73,6 +73,15 @@ define('NOBLE_MAX_DROP', 35);
 // Feature flags
 define('FEATURE_TASKS_ENABLED', true); // Daily/weekly tasks/challenges
 
+// Allegiance (conquest) regen/decay tuning
+define('ALLEG_REGEN_PER_HOUR', 2.0); // base allegiance regeneration per hour
+define('ALLEG_MAX_REGEN_MULT', 1.75); // cap for regen multiplier after bonuses
+define('ALLEG_REGEN_PAUSE_WINDOW_MS', 5000); // pause regen if hostile command ETA within this window
+define('ALLEG_ABANDON_DECAY_PER_HOUR', 0.0); // optional decay when abandoned/offline (0 = disabled)
+define('ALLEG_SHRINE_REGEN_BONUS_PER_LEVEL', 0.02); // +2% regen per shrine/temple level
+define('ALLEG_HALL_REGEN_FLAT_PER_LEVEL', 0.25); // flat regen/hour added per Hall of Banners level
+define('ALLEG_TRIBE_REGEN_MULT', 0.15); // default tribe tech regen multiplier (15%)
+
 // Default world ID
 define('INITIAL_WORLD_ID', 1);
 

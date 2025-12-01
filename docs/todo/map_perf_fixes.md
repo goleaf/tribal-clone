@@ -25,6 +25,13 @@
 - **Fallback mode:** If device perf is low (dropped frames threshold), auto-switch to simplified visuals: hide minor overlays, reduce command line density/update frequency; allow user opt-back.
 - **Offline/poor-connection mode:** Cache last tiles/markers for current viewport; queue marker drops locally and sync on reconnect with conflict resolution; show stale indicator on data.
 
+### Batching & Pagination Implementation Notes
+- Command batching cadence: aggregate incoming/outgoing/support/trade/scout updates per village in a 1s window; send deltas keyed by `command_id` with ops `[add|update|remove]`, plus `cursor` for continuation if >500 ops.
+- Priorities: combat/conquest/support deltas before trades/markers; if payload > `MAX_COMMAND_DELTA_BYTES` (default 120KB), emit continuation token and client auto-requests next page.
+- Pagination UI: command list per selection paginated 50 rows; infinite scroll fetches `?cursor=...`; loading state reuses skeleton rows.
+- Marker batching: cluster recalculated each 1s window per zoom; send cluster centroids + counts; raw markers only within viewport padding; use `etag` on cluster payloads.
+- Client merge: apply deltas idempotently; expired commands removed by `remove` op or TTL; dropped packets retried with last `cursor` + `If-None-Match` to avoid dupes.
+
 ## Acceptance Criteria
 - Map endpoints return 304 with ETag/Last-Modified when unchanged; payload size tracked and stable under load.
 - Paginated/clustered commands and markers keep p95 client render under 200ms on target devices in a 500+ command scenario.
@@ -51,6 +58,7 @@
 - Offline/poor-connection: toggle offline, cache last viewport, queue marker drops, reconnect and confirm conflict resolution and stale indicators.
 - Fallback mode: force low-perf device profile; ensure minor overlays/lines hide, update rate drops, and user toggle works.
 - Rate limits: hammer map fetch/marker-drop endpoints to confirm `ERR_RATE_LIMITED` with retry-after and no server degradation.
+- Pagination: scroll command list with 1k+ entries; ensure cursors load next pages, no duplicates, and skeletons show while fetching.
 
 ## Profiling Plan
 - Front-end: capture performance profiles on low/mid/high devices with 500–1000 commands + overlays; record main-thread time, memory, and dropped frames; compare with/without clustering and fallback mode.

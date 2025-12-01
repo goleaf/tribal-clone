@@ -533,6 +533,7 @@ async function jumpToBookmark(match) {
 document.addEventListener('DOMContentLoaded', () => {
     initHighContrast();
     initReducedMotion();
+    initOfflineMode();
     startFrameMonitor();
     document.addEventListener('keydown', handleMapKeydown);
     const sizeInput = document.getElementById('map-size');
@@ -936,6 +937,8 @@ function movementVisible(move) {
 
 async function fetchMapData(targetX, targetY, targetSize, controller) {
     if (mapOfflineMode && window.__mapCache) {
+        mapCacheStatus = 'hit';
+        lastMapFetchMs = null;
         return {
             ...window.__mapCache,
             center: { x: targetX, y: targetY },
@@ -965,6 +968,8 @@ async function fetchMapData(targetX, targetY, targetSize, controller) {
     if (response.status === 304) {
         if (window.__mapCache) {
             // Reuse cached payload; adjust center/size to requested params
+            mapCacheStatus = 'hit';
+            lastMapFetchMs = performance.now();
             return {
                 ...window.__mapCache,
                 center: { x: targetX, y: targetY },
@@ -972,7 +977,7 @@ async function fetchMapData(targetX, targetY, targetSize, controller) {
             };
         }
         // No cache available; fallback to fresh fetch without conditionals
-        const refetch = await fetch(url, { credentials: 'same-origin', signal: controller?.signal });
+        const refetch = await fetch(url, { credentials: 'same-origin', signal: abortController.signal });
         if (!refetch.ok) {
             throw new Error(`Map fetch failed with status ${refetch.status}`);
         }
@@ -980,15 +985,14 @@ async function fetchMapData(targetX, targetY, targetSize, controller) {
         window.__mapETag = refetch.headers.get('ETag') || null;
         window.__mapLastModified = refetch.headers.get('Last-Modified') || null;
         window.__mapCache = freshData;
+        mapCacheStatus = 'miss';
+        lastMapFetchMs = performance.now();
         return freshData;
-    }
-    if (response.status === 429) {
-        const retryAfter = parseInt(response.headers.get('Retry-After') || '1', 10);
-        throw new Error(`RATE_LIMIT:${isNaN(retryAfter) ? 1 : retryAfter}`);
     }
     if (!response.ok) {
         throw new Error(`Map fetch failed with status ${response.status}`);
     }
+    mapCacheStatus = 'miss';
     const data = await response.json();
     window.__mapETag = response.headers.get('ETag') || null;
     window.__mapLastModified = response.headers.get('Last-Modified') || null;
@@ -1001,6 +1005,7 @@ async function fetchMapData(targetX, targetY, targetSize, controller) {
             lastMapPayloadBytes = null;
         }
     }
+    lastMapFetchMs = performance.now();
     return data;
 }
 
@@ -1201,6 +1206,33 @@ function initReducedMotion() {
     if (reducedMotionToggle) {
         reducedMotionToggle.addEventListener('change', (e) => {
             applyReducedMotion(e.target.checked);
+        });
+    }
+}
+
+function applyOfflineMode(enabled) {
+    mapOfflineMode = !!enabled;
+    if (offlineToggle) {
+        offlineToggle.checked = mapOfflineMode;
+    }
+    try {
+        localStorage.setItem(OFFLINE_MODE_KEY, mapOfflineMode ? '1' : '0');
+    } catch (e) {
+        // ignore storage failures
+    }
+    if (offlineWarningEl) {
+        offlineWarningEl.style.display = mapOfflineMode ? 'block' : 'none';
+    }
+}
+
+function initOfflineMode() {
+    const stored = localStorage.getItem(OFFLINE_MODE_KEY);
+    const enabled = stored === '1';
+    applyOfflineMode(enabled);
+    if (offlineToggle) {
+        offlineToggle.addEventListener('change', (e) => {
+            applyOfflineMode(e.target.checked);
+            requestMapLoad(mapState.center.x, mapState.center.y, mapState.size, { skipUrl: true });
         });
     }
 }
