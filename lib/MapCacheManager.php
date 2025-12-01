@@ -164,14 +164,26 @@ class MapCacheManager
     {
         $newVersion = time();
         
-        $this->db->execute(
-            "INSERT INTO cache_versions (world_id, data_version, diplomacy_version, updated_at) 
-             VALUES (?, ?, ?, ?)
-             ON CONFLICT(world_id) DO UPDATE SET 
-                data_version = ?,
-                updated_at = ?",
-            [$worldId, $newVersion, $newVersion, $newVersion, $newVersion, $newVersion]
+        // Check if record exists
+        $existing = $this->db->fetchOne(
+            "SELECT world_id FROM cache_versions WHERE world_id = ?",
+            [$worldId]
         );
+        
+        if ($existing) {
+            // Update existing record
+            $this->db->execute(
+                "UPDATE cache_versions SET data_version = ?, updated_at = ? WHERE world_id = ?",
+                [$newVersion, $newVersion, $worldId]
+            );
+        } else {
+            // Insert new record
+            $this->db->execute(
+                "INSERT INTO cache_versions (world_id, data_version, diplomacy_version, updated_at) 
+                 VALUES (?, ?, ?, ?)",
+                [$worldId, $newVersion, $newVersion, $newVersion]
+            );
+        }
     }
     
     /**
@@ -184,14 +196,26 @@ class MapCacheManager
     {
         $newVersion = time();
         
-        $this->db->execute(
-            "INSERT INTO cache_versions (world_id, data_version, diplomacy_version, updated_at) 
-             VALUES (?, ?, ?, ?)
-             ON CONFLICT(world_id) DO UPDATE SET 
-                diplomacy_version = ?,
-                updated_at = ?",
-            [$worldId, $newVersion, $newVersion, $newVersion, $newVersion, $newVersion]
+        // Check if record exists
+        $existing = $this->db->fetchOne(
+            "SELECT world_id FROM cache_versions WHERE world_id = ?",
+            [$worldId]
         );
+        
+        if ($existing) {
+            // Update existing record
+            $this->db->execute(
+                "UPDATE cache_versions SET diplomacy_version = ?, updated_at = ? WHERE world_id = ?",
+                [$newVersion, $newVersion, $worldId]
+            );
+        } else {
+            // Insert new record
+            $this->db->execute(
+                "INSERT INTO cache_versions (world_id, data_version, diplomacy_version, updated_at) 
+                 VALUES (?, ?, ?, ?)",
+                [$worldId, $newVersion, $newVersion, $newVersion]
+            );
+        }
     }
     
     /**
