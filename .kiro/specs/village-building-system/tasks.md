@@ -25,8 +25,8 @@
   - Verify prerequisite validation correctly identifies missing requirements
   - Test with circular dependency detection
 
-- [ ] 2. Implement core building upgrade validation
-- [ ] 2.1 Enhance BuildingManager::canUpgradeBuilding validation
+- [-] 2. Implement core building upgrade validation
+- [x] 2.1 Enhance BuildingManager::canUpgradeBuilding validation
   - Implement complete validation chain (input, protection, caps, prerequisites, queue, resources, population, storage)
   - Return appropriate error codes for each validation failure
   - Add user ID parameter for First Church uniqueness check

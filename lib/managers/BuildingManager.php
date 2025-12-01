@@ -492,64 +492,161 @@ class BuildingManager {
         return 0;
     }
 
+    /**
+     * Comprehensive validation for building upgrade eligibility.
+     * Implements complete validation chain as per requirements 1.1, 1.2, 1.3, 14.1-14.4, 19.1-19.3.
+     * 
+     * Validation order:
+     * 1. Input validation (building ID exists)
+     * 2. Protection status checks (emergency shield, protection mode)
+     * 3. Maximum level caps
+     * 4. Prerequisites (buildings, research, special conditions like First Church)
+     * 5. Queue capacity
+     * 6. Resource availability
+     * 7. Population capacity
+     * 8. Storage capacity (for large builds)
+     * 
+     * @param int $villageId Village ID
+     * @param string $internalName Building internal name
+     * @param int|null $userId User ID (required for First Church uniqueness check)
+     * @return array ['success' => bool, 'message' => string, 'code' => string, 'details' => array]
+     */
     public function canUpgradeBuilding(int $villageId, string $internalName, ?int $userId = null): array
     {
-        $currentLevel = $this->getBuildingLevel($villageId, $internalName);
-        
+        // 1. Input validation - verify building exists
         $config = $this->buildingConfigManager->getBuildingConfig($internalName);
         if (!$config) {
-             return ['success' => false, 'message' => 'Unknown building type.', 'code' => 'ERR_INPUT'];
+            return [
+                'success' => false, 
+                'message' => 'Unknown building type.', 
+                'code' => 'ERR_INPUT'
+            ];
         }
         
-        if ($currentLevel >= $config['max_level']) {
-            return ['success' => false, 'message' => 'Maximum level reached for this building.', 'code' => 'ERR_MAX'];
+        $currentLevel = $this->getBuildingLevel($villageId, $internalName);
+        $nextLevel = $currentLevel + 1;
+        
+        // 2. Protection status checks
+        $protectionCheck = $this->checkProtectionStatus($villageId, $internalName);
+        if (!$protectionCheck['success']) {
+            return $protectionCheck;
         }
-
+        
+        // 3. Maximum level cap enforcement
+        $maxLevel = (int)$config['max_level'];
+        if ($currentLevel >= $maxLevel) {
+            return [
+                'success' => false, 
+                'message' => 'Maximum level reached for this building.', 
+                'code' => 'ERR_CAP',
+                'details' => [
+                    'current_level' => $currentLevel,
+                    'max_level' => $maxLevel
+                ]
+            ];
+        }
+        
+        // 4. Prerequisites validation
+        // 4a. Building prerequisites
+        $requirementsCheck = $this->checkBuildingRequirements($internalName, $villageId);
+        if (!$requirementsCheck['success']) {
+            $requirementsCheck['code'] = 'ERR_PREREQ';
+            return $requirementsCheck;
+        }
+        
+        // 4b. Research prerequisites (if applicable)
+        $researchCheck = $this->checkResearchPrerequisites($internalName, $villageId);
+        if (!$researchCheck['success']) {
+            return $researchCheck;
+        }
+        
+        // 4c. Special building uniqueness (First Church)
         if ($userId !== null && $internalName === 'first_church') {
             if ($this->userHasBuiltFirstChurch($userId, $villageId)) {
-                return ['success' => false, 'message' => 'You can only have one First Church across all villages.', 'code' => 'ERR_PREREQ'];
+                return [
+                    'success' => false, 
+                    'message' => 'You can only have one First Church across all villages.', 
+                    'code' => 'ERR_PREREQ'
+                ];
             }
         }
         
+        // 5. Queue capacity validation
         $queueCount = $this->getActivePendingQueueCount($villageId);
         $maxQueueItems = $this->getQueueLimit();
         if ($queueCount >= $maxQueueItems) {
-            return ['success' => false, 'message' => "Build queue is full (max {$maxQueueItems} items).", 'code' => 'ERR_CAP'];
+            return [
+                'success' => false, 
+                'message' => "Build queue is full (max {$maxQueueItems} items).", 
+                'code' => 'ERR_QUEUE_FULL',
+                'details' => [
+                    'current_count' => $queueCount,
+                    'max_items' => $maxQueueItems
+                ]
+            ];
         }
-
-        $nextLevel = $currentLevel + 1;
-        $upgradeCosts = $this->buildingConfigManager->calculateUpgradeCost($internalName, $currentLevel);
         
+        // 6. Resource availability validation
+        $upgradeCosts = $this->buildingConfigManager->calculateUpgradeCost($internalName, $currentLevel);
         if (!$upgradeCosts) {
-             return ['success' => false, 'message' => 'Cannot calculate upgrade costs.', 'code' => 'ERR_INPUT'];
+            return [
+                'success' => false, 
+                'message' => 'Cannot calculate upgrade costs.', 
+                'code' => 'ERR_INPUT'
+            ];
         }
-
+        
         $stmt_resources = $this->conn->prepare("SELECT wood, clay, iron FROM villages WHERE id = ?");
         if ($stmt_resources === false) {
-             error_log("Prepare failed for resource check: " . $this->conn->error);
-              return ['success' => false, 'message' => 'Server error while fetching resources.', 'code' => 'ERR_SERVER'];
-         }
+            error_log("Prepare failed for resource check: " . $this->conn->error);
+            return [
+                'success' => false, 
+                'message' => 'Server error while fetching resources.', 
+                'code' => 'ERR_SERVER'
+            ];
+        }
         $stmt_resources->bind_param("i", $villageId);
         $stmt_resources->execute();
         $resources = $stmt_resources->get_result()->fetch_assoc();
         $stmt_resources->close();
         
         if (!$resources) {
-             return ['success' => false, 'message' => 'Cannot fetch village resources.', 'code' => 'ERR_SERVER'];
-        }
-
-        if ($resources['wood'] < $upgradeCosts['wood'] || 
-            $resources['clay'] < $upgradeCosts['clay'] || 
-            $resources['iron'] < $upgradeCosts['iron']) {
-            return ['success' => false, 'message' => 'Not enough resources.', 'code' => 'ERR_RES'];
+            return [
+                'success' => false, 
+                'message' => 'Cannot fetch village resources.', 
+                'code' => 'ERR_SERVER'
+            ];
         }
         
-        $requirementsCheck = $this->checkBuildingRequirements($internalName, $villageId);
-        if (!$requirementsCheck['success']) {
-            return $requirementsCheck + ['code' => 'ERR_PREREQ'];
+        $missingResources = [];
+        if ($resources['wood'] < $upgradeCosts['wood']) {
+            $missingResources['wood'] = $upgradeCosts['wood'] - $resources['wood'];
+        }
+        if ($resources['clay'] < $upgradeCosts['clay']) {
+            $missingResources['clay'] = $upgradeCosts['clay'] - $resources['clay'];
+        }
+        if ($resources['iron'] < $upgradeCosts['iron']) {
+            $missingResources['iron'] = $upgradeCosts['iron'] - $resources['iron'];
         }
         
-        // Check population availability (apply on completion, so check future state)
+        if (!empty($missingResources)) {
+            return [
+                'success' => false, 
+                'message' => 'Not enough resources.', 
+                'code' => 'ERR_RES',
+                'details' => [
+                    'required' => $upgradeCosts,
+                    'available' => [
+                        'wood' => $resources['wood'],
+                        'clay' => $resources['clay'],
+                        'iron' => $resources['iron']
+                    ],
+                    'missing' => $missingResources
+                ]
+            ];
+        }
+        
+        // 7. Population capacity validation
         $popManager = $this->getPopulationManager();
         $popCheck = $popManager->canAffordBuildingPopulation($villageId, $internalName, $nextLevel);
         if (!$popCheck['success']) {
@@ -557,7 +654,225 @@ class BuildingManager {
             return $popCheck;
         }
         
-        return ['success' => true, 'message' => 'Upgrade possible.'];
+        // 8. Storage capacity validation (for large builds)
+        $storageCheck = $this->checkStorageCapacity($villageId, $upgradeCosts);
+        if (!$storageCheck['success']) {
+            return $storageCheck;
+        }
+        
+        return [
+            'success' => true, 
+            'message' => 'Upgrade possible.'
+        ];
+    }
+    
+    /**
+     * Check if village is under protection that blocks building upgrades.
+     * Implements requirement 14.4 - protection mode military building blocking.
+     * 
+     * @param int $villageId Village ID
+     * @param string $internalName Building internal name
+     * @return array ['success' => bool, 'message' => string, 'code' => string]
+     */
+    private function checkProtectionStatus(int $villageId, string $internalName): array
+    {
+        // Check if village has emergency shield/protection
+        $stmt = $this->conn->prepare("
+            SELECT v.id, v.protection_until, w.block_military_during_protection
+            FROM villages v
+            LEFT JOIN worlds w ON v.world_id = w.id
+            WHERE v.id = ?
+            LIMIT 1
+        ");
+        
+        if ($stmt === false) {
+            error_log("Prepare failed for protection check: " . $this->conn->error);
+            return ['success' => true, 'message' => 'Protection check skipped.']; // Fail open
+        }
+        
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        
+        if (!$result) {
+            return ['success' => true, 'message' => 'No protection.'];
+        }
+        
+        // Check if protection is active
+        $protectionUntil = $result['protection_until'] ?? null;
+        $blockMilitary = (bool)($result['block_military_during_protection'] ?? false);
+        
+        if ($protectionUntil && strtotime($protectionUntil) > time()) {
+            // Protection is active
+            if ($blockMilitary && $this->isMilitaryBuilding($internalName)) {
+                return [
+                    'success' => false,
+                    'message' => 'Cannot upgrade military buildings while under protection.',
+                    'code' => 'ERR_PROTECTED'
+                ];
+            }
+        }
+        
+        return ['success' => true, 'message' => 'No protection blocking.'];
+    }
+    
+    /**
+     * Check if building is a military building.
+     * 
+     * @param string $internalName Building internal name
+     * @return bool True if military building
+     */
+    private function isMilitaryBuilding(string $internalName): bool
+    {
+        $militaryBuildings = [
+            'barracks',
+            'stable',
+            'workshop',
+            'siege_foundry',
+            'garrison',
+            'hall_of_banners'
+        ];
+        
+        return in_array($internalName, $militaryBuildings, true);
+    }
+    
+    /**
+     * Check research prerequisites for a building.
+     * Implements requirement 14.3 - research prerequisite validation.
+     * 
+     * @param string $internalName Building internal name
+     * @param int $villageId Village ID
+     * @return array ['success' => bool, 'message' => string, 'code' => string]
+     */
+    private function checkResearchPrerequisites(string $internalName, int $villageId): array
+    {
+        // Get village's user_id to check research
+        $stmt = $this->conn->prepare("SELECT user_id FROM villages WHERE id = ? LIMIT 1");
+        if ($stmt === false) {
+            error_log("Prepare failed for village user lookup: " . $this->conn->error);
+            return ['success' => true, 'message' => 'Research check skipped.']; // Fail open
+        }
+        
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $villageData = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        
+        if (!$villageData) {
+            return ['success' => true, 'message' => 'No research requirements.'];
+        }
+        
+        $userId = (int)$villageData['user_id'];
+        
+        // Check if research_requirements table exists
+        $tableCheck = $this->conn->query("
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='research_requirements'
+        ");
+        
+        if (!$tableCheck || $tableCheck->num_rows === 0) {
+            return ['success' => true, 'message' => 'No research system.'];
+        }
+        
+        // Get research requirements for this building
+        $config = $this->buildingConfigManager->getBuildingConfig($internalName);
+        if (!$config) {
+            return ['success' => true, 'message' => 'No research requirements.'];
+        }
+        
+        $buildingTypeId = (int)$config['id'];
+        
+        $stmt = $this->conn->prepare("
+            SELECT rr.research_id, r.name as research_name
+            FROM research_requirements rr
+            LEFT JOIN research r ON rr.research_id = r.id
+            WHERE rr.building_type_id = ?
+        ");
+        
+        if ($stmt === false) {
+            return ['success' => true, 'message' => 'No research requirements.'];
+        }
+        
+        $stmt->bind_param("i", $buildingTypeId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $missingResearch = [];
+        while ($row = $result->fetch_assoc()) {
+            $researchId = (int)$row['research_id'];
+            $researchName = $row['research_name'] ?? "Research #{$researchId}";
+            
+            // Check if user has completed this research
+            $checkStmt = $this->conn->prepare("
+                SELECT id FROM user_research 
+                WHERE user_id = ? AND research_id = ? AND completed = 1
+                LIMIT 1
+            ");
+            
+            if ($checkStmt) {
+                $checkStmt->bind_param("ii", $userId, $researchId);
+                $checkStmt->execute();
+                $completed = $checkStmt->get_result()->fetch_assoc();
+                $checkStmt->close();
+                
+                if (!$completed) {
+                    $missingResearch[] = $researchName;
+                }
+            }
+        }
+        $stmt->close();
+        
+        if (!empty($missingResearch)) {
+            return [
+                'success' => false,
+                'message' => 'Missing required research: ' . implode(', ', $missingResearch),
+                'code' => 'ERR_RESEARCH',
+                'details' => [
+                    'missing_research' => $missingResearch
+                ]
+            ];
+        }
+        
+        return ['success' => true, 'message' => 'Research requirements met.'];
+    }
+    
+    /**
+     * Check if storage capacity is sufficient for the upgrade cost.
+     * Implements requirement 5.5 - storage capacity prerequisite.
+     * 
+     * @param int $villageId Village ID
+     * @param array $upgradeCosts Upgrade costs ['wood' => int, 'clay' => int, 'iron' => int]
+     * @return array ['success' => bool, 'message' => string, 'code' => string]
+     */
+    private function checkStorageCapacity(int $villageId, array $upgradeCosts): array
+    {
+        // Get storage and warehouse levels
+        $storageLevel = $this->getBuildingLevel($villageId, 'storage');
+        $warehouseLevel = $this->getBuildingLevel($villageId, 'warehouse');
+        
+        // Calculate total capacity
+        $storageCapacity = $this->buildingConfigManager->calculateWarehouseCapacity($storageLevel) ?? 1000;
+        $warehouseCapacity = $this->buildingConfigManager->calculateWarehouseCapacity($warehouseLevel) ?? 0;
+        $totalCapacity = $storageCapacity + $warehouseCapacity;
+        
+        // Check if any resource cost exceeds capacity
+        $maxCost = max($upgradeCosts['wood'], $upgradeCosts['clay'], $upgradeCosts['iron']);
+        
+        if ($maxCost > $totalCapacity) {
+            return [
+                'success' => false,
+                'message' => 'Upgrade cost exceeds storage capacity. Upgrade your Storage or Warehouse first.',
+                'code' => 'ERR_STORAGE_CAP',
+                'details' => [
+                    'max_cost' => $maxCost,
+                    'storage_capacity' => $totalCapacity,
+                    'required_capacity' => $maxCost
+                ]
+            ];
+        }
+        
+        return ['success' => true, 'message' => 'Storage capacity sufficient.'];
     }
     
     public function addBuildingToQueue(int $villageId, string $internalName): array
