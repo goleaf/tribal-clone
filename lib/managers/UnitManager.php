@@ -1292,28 +1292,7 @@ class UnitManager
             return ['can_train' => true, 'current' => 0, 'max' => -1];
         }
 
-        // Query elite_unit_caps table for user-specific cap override
-        $maxCap = $defaultEliteUnitCaps[$internal]; // Default cap
-        $stmtCap = $this->conn->prepare("
-            SELECT per_account_cap
-            FROM elite_unit_caps
-            WHERE user_id = ? AND unit_internal_name = ?
-            LIMIT 1
-        ");
-
-        if ($stmtCap) {
-            $stmtCap->bind_param("is", $userId, $internal);
-            $stmtCap->execute();
-            $capResult = $stmtCap->get_result();
-            if ($capResult->num_rows > 0) {
-                $capRow = $capResult->fetch_assoc();
-                // Use custom cap if defined, otherwise use default
-                if (isset($capRow['per_account_cap']) && $capRow['per_account_cap'] > 0) {
-                    $maxCap = (int)$capRow['per_account_cap'];
-                }
-            }
-            $stmtCap->close();
-        }
+        $maxCap = $defaultEliteUnitCaps[$internal];
 
         // Count existing units across all villages for this user
         $stmt = $this->conn->prepare("
