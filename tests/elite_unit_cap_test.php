@@ -37,8 +37,8 @@ function testEliteUnitCap() {
     $insertResult = $conn->query("
         INSERT INTO unit_types (internal_name, name, building_type, required_building_level, 
                                 cost_wood, cost_clay, cost_iron, population, attack, 
-                                defense_infantry, defense_cavalry, defense_ranged, 
-                                speed, carry, training_time_base, category, is_active)
+                                defense, defense_cavalry, defense_archer, 
+                                speed, carry_capacity, training_time_base, category, is_active)
         VALUES ('warden', 'Warden', 'barracks', 10, 200, 150, 100, 3, 50, 80, 80, 80, 20, 15, 7200, 'infantry', 1)
     ");
     if (!$insertResult) {
@@ -106,8 +106,8 @@ function testEliteUnitCap() {
     $conn->query("
         INSERT INTO unit_types (internal_name, name, building_type, required_building_level, 
                                 cost_wood, cost_clay, cost_iron, population, attack, 
-                                defense_infantry, defense_cavalry, defense_ranged, 
-                                speed, carry, training_time_base, category, is_active)
+                                defense, defense_cavalry, defense_archer, 
+                                speed, carry_capacity, training_time_base, category, is_active)
         VALUES ('ranger', 'Ranger', 'barracks', 8, 180, 140, 90, 2, 45, 60, 60, 75, 18, 20, 6000, 'ranged', 1)
     ");
     $result = $unitManager->checkEliteUnitCap($testUserId, 'ranger', 50);

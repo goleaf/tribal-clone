@@ -71,7 +71,7 @@
   - **Property 17: Seasonal window enforcement**
   - **Validates: Requirements 10.1, 10.2, 10.4**
 
-- [-] 2.8 Implement checkEliteUnitCap() method
+- [x] 2.8 Implement checkEliteUnitCap() method
   - Query elite_unit_caps table for user
   - Count existing units across all villages
   - Compare against per-account cap
