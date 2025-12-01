@@ -110,6 +110,7 @@ class BuildingUpgradeValidationTest {
         
         // Initialize village buildings - use a simpler approach
         $result = $this->db->query("SELECT id, internal_name FROM building_types");
+        $count = 0;
         while ($row = $result->fetch_assoc()) {
             $buildingTypeId = $row['id'];
             $level = ($row['internal_name'] === 'main_building') ? 10 : 0;
@@ -118,7 +119,10 @@ class BuildingUpgradeValidationTest {
             $stmt->bind_param("iii", $this->testVillageId, $buildingTypeId, $level);
             $stmt->execute();
             $stmt->close();
+            $count++;
         }
+        
+        echo "Setup: Created $count building entries for village {$this->testVillageId}\n";
     }
     
     private function cleanupTestData() {
@@ -157,6 +161,18 @@ class BuildingUpgradeValidationTest {
         $mainBuildingTypeId = $this->db->query("SELECT id FROM building_types WHERE internal_name = 'main_building'")->fetch_assoc()['id'];
         $barracksTypeId = $this->db->query("SELECT id FROM building_types WHERE internal_name = 'barracks'")->fetch_assoc()['id'];
         $barracksMaxLevel = $this->db->query("SELECT max_level FROM building_types WHERE internal_name = 'barracks'")->fetch_assoc()['max_level'];
+        
+        // Check if rows exist
+        $checkStmt = $this->db->prepare("SELECT COUNT(*) as cnt FROM village_buildings WHERE village_id = ? AND building_type_id = ?");
+        $checkStmt->bind_param("ii", $this->testVillageId, $mainBuildingTypeId);
+        $checkStmt->execute();
+        $count = $checkStmt->get_result()->fetch_assoc()['cnt'];
+        $checkStmt->close();
+        
+        if ($count == 0) {
+            echo "  Debug: No village_buildings row found for village {$this->testVillageId} and building_type_id {$mainBuildingTypeId}\n";
+            return false;
+        }
         
         // Ensure main_building is at sufficient level
         $stmt = $this->db->prepare("UPDATE village_buildings SET level = 10 WHERE village_id = ? AND building_type_id = ?");
