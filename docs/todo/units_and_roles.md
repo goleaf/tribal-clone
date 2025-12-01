@@ -127,7 +127,7 @@ Status markers:
 - [ ] Define base stats per unit (attack, def_inf/def_cav/def_rng, speed, pop, carry, build time) and link to research/building prereqs.
  - [x] Implement RPS modifiers: cav bonus vs ranged in field, pike bonus vs cav, mantlet bonus vs ranged damage to siege, ranger bonus vs siege. _(RPS spec below)_
 - [x] World-configurable toggles: enable/disable seasonal units, healer/recovery mechanics, and conquest unit availability. _(flags below)_
-- [ ] Conquest units: enforce Standard Bearer unlock/building requirements, cost sinks (standards/coins), speed at siege pace, and per-command cap.
+- [x] Conquest units: enforce Standard Bearer unlock/building requirements, cost sinks (standards/coins), speed at siege pace, and per-command cap. _(per-command cap in BattleManager; recruitment now requires conquest feature flag, academy/smithy prereqs, and coin/standard sink before queueing)_
 - [ ] Support units: aura effects for Banner Guard, post-battle recovery for Healer; ensure combat resolver applies buffs before casualty calc.
 - [ ] Balance tooling: scripts to simulate common matchups (raid vs barb, cav vs pike wall, siege vs archer stack) and output losses/time to break wall.
 - [ ] Unit UI: consistent icons/names/roles; tooltips showing strengths/weaknesses and world-rule overrides (night/morale/weather).

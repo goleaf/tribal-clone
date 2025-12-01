@@ -260,6 +260,14 @@ $stmt_check_queue->execute();
     if ($total_units === 0) {
         throw new RecruitmentException('No units selected for recruitment.', 'NO_UNITS_SELECTED');
     }
+
+    if ($requiresConquestGate) {
+        $academyLevel = getBuildingLevelByInternal($conn, $village_id, 'academy');
+        $smithyLevel = getBuildingLevelByInternal($conn, $village_id, 'smithy');
+        if ($academyLevel < 5 || $smithyLevel < 15) {
+            throw new RecruitmentException('Conquest unit requirements not met (academy 5, smithy 15).', 'CONQUEST_PREREQ');
+        }
+    }
     
     // Validate resources and population capacity
     if ($resources['wood'] < $total_wood || 
@@ -276,6 +284,16 @@ $stmt_check_queue->execute();
     }
     
     // Deduct resources and population
+    if ($requiredCoins > 0) {
+        $stmtCoins = $conn->prepare("UPDATE villages SET coins = coins - ? WHERE id = ? AND coins >= ?");
+        $stmtCoins->bind_param('iii', $requiredCoins, $village_id, $requiredCoins);
+        $stmtCoins->execute();
+        if ($stmtCoins->affected_rows === 0) {
+            throw new RecruitmentException('Not enough coins/standards for conquest units.', 'COIN_LIMIT');
+        }
+        $stmtCoins->close();
+    }
+
     $stmt_deduct_resources = $conn->prepare('UPDATE villages SET wood = wood - ?, clay = clay - ?, iron = iron - ?, population = population + ? WHERE id = ?');
     $stmt_deduct_resources->bind_param('ddiii', $total_wood, $total_clay, $total_iron, $total_population, $village_id);
     if (!$stmt_deduct_resources->execute()) {

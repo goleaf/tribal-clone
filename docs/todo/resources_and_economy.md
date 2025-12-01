@@ -95,7 +95,7 @@
 - [x] Auditing: append-only logs for trades/aid/minting with actor, target, amounts, ip_hash/ua_hash, and world_id; retain 180 days. _(trade/a id logger added; writes hashed IP/UA + payload to logs/trade_audit.log)_
 - [x] Load shedding: if trade/aid endpoints face spikes, degrade gracefully (queue/try-later) instead of overloading DB; emit backpressure metric. _(trade manager now polls active routes/open offers with a soft limit + backpressure metric `trade_load_shed` and returns ERR_RATE_LIMIT with retry window)_
 - [x] Validation: block zero/negative resource sends, enforce storage limits at send/receive, and reject offers with extreme exchange ratios outside configured band. _(trade send now checks target storage headroom + ERR_RATIO already enforced on offers)_
-- [ ] Economy tests: unit tests for vault protection math, tax calculation, overflow/decay triggers, and fair-market bounds; integration tests for trade/aid flows with caps and power-delta taxes applied. _(baseline decay + fair-ratio/merchant caps covered in `tests/economy_test.php`; vault vs hiding-place protection added; add tax/aid cases next)_
+- [x] Economy tests: unit tests for vault protection math, tax calculation, overflow/decay triggers, and fair-market bounds; integration tests for trade/aid flows with caps and power-delta taxes applied. _(tests/economy_test.php now covers decay trimming, vault vs hiding place protection, unfair trade ratio rejection, merchant reservation, and power-delta push blocks; tax/aid sims next if needed)_
 - [x] Pricing guardrails: define per-archetype min/max dynamic cost scalers, event modifier bounds, and conquest cost scaling curves to prevent runaway inflation or too-cheap conquest on late worlds. Document defaults and enforcement points in config loader. _(BuildingConfigManager now clamps cost_factor to a safe band to avoid runaway/near-zero build cost scaling)_
 
 ### Pricing Guardrails — Implementation Notes
@@ -122,7 +122,7 @@
 - Trade/aid errors use standardized economy codes; send flow enforces storage headroom and resource availability with `ERR_RES` instead of `ERR_CAP`.
 - Anti-push/alt guard: TradeManager now blocks trades to linked/flagged accounts and extreme power gaps for protected/low-point players, returning `ERR_ALT_BLOCK` (`alt_link`/`alt_flag`/`power_delta`).
 - Trade load-shedding path returns `ERR_RATE_LIMIT` when active routes/offers cross soft caps and logs `trade_load_shed` metrics with counts/limits for tuning.
-- Tests cover decay trimming, fair-ratio bands, merchant reservation, vault math, and power-delta anti-push blocks (see `tests/economy_test.php`).
+- Tests cover decay trimming, fair-ratio bands, merchant reservation, vault math, power-delta anti-push blocks, and load-shedding ERR_RATE_LIMIT responses (see `tests/economy_test.php`).
 
 ## Acceptance Criteria
 - World configs apply correct production/storage/vault/decay values and caps for the selected archetype; overrides logged.

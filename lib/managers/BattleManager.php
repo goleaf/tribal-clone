@@ -158,6 +158,19 @@ class BattleManager
         $target_is_barb = $defender_user_id === -1;
         $defender_points = $target_is_barb ? null : $this->getUserPoints($defender_user_id);
 
+        $envelopeCheck = $this->validateCommandEnvelope(
+            $attacker_user_id,
+            (int)$source_village_id,
+            (int)$target_village_id,
+            $attack_type,
+            $target_building,
+            $units_sent,
+            $options
+        );
+        if ($envelopeCheck !== true) {
+            return $envelopeCheck;
+        }
+
         // Global rate limit per attacker to deter automation/burst spam + duplicate submission guard
         $rateLimitCheck = $this->enforceCommandRateLimit($attacker_user_id, $attack_type, $defender_user_id);
         if ($rateLimitCheck !== true) {
@@ -3851,6 +3864,25 @@ class BattleManager
         }
         $ts = strtotime($row['capture_cooldown_until']);
         return $ts !== false ? $ts : null;
+    }
+
+    private function getAllegianceFloor(int $villageId): int
+    {
+        if (!$this->villageColumnExists('allegiance_floor')) {
+            return 0;
+        }
+        $stmt = $this->conn->prepare("SELECT allegiance_floor FROM villages WHERE id = ? LIMIT 1");
+        if ($stmt === false) {
+            return 0;
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$row || !isset($row['allegiance_floor'])) {
+            return 0;
+        }
+        return max(0, (int)$row['allegiance_floor']);
     }
 
     private function updateVillageLoyalty(int $villageId, int $loyalty): void
