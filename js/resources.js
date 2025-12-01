@@ -246,7 +246,18 @@ class ResourceUpdater {
     }
 
     formatNumber(number) {
-        return window.formatNumber(number);
+        try {
+            if (typeof window.formatNumber === 'function') {
+                return window.formatNumber(number);
+            }
+            const numeric = Number(number);
+            if (!Number.isFinite(numeric)) {
+                return `${number}`;
+            }
+            return new Intl.NumberFormat('en-US').format(numeric);
+        } catch (error) {
+            return `${number}`;
+        }
     }
 }
 

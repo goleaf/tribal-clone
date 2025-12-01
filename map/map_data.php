@@ -11,6 +11,7 @@ if (!isset($_SESSION['user_id'])) {
     echo json_encode(['error' => 'Login required']);
     exit;
 }
+$user_id = (int)$_SESSION['user_id'];
 
 $centerX = isset($_GET['x']) ? (int)$_GET['x'] : 0;
 $centerY = isset($_GET['y']) ? (int)$_GET['y'] : 0;
@@ -25,7 +26,7 @@ $worldId = CURRENT_WORLD_ID;
 
 // Fetch villages with owner info inside the viewport
 $stmt = $conn->prepare("
-    SELECT v.id, v.x_coord, v.y_coord, v.name, v.user_id, v.points, u.username
+    SELECT v.id, v.x_coord, v.y_coord, v.name, v.user_id, v.points, u.username, u.ally_id
     FROM villages v
     LEFT JOIN users u ON v.user_id = u.id
     WHERE v.world_id = ? 
@@ -57,9 +58,11 @@ while ($row = $result->fetch_assoc()) {
         'name' => $row['name'],
         'user_id' => $villageOwnerId,
         'owner' => $row['username'] ?? null,
+        'ally_id' => $row['ally_id'] ?? null,
         'points' => (int)$row['points'],
         'type' => $ownerType,
         'is_own' => $isOwn,
+        'continent' => getContinent((int)$row['x_coord'], (int)$row['y_coord']),
         // Reserved and movement flags can be filled once those systems exist.
         'reserved_by' => null,
         'reserved_team' => null,
@@ -70,7 +73,8 @@ while ($row = $result->fetch_assoc()) {
         $players[$villageOwnerId] = [
             'id' => $villageOwnerId,
             'username' => $row['username'],
-            'points' => (int)$row['points']
+            'points' => (int)$row['points'],
+            'ally_id' => $row['ally_id'] ?? null
         ];
     }
 }
@@ -84,11 +88,11 @@ if (dbTableExists($conn, 'tribes')) {
         $allyQuery .= ' WHERE world_id = ' . (int)$worldId;
     }
 
-    $allyResult = $conn->query($allyQuery);
-    if ($allyResult) {
-        while ($allyRow = $allyResult->fetch_assoc()) {
-            $allies[] = [
-                'id' => (int)$allyRow['id'],
+$allyResult = $conn->query($allyQuery);
+if ($allyResult) {
+    while ($allyRow = $allyResult->fetch_assoc()) {
+        $allies[] = [
+            'id' => (int)$allyRow['id'],
                 'name' => $allyRow['name'],
                 'points' => (int)($allyRow['points'] ?? 0),
                 'short' => $allyRow['tag'] ?? ''
@@ -98,10 +102,29 @@ if (dbTableExists($conn, 'tribes')) {
     }
 }
 
+$boundsStmt = $conn->prepare("SELECT MIN(x_coord) AS min_x, MAX(x_coord) AS max_x, MIN(y_coord) AS min_y, MAX(y_coord) AS max_y FROM villages WHERE world_id = ?");
+$worldBounds = null;
+if ($boundsStmt) {
+    $boundsStmt->bind_param('i', $worldId);
+    $boundsStmt->execute();
+    $boundsRow = $boundsStmt->get_result()->fetch_assoc();
+    if ($boundsRow && $boundsRow['min_x'] !== null && $boundsRow['max_x'] !== null) {
+        $worldBounds = [
+            'min_x' => (int)$boundsRow['min_x'],
+            'max_x' => (int)$boundsRow['max_x'],
+            'min_y' => (int)$boundsRow['min_y'],
+            'max_y' => (int)$boundsRow['max_y']
+        ];
+    }
+    $boundsStmt->close();
+}
+
 echo json_encode([
     'center' => ['x' => $centerX, 'y' => $centerY],
     'size' => $size,
     'villages' => $villages,
     'players' => array_values($players),
-    'allies' => $allies
+    'allies' => $allies,
+    'tribes' => $allies,
+    'world_bounds' => $worldBounds
 ]);

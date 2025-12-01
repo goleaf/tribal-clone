@@ -99,6 +99,7 @@ header('Content-Security-Policy: ' . implode('; ', $csp));
         window.currentVillageId = <?= json_encode($firstVidData['id'] ?? null) ?>;
     </script>
     <?php endif; ?>
+    <script src="/js/utils.js" defer></script>
 
     <?php
     // Get messages from the session and pass them to JavaScript
@@ -112,10 +113,11 @@ header('Content-Security-Policy: ' . implode('; ', $csp));
         window.gameMessages = <?= json_encode($gameMessages) ?>;
     </script>
     <?php if (isset($_SESSION['user_id'])): ?>
-<?php $assetVersion = 'v2'; ?>
+<?php $assetVersion = 'v3'; ?>
 <script src="/js/resources.js?<?= $assetVersion ?>" defer></script>
 <script src="/js/notifications.js?<?= $assetVersion ?>" defer></script>
     <?php endif; ?>
+    <script src="/js/main.js" defer></script>
 </head>
 <body>
     <?php $current_page = basename($_SERVER['PHP_SELF']); ?>
@@ -124,7 +126,13 @@ header('Content-Security-Policy: ' . implode('; ', $csp));
         <div class="logo">
             <h1>Tribal Wars</h1>
         </div>
-        <nav class="main-nav">
+        <button class="mobile-nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="primary-nav">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+        </button>
+        <nav id="primary-nav" class="main-nav">
             <?php if (isset($_SESSION['user_id'])): ?>
                 <!-- Navigation for logged-in users -->
                 <a href="/game/game.php" class="<?= $current_page === 'game.php' ? 'active' : '' ?>"><i class="fas fa-home"></i> Overview</a>
@@ -133,6 +141,7 @@ header('Content-Security-Policy: ' . implode('; ', $csp));
                 <a href="/messages/messages.php" class="<?= $current_page === 'messages.php' ? 'active' : '' ?>"><i class="fas fa-envelope"></i> Messages</a>
                 <a href="/player/tribe.php" class="<?= $current_page === 'tribe.php' ? 'active' : '' ?>"><i class="fas fa-users"></i> Tribe</a>
                 <a href="/player/ranking.php" class="<?= $current_page === 'ranking.php' ? 'active' : '' ?>"><i class="fas fa-trophy"></i> Rankings</a>
+                <a href="/guides.php" class="<?= $current_page === 'guides.php' ? 'active' : '' ?>"><i class="fas fa-book-open"></i> Guides</a>
                 <a href="/player/achievements.php" class="<?= $current_page === 'achievements.php' ? 'active' : '' ?>"><i class="fas fa-medal"></i> Achievements</a>
                 <a href="/player/settings.php" class="<?= $current_page === 'settings.php' ? 'active' : '' ?>"><i class="fas fa-cog"></i> Settings</a>
                 <a href="/auth/logout.php"><i class="fas fa-sign-out-alt"></i> Log out</a>
@@ -176,6 +185,7 @@ header('Content-Security-Policy: ' . implode('; ', $csp));
             <?php else: ?>
                 <!-- Navigation for guests (homepage) -->
                 <a href="/index.php" class="<?= $current_page === 'index.php' ? 'active' : '' ?>">Home</a>
+                <a href="/guides.php" class="<?= $current_page === 'guides.php' ? 'active' : '' ?>">Guides</a>
                 <a href="/auth/register.php" class="<?= $current_page === 'register.php' ? 'active' : '' ?>">Register</a>
                 <a href="/auth/login.php" class="<?= $current_page === 'login.php' ? 'active' : '' ?>">Log in</a>
             <?php endif; ?>

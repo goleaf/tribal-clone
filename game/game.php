@@ -7,6 +7,7 @@ require_once __DIR__ . '/../lib/managers/ResourceManager.php';
 require_once __DIR__ . '/../lib/managers/UnitManager.php';
 require_once __DIR__ . '/../lib/managers/BattleManager.php';
 require_once __DIR__ . '/../lib/managers/ResearchManager.php';
+require_once __DIR__ . '/../lib/managers/NotificationManager.php';
 require_once __DIR__ . '/../lib/functions.php';
 
 // Instantiate managers
@@ -17,6 +18,7 @@ $resourceManager = new ResourceManager($conn, $buildingManager);
 $unitManager = new UnitManager($conn);
 $battleManager = new BattleManager($conn, $villageManager, $buildingManager);
 $researchManager = new ResearchManager($conn);
+$notificationManager = new NotificationManager($conn);
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: /auth/login.php");
@@ -50,6 +52,12 @@ $village = $villageManager->getVillageInfo($village_id);
 $attackMessages = $battleManager->processCompletedAttacks($user_id);
 if (!empty($attackMessages)) {
     $message .= implode('', $attackMessages);
+    $notificationManager->addNotification(
+        $user_id,
+        sprintf('%d attack(s) resolved.', count($attackMessages)),
+        'info',
+        '/messages/reports.php'
+    );
 }
 
 // --- BUILDING DATA FOR VIEW ---
@@ -82,6 +90,7 @@ require '../header.php';
 ?>
 
 <div id="game-container" class="game-shell">
+    <main id="main-content">
     <section class="village-hero">
         <div class="hero-copy">
             <p class="eyebrow">Village overview</p>
@@ -497,6 +506,7 @@ require '../header.php';
             <?php foreach ($other_buildings_data as $building) render_building_item($building, $village, $buildingManager, $village_id); ?>
         </div>
     </section>
+    </main>
 </div>
 
 <div id="popup-overlay" class="popup-overlay"></div>
@@ -532,7 +542,7 @@ require '../header.php';
             </div>
         </div>
 
-        <div id="popup-action-content" style="display:none;"></div>
+        <div id="popup-action-content" class="popup-details" style="display:none;"></div>
     </div>
 </div>
 
@@ -545,7 +555,6 @@ require '../header.php';
 <script src="/js/noble.js" defer></script>
 <script src="/js/mint.js" defer></script>
 <script src="/js/info_panel.js" defer></script>
-<script src="/js/main.js" defer></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
