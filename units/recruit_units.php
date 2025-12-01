@@ -20,7 +20,7 @@ if (!isset($_SESSION['user_id'])) {
 
 // Validate required parameters
 if (!isset($_POST['village_id']) || !is_numeric($_POST['village_id']) || 
-    !isset($_POST['building_id']) || !is_numeric($_POST['building_id']) ||
+    (!isset($_POST['building_id']) && !isset($_POST['building_type'])) ||
     !isset($_POST['recruit']) || !is_array($_POST['recruit'])) {
     if (isset($_POST['ajax'])) {
         header('Content-Type: application/json');
@@ -34,8 +34,9 @@ if (!isset($_POST['village_id']) || !is_numeric($_POST['village_id']) ||
 
 $user_id = $_SESSION['user_id'];
 $village_id = (int)$_POST['village_id'];
-$building_id = (int)$_POST['building_id'];
+$building_id = isset($_POST['building_id']) ? (int)$_POST['building_id'] : 0;
 $recruit_data = $_POST['recruit'];
+$building_type_from_request = isset($_POST['building_type']) ? trim((string)$_POST['building_type']) : '';
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'managers' . DIRECTORY_SEPARATOR . 'UnitManager.php';
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'managers' . DIRECTORY_SEPARATOR . 'VillageManager.php';
@@ -63,35 +64,52 @@ try {
     }
     $stmt_check_village->close();
     
-    // Verify the building is the village barracks
+// Resolve building by id or building_type
+if ($building_id > 0) {
     $stmt_check_building = $conn->prepare("
         SELECT vb.id, bt.internal_name, vb.level 
         FROM village_buildings vb 
         JOIN building_types bt ON vb.building_type_id = bt.id 
-        WHERE vb.id = ? AND vb.village_id = ? AND bt.internal_name = 'barracks'
+        WHERE vb.id = ? AND vb.village_id = ?
     ");
     $stmt_check_building->bind_param('ii', $building_id, $village_id);
-    $stmt_check_building->execute();
-    $result_building = $stmt_check_building->get_result();
-    
-    if ($result_building->num_rows === 0) {
-        throw new Exception('Invalid building.');
-    }
-    
-    $building = $result_building->fetch_assoc();
-    $barracks_level = $building['level'];
-    $stmt_check_building->close();
+} else {
+    $stmt_check_building = $conn->prepare("
+        SELECT vb.id, bt.internal_name, vb.level 
+        FROM village_buildings vb 
+        JOIN building_types bt ON vb.building_type_id = bt.id 
+        WHERE bt.internal_name = ? AND vb.village_id = ?
+    ");
+    $stmt_check_building->bind_param('si', $building_type_from_request, $village_id);
+}
+$stmt_check_building->execute();
+$result_building = $stmt_check_building->get_result();
+
+if ($result_building->num_rows === 0) {
+    throw new Exception('Invalid building.');
+}
+
+$building = $result_building->fetch_assoc();
+$building_internal_name = $building['internal_name'];
+$building_level = (int)$building['level'];
+$building_id = (int)$building['id'];
+$stmt_check_building->close();
+
+// Optional: ensure the client-specified building_type matches the resolved one
+if ($building_type_from_request && $building_type_from_request !== $building_internal_name) {
+    throw new Exception('Mismatched building type for recruitment.');
+}
     
     // Check current recruitment queues for this building
-    $stmt_check_queue = $conn->prepare("
+$stmt_check_queue = $conn->prepare("
         SELECT COUNT(*) as queue_count 
         FROM unit_queue 
         WHERE village_id = ? AND building_type = ?
-    ");
-    $queue_building_type = 'barracks';
+");
+$queue_building_type = $building_internal_name;
 
-    $stmt_check_queue->bind_param('is', $village_id, $queue_building_type);
-    $stmt_check_queue->execute();
+$stmt_check_queue->bind_param('is', $village_id, $queue_building_type);
+$stmt_check_queue->execute();
     $result_queue = $stmt_check_queue->get_result();
     $queue_count = $result_queue->fetch_assoc()['queue_count'];
     $stmt_check_queue->close();
@@ -125,24 +143,24 @@ try {
         
         // Pull unit info
         $stmt_unit = $conn->prepare("
-            SELECT internal_name, name, cost_wood, cost_clay, cost_iron, population, training_time_base, required_building_level
+            SELECT internal_name, name, building_type, cost_wood, cost_clay, cost_iron, population, training_time_base, required_building_level
             FROM unit_types 
-            WHERE id = ? AND building_type = 'barracks'
+            WHERE id = ? AND building_type = ?
         ");
-        $stmt_unit->bind_param('i', $unit_type_id);
+        $stmt_unit->bind_param('is', $unit_type_id, $building_internal_name);
         $stmt_unit->execute();
         $result_unit = $stmt_unit->get_result();
         
         if ($result_unit->num_rows === 0) {
-            throw new Exception('Invalid unit.');
+            throw new Exception('Invalid unit for this building.');
         }
         
         $unit = $result_unit->fetch_assoc();
         $stmt_unit->close();
         
-        // Ensure the barracks level is high enough
-        if ($barracks_level < $unit['required_building_level']) {
-            throw new Exception('Barracks level is too low for unit ' . $unit['name'] . '.');
+        // Ensure the building level is high enough
+        if ($building_level < $unit['required_building_level']) {
+            throw new Exception(ucfirst($building_internal_name) . ' level is too low for unit ' . $unit['name'] . '.');
         }
         
         // Calculate costs and training time
@@ -156,9 +174,9 @@ try {
         $total_iron += $iron_cost;
         $total_population += $population_cost;
         
-        // Training time per unit (5% faster per barracks level)
+        // Training time per unit (5% faster per building level)
         $training_time_base = $unit['training_time_base'];
-        $training_time_per_unit = floor($training_time_base * pow(0.95, $barracks_level - 1));
+        $training_time_per_unit = floor($training_time_base * pow(0.95, $building_level - 1));
         
         $units_to_recruit[] = [
             'unit_type_id' => $unit_type_id,

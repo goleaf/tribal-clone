@@ -31,7 +31,10 @@ class UnitManager
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $internal = $row['internal_name'] ?? '';
-                if (!$this->worldManager->isArcherEnabled() && in_array($internal, ['archer', 'marcher'], true)) {
+                if (
+                    !$this->worldManager->isArcherEnabled() &&
+                    in_array($internal, ['archer', 'marcher', 'bowman', 'slinger', 'horse_archer'], true)
+                ) {
                     continue;
                 }
                 if (!$this->worldManager->isPaladinEnabled() && $internal === 'paladin') {
@@ -170,7 +173,7 @@ class UnitManager
         if (!empty($unit['required_tech']) && $unit['required_tech_level'] > 0) {
             $stmt = $this->conn->prepare("
                 SELECT level
-                FROM village_researches
+                FROM village_research
                 WHERE village_id = ? AND research_type_id = (
                     SELECT id FROM research_types WHERE internal_name = ?
                 )

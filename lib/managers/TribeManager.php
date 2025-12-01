@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../functions.php';
+
 /**
  * Tribe/alliance operations with role permissions, diplomacy, and forum stubs.
  */
@@ -29,13 +31,60 @@ class TribeManager
         'forum' => ['leader', 'co_leader', 'officer', 'member'],
         'forum_admin' => ['leader', 'co_leader'],
         'manage_roles' => ['leader', 'co_leader'],
+        'edit_profile' => ['leader', 'co_leader'],
     ];
+    private const ALLOWED_RECRUITMENT_POLICIES = ['open', 'application', 'invite', 'closed'];
+    private const MIN_NAP_DAYS = 7;
+    private const MIN_ALLY_DAYS = 14;
+    private const MIN_TRUCE_HOURS = 12;
+    private const MIN_WAR_HOURS = 24;
+    private const ALLY_REFORM_COOLDOWN_HOURS = 48;
 
     private $conn;
 
     public function __construct($conn)
     {
         $this->conn = $conn;
+        $this->ensureCooldownColumn();
+        $this->ensureRecruitmentPolicyColumn();
+    }
+
+    private function columnExists(string $table, string $column): bool
+    {
+        // SQLite
+        if (class_exists('SQLiteAdapter') && $this->conn instanceof SQLiteAdapter) {
+            $stmt = $this->conn->prepare("PRAGMA table_info($table)");
+            $stmt->execute();
+            $res = $stmt->get_result();
+            if ($res) {
+                while ($row = $res->fetch_assoc()) {
+                    if (($row['name'] ?? '') === $column) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // MySQL
+        $stmt = $this->conn->prepare("SHOW COLUMNS FROM $table LIKE ?");
+        if ($stmt) {
+            $stmt->bind_param("s", $column);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $exists = $result && $result->num_rows > 0;
+            $stmt->close();
+            return $exists;
+        }
+        return false;
+    }
+
+    private function addColumnIfMissing(string $table, string $column, string $definition): void
+    {
+        if ($this->columnExists($table, $column)) {
+            return;
+        }
+        $this->conn->query("ALTER TABLE $table ADD COLUMN $column $definition");
     }
 
     private function canonicalizeRole(string $role): string
@@ -53,6 +102,20 @@ class TribeManager
         return self::ROLE_DB_MAP[$canonical] ?? 'member';
     }
 
+    private function getUserPoints(int $userId): ?int
+    {
+        $stmt = $this->conn->prepare("SELECT points FROM users WHERE id = ? LIMIT 1");
+        if ($stmt === false) {
+            return null;
+        }
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = $res ? $res->fetch_assoc() : null;
+        $stmt->close();
+        return $row ? (int)$row['points'] : null;
+    }
+
     private function ensureExtrasTables(): void
     {
         // Best-effort creation; errors are logged by SQLiteAdapter if any.
@@ -65,6 +128,26 @@ class TribeManager
                 created_by INTEGER NOT NULL,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(tribe_id, target_tribe_id)
+            )
+        ");
+        // Patch legacy tables with richer state metadata
+        $this->addColumnIfMissing('tribe_diplomacy', 'is_pending', "INTEGER NOT NULL DEFAULT 0");
+        $this->addColumnIfMissing('tribe_diplomacy', 'starts_at', "INTEGER DEFAULT NULL");
+        $this->addColumnIfMissing('tribe_diplomacy', 'ends_at', "INTEGER DEFAULT NULL");
+        $this->addColumnIfMissing('tribe_diplomacy', 'requested_by_user_id', "INTEGER DEFAULT NULL");
+        $this->addColumnIfMissing('tribe_diplomacy', 'accepted_by_user_id', "INTEGER DEFAULT NULL");
+        $this->addColumnIfMissing('tribe_diplomacy', 'reason', "TEXT DEFAULT ''");
+        $this->addColumnIfMissing('tribe_diplomacy', 'cooldown_until', "INTEGER NOT NULL DEFAULT 0");
+        $this->addColumnIfMissing('tribe_diplomacy', 'updated_at', "INTEGER NOT NULL DEFAULT (strftime('%s','now'))");
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS tribe_diplomacy_cooldowns (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tribe_id INTEGER NOT NULL,
+                target_tribe_id INTEGER NOT NULL,
+                type TEXT NOT NULL,
+                cooldown_until TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(tribe_id, target_tribe_id, type)
             )
         ");
 
@@ -155,12 +238,13 @@ class TribeManager
         return $ok;
     }
 
-    public function createTribe(int $founderId, string $name, string $tag, string $description = '', string $internalText = ''): array
+    public function createTribe(int $founderId, string $name, string $tag, string $description = '', string $internalText = '', string $recruitmentPolicy = 'invite'): array
     {
         $name = trim($name);
         $tag = strtoupper(trim($tag));
         $description = trim($description);
         $internalText = trim($internalText);
+        $recruitmentPolicy = $this->normalizeRecruitmentPolicy($recruitmentPolicy);
 
         if (strlen($name) < 3 || strlen($name) > 64) {
             return ['success' => false, 'message' => 'Tribe name must be between 3 and 64 characters.'];
@@ -174,6 +258,19 @@ class TribeManager
 
         if ($this->getTribeForUser($founderId)) {
             return ['success' => false, 'message' => 'You are already a member of a tribe.'];
+        }
+
+        $cooldownBlock = $this->checkJoinCooldown($founderId);
+        if ($cooldownBlock !== null) {
+            return $cooldownBlock;
+        }
+
+        $points = $this->getUserPoints($founderId);
+        if ($points === null) {
+            return ['success' => false, 'message' => 'Unable to verify your points to create a tribe.'];
+        }
+        if ($points < 500) {
+            return ['success' => false, 'message' => 'You need at least 500 points to found a tribe.'];
         }
 
         $check = $this->conn->prepare("SELECT id FROM tribes WHERE name = ? OR tag = ? LIMIT 1");
@@ -190,12 +287,12 @@ class TribeManager
         }
         $check->close();
 
-        $stmt = $this->conn->prepare("INSERT INTO tribes (name, tag, description, internal_text, founder_id) VALUES (?, ?, ?, ?, ?)");
+        $stmt = $this->conn->prepare("INSERT INTO tribes (name, tag, description, internal_text, founder_id, recruitment_policy) VALUES (?, ?, ?, ?, ?, ?)");
         if ($stmt === false) {
             error_log("TribeManager::createTribe insert prepare failed: " . $this->conn->error);
             return ['success' => false, 'message' => 'Unable to create tribe right now.'];
         }
-        $stmt->bind_param("ssssi", $name, $tag, $description, $internalText, $founderId);
+        $stmt->bind_param("ssssis", $name, $tag, $description, $internalText, $founderId, $recruitmentPolicy);
         if (!$stmt->execute()) {
             $stmt->close();
             return ['success' => false, 'message' => 'Failed to create tribe. Please try again.'];
@@ -247,6 +344,71 @@ class TribeManager
         }
 
         return $tribe ?: null;
+    }
+
+    public function updateTribeProfile(int $tribeId, int $actorUserId, string $description, string $internalText = ''): array
+    {
+        $membership = $this->getMembership($actorUserId);
+        if (!$membership || $membership['tribe_id'] !== $tribeId) {
+            return ['success' => false, 'message' => 'You are not a member of this tribe.'];
+        }
+        if (!$this->roleHasPermission($membership['role'], 'edit_profile')) {
+            return ['success' => false, 'message' => 'You do not have permission to edit tribe profile.'];
+        }
+
+        $description = trim($description);
+        $internalText = trim($internalText);
+
+        if (strlen($description) > 2000 || strlen($internalText) > 2000) {
+            return ['success' => false, 'message' => 'Text too long. Keep descriptions under 2000 characters.'];
+        }
+
+        $stmt = $this->conn->prepare("UPDATE tribes SET description = ?, internal_text = ? WHERE id = ?");
+        if ($stmt === false) {
+            error_log("TribeManager::updateTribeProfile prepare failed: " . $this->conn->error);
+            return ['success' => false, 'message' => 'Unable to update tribe profile right now.'];
+        }
+        $stmt->bind_param("ssi", $description, $internalText, $tribeId);
+        $ok = $stmt->execute();
+        $stmt->close();
+
+        if ($ok) {
+            $this->logActivity($tribeId, $actorUserId, 'profile_updated', [
+                'desc_len' => strlen($description),
+                'internal_len' => strlen($internalText)
+            ]);
+            return ['success' => true, 'message' => 'Tribe profile updated.'];
+        }
+
+        return ['success' => false, 'message' => 'Failed to save tribe profile.'];
+    }
+
+    public function updateRecruitmentPolicy(int $tribeId, int $actorUserId, string $policy): array
+    {
+        $membership = $this->getMembership($actorUserId);
+        if (!$membership || $membership['tribe_id'] !== $tribeId) {
+            return ['success' => false, 'message' => 'You are not a member of this tribe.'];
+        }
+        if (!$this->roleHasPermission($membership['role'], 'edit_profile')) {
+            return ['success' => false, 'message' => 'You do not have permission to edit tribe profile.'];
+        }
+
+        $policy = $this->normalizeRecruitmentPolicy($policy);
+        $stmt = $this->conn->prepare("UPDATE tribes SET recruitment_policy = ? WHERE id = ?");
+        if ($stmt === false) {
+            error_log("TribeManager::updateRecruitmentPolicy prepare failed: " . $this->conn->error);
+            return ['success' => false, 'message' => 'Unable to update recruitment policy right now.'];
+        }
+        $stmt->bind_param("si", $policy, $tribeId);
+        $ok = $stmt->execute();
+        $stmt->close();
+
+        if ($ok) {
+            $this->logActivity($tribeId, $actorUserId, 'policy_updated', ['policy' => $policy]);
+            return ['success' => true, 'message' => 'Recruitment policy updated.'];
+        }
+
+        return ['success' => false, 'message' => 'Failed to save recruitment policy.'];
     }
 
     public function getTribeById(int $tribeId): ?array
@@ -541,6 +703,11 @@ class TribeManager
             return ['success' => false, 'message' => 'You have already joined a tribe.'];
         }
 
+        $cooldownBlock = $this->checkJoinCooldown($userId);
+        if ($cooldownBlock !== null) {
+            return $cooldownBlock;
+        }
+
         $add = $this->addMember((int)$invite['tribe_id'], $userId, 'member');
         if (!$add['success']) {
             return $add;
@@ -595,6 +762,7 @@ class TribeManager
         $stmt->close();
 
         $this->setUserTribe($userId, null);
+        $this->setJoinCooldownHours($userId, 24);
         $this->recalculateTribePoints($tribeId);
 
         return ['success' => true, 'message' => 'You have left the tribe.'];
@@ -607,11 +775,37 @@ class TribeManager
             return ['success' => false, 'message' => 'Only the tribe leader can disband the tribe.'];
         }
 
+        if (!$this->performDisband($tribeId)) {
+            return ['success' => false, 'message' => 'Unable to disband tribe.'];
+        }
+
+        return ['success' => true, 'message' => 'Tribe has been disbanded.'];
+    }
+
+    /**
+     * System-level disband that bypasses role checks (used by cleanup jobs).
+     */
+    public function systemDisbandTribe(int $tribeId, string $reason = 'system_cleanup'): array
+    {
+        $ok = $this->performDisband($tribeId);
+        if ($ok) {
+            $this->logActivity($tribeId, 0, 'tribe_disbanded', ['reason' => $reason]);
+        }
+        return $ok
+            ? ['success' => true, 'message' => 'Tribe has been disbanded.']
+            : ['success' => false, 'message' => 'Unable to disband tribe.'];
+    }
+
+    /**
+     * Shared disband logic used by both leader-driven and system disbands.
+     */
+    private function performDisband(int $tribeId): bool
+    {
         // Reset ally_id for all members
         $memberIds = $this->conn->prepare("SELECT user_id FROM tribe_members WHERE tribe_id = ?");
         if ($memberIds === false) {
-            error_log("TribeManager::disbandTribe member fetch failed: " . $this->conn->error);
-            return ['success' => false, 'message' => 'Unable to disband tribe right now.'];
+            error_log("TribeManager::performDisband member fetch failed: " . $this->conn->error);
+            return false;
         }
         $memberIds->bind_param("i", $tribeId);
         $memberIds->execute();
@@ -636,14 +830,14 @@ class TribeManager
 
         $delete = $this->conn->prepare("DELETE FROM tribes WHERE id = ?");
         if ($delete === false) {
-            error_log("TribeManager::disbandTribe delete failed: " . $this->conn->error);
-            return ['success' => false, 'message' => 'Unable to disband tribe.'];
+            error_log("TribeManager::performDisband delete failed: " . $this->conn->error);
+            return false;
         }
         $delete->bind_param("i", $tribeId);
         $delete->execute();
         $delete->close();
 
-        return ['success' => true, 'message' => 'Tribe has been disbanded.'];
+        return true;
     }
 
     public function changeMemberRole(int $tribeId, int $actorUserId, int $targetUserId, string $newRole): array
@@ -716,6 +910,7 @@ class TribeManager
         }
 
         $this->clearUserTribe($targetUserId);
+        $this->setJoinCooldownHours($targetUserId, 72);
         $this->recalculateTribePoints($tribeId);
         return ['success' => true, 'message' => 'Member removed from tribe.'];
     }
@@ -815,6 +1010,11 @@ class TribeManager
 
     private function addMemberInternal(int $tribeId, int $userId, string $role): array
     {
+        $cooldownBlock = $this->checkJoinCooldown($userId);
+        if ($cooldownBlock !== null) {
+            return $cooldownBlock;
+        }
+
         // Enforce per-world member limit if set
         $worldManager = class_exists('WorldManager') ? new WorldManager($this->conn) : null;
         $limit = $worldManager ? $worldManager->getTribeLimit() : null;
@@ -879,6 +1079,29 @@ class TribeManager
         return (int)($row['cnt'] ?? 0);
     }
 
+    /**
+     * Counts members whose last_activity_at is on/after the given timestamp.
+     */
+    public function getActiveMemberCountSince(int $tribeId, string $sinceTimestamp): int
+    {
+        $stmt = $this->conn->prepare("
+            SELECT COUNT(*) AS cnt
+            FROM tribe_members tm
+            JOIN users u ON u.id = tm.user_id
+            WHERE tm.tribe_id = ? AND u.last_activity_at >= ?
+        ");
+        if ($stmt === false) {
+            error_log("TribeManager::getActiveMemberCountSince prepare failed: " . $this->conn->error);
+            return 0;
+        }
+        $stmt->bind_param("is", $tribeId, $sinceTimestamp);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = $res ? $res->fetch_assoc() : null;
+        $stmt->close();
+        return (int)($row['cnt'] ?? 0);
+    }
+
     private function sanitizeRole(string $role): string
     {
         return $this->canonicalizeRole($role);
@@ -893,7 +1116,12 @@ class TribeManager
     public function setDiplomacyStatus(int $tribeId, int $actorUserId, int $targetTribeId, string $status): array
     {
         $status = strtolower($status);
-        if (!in_array($status, ['nap', 'ally', 'enemy'], true)) {
+        if ($status === 'ally') {
+            $status = 'alliance';
+        } elseif ($status === 'enemy') {
+            $status = 'war';
+        }
+        if (!in_array($status, ['nap', 'alliance', 'war', 'truce', 'neutral'], true)) {
             return ['success' => false, 'message' => 'Invalid diplomacy status.'];
         }
         if ($tribeId === $targetTribeId) {
@@ -905,17 +1133,20 @@ class TribeManager
             return ['success' => false, 'message' => 'You do not have permission to manage diplomacy.'];
         }
 
-        $ok1 = $this->upsertDiplomacy($tribeId, $targetTribeId, $status, $actorUserId);
-        $ok2 = $this->upsertDiplomacy($targetTribeId, $tribeId, $status, $actorUserId);
-
-        return ($ok1 && $ok2) ? ['success' => true, 'message' => 'Diplomacy updated.'] : ['success' => false, 'message' => 'Unable to update diplomacy.'];
+        return match ($status) {
+            'war' => $this->declareWar($tribeId, $actorUserId, $targetTribeId),
+            'nap', 'alliance', 'truce' => $this->proposeOrAcceptTreaty($tribeId, $actorUserId, $targetTribeId, $status),
+            'neutral' => $this->dropToNeutral($tribeId, $actorUserId, $targetTribeId),
+            default => ['success' => false, 'message' => 'Unsupported state.']
+        };
     }
 
     public function getDiplomacyRelations(int $tribeId): array
     {
         $this->ensureExtrasTables();
         $stmt = $this->conn->prepare("
-            SELECT td.target_tribe_id, td.status, td.created_at, t.name, t.tag
+            SELECT td.target_tribe_id, td.status, td.created_at, td.starts_at, td.ends_at, td.is_pending,
+                   td.cooldown_until, td.reason, t.name, t.tag
             FROM tribe_diplomacy td
             LEFT JOIN tribes t ON t.id = td.target_tribe_id
             WHERE td.tribe_id = ?
@@ -932,6 +1163,335 @@ class TribeManager
         }
         $stmt->close();
         return $relations;
+    }
+
+    private function getDiplomacyRelation(int $tribeId, int $targetTribeId): ?array
+    {
+        return $this->getDiplomacyRow($tribeId, $targetTribeId);
+    }
+
+    private function proposeOrAcceptTreaty(int $tribeId, int $actorUserId, int $targetTribeId, string $type): array
+    {
+        $now = time();
+        $existing = $this->getDiplomacyRow($tribeId, $targetTribeId);
+        $pendingKey = 'pending_' . $type;
+
+        if ($existing && (int)($existing['cooldown_until'] ?? 0) > $now) {
+            $remaining = $this->formatRemainingSeconds((int)$existing['cooldown_until'] - $now);
+            return ['success' => false, 'message' => 'Cooldown active. Wait ' . $remaining . ' before changing diplomacy.'];
+        }
+        if ($existing && (int)($existing['is_pending'] ?? 0) === 0 && ($existing['status'] ?? '') !== 'neutral' && ($existing['status'] ?? '') !== $type) {
+            $normalized = $existing['status'] === 'enemy' ? 'war' : ($existing['status'] === 'ally' ? 'alliance' : $existing['status']);
+            $minDuration = $this->getMinDurationSeconds($normalized);
+            $start = (int)($existing['starts_at'] ?? 0);
+            if ($start === 0 && !empty($existing['created_at'])) {
+                $start = strtotime((string)$existing['created_at']) ?: 0;
+            }
+            if ($minDuration > 0 && $start > 0 && ($start + $minDuration) > $now) {
+                $remaining = $this->formatRemainingSeconds(($start + $minDuration) - $now);
+                return ['success' => false, 'message' => 'Minimum duration not met. Wait ' . $remaining . '.'];
+            }
+        }
+        if ($existing && ($existing['status'] ?? '') === $type && (int)($existing['is_pending'] ?? 0) === 0) {
+            return ['success' => true, 'message' => 'Already in ' . $type . ' state.'];
+        }
+
+        // Accept incoming pending request
+        if ($existing && (int)($existing['is_pending'] ?? 0) === 1 && $existing['status'] === $pendingKey) {
+            $minDuration = $this->getMinDurationSeconds($type);
+            $start = $now;
+            $end = $minDuration > 0 ? $start + $minDuration : null;
+            $this->writeRelationPair($tribeId, $targetTribeId, [
+                'status' => $type,
+                'is_pending' => 0,
+                'starts_at' => $start,
+                'ends_at' => $end,
+                'requested_by_user_id' => $existing['requested_by_user_id'] ?? $actorUserId,
+                'accepted_by_user_id' => $actorUserId,
+                'reason' => $existing['reason'] ?? '',
+                'cooldown_until' => 0,
+            ]);
+            return ['success' => true, 'message' => ucfirst($type) . ' accepted.'];
+        }
+
+        // Otherwise, send a request
+        $minDuration = $this->getMinDurationSeconds($type);
+        $start = $now;
+        $end = $minDuration > 0 ? $start + $minDuration : null;
+        $this->writeRelationPair($tribeId, $targetTribeId, [
+            'status' => $pendingKey,
+            'is_pending' => 1,
+            'starts_at' => $start,
+            'ends_at' => $end,
+            'requested_by_user_id' => $actorUserId,
+            'accepted_by_user_id' => null,
+            'reason' => '',
+            'cooldown_until' => 0,
+        ]);
+        return ['success' => true, 'message' => ucfirst($type) . ' request sent.'];
+    }
+
+    private function declareWar(int $tribeId, int $actorUserId, int $targetTribeId): array
+    {
+        $now = time();
+        $existing = $this->getDiplomacyRow($tribeId, $targetTribeId);
+        if ($existing) {
+            if (($existing['status'] ?? '') === 'war' && (int)($existing['is_pending'] ?? 0) === 0) {
+                return ['success' => false, 'message' => 'War already active with this tribe.'];
+            }
+            if ((int)($existing['cooldown_until'] ?? 0) > $now) {
+                $remaining = $this->formatRemainingSeconds((int)$existing['cooldown_until'] - $now);
+                return ['success' => false, 'message' => 'War cooldown active. Wait ' . $remaining . '.'];
+            }
+        }
+
+        $minDuration = $this->getMinDurationSeconds('war');
+        $start = $now;
+        $end = $minDuration > 0 ? $start + $minDuration : null;
+        $this->writeRelationPair($tribeId, $targetTribeId, [
+            'status' => 'war',
+            'is_pending' => 0,
+            'starts_at' => $start,
+            'ends_at' => $end,
+            'requested_by_user_id' => $actorUserId,
+            'accepted_by_user_id' => null,
+            'reason' => '',
+            'cooldown_until' => 0,
+        ]);
+
+        return ['success' => true, 'message' => 'War declared.'];
+    }
+
+    private function dropToNeutral(int $tribeId, int $actorUserId, int $targetTribeId): array
+    {
+        $now = time();
+        $current = $this->getDiplomacyRow($tribeId, $targetTribeId);
+        if (!$current) {
+            return ['success' => true, 'message' => 'Already neutral.'];
+        }
+
+        $status = $current['status'] ?? 'neutral';
+        if ($status === 'enemy') {
+            $status = 'war';
+        } elseif ($status === 'ally') {
+            $status = 'alliance';
+        }
+        $start = (int)($current['starts_at'] ?? 0);
+        if ($start === 0 && !empty($current['created_at'])) {
+            $start = strtotime((string)$current['created_at']) ?: 0;
+        }
+        $minDuration = (int)($current['is_pending'] ?? 0) === 1 ? 0 : $this->getMinDurationSeconds($status);
+        if ($minDuration > 0 && ($start + $minDuration) > $now) {
+            $remaining = $this->formatRemainingSeconds(($start + $minDuration) - $now);
+            return ['success' => false, 'message' => 'Minimum duration not met. Wait ' . $remaining . '.'];
+        }
+
+        $cooldown = 0;
+        if ($status === 'war') {
+            $cooldown = $now + (self::MIN_WAR_HOURS * 3600);
+        } elseif ($status === 'alliance') {
+            $cooldown = $now + (self::ALLY_REFORM_COOLDOWN_HOURS * 3600);
+        }
+
+        $this->writeRelationPair($tribeId, $targetTribeId, [
+            'status' => 'neutral',
+            'is_pending' => 0,
+            'starts_at' => $now,
+            'ends_at' => $now,
+            'requested_by_user_id' => $actorUserId,
+            'accepted_by_user_id' => null,
+            'reason' => 'returned_to_neutral',
+            'cooldown_until' => $cooldown,
+        ]);
+
+        return ['success' => true, 'message' => 'Relation set to Neutral.'];
+    }
+
+    private function getMinDurationSeconds(string $status): int
+    {
+        return match ($status) {
+            'nap', 'pending_nap' => self::MIN_NAP_DAYS * 86400,
+            'alliance', 'ally', 'pending_alliance' => self::MIN_ALLY_DAYS * 86400,
+            'truce', 'pending_truce' => self::MIN_TRUCE_HOURS * 3600,
+            'war', 'enemy' => self::MIN_WAR_HOURS * 3600,
+            default => 0
+        };
+    }
+
+    private function getDiplomacyRow(int $tribeId, int $targetTribeId): ?array
+    {
+        $stmt = $this->conn->prepare("
+            SELECT * FROM tribe_diplomacy
+            WHERE tribe_id = ? AND target_tribe_id = ?
+            LIMIT 1
+        ");
+        if ($stmt === false) {
+            return null;
+        }
+        $stmt->bind_param("ii", $tribeId, $targetTribeId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = $res ? $res->fetch_assoc() : null;
+        $stmt->close();
+        return $row ?: null;
+    }
+
+    private function writeRelationPair(int $tribeId, int $targetTribeId, array $data): void
+    {
+        $this->writeRelation($tribeId, $targetTribeId, $data);
+        $this->writeRelation($targetTribeId, $tribeId, $data);
+    }
+
+    private function writeRelation(int $tribeId, int $targetTribeId, array $data): void
+    {
+        $now = time();
+        $payload = [
+            'status' => $data['status'] ?? 'neutral',
+            'is_pending' => (int)($data['is_pending'] ?? 0),
+            'starts_at' => $data['starts_at'] ?? null,
+            'ends_at' => $data['ends_at'] ?? null,
+            'requested_by_user_id' => $data['requested_by_user_id'] ?? null,
+            'accepted_by_user_id' => $data['accepted_by_user_id'] ?? null,
+            'reason' => $data['reason'] ?? '',
+            'cooldown_until' => (int)($data['cooldown_until'] ?? 0),
+            'updated_at' => $now,
+        ];
+
+        $existing = $this->getDiplomacyRow($tribeId, $targetTribeId);
+        if ($existing) {
+            $stmt = $this->conn->prepare("
+                UPDATE tribe_diplomacy
+                SET status = ?, is_pending = ?, starts_at = ?, ends_at = ?, requested_by_user_id = ?, accepted_by_user_id = ?, reason = ?, cooldown_until = ?, updated_at = ?
+                WHERE tribe_id = ? AND target_tribe_id = ?
+            ");
+            if ($stmt) {
+                $stmt->bind_param(
+                    "siiiiisiiii",
+                    $payload['status'],
+                    $payload['is_pending'],
+                    $payload['starts_at'],
+                    $payload['ends_at'],
+                    $payload['requested_by_user_id'],
+                    $payload['accepted_by_user_id'],
+                    $payload['reason'],
+                    $payload['cooldown_until'],
+                    $payload['updated_at'],
+                    $tribeId,
+                    $targetTribeId
+                );
+                $stmt->execute();
+                $stmt->close();
+            }
+            return;
+        }
+
+        $stmt = $this->conn->prepare("
+            INSERT INTO tribe_diplomacy
+            (tribe_id, target_tribe_id, status, created_by, created_at, is_pending, starts_at, ends_at, requested_by_user_id, accepted_by_user_id, reason, cooldown_until, updated_at)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        if ($stmt) {
+            $stmt->bind_param(
+                "iisiiiiiisii",
+                $tribeId,
+                $targetTribeId,
+                $payload['status'],
+                $payload['requested_by_user_id'],
+                $payload['is_pending'],
+                $payload['starts_at'],
+                $payload['ends_at'],
+                $payload['requested_by_user_id'],
+                $payload['accepted_by_user_id'],
+                $payload['reason'],
+                $payload['cooldown_until'],
+                $payload['updated_at']
+            );
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+
+    private function getAllianceCooldown(int $tribeId, int $targetTribeId): ?string
+    {
+        $stmt = $this->conn->prepare("
+            SELECT cooldown_until
+            FROM tribe_diplomacy_cooldowns
+            WHERE type = 'ally'
+              AND ((tribe_id = ? AND target_tribe_id = ?) OR (tribe_id = ? AND target_tribe_id = ?))
+            LIMIT 1
+        ");
+        if ($stmt === false) {
+            return null;
+        }
+        $stmt->bind_param("iiii", $tribeId, $targetTribeId, $targetTribeId, $tribeId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = $res ? $res->fetch_assoc() : null;
+        $stmt->close();
+        if (!$row || empty($row['cooldown_until'])) {
+            return null;
+        }
+        $ts = strtotime($row['cooldown_until']);
+        if ($ts !== false && $ts <= time()) {
+            // expire it
+            $this->clearAllianceCooldown($tribeId, $targetTribeId);
+            return null;
+        }
+        return $row['cooldown_until'];
+    }
+
+    private function setAllianceCooldown(int $tribeId, int $targetTribeId, int $hours): void
+    {
+        if ($hours <= 0) {
+            return;
+        }
+        $until = date('Y-m-d H:i:s', time() + ($hours * 3600));
+        $this->upsertCooldown($tribeId, $targetTribeId, 'ally', $until);
+        $this->upsertCooldown($targetTribeId, $tribeId, 'ally', $until);
+    }
+
+    private function upsertCooldown(int $tribeId, int $targetTribeId, string $type, string $until): void
+    {
+        $stmt = $this->conn->prepare("
+            INSERT INTO tribe_diplomacy_cooldowns (tribe_id, target_tribe_id, type, cooldown_until)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(tribe_id, target_tribe_id, type) DO UPDATE SET cooldown_until = excluded.cooldown_until, created_at = CURRENT_TIMESTAMP
+        ");
+        if ($stmt) {
+            $stmt->bind_param("iiss", $tribeId, $targetTribeId, $type, $until);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+
+    private function clearAllianceCooldown(int $tribeId, int $targetTribeId): void
+    {
+        $stmt = $this->conn->prepare("
+            DELETE FROM tribe_diplomacy_cooldowns
+            WHERE type = 'ally'
+              AND ((tribe_id = ? AND target_tribe_id = ?) OR (tribe_id = ? AND target_tribe_id = ?))
+        ");
+        if ($stmt) {
+            $stmt->bind_param("iiii", $tribeId, $targetTribeId, $targetTribeId, $tribeId);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+
+    private function formatRemainingSeconds(int $seconds): string
+    {
+        if ($seconds <= 0) {
+            return '0m';
+        }
+        $hours = intdiv($seconds, 3600);
+        $minutes = intdiv($seconds % 3600, 60);
+        if ($hours > 0 && $minutes > 0) {
+            return $hours . 'h ' . $minutes . 'm';
+        }
+        if ($hours > 0) {
+            return $hours . 'h';
+        }
+        return $minutes . 'm';
     }
 
     // Tribe forum (simple private board)
@@ -1143,6 +1703,10 @@ class TribeManager
         if ($this->getTribeForUser((int)$row['user_id'])) {
             return ['success' => false, 'message' => 'Player already in a tribe.'];
         }
+        $cooldownBlock = $this->checkJoinCooldown((int)$row['user_id']);
+        if ($cooldownBlock !== null) {
+            return $cooldownBlock;
+        }
         $add = $this->addMember($tribeId, (int)$row['user_id'], 'member');
         if (!$add['success']) {
             return $add;
@@ -1179,6 +1743,55 @@ class TribeManager
         return $rows;
     }
 
+    /**
+     * Auto-disband tribes that have fewer than $minActiveMembers active members in the last $inactiveDays days.
+     * Returns number of tribes disbanded.
+     */
+    public function disbandInactiveTribes(int $minActiveMembers = 3, int $inactiveDays = 14): int
+    {
+        if ($minActiveMembers <= 0 || $inactiveDays <= 0) {
+            return 0;
+        }
+        if (!function_exists('dbColumnExists') || !dbColumnExists($this->conn, 'users', 'last_activity_at')) {
+            return 0;
+        }
+
+        $threshold = date('Y-m-d H:i:s', time() - ($inactiveDays * 86400));
+        $stmt = $this->conn->prepare("
+            SELECT 
+                t.id,
+                COUNT(tm.user_id) AS member_count,
+                SUM(CASE WHEN u.last_activity_at IS NOT NULL AND u.last_activity_at >= ? THEN 1 ELSE 0 END) AS active_recent
+            FROM tribes t
+            LEFT JOIN tribe_members tm ON tm.tribe_id = t.id
+            LEFT JOIN users u ON u.id = tm.user_id
+            GROUP BY t.id
+            HAVING active_recent < ? AND member_count > 0
+        ");
+        if ($stmt === false) {
+            return 0;
+        }
+        $stmt->bind_param("si", $threshold, $minActiveMembers);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $rows = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+        $stmt->close();
+
+        if (empty($rows)) {
+            return 0;
+        }
+
+        $disbanded = 0;
+        foreach ($rows as $row) {
+            $tribeId = (int)$row['id'];
+            if ($this->forceDisbandTribe($tribeId, 'inactive_low_activity')) {
+                $disbanded++;
+            }
+        }
+
+        return $disbanded;
+    }
+
     private function logActivity(int $tribeId, int $actorId, string $action, array $meta = []): void
     {
         $this->ensureExtrasTables();
@@ -1189,5 +1802,147 @@ class TribeManager
             $stmt->execute();
             $stmt->close();
         }
+    }
+
+    /**
+     * Disband a tribe without requiring leader approval (used by cron cleanup).
+     */
+    private function forceDisbandTribe(int $tribeId, string $reason = 'system'): bool
+    {
+        // Fetch member ids
+        $memberIds = [];
+        $stmtMembers = $this->conn->prepare("SELECT user_id FROM tribe_members WHERE tribe_id = ?");
+        if ($stmtMembers) {
+            $stmtMembers->bind_param("i", $tribeId);
+            $stmtMembers->execute();
+            $res = $stmtMembers->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $memberIds[] = (int)$row['user_id'];
+            }
+            $stmtMembers->close();
+        }
+
+        // Clear ally_id for members
+        foreach ($memberIds as $uid) {
+            $stmt = $this->conn->prepare("UPDATE users SET ally_id = NULL WHERE id = ?");
+            if ($stmt) {
+                $stmt->bind_param("i", $uid);
+                $stmt->execute();
+                $stmt->close();
+            }
+        }
+
+        $this->logActivity($tribeId, 0, 'tribe_disbanded_auto', ['reason' => $reason, 'member_count' => count($memberIds)]);
+
+        $stmtDelMembers = $this->conn->prepare("DELETE FROM tribe_members WHERE tribe_id = ?");
+        if ($stmtDelMembers) {
+            $stmtDelMembers->bind_param("i", $tribeId);
+            $stmtDelMembers->execute();
+            $stmtDelMembers->close();
+        }
+
+        $stmtDel = $this->conn->prepare("DELETE FROM tribes WHERE id = ?");
+        if ($stmtDel === false) {
+            return false;
+        }
+        $stmtDel->bind_param("i", $tribeId);
+        $ok = $stmtDel->execute();
+        $stmtDel->close();
+
+        return $ok;
+    }
+
+    private function ensureCooldownColumn(): void
+    {
+        if (function_exists('dbColumnExists') && !dbColumnExists($this->conn, 'users', 'tribe_join_cooldown_until')) {
+            $this->conn->query("ALTER TABLE users ADD COLUMN tribe_join_cooldown_until DATETIME DEFAULT NULL");
+        }
+    }
+
+    private function ensureRecruitmentPolicyColumn(): void
+    {
+        if (function_exists('dbColumnExists') && !dbColumnExists($this->conn, 'tribes', 'recruitment_policy')) {
+            $this->conn->query("ALTER TABLE tribes ADD COLUMN recruitment_policy VARCHAR(16) NOT NULL DEFAULT 'invite'");
+        }
+    }
+
+    private function setJoinCooldownHours(int $userId, int $hours): void
+    {
+        if ($hours <= 0) {
+            return;
+        }
+        $until = date('Y-m-d H:i:s', time() + ($hours * 3600));
+        $stmt = $this->conn->prepare("UPDATE users SET tribe_join_cooldown_until = ? WHERE id = ?");
+        if ($stmt) {
+            $stmt->bind_param("si", $until, $userId);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+
+    private function getJoinCooldownUntil(int $userId): ?string
+    {
+        $stmt = $this->conn->prepare("SELECT tribe_join_cooldown_until FROM users WHERE id = ? LIMIT 1");
+        if ($stmt === false) {
+            return null;
+        }
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = $res ? $res->fetch_assoc() : null;
+        $stmt->close();
+        if (!$row || empty($row['tribe_join_cooldown_until'])) {
+            return null;
+        }
+
+        $ts = strtotime($row['tribe_join_cooldown_until']);
+        if ($ts !== false && $ts <= time()) {
+            $clear = $this->conn->prepare("UPDATE users SET tribe_join_cooldown_until = NULL WHERE id = ?");
+            if ($clear) {
+                $clear->bind_param("i", $userId);
+                $clear->execute();
+                $clear->close();
+            }
+            return null;
+        }
+
+        return $row['tribe_join_cooldown_until'];
+    }
+
+    private function formatCooldownRemaining(string $until): string
+    {
+        $ts = strtotime($until);
+        if ($ts === false) {
+            return 'a short time';
+        }
+        $remaining = max(0, $ts - time());
+        $hours = intdiv($remaining, 3600);
+        $minutes = intdiv($remaining % 3600, 60);
+        if ($hours > 0 && $minutes > 0) {
+            return $hours . 'h ' . $minutes . 'm';
+        }
+        if ($hours > 0) {
+            return $hours . 'h';
+        }
+        return $minutes . 'm';
+    }
+
+    private function checkJoinCooldown(int $userId): ?array
+    {
+        $until = $this->getJoinCooldownUntil($userId);
+        if ($until === null) {
+            return null;
+        }
+        $remaining = $this->formatCooldownRemaining($until);
+        return [
+            'success' => false,
+            'message' => 'You must wait ' . $remaining . ' before joining a tribe.'
+        ];
+    }
+
+    private function normalizeRecruitmentPolicy(string $policy): string
+    {
+        $policy = strtolower(trim($policy));
+        return in_array($policy, self::ALLOWED_RECRUITMENT_POLICIES, true) ? $policy : 'invite';
     }
 }

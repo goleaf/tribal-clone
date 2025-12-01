@@ -75,6 +75,26 @@ class TribeWarManager
             return ['success' => false, 'message' => 'An active war between these tribes already exists.'];
         }
 
+        // Cooldown: cannot declare war twice within 24h on the same pair
+        $cooldownSince = date('Y-m-d H:i:s', time() - 24 * 3600);
+        $stmtCooldown = $this->conn->prepare("
+            SELECT id FROM tribe_wars
+            WHERE status = 'finished'
+              AND ended_at IS NOT NULL
+              AND ended_at >= ?
+              AND ((attacker_tribe_id = ? AND defender_tribe_id = ?) OR (attacker_tribe_id = ? AND defender_tribe_id = ?))
+            LIMIT 1
+        ");
+        if ($stmtCooldown) {
+            $stmtCooldown->bind_param("siiii", $cooldownSince, $attackerTribeId, $defenderTribeId, $defenderTribeId, $attackerTribeId);
+            $stmtCooldown->execute();
+            $recent = $stmtCooldown->get_result()->fetch_assoc();
+            $stmtCooldown->close();
+            if ($recent) {
+                return ['success' => false, 'message' => 'A recent war between these tribes ended less than 24 hours ago.'];
+            }
+        }
+
         $stmtInsert = $this->conn->prepare("
             INSERT INTO tribe_wars (attacker_tribe_id, defender_tribe_id, target_score, victory_condition)
             VALUES (?, ?, ?, ?)

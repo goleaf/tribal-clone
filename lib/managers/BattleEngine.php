@@ -25,6 +25,7 @@ class BattleEngine
     
     // Unit class mappings
     private const UNIT_CLASSES = [
+        // Legacy/internal names
         'spear' => 'infantry',
         'sword' => 'infantry',
         'axe' => 'infantry',
@@ -34,7 +35,25 @@ class BattleEngine
         'heavy' => 'cavalry',
         'ram' => 'infantry',
         'catapult' => 'infantry',
-        'noble' => 'cavalry'
+        'noble' => 'cavalry',
+        'paladin' => 'cavalry',
+        'marcher' => 'archer',
+
+        // Design-roster names
+        'tribesman' => 'infantry',
+        'spearguard' => 'infantry',
+        'axe_warrior' => 'infantry',
+        'bowman' => 'archer',
+        'slinger' => 'archer',
+        'raider' => 'cavalry',
+        'lancer' => 'cavalry',
+        'horse_archer' => 'archer',
+        'battering_ram' => 'infantry',
+        'supply_cart' => 'infantry',
+        'berserker' => 'infantry',
+        'shieldmaiden' => 'infantry',
+        'warlord' => 'cavalry',
+        'rune_priest' => 'infantry'
     ];
     
     public function __construct($conn)

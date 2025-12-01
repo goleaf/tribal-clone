@@ -95,8 +95,8 @@ private function getWorldConfig(): array
     return [
         'speed' => $worldManager->getWorldSpeed(),
         'night_bonus_enabled' => $worldManager->isNightBonusEnabled(),
-        'night_start' => 22,
-        'night_end' => 6
+        'night_start' => $worldManager->getNightBonusWindow()['start'],
+        'night_end' => $worldManager->getNightBonusWindow()['end']
     ];
 }
 

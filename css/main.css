@@ -2496,6 +2496,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
 
 .legend-dot.relation-own { background: #2c7be5; }
 .legend-dot.relation-ally { background: #4caf50; }
+.legend-dot.relation-neutral { background: #d1a23d; }
 .legend-dot.relation-enemy { background: #c0392b; }
 .legend-dot.relation-barb { background: #7f8c8d; }
 
@@ -3677,6 +3678,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     color: var(--color-primary);
     display: flex;
     align-items: center;
+    gap: var(--spacing-xs);
 }
 
 .report-icon {
@@ -3695,6 +3697,39 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     font-size: var(--font-size-small);
     color: #666;
     text-align: right; 
+}
+
+.report-name {
+    flex: 1;
+}
+
+.report-item.starred {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 1px rgba(141, 92, 44, 0.1);
+}
+
+.report-star {
+    margin-left: auto;
+    background: none;
+    border: 1px solid transparent;
+    color: var(--color-text-dark);
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 6px;
+    line-height: 1.2;
+    transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.report-star:hover {
+    color: var(--color-primary);
+    border-color: var(--color-border);
+    background-color: var(--color-background-dark);
+}
+
+.report-star.active {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background-color: #f7e7cf;
 }
 
 .report-details {
@@ -4402,6 +4437,7 @@ p.no-reports {
 
 .relation-own { border-color: #2c7be5; box-shadow: 0 0 0 1px rgba(44,123,229,0.4); }
 .relation-ally { border-color: #4caf50; box-shadow: 0 0 0 1px rgba(76,175,80,0.4); }
+.relation-neutral { border-color: #d1a23d; box-shadow: 0 0 0 1px rgba(209,162,61,0.35); }
 .relation-enemy { border-color: #c0392b; box-shadow: 0 0 0 1px rgba(192,57,43,0.35); }
 .relation-barb { border-color: #7f8c8d; box-shadow: 0 0 0 1px rgba(127,140,141,0.3); }
 
@@ -4448,6 +4484,7 @@ p.no-reports {
 .mini-map-legend .legend.own { background: #2c7be5; }
 .mini-map-legend .legend.ally { background: #4caf50; }
 .mini-map-legend .legend.enemy { background: #c0392b; }
+.mini-map-legend .legend.neutral { background: #d1a23d; }
 .mini-map-legend .legend.barb { background: #7f8c8d; }
 
 .map-popup {

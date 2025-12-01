@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS tribes (
     tag VARCHAR(12) NOT NULL UNIQUE,
     description TEXT,
     internal_text TEXT,
+    recruitment_policy VARCHAR(16) NOT NULL DEFAULT 'invite',
     founder_id INT NOT NULL,
     points INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -20,6 +20,15 @@ $tribeProgression = new TribeProgressionManager($conn, $tribeManager);
 
 $village_id = $villageManager->getFirstVillage($user_id);
 $village = $village_id ? $villageManager->getVillageInfo($village_id) : null;
+$userPoints = 0;
+$pointsStmt = $conn->prepare("SELECT points FROM users WHERE id = ? LIMIT 1");
+if ($pointsStmt) {
+    $pointsStmt->bind_param("i", $user_id);
+    $pointsStmt->execute();
+    $row = $pointsStmt->get_result()->fetch_assoc();
+    $userPoints = (int)($row['points'] ?? 0);
+    $pointsStmt->close();
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     validateCSRF();
@@ -33,7 +42,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $name = $_POST['tribe_name'] ?? '';
             $tag = $_POST['tribe_tag'] ?? '';
             $description = $_POST['tribe_description'] ?? '';
-            $result = $tribeManager->createTribe($user_id, $name, $tag, $description);
+            $policy = $_POST['tribe_policy'] ?? 'invite';
+            $result = $tribeManager->createTribe($user_id, $name, $tag, $description, '', $policy);
             break;
         case 'invite':
             $tribeId = (int)($_POST['tribe_id'] ?? 0);
@@ -62,6 +72,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tribeId = (int)($_POST['tribe_id'] ?? 0);
             $targetUserId = (int)($_POST['target_user_id'] ?? 0);
             $result = $tribeManager->kickMember($tribeId, $user_id, $targetUserId);
+            break;
+        case 'update_description':
+            if (!$currentTribeForAction || !$tribeManager->roleHasPermission($currentTribeForAction['role'], 'edit_profile')) {
+                $result = ['success' => false, 'message' => 'You do not have permission to edit tribe profile.'];
+                break;
+            }
+            $tribeId = (int)($_POST['tribe_id'] ?? 0);
+            $description = $_POST['tribe_description'] ?? '';
+            $internalText = $_POST['tribe_internal'] ?? '';
+            $result = $tribeManager->updateTribeProfile($tribeId, $user_id, $description, $internalText);
+            break;
+        case 'update_policy':
+            if (!$currentTribeForAction || !$tribeManager->roleHasPermission($currentTribeForAction['role'], 'edit_profile')) {
+                $result = ['success' => false, 'message' => 'You do not have permission to edit recruitment policy.'];
+                break;
+            }
+            $tribeId = (int)($_POST['tribe_id'] ?? 0);
+            $policy = $_POST['tribe_policy'] ?? 'invite';
+            $result = $tribeManager->updateRecruitmentPolicy($tribeId, $user_id, $policy);
             break;
         case 'cancel_invite':
             $tribeId = (int)($_POST['tribe_id'] ?? 0);
@@ -140,6 +169,7 @@ $tribeSkills = $currentTribe ? $tribeProgression->getTribeSkills((int)$currentTr
 $tribeQuests = $currentTribe ? $tribeProgression->getTribeQuests((int)$currentTribe['id']) : [];
 $availableSkillPoints = $currentTribe ? $tribeProgression->getAvailableSkillPoints((int)$currentTribe['id']) : 0;
 $canManageRoles = $currentTribe ? $tribeManager->roleHasPermission($currentTribe['role'], 'manage_roles') : false;
+$canEditProfile = $currentTribe ? $tribeManager->roleHasPermission($currentTribe['role'], 'edit_profile') : false;
 $canManageDiplomacy = $currentTribe ? $tribeManager->roleHasPermission($currentTribe['role'], 'diplomacy') : false;
 $canUseForum = $currentTribe ? $tribeManager->roleHasPermission($currentTribe['role'], 'forum') : false;
 $diplomacyRelations = $currentTribe ? $tribeManager->getDiplomacyRelations((int)$currentTribe['id']) : [];
@@ -161,6 +191,32 @@ $allowedRoles = [
     'officer' => 'Officer',
     'member' => 'Member'
 ];
+$activityLog = $currentTribe ? $tribeManager->getActivityLog((int)$currentTribe['id'], 15) : [];
+$canCreateTribe = $userPoints >= 500;
+
+function formatTribeAction(string $action, array $meta): string {
+    return match ($action) {
+        'invite_sent' => 'Sent an invitation to ' . htmlspecialchars($meta['target_username'] ?? '?'),
+        'invite_accepted' => 'Accepted a tribe invitation',
+        'invite_declined' => 'Declined a tribe invitation',
+        'application_submitted' => 'Submitted a tribe application',
+        'application_declined' => 'Declined a tribe application',
+        'application_accepted' => 'Accepted a tribe application',
+        'profile_updated' => 'Updated tribe profile',
+        'policy_updated' => 'Updated recruitment policy',
+        default => ucfirst(str_replace('_', ' ', $action)),
+    };
+}
+
+function formatRecruitmentPolicy(?string $policy): string {
+    return match (strtolower((string)$policy)) {
+        'open' => 'Open (anyone can join)',
+        'application' => 'Application only',
+        'invite' => 'Invite only',
+        'closed' => 'Closed (no new members)',
+        default => 'Invite only',
+    };
+}
 
 $pageTitle = 'Tribe';
 require '../header.php';
@@ -223,7 +279,68 @@ require '../header.php';
                 <section class="tribe-description" style="background:#fff;border:1px solid #e0c9a6;border-radius:10px;padding:16px;margin-bottom:16px;">
                     <h3 style="margin-top:0;margin-bottom:8px;">Tribe description</h3>
                     <p style="margin:0;color:#4a3c30;"><?= nl2br(htmlspecialchars($currentTribe['description'] ?? 'No description set.')) ?></p>
+                    <div style="margin-top:12px;color:#6b5948;">
+                        <strong>Internal notes (tribe-only):</strong><br>
+                        <?= nl2br(htmlspecialchars($currentTribe['internal_text'] ?? 'No internal notes set.')) ?>
+                    </div>
+                    <div style="margin-top:10px;color:#5a4637;">
+                        <strong>Recruitment policy:</strong>
+                        <span><?= htmlspecialchars(formatRecruitmentPolicy($currentTribe['recruitment_policy'] ?? 'invite')) ?></span>
+                    </div>
+                    <?php if ($canEditProfile): ?>
+                        <form method="POST" action="tribe.php" style="margin-top:14px;display:grid;gap:10px;">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                            <input type="hidden" name="action" value="update_description">
+                            <input type="hidden" name="tribe_id" value="<?= (int)$currentTribe['id'] ?>">
+                            <label>
+                                <span style="font-weight:600;">Public description</span>
+                                <textarea name="tribe_description" rows="3" maxlength="2000" style="width:100%;padding:8px;border:1px solid #d7c3a6;border-radius:6px;"><?= htmlspecialchars($currentTribe['description'] ?? '') ?></textarea>
+                            </label>
+                            <label>
+                                <span style="font-weight:600;">Internal notes (visible to tribe)</span>
+                                <textarea name="tribe_internal" rows="3" maxlength="2000" style="width:100%;padding:8px;border:1px solid #d7c3a6;border-radius:6px;"><?= htmlspecialchars($currentTribe['internal_text'] ?? '') ?></textarea>
+                            </label>
+                            <button type="submit" class="btn btn-primary" style="max-width:200px;">Save profile</button>
+                        </form>
+                        <form method="POST" action="tribe.php" style="margin-top:10px;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                            <input type="hidden" name="action" value="update_policy">
+                            <input type="hidden" name="tribe_id" value="<?= (int)$currentTribe['id'] ?>">
+                            <label style="display:flex;flex-direction:column;gap:4px;">
+                                <span style="font-weight:600;">Update recruitment policy</span>
+                                <select name="tribe_policy" style="min-width:200px;">
+                                    <?php
+                                    $policies = ['open' => 'Open (anyone can join)', 'application' => 'Application only', 'invite' => 'Invite only', 'closed' => 'Closed'];
+                                    $currentPolicy = strtolower($currentTribe['recruitment_policy'] ?? 'invite');
+                                    foreach ($policies as $value => $label):
+                                    ?>
+                                        <option value="<?= $value ?>" <?= $value === $currentPolicy ? 'selected' : '' ?>><?= $label ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </label>
+                            <button type="submit" class="btn btn-secondary">Save policy</button>
+                        </form>
+                    <?php endif; ?>
                 </section>
+
+                <?php if (!empty($activityLog)): ?>
+                <section class="tribe-activity" style="background:#fff;border:1px solid #e0c9a6;border-radius:10px;padding:16px;margin-bottom:16px;">
+                    <h3 style="margin-top:0;margin-bottom:8px;">Recent tribe activity</h3>
+                    <ul style="list-style:none;padding:0;margin:0;display:grid;gap:6px;">
+                        <?php foreach ($activityLog as $entry): 
+                            $meta = $entry['meta'] ? json_decode($entry['meta'], true) : [];
+                            ?>
+                            <li style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:1px dashed #e9d9c0;padding-bottom:6px;">
+                                <div>
+                                    <strong><?= htmlspecialchars($entry['username'] ?? 'Unknown') ?></strong>
+                                    <span style="color:#6b5948;">&middot; <?= formatTribeAction($entry['action'], is_array($meta) ? $meta : []) ?></span>
+                                </div>
+                                <span style="color:#8d7a67;font-size:12px;white-space:nowrap;"><?= htmlspecialchars($entry['created_at']) ?></span>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </section>
+                <?php endif; ?>
 
                 <section class="tribe-diplomacy" style="background:#fff;border:1px solid #e0c9a6;border-radius:10px;padding:16px;margin-bottom:16px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -538,6 +655,7 @@ require '../header.php';
 
                 <section class="form-container" style="border:1px solid #e0c9a6;">
                     <h3>Create a tribe</h3>
+                    <p style="margin-top:0;color:#7a6347;">Requires at least 500 points. You currently have <?= formatNumber($userPoints) ?> points.</p>
                     <form method="POST" action="tribe.php">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                         <input type="hidden" name="action" value="create">
@@ -550,8 +668,19 @@ require '../header.php';
                         <label for="tribe_description">Description</label>
                         <textarea id="tribe_description" name="tribe_description" rows="4" placeholder="Tell others about your tribe"></textarea>
 
-                        <button type="submit" class="btn btn-primary mt-2">Create tribe</button>
+                        <label for="tribe_policy">Recruitment policy</label>
+                        <select id="tribe_policy" name="tribe_policy">
+                            <option value="open">Open</option>
+                            <option value="application">Application only</option>
+                            <option value="invite" selected>Invite only</option>
+                            <option value="closed">Closed</option>
+                        </select>
+
+                        <button type="submit" class="btn btn-primary mt-2" <?= $canCreateTribe ? '' : 'disabled' ?>>Create tribe</button>
                     </form>
+                    <?php if (!$canCreateTribe): ?>
+                        <p style="color:#b23b3b;margin-top:8px;">Earn more points to unlock tribe creation.</p>
+                    <?php endif; ?>
                 </section>
 
                 <section class="tribe-invitations" style="background:#fff;border:1px solid #e0c9a6;border-radius:10px;padding:16px;margin-top:16px;">

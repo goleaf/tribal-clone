@@ -10,13 +10,25 @@ class CronRunner
     private VillageManager $villageManager;
     private BattleManager $battleManager;
     private NotificationManager $notificationManager;
+    private $tribeDiplomacyManager;
+    private ?TribeManager $tribeManager;
 
-    public function __construct($conn, VillageManager $villageManager, BattleManager $battleManager, NotificationManager $notificationManager)
+    public function __construct($conn, VillageManager $villageManager, BattleManager $battleManager, NotificationManager $notificationManager, ?TribeManager $tribeManager = null)
     {
         $this->conn = $conn;
         $this->villageManager = $villageManager;
         $this->battleManager = $battleManager;
         $this->notificationManager = $notificationManager;
+        if (!class_exists('TribeDiplomacyManager')) {
+            require_once __DIR__ . '/TribeDiplomacyManager.php';
+        }
+        if (class_exists('TribeDiplomacyManager')) {
+            $this->tribeDiplomacyManager = new TribeDiplomacyManager($conn);
+        }
+        $this->tribeManager = $tribeManager;
+        if ($this->tribeManager === null && class_exists('TribeManager')) {
+            $this->tribeManager = new TribeManager($conn);
+        }
     }
 
     public function run(): array
@@ -25,7 +37,9 @@ class CronRunner
             'villages_processed' => 0,
             'task_messages' => 0,
             'attack_messages' => 0,
-            'abandoned_converted' => 0
+            'abandoned_converted' => 0,
+            'wars_started' => 0,
+            'tribes_disbanded' => 0
         ];
 
         $villagesStmt = $this->conn->prepare("SELECT id, user_id FROM villages WHERE user_id > 0");
@@ -58,8 +72,17 @@ class CronRunner
             }
         }
 
+        if ($this->tribeDiplomacyManager) {
+            $processedWars = $this->tribeDiplomacyManager->processPendingWars();
+            $summary['wars_started'] = count($processedWars);
+        }
+
         if (defined('INACTIVE_TO_BARBARIAN_DAYS') && dbColumnExists($this->conn, 'users', 'last_activity_at')) {
             $summary['abandoned_converted'] = $this->convertInactivePlayersToBarbarians((int)INACTIVE_TO_BARBARIAN_DAYS);
+        }
+
+        if ($this->tribeManager) {
+            $summary['tribes_disbanded'] = $this->tribeManager->disbandInactiveTribes(3, 14);
         }
 
         return $summary;

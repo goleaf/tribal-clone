@@ -13,6 +13,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 $user_id = (int)$_SESSION['user_id'];
 $userTribeId = null;
+$lastModifiedTs = 0;
 if ($user_id) {
     $stmtUser = $conn->prepare("SELECT ally_id FROM users WHERE id = ? LIMIT 1");
     if ($stmtUser) {
@@ -85,6 +86,10 @@ while ($row = $result->fetch_assoc()) {
     $villageOwnerId = isset($row['user_id']) ? (int)$row['user_id'] : null;
     $ownerType = ($villageOwnerId === null || $villageOwnerId === -1) ? 'barbarian' : 'player';
     $isOwn = $villageOwnerId === $user_id;
+    $createdAtTs = isset($row['created_at']) ? strtotime($row['created_at']) : 0;
+    if ($createdAtTs > $lastModifiedTs) {
+        $lastModifiedTs = $createdAtTs;
+    }
 
     $userRow = [
         'id' => $villageOwnerId,
@@ -164,6 +169,13 @@ if ($movementsStmt) {
         $sourceId = (int)$move['source_village_id'];
         $targetId = (int)$move['target_village_id'];
         $arrivalTs = strtotime($move['arrival_time']);
+        $startTs = isset($move['start_time']) ? strtotime($move['start_time']) : 0;
+        if ($arrivalTs > $lastModifiedTs) {
+            $lastModifiedTs = $arrivalTs;
+        }
+        if ($startTs > $lastModifiedTs) {
+            $lastModifiedTs = $startTs;
+        }
 
         if (isset($villagesById[$sourceId])) {
             $villages[$villagesById[$sourceId]]['movements'][] = [
@@ -220,11 +232,15 @@ if ($boundsStmt) {
             'min_y' => (int)$boundsRow['min_y'],
             'max_y' => (int)$boundsRow['max_y']
         ];
+        $boundsUpdatedTs = time();
+        if ($boundsUpdatedTs > $lastModifiedTs) {
+            $lastModifiedTs = $boundsUpdatedTs;
+        }
     }
     $boundsStmt->close();
 }
 
-echo json_encode([
+$payload = [
     'center' => ['x' => $centerX, 'y' => $centerY],
     'size' => $size,
     'villages' => $villages,
@@ -234,7 +250,38 @@ echo json_encode([
     'world_bounds' => $worldBounds,
     'my_tribe_id' => $userTribeId,
     'diplomacy' => fetchTribeDiplomacy($conn, $userTribeId)
-]);
+];
+
+$json = json_encode($payload);
+if ($json === false) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Failed to encode map data']);
+    exit;
+}
+
+$etag = '"' . sha1($json) . '"';
+$lastModifiedTs = $lastModifiedTs ?: time();
+$lastModifiedHeader = gmdate('D, d M Y H:i:s', $lastModifiedTs) . ' GMT';
+
+header('Cache-Control: public, max-age=15, must-revalidate');
+header('ETag: ' . $etag);
+header('Last-Modified: ' . $lastModifiedHeader);
+
+$ifNoneMatch = $_SERVER['HTTP_IF_NONE_MATCH'] ?? '';
+$ifModifiedSince = $_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? '';
+$ifModifiedSinceTs = $ifModifiedSince ? strtotime($ifModifiedSince) : 0;
+
+if ($ifNoneMatch && trim($ifNoneMatch) === $etag) {
+    http_response_code(304);
+    exit;
+}
+
+if ($ifModifiedSinceTs && $ifModifiedSinceTs >= $lastModifiedTs) {
+    http_response_code(304);
+    exit;
+}
+
+echo $json;
 
 function fetchTribeDiplomacy($conn, ?int $tribeId): array
 {

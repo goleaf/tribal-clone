@@ -5,6 +5,7 @@ require_once __DIR__ . '/../lib/managers/VillageManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingManager.php';
 require_once __DIR__ . '/../lib/managers/BattleManager.php';
+require_once __DIR__ . '/../lib/managers/ReportStateManager.php';
 
 // Ensure the user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -14,26 +15,27 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
+$villageManager = new VillageManager($conn);
+$buildingConfigManager = new BuildingConfigManager($conn);
+$buildingManager = new BuildingManager($conn, $buildingConfigManager);
+$battleManager = new BattleManager($conn, $villageManager, $buildingManager);
+$reportStateManager = new ReportStateManager($conn);
+
 // Handle AJAX requests for report details
 if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest' && isset($_GET['report_id'])) {
     $report_id = (int)$_GET['report_id'];
-    
-    $villageManager = new VillageManager($conn);
-    $buildingConfigManager = new BuildingConfigManager($conn);
-    $buildingManager = new BuildingManager($conn, $buildingConfigManager);
-    $battleManager = new BattleManager($conn, $villageManager, $buildingManager);
-    
     $result = $battleManager->getBattleReport($report_id, $user_id);
+    if ($result['success']) {
+        $reportStateManager->markRead($report_id, $user_id);
+        $state = $reportStateManager->getState($report_id, $user_id);
+        $result['report']['is_starred'] = $state['is_starred'];
+        $result['report']['is_read'] = $state['is_read'];
+    }
     
     header('Content-Type: application/json');
     echo json_encode($result);
     exit(); // Stop execution after returning JSON
 }
-
-$villageManager = new VillageManager($conn);
-$buildingConfigManager = new BuildingConfigManager($conn);
-$buildingManager = new BuildingManager($conn, $buildingConfigManager);
-$battleManager = new BattleManager($conn, $villageManager, $buildingManager);
 
 $username = $_SESSION['username'];
 
@@ -67,13 +69,23 @@ if (isset($_GET['report_id'])) {
     $result = $battleManager->getBattleReport($report_id, $user_id);
     
     if ($result['success']) {
+        $reportStateManager->markRead($report_id, $user_id);
+        $state = $reportStateManager->getState($report_id, $user_id);
         $report_details = $result['report'];
+        $report_details['is_starred'] = $state['is_starred'];
+        $report_details['is_read'] = $state['is_read'];
     }
 }
 
 // Fetch battle reports the user participated in (with pagination)
 $reports = $battleManager->getBattleReportsForUser($user_id, $reportsPerPage, $offset);
-$unreadCount = 0;
+foreach ($reports as &$report) {
+    $state = $reportStateManager->getState((int)$report['report_id'], $user_id);
+    $report['is_starred'] = $state['is_starred'] ?? 0;
+    $report['is_read'] = $state['is_read'] ?? 0;
+}
+unset($report);
+$unreadCount = $reportStateManager->countUnreadForUser($user_id);
 
 $pageTitle = 'Battle reports'; // Will become generic "Reports" once other types are added
 require '../header.php';
@@ -109,7 +121,7 @@ require '../header.php';
                     </div>
                     <div class="stat-card" style="background:#fff;border:1px solid #e0c9a6;border-radius:8px;padding:12px 16px;min-width:160px;">
                         <div style="font-size:12px;text-transform:uppercase;color:#8d5c2c;letter-spacing:0.03em;">Unread</div>
-                        <div style="font-size:22px;font-weight:700;"><?= (int)$unreadCount ?></div>
+                        <div style="font-size:22px;font-weight:700;" data-unread-count><?= (int)$unreadCount ?></div>
                     </div>
                     <div class="stat-card" style="background:#fff;border:1px solid #e0c9a6;border-radius:8px;padding:12px 16px;min-width:160px;">
                         <div style="font-size:12px;text-transform:uppercase;color:#8d5c2c;letter-spacing:0.03em;">Page</div>
@@ -134,10 +146,13 @@ require '../header.php';
                     <!-- Reports list -->
                     <div class="reports-list">
                         <?php foreach ($reports as $report): ?>
-                            <div class="report-item" data-report-id="<?= $report['report_id'] ?>">
+                            <div class="report-item <?= empty($report['is_read']) ? 'unread' : '' ?> <?= !empty($report['is_starred']) ? 'starred' : '' ?>" data-report-id="<?= $report['report_id'] ?>" data-read="<?= !empty($report['is_read']) ? '1' : '0' ?>" data-starred="<?= !empty($report['is_starred']) ? '1' : '0' ?>">
                                 <div class="report-title">
                                     <span class="report-icon"><?= $report['attacker_won'] ? '&#9876;' : '&#128737;' ?></span>
-                                    <?= ucfirst($report['type']) ?> - <?= htmlspecialchars($report['source_village_name']) ?> (<?= $report['source_x'] ?>|<?= $report['source_y'] ?>) → <?= htmlspecialchars($report['target_village_name']) ?> (<?= $report['target_x'] ?>|<?= $report['target_y'] ?>)
+                                    <span class="report-name"><?= ucfirst($report['type']) ?> - <?= htmlspecialchars($report['source_village_name']) ?> (<?= $report['source_x'] ?>|<?= $report['source_y'] ?>) → <?= htmlspecialchars($report['target_village_name']) ?> (<?= $report['target_x'] ?>|<?= $report['target_y'] ?>)</span>
+                                    <button type="button" class="report-star<?= !empty($report['is_starred']) ? ' active' : '' ?>" data-report-id="<?= $report['report_id'] ?>" data-starred="<?= !empty($report['is_starred']) ? '1' : '0' ?>" aria-pressed="<?= !empty($report['is_starred']) ? 'true' : 'false' ?>" title="<?= !empty($report['is_starred']) ? 'Starred report' : 'Mark as important' ?>">
+                                        <?= !empty($report['is_starred']) ? '★' : '☆' ?>
+                                    </button>
                                 </div>
                                 <div class="report-villages">
                                     From: <?= htmlspecialchars($report['attacker_name']) ?> (<?= htmlspecialchars($report['source_village_name']) ?>) To: <?= htmlspecialchars($report['defender_name']) ?> (<?= htmlspecialchars($report['target_village_name']) ?>)
@@ -189,6 +204,9 @@ require '../header.php';
 document.addEventListener('DOMContentLoaded', () => {
     const reportsList = document.querySelector('.reports-list');
     const reportDetailsArea = document.getElementById('report-details');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    let unreadCount = <?= (int)$unreadCount ?>;
+    const unreadCountEl = document.querySelector('[data-unread-count]');
 
     function formatDateTime(datetimeString) {
         const date = new Date(datetimeString);
@@ -204,6 +222,71 @@ document.addEventListener('DOMContentLoaded', () => {
         const div = document.createElement('div');
         div.appendChild(document.createTextNode(str));
         return div.innerHTML;
+    }
+
+    function updateUnreadDisplay() {
+        if (unreadCountEl) {
+            unreadCountEl.textContent = unreadCount;
+        }
+    }
+
+    function markListItemRead(reportId) {
+        if (!reportsList) return;
+        const item = reportsList.querySelector(`.report-item[data-report-id="${reportId}"]`);
+        if (item && item.dataset.read !== '1') {
+            item.dataset.read = '1';
+            item.classList.remove('unread');
+            unreadCount = Math.max(0, unreadCount - 1);
+            updateUnreadDisplay();
+        }
+    }
+
+    function setStarButtonState(button, isStarred) {
+        button.dataset.starred = isStarred ? '1' : '0';
+        const isListButton = button.classList.contains('report-star');
+        button.textContent = isListButton ? (isStarred ? '★' : '☆') : (isStarred ? 'Unstar' : 'Star');
+        button.setAttribute('aria-pressed', isStarred ? 'true' : 'false');
+        button.classList.toggle('active', isStarred);
+        button.title = isStarred ? 'Starred report' : 'Mark as important';
+    }
+
+    function syncListStar(reportId, isStarred) {
+        if (!reportsList) return;
+        const item = reportsList.querySelector(`.report-item[data-report-id="${reportId}"]`);
+        if (!item) return;
+        item.dataset.starred = isStarred ? '1' : '0';
+        item.classList.toggle('starred', isStarred);
+        const starBtn = item.querySelector('.report-star');
+        if (starBtn) {
+            setStarButtonState(starBtn, isStarred);
+        }
+    }
+
+    function toggleStar(reportId, shouldStar) {
+        const payload = new URLSearchParams();
+        payload.set('report_id', reportId);
+        payload.set('starred', shouldStar ? '1' : '0');
+        if (csrfToken) {
+            payload.set('csrf_token', csrfToken);
+        }
+
+        return fetch('../ajax/reports/toggle_star.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: payload.toString()
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Request failed.');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    return true;
+                }
+                throw new Error(data.message || 'Could not update star.');
+            });
     }
 
     function renderUnitsTable(units) {
@@ -310,6 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const report = reportData.report;
         const details = report.details || {};
         const type = report.type || report.attack_type || details.type || 'battle';
+        const isStarred = !!report.is_starred;
         let detailsHtml = `
             <div class="report-details-content">
                 <div class="report-header">
@@ -383,6 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         detailsHtml += `
                 <div class="report-actions">
+                    <button class="btn-secondary toggle-star ${isStarred ? 'active' : ''}" data-report-id="${report.id}" data-starred="${isStarred ? '1' : '0'}" aria-pressed="${isStarred ? 'true' : 'false'}">${isStarred ? 'Unstar' : 'Star'}</button>
                     <button class="btn-secondary copy-link" data-link="reports.php?report_id=${report.id}">Copy share link</button>
                     <button class="btn-secondary share-tribe" disabled title="Tribe sharing coming soon">Share with tribe</button>
                     <button class="btn-secondary forward-report" disabled title="Forwarding to players coming soon">Forward to player</button>
@@ -391,6 +476,25 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         reportDetailsArea.innerHTML = detailsHtml;
+
+        const starBtn = reportDetailsArea.querySelector('.toggle-star');
+        if (starBtn) {
+            starBtn.addEventListener('click', () => {
+                const nextState = starBtn.dataset.starred === '1' ? false : true;
+                starBtn.disabled = true;
+                toggleStar(report.id, nextState)
+                    .then(() => {
+                        setStarButtonState(starBtn, nextState);
+                        syncListStar(report.id, nextState);
+                    })
+                    .catch(error => {
+                        alert(error.message || 'Could not update star state.');
+                    })
+                    .finally(() => {
+                        starBtn.disabled = false;
+                    });
+            });
+        }
 
         // Wire copy action
         const copyBtn = reportDetailsArea.querySelector('.copy-link');
@@ -426,6 +530,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (data.success) {
                     renderReportDetails(data);
+                    if (data.report && data.report.id) {
+                        markListItemRead(data.report.id);
+                        syncListStar(data.report.id, !!data.report.is_starred);
+                    }
                 } else {
                     reportDetailsArea.innerHTML = `<p class="error-message">${escapeHTML(data.message || data.error || 'Failed to load the report.')}</p>`;
                 }
@@ -439,6 +547,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (reportsList && reportDetailsArea) {
         reportsList.addEventListener('click', (event) => {
+            const starBtn = event.target.closest('.report-star');
+            if (starBtn) {
+                event.stopPropagation();
+                const reportId = starBtn.dataset.reportId || starBtn.closest('.report-item')?.dataset.reportId;
+                if (!reportId) return;
+                const nextState = starBtn.dataset.starred === '1' ? false : true;
+                starBtn.disabled = true;
+                toggleStar(reportId, nextState)
+                    .then(() => {
+                        setStarButtonState(starBtn, nextState);
+                        syncListStar(reportId, nextState);
+                        const detailStar = reportDetailsArea.querySelector('.toggle-star');
+                        if (detailStar && detailStar.dataset.reportId === reportId) {
+                            setStarButtonState(detailStar, nextState);
+                        }
+                    })
+                    .catch(error => alert(error.message || 'Could not update star state.'))
+                    .finally(() => {
+                        starBtn.disabled = false;
+                    });
+                return;
+            }
+
             const reportItem = event.target.closest('.report-item');
             if (reportItem) {
                 const reportId = reportItem.dataset.reportId;

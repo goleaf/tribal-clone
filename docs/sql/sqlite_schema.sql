@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS tribes (
     tag TEXT NOT NULL UNIQUE,
     description TEXT DEFAULT '',
     internal_text TEXT DEFAULT '',
+    recruitment_policy TEXT NOT NULL DEFAULT 'invite',
     founder_id INTEGER NOT NULL,
     points INTEGER NOT NULL DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -486,6 +487,19 @@ CREATE TABLE IF NOT EXISTS tribe_forum_posts (
 CREATE INDEX IF NOT EXISTS idx_villages_user ON villages(user_id);
 CREATE INDEX IF NOT EXISTS idx_village_buildings_village ON village_buildings(village_id);
 CREATE INDEX IF NOT EXISTS idx_village_buildings_type ON village_buildings(building_type_id);
+
+-- Performance indexes
+CREATE INDEX IF NOT EXISTS idx_attacks_arrival ON attacks(arrival_time);
+CREATE INDEX IF NOT EXISTS idx_attacks_target_arrival ON attacks(target_village_id, arrival_time);
+CREATE INDEX IF NOT EXISTS idx_attacks_source_arrival ON attacks(source_village_id, arrival_time);
+CREATE INDEX IF NOT EXISTS idx_battle_reports_target_time ON battle_reports(target_village_id, battle_time);
+CREATE INDEX IF NOT EXISTS idx_battle_reports_source_time ON battle_reports(source_village_id, battle_time);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read, expires_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_expires ON notifications(expires_at);
+CREATE INDEX IF NOT EXISTS idx_trade_offers_source_status ON trade_offers(source_village_id, status, created_at);
+CREATE INDEX IF NOT EXISTS idx_trade_offers_status_created ON trade_offers(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_trade_routes_source_arrival ON trade_routes(source_village_id, arrival_time);
+CREATE INDEX IF NOT EXISTS idx_trade_routes_target_arrival ON trade_routes(target_village_id, arrival_time);
 CREATE INDEX IF NOT EXISTS idx_building_queue_village_finish ON building_queue(village_id, finish_time);
 CREATE INDEX IF NOT EXISTS idx_building_queue_building ON building_queue(village_building_id);
 CREATE INDEX IF NOT EXISTS idx_unit_queue_village_finish ON unit_queue(village_id, finish_at);
@@ -544,28 +558,45 @@ INSERT INTO unit_types (
     required_tech, required_tech_level, required_building_level,
     training_time_base, is_active, points
 ) VALUES
-('spear', 'Spearman', 'Basic infantry, strong against cavalry.', 'barracks', 10, 15, 45, 20, 14, 25, 1, 50, 30, 10, NULL, 0, 1, 90, 1, 1),
-('sword', 'Swordsman', 'Stronger infantry, solid versus other infantry.', 'barracks', 25, 50, 40, 30, 14, 15, 1, 30, 30, 70, NULL, 0, 1, 110, 1, 1),
-('axe', 'Axeman', 'Powerful infantry attacker.', 'barracks', 40, 10, 5, 10, 14, 10, 1, 60, 30, 40, NULL, 0, 2, 95, 1, 2),
-('archer', 'Archer', 'Ranged infantry for attack and defense.', 'barracks', 15, 50, 40, 5, 18, 10, 1, 100, 30, 60, 'improved_axe', 1, 5, 1800, 1, 2),
-('spy', 'Scout', 'Fast cavalry scout.', 'stable', 0, 2, 2, 2, 9, 0, 2, 50, 50, 20, NULL, 0, 1, 900, 1, 2),
-('light', 'Light Cavalry', 'Fast attacking cavalry.', 'stable', 130, 30, 40, 30, 9, 80, 4, 125, 100, 250, NULL, 0, 1, 400, 1, 4),
-('heavy', 'Heavy Cavalry', 'Powerful cavalry for attack and defense.', 'stable', 150, 200, 150, 120, 11, 50, 6, 200, 150, 600, 'improved_sword', 2, 3, 900, 1, 6),
-('marcher', 'Mounted Archer', 'Ranged cavalry unit.', 'stable', 120, 50, 40, 150, 10, 50, 5, 250, 100, 150, 'horseshoe', 1, 3, 700, 1, 5),
-('ram', 'Ram', 'Siege unit for breaking walls.', 'workshop', 2, 20, 50, 20, 30, 0, 5, 300, 200, 200, NULL, 0, 1, 600, 1, 5),
-('catapult', 'Catapult', 'Siege unit for destroying buildings.', 'workshop', 100, 100, 100, 100, 30, 0, 8, 320, 400, 100, 'improved_catapult', 1, 2, 900, 1, 8),
-('noble', 'Nobleman', 'Reduces loyalty and conquers villages.', 'academy', 30, 100, 50, 50, 35, 0, 100, 40000, 50000, 50000, NULL, 0, 1, 18000, 1, 80),
-('paladin', 'Paladin', 'Heroic leader that boosts armies.', 'statue', 150, 250, 200, 180, 10, 100, 20, 20000, 20000, 40000, NULL, 0, 1, 3600, 1, 10);
+('tribesman', 'Tribesman', 'Basic infantry unit, defensive backbone.', 'barracks', 12, 20, 15, 10, 18, 25, 1, 40, 30, 20, NULL, 0, 1, 300, 1, 1),
+('spearguard', 'Spearguard', 'Anti-cavalry specialist, defensive formation fighter.', 'barracks', 10, 30, 60, 20, 20, 15, 1, 50, 60, 30, 'spear_training', 1, 5, 420, 1, 1),
+('axe_warrior', 'Axe Warrior', 'Offensive infantry, breakthrough unit.', 'barracks', 45, 20, 15, 10, 18, 35, 1, 70, 40, 60, 'advanced_weapons', 1, 6, 480, 1, 2),
+('bowman', 'Bowman', 'Basic ranged unit, defensive support.', 'barracks', 25, 10, 20, 5, 18, 20, 1, 60, 30, 40, 'archery', 1, 2, 600, 1, 1),
+('slinger', 'Slinger', 'Anti-armor ranged, siege support.', 'barracks', 25, 12, 30, 8, 18, 15, 1, 40, 40, 20, 'ranged_warfare', 1, 4, 540, 1, 1),
+('scout', 'Scout', 'Intelligence gathering, fastest unit.', 'barracks', 0, 2, 2, 2, 5, 0, 1, 50, 30, 20, NULL, 0, 1, 180, 1, 1),
+('raider', 'Raider', 'Fast raiding cavalry.', 'stable', 60, 20, 15, 15, 8, 80, 2, 100, 50, 80, 'horse_breeding', 1, 1, 600, 1, 3),
+('lancer', 'Lancer', 'Heavy cavalry, shock troops.', 'stable', 150, 60, 40, 30, 9, 40, 3, 150, 120, 200, 'heavy_cavalry', 1, 5, 1200, 1, 5),
+('horse_archer', 'Horse Archer', 'Mobile ranged harassment, skirmisher.', 'stable', 80, 35, 30, 40, 9, 30, 3, 140, 80, 160, 'mounted_archery', 1, 10, 1200, 1, 5),
+('supply_cart', 'Supply Cart', 'Army logistics, extended campaigns.', 'workshop', 0, 10, 5, 5, 30, 500, 4, 200, 200, 100, 'logistics', 1, 3, 1800, 1, 4),
+('battering_ram', 'Battering Ram', 'Wall breaching, gate destruction.', 'workshop', 2, 20, 50, 20, 30, 0, 5, 300, 200, 200, 'siege_warfare', 1, 8, 2400, 1, 5),
+('catapult', 'Catapult', 'Long-range siege, wall destruction.', 'workshop', 100, 100, 100, 100, 35, 0, 8, 320, 400, 150, 'artillery', 1, 12, 3000, 1, 8),
+('berserker', 'Berserker', 'Elite shock infantry, morale breaker.', 'barracks', 200, 60, 40, 40, 15, 30, 2, 160, 120, 150, 'battle_rage', 1, 15, 2400, 1, 6),
+('shieldmaiden', 'Shieldmaiden', 'Elite defensive unit, formation anchor.', 'barracks', 60, 220, 220, 180, 20, 20, 2, 120, 160, 150, 'elite_training', 1, 15, 2400, 1, 6),
+('warlord', 'Warlord', 'Army commander, cavalry elite.', 'stable', 220, 180, 150, 150, 9, 50, 5, 400, 300, 300, 'leadership', 1, 20, 7200, 1, 10),
+('rune_priest', 'Rune Priest', 'Mystical support, morale and blessing.', 'church', 0, 30, 30, 30, 20, 0, 3, 150, 150, 200, 'divine_blessing', 1, 15, 3600, 1, 4);
 
 INSERT INTO research_types (internal_name, name, description, building_type, required_building_level, cost_wood, cost_clay, cost_iron, research_time_base, research_time_factor, max_level, is_active, prerequisite_research_id, prerequisite_research_level) VALUES
-('improved_axe', 'Improved Axe', 'Increases infantry attack by 10% per level.', 'smithy', 1, 180, 150, 220, 3600, 1.2, 3, 1, NULL, NULL),
-('improved_armor', 'Improved Armor', 'Increases infantry defense by 10% per level.', 'smithy', 2, 200, 180, 240, 4200, 1.2, 3, 1, NULL, NULL),
-('improved_sword', 'Improved Sword', 'Increases cavalry attack by 10% per level.', 'smithy', 3, 220, 200, 260, 4800, 1.2, 3, 1, NULL, NULL),
-('horseshoe', 'Horseshoes', 'Increases cavalry speed by 10% per level.', 'smithy', 4, 240, 220, 280, 5400, 1.2, 3, 1, NULL, NULL),
-('improved_catapult', 'Improved Catapult', 'Increases catapult damage by 10% per level.', 'smithy', 5, 300, 280, 350, 6000, 1.2, 3, 1, NULL, NULL),
-('spying', 'Espionage', 'Enables more detailed scouting reports.', 'academy', 1, 400, 600, 500, 7200, 1.2, 3, 1, NULL, NULL),
-('improved_maps', 'Improved Maps', 'Expands visible map range.', 'academy', 2, 500, 700, 600, 8400, 1.2, 3, 1, NULL, NULL),
-('military_tactics', 'Military Tactics', 'Raises troop morale by 5% per level.', 'academy', 3, 600, 800, 700, 9600, 1.2, 3, 1, NULL, NULL);
+('basic_training', 'Basic Training', 'Faster unit training.', 'academy', 1, 200, 200, 150, 1800, 1.2, 1, 1, NULL, NULL),
+('iron_weapons', 'Iron Weapons', '+5% attack for infantry.', 'academy', 1, 200, 200, 200, 1800, 1.2, 1, 1, NULL, NULL),
+('leather_armor', 'Leather Armor', '+5% defense for infantry.', 'academy', 1, 200, 200, 200, 1800, 1.2, 1, 1, NULL, NULL),
+('horse_breeding', 'Horse Breeding', 'Unlock Raiders.', 'academy', 2, 300, 250, 250, 2400, 1.2, 1, 1, NULL, NULL),
+('archery', 'Archery', 'Unlock Bowmen.', 'academy', 2, 300, 250, 250, 2400, 1.2, 1, 1, NULL, NULL),
+('spear_training', 'Spear Training', 'Unlock Spearguard.', 'academy', 3, 400, 350, 300, 3600, 1.2, 1, 1, NULL, NULL),
+('advanced_weapons', 'Advanced Weapons', 'Unlock Axe Warriors.', 'academy', 4, 400, 350, 300, 3600, 1.2, 1, 1, NULL, NULL),
+('heavy_cavalry', 'Heavy Cavalry', 'Unlock Lancers.', 'academy', 5, 500, 450, 400, 4800, 1.2, 1, 1, NULL, NULL),
+('ranged_warfare', 'Ranged Warfare', 'Unlock Slingers.', 'academy', 4, 400, 350, 300, 3600, 1.2, 1, 1, NULL, NULL),
+('logistics', 'Logistics', 'Unlock Supply Carts.', 'academy', 3, 450, 400, 350, 3600, 1.2, 1, 1, NULL, NULL),
+('mounted_archery', 'Mounted Archery', 'Unlock Horse Archers.', 'academy', 7, 600, 600, 500, 5400, 1.2, 1, 1, NULL, NULL),
+('siege_warfare', 'Siege Warfare', 'Unlock Battering Rams.', 'academy', 8, 700, 650, 600, 5400, 1.2, 1, 1, NULL, NULL),
+('artillery', 'Artillery', 'Unlock Catapults.', 'academy', 12, 800, 800, 700, 6000, 1.2, 1, 1, NULL, NULL),
+('elite_training', 'Elite Training', 'Unlock Shieldmaidens.', 'academy', 10, 800, 750, 700, 6000, 1.2, 1, 1, NULL, NULL),
+('battle_rage', 'Battle Rage', 'Unlock Berserkers.', 'academy', 10, 850, 800, 750, 6000, 1.2, 1, 1, NULL, NULL),
+('leadership', 'Leadership', 'Unlock Warlords.', 'academy', 12, 1000, 900, 900, 7200, 1.2, 1, 1, NULL, NULL),
+('divine_blessing', 'Divine Blessing', 'Unlock Rune Priests.', 'academy', 12, 1000, 900, 900, 7200, 1.2, 1, 1, NULL, NULL),
+('fortification', 'Fortification', '+10% wall defense.', 'academy', 6, 500, 500, 500, 4200, 1.2, 1, 1, NULL, NULL),
+('advanced_tactics', 'Advanced Tactics', '+15% army efficiency.', 'academy', 8, 600, 600, 600, 5400, 1.2, 1, 1, NULL, NULL),
+('master_craftsmanship', 'Master Craftsmanship', '+20% all unit stats.', 'academy', 12, 1200, 1100, 1100, 7200, 1.2, 1, 1, NULL, NULL),
+('legendary_warfare', 'Legendary Warfare', 'Reduced elite unit costs.', 'academy', 12, 1200, 1100, 1100, 7200, 1.2, 1, 1, NULL, NULL);
 
 INSERT OR IGNORE INTO achievements (internal_name, name, description, category, condition_type, condition_target, condition_value, reward_wood, reward_clay, reward_iron, reward_points) VALUES
 ('first_steps', 'A New Beginning', 'Establish your first village and start constructing the Town Hall.', 'progression', 'building_level', 'main_building', 1, 150, 150, 150, 2),

@@ -158,8 +158,24 @@ Detailed documentation of the code and database can be found in the `docs/` dire
 - Village & Building System: `docs/village-building-system.md`
 - Core Gameplay Loop: `docs/core-gameplay-loop.md`
 - Tribes & Diplomacy: `docs/tribes-and-diplomacy.md`
+- Diplomacy States & War Declaration: `docs/diplomacy-states.md`
 - Combat & Battles: `docs/combat-and-battles.md`
+- Combat Anti-Abuse & Safety Rails: `docs/combat-anti-abuse.md`
 - Units & Roles: `docs/units-and-roles.md`
+- Scouting & Intel: `docs/scouting-and-intel.md`
+- World Map & Navigation: `docs/world-map-and-navigation.md`
+- Village Conquest & Control: `docs/village-conquest-and-control.md`
+- Core Game Vision: `docs/core-game-vision.md`
+- Performance & Scaling: `docs/performance-and-scaling.md`
+- Onboarding & Tutorial: `docs/onboarding-and-tutorial.md`
+- Performance & Scaling TODOs: `docs/performance-and-scaling-todos.md`
+- Tribes & Diplomacy TODOs: `docs/tribes-and-diplomacy-todos.md`
+- Full Gameplay Design: `docs/full-gameplay-design.md`
+- Originality Review: `docs/originality-review.md`
+- Security Hardening: `docs/security-hardening.md`
+- Fair Monetization Design: `docs/monetization-fair-design.md`
+- IP Safeguards Checklist: `docs/ip-safeguards.md`
+- AI Assistants & Automation Limits: `docs/ai-assistants-limits.md`
 
 ## Further Development
 

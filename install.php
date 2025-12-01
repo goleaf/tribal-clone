@@ -204,6 +204,44 @@ CREATE TABLE unit_queue (
 )");
 ensureIndex($db, 'idx_unit_queue_village', 'unit_queue(village_id, complete_at)');
 
+ensureTable($db, 'research_types', "
+CREATE TABLE research_types (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    internal_name TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT,
+    building_type TEXT NOT NULL,
+    required_building_level INTEGER NOT NULL DEFAULT 1,
+    cost_wood INTEGER NOT NULL DEFAULT 0,
+    cost_clay INTEGER NOT NULL DEFAULT 0,
+    cost_iron INTEGER NOT NULL DEFAULT 0,
+    research_time_base INTEGER NOT NULL DEFAULT 0,
+    research_time_factor REAL NOT NULL DEFAULT 1.2,
+    max_level INTEGER NOT NULL DEFAULT 1,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    prerequisite_research_id INTEGER DEFAULT NULL,
+    prerequisite_research_level INTEGER DEFAULT NULL
+)");
+
+ensureTable($db, 'village_research', "
+CREATE TABLE village_research (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    village_id INTEGER NOT NULL,
+    research_type_id INTEGER NOT NULL,
+    level INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(village_id, research_type_id)
+)");
+
+ensureTable($db, 'research_queue', "
+CREATE TABLE research_queue (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    village_id INTEGER NOT NULL,
+    research_type_id INTEGER NOT NULL,
+    level_after INTEGER NOT NULL,
+    started_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+    ends_at INTEGER NOT NULL
+)");
+
 ensureTable($db, 'troop_movements', "
 CREATE TABLE troop_movements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -304,20 +342,62 @@ seedIfEmpty($db, 'building_types', function (Database $db) {
 
 seedIfEmpty($db, 'unit_types', function (Database $db) {
     $units = [
-        // internal, name, building_type, attack, defense, def_cav, def_arch, speed, carry, pop, wood, clay, iron, training_time_base, req_building_level, points
-        ['spear', 'Spearman', 'barracks', 10, 15, 45, 20, 18, 25, 1, 50, 30, 10, 600, 1, 1],
-        ['sword', 'Swordsman', 'barracks', 25, 50, 15, 15, 22, 15, 1, 30, 30, 70, 900, 1, 1],
-        ['axe', 'Axeman', 'barracks', 40, 10, 5, 5, 18, 10, 1, 60, 30, 40, 900, 2, 2],
-        ['light', 'Light Cavalry', 'stable', 130, 40, 30, 30, 10, 80, 4, 125, 100, 250, 1800, 3, 4],
-        ['heavy', 'Heavy Cavalry', 'stable', 150, 200, 80, 80, 11, 50, 6, 200, 150, 600, 3600, 3, 6],
-        ['marcher', 'Mounted Archer', 'stable', 120, 40, 50, 120, 10, 50, 5, 250, 100, 150, 2400, 3, 5],
-        ['ram', 'Ram', 'workshop', 2, 20, 2, 2, 30, 0, 5, 300, 200, 100, 4800, 1, 5],
-        ['catapult', 'Catapult', 'workshop', 100, 100, 100, 100, 30, 0, 8, 320, 400, 100, 7200, 1, 8],
-        ['noble', 'Nobleman', 'academy', 30, 100, 100, 100, 35, 0, 100, 40000, 50000, 50000, 36000, 1, 40],
-        ['paladin', 'Paladin', 'statue', 150, 200, 200, 200, 30, 0, 10, 400, 400, 200, 7200, 1, 20],
+        // internal, name, building_type, attack, defense, def_cav, def_arch, speed, carry, pop, wood, clay, iron, required_tech, required_tech_level, required_building_level, training_time_base, is_active, points
+        ['tribesman', 'Tribesman', 'barracks', 12, 20, 15, 10, 18, 25, 1, 40, 30, 20, null, 0, 1, 300, 1, 1],
+        ['spearguard', 'Spearguard', 'barracks', 10, 30, 60, 20, 20, 15, 1, 50, 60, 30, 'spear_training', 1, 5, 420, 1, 1],
+        ['axe_warrior', 'Axe Warrior', 'barracks', 45, 20, 15, 10, 18, 35, 1, 70, 40, 60, 'advanced_weapons', 1, 6, 480, 1, 2],
+        ['bowman', 'Bowman', 'barracks', 25, 10, 20, 5, 18, 20, 1, 60, 30, 40, 'archery', 1, 2, 600, 1, 1],
+        ['slinger', 'Slinger', 'barracks', 25, 12, 30, 8, 18, 15, 1, 40, 40, 20, 'ranged_warfare', 1, 4, 540, 1, 1],
+        ['scout', 'Scout', 'barracks', 0, 2, 2, 2, 5, 0, 1, 50, 30, 20, null, 0, 1, 180, 1, 1],
+        ['raider', 'Raider', 'stable', 60, 20, 15, 15, 8, 80, 2, 100, 50, 80, 'horse_breeding', 1, 1, 600, 1, 3],
+        ['lancer', 'Lancer', 'stable', 150, 60, 40, 30, 9, 40, 3, 150, 120, 200, 'heavy_cavalry', 1, 5, 1200, 1, 5],
+        ['horse_archer', 'Horse Archer', 'stable', 80, 35, 30, 40, 9, 30, 3, 140, 80, 160, 'mounted_archery', 1, 10, 1200, 1, 5],
+        ['supply_cart', 'Supply Cart', 'workshop', 0, 10, 5, 5, 30, 500, 4, 200, 200, 100, 'logistics', 1, 3, 1800, 1, 4],
+        ['battering_ram', 'Battering Ram', 'workshop', 2, 20, 50, 20, 30, 0, 5, 300, 200, 200, 'siege_warfare', 1, 8, 2400, 1, 5],
+        ['catapult', 'Catapult', 'workshop', 100, 100, 100, 100, 35, 0, 8, 320, 400, 150, 'artillery', 1, 12, 3000, 1, 8],
+        ['berserker', 'Berserker', 'barracks', 200, 60, 40, 40, 15, 30, 2, 160, 120, 150, 'battle_rage', 1, 15, 2400, 1, 6],
+        ['shieldmaiden', 'Shieldmaiden', 'barracks', 60, 220, 220, 180, 20, 20, 2, 120, 160, 150, 'elite_training', 1, 15, 2400, 1, 6],
+        ['warlord', 'Warlord', 'stable', 220, 180, 150, 150, 9, 50, 5, 400, 300, 300, 'leadership', 1, 20, 7200, 1, 10],
+        ['rune_priest', 'Rune Priest', 'church', 0, 30, 30, 30, 20, 0, 3, 150, 150, 200, 'divine_blessing', 1, 15, 3600, 1, 4],
     ];
     foreach ($units as $u) {
-        $db->execute("INSERT INTO unit_types (internal_name, name, building_type, attack, defense, defense_cavalry, defense_archer, speed, carry_capacity, population, cost_wood, cost_clay, cost_iron, training_time_base, required_building_level, points) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", $u);
+        $db->execute("INSERT INTO unit_types (internal_name, name, building_type, attack, defense, defense_cavalry, defense_archer, speed, carry_capacity, population, cost_wood, cost_clay, cost_iron, required_tech, required_tech_level, required_building_level, training_time_base, is_active, points) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", $u);
+    }
+});
+
+seedIfEmpty($db, 'research_types', function (Database $db) {
+    $researchTypes = [
+        ['basic_training', 'Basic Training', 'Faster unit training.', 'academy', 1, 200, 200, 150, 1800, 1.2, 1, 1, null, null],
+        ['iron_weapons', 'Iron Weapons', '+5% attack for infantry.', 'academy', 1, 200, 200, 200, 1800, 1.2, 1, 1, null, null],
+        ['leather_armor', 'Leather Armor', '+5% defense for infantry.', 'academy', 1, 200, 200, 200, 1800, 1.2, 1, 1, null, null],
+        ['horse_breeding', 'Horse Breeding', 'Unlock Raiders.', 'academy', 2, 300, 250, 250, 2400, 1.2, 1, 1, null, null],
+        ['archery', 'Archery', 'Unlock Bowmen.', 'academy', 2, 300, 250, 250, 2400, 1.2, 1, 1, null, null],
+        ['spear_training', 'Spear Training', 'Unlock Spearguard.', 'academy', 3, 400, 350, 300, 3600, 1.2, 1, 1, null, null],
+        ['advanced_weapons', 'Advanced Weapons', 'Unlock Axe Warriors.', 'academy', 4, 400, 350, 300, 3600, 1.2, 1, 1, null, null],
+        ['heavy_cavalry', 'Heavy Cavalry', 'Unlock Lancers.', 'academy', 5, 500, 450, 400, 4800, 1.2, 1, 1, null, null],
+        ['ranged_warfare', 'Ranged Warfare', 'Unlock Slingers.', 'academy', 4, 400, 350, 300, 3600, 1.2, 1, 1, null, null],
+        ['logistics', 'Logistics', 'Unlock Supply Carts.', 'academy', 3, 450, 400, 350, 3600, 1.2, 1, 1, null, null],
+        ['mounted_archery', 'Mounted Archery', 'Unlock Horse Archers.', 'academy', 7, 600, 600, 500, 5400, 1.2, 1, 1, null, null],
+        ['siege_warfare', 'Siege Warfare', 'Unlock Battering Rams.', 'academy', 8, 700, 650, 600, 5400, 1.2, 1, 1, null, null],
+        ['artillery', 'Artillery', 'Unlock Catapults.', 'academy', 12, 800, 800, 700, 6000, 1.2, 1, 1, null, null],
+        ['elite_training', 'Elite Training', 'Unlock Shieldmaidens.', 'academy', 10, 800, 750, 700, 6000, 1.2, 1, 1, null, null],
+        ['battle_rage', 'Battle Rage', 'Unlock Berserkers.', 'academy', 10, 850, 800, 750, 6000, 1.2, 1, 1, null, null],
+        ['leadership', 'Leadership', 'Unlock Warlords.', 'academy', 12, 1000, 900, 900, 7200, 1.2, 1, 1, null, null],
+        ['divine_blessing', 'Divine Blessing', 'Unlock Rune Priests.', 'academy', 12, 1000, 900, 900, 7200, 1.2, 1, 1, null, null],
+        ['fortification', 'Fortification', '+10% wall defense.', 'academy', 6, 500, 500, 500, 4200, 1.2, 1, 1, null, null],
+        ['advanced_tactics', 'Advanced Tactics', '+15% army efficiency.', 'academy', 8, 600, 600, 600, 5400, 1.2, 1, 1, null, null],
+        ['master_craftsmanship', 'Master Craftsmanship', '+20% all unit stats.', 'academy', 12, 1200, 1100, 1100, 7200, 1.2, 1, 1, null, null],
+        ['legendary_warfare', 'Legendary Warfare', 'Reduced elite unit costs.', 'academy', 12, 1200, 1100, 1100, 7200, 1.2, 1, 1, null, null],
+    ];
+
+    foreach ($researchTypes as $research) {
+        $db->execute("
+            INSERT INTO research_types (
+                internal_name, name, description, building_type, required_building_level,
+                cost_wood, cost_clay, cost_iron, research_time_base, research_time_factor,
+                max_level, is_active, prerequisite_research_id, prerequisite_research_level
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ", $research);
     }
 });
 

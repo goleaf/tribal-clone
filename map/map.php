@@ -91,10 +91,15 @@ require '../header.php';
         <section class="map-subtoolbar">
             <div class="filter-card">
                 <div class="filter-row">
-                    <label><input type="checkbox" id="filter-barbs" checked> Barbarians</label>
-                    <label><input type="checkbox" id="filter-players" checked> Other players</label>
-                    <label><input type="checkbox" id="filter-tribe" checked> My tribe</label>
                     <label><input type="checkbox" id="filter-own" checked> My villages</label>
+                    <label><input type="checkbox" id="filter-tribe" checked> Tribe</label>
+                    <label><input type="checkbox" id="filter-allies" checked> Allies / NAP</label>
+                    <label><input type="checkbox" id="filter-enemies" checked> Enemies</label>
+                    <label><input type="checkbox" id="filter-neutral" checked> Neutral</label>
+                    <label><input type="checkbox" id="filter-barbs" checked> Barbarians</label>
+                </div>
+                <div class="filter-row secondary-filters">
+                    <label><input type="checkbox" id="filter-players" checked> Non-tribe players (master)</label>
                     <label><input type="checkbox" id="filter-marked"> Marked only</label>
                 </div>
                 <div class="filter-hint">Filters are instant. Use the popup to mark reservations or add notes.</div>
@@ -114,7 +119,8 @@ require '../header.php';
                 <div class="mini-map-legend">
                     <span class="legend own"></span> You
                     <span class="legend ally"></span> Ally
-                    <span class="legend enemy"></span> Other
+                    <span class="legend enemy"></span> Enemy
+                    <span class="legend neutral"></span> Neutral
                     <span class="legend barb"></span> Barb
                 </div>
             </aside>
@@ -126,6 +132,7 @@ require '../header.php';
                 <div class="legend-row"><span class="legend-dot relation-own"></span> <span>Your tribe</span></div>
                 <div class="legend-row"><span class="legend-dot relation-ally"></span> <span>Ally</span></div>
                 <div class="legend-row"><span class="legend-dot relation-enemy"></span> <span>Enemy</span></div>
+                <div class="legend-row"><span class="legend-dot relation-neutral"></span> <span>Neutral</span></div>
                 <div class="legend-row"><img src="../img/tw_map/reserved_player.png" alt="Reserved"> <span>Reserved (self)</span></div>
                 <div class="legend-row"><img src="../img/tw_map/reserved_team.png" alt="Team reservation"> <span>Reserved (tribe)</span></div>
                 <div class="legend-row"><img src="../img/tw_map/incoming_attack.png" alt="Incoming"> <span>Incoming attack</span></div>
@@ -141,6 +148,7 @@ require '../header.php';
             <div class="popup-body">
                 <div class="pill-row">
                     <span class="pill coords-pill" id="popup-village-coords"></span>
+                    <span class="pill distance-pill" id="popup-village-distance" style="display:none;"></span>
                     <span class="pill owner-pill" id="popup-village-owner"></span>
                     <span class="pill points-pill" id="popup-village-points"></span>
                 </div>
@@ -233,7 +241,9 @@ const mapState = {
     size: initialSize,
     byCoord: {},
     players: {},
-    tribes: {}
+    tribes: {},
+    tribeDiplomacy: {},
+    myTribeId: currentUserAllyId || null
 };
 let annotations = loadAnnotations();
 let mapFetchInFlight = false;
@@ -247,7 +257,8 @@ const filters = {
     own: true,
     markedOnly: false,
     allies: true,
-    enemies: true
+    enemies: true,
+    neutral: true
 };
 
 function loadAnnotations() {
@@ -388,8 +399,10 @@ document.addEventListener('DOMContentLoaded', () => {
             filters.markedOnly = document.getElementById('filter-marked').checked;
             const allyBox = document.getElementById('filter-allies');
             const enemyBox = document.getElementById('filter-enemies');
+            const neutralBox = document.getElementById('filter-neutral');
             if (allyBox) filters.allies = allyBox.checked;
             if (enemyBox) filters.enemies = enemyBox.checked;
+            if (neutralBox) filters.neutral = neutralBox.checked;
             renderMap();
         });
     });
@@ -464,6 +477,56 @@ function formatContinent(x, y) {
     return `K${String(k).padStart(2, '0')}`;
 }
 
+function calculateDistanceTiles(fromX, fromY, toX, toY) {
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+function formatDistance(distance, withUnit = true) {
+    if (!Number.isFinite(distance)) return '-';
+    const rounded = distance >= 10 ? Math.round(distance) : Math.round(distance * 10) / 10;
+    const label = Number.isInteger(rounded) ? `${rounded}` : `${rounded.toFixed(1)}`;
+    return withUnit ? `${label} tiles` : label;
+}
+
+function formatDirection(dx, dy) {
+    const vertical = dy < -0.0001 ? 'N' : dy > 0.0001 ? 'S' : '';
+    const horizontal = dx < -0.0001 ? 'W' : dx > 0.0001 ? 'E' : '';
+    return `${vertical}${horizontal}`;
+}
+
+function formatDistanceFromHome(targetX, targetY) {
+    if (!homeVillage || !Number.isFinite(homeVillage.x) || !Number.isFinite(homeVillage.y)) return '';
+    const tiles = calculateDistanceTiles(homeVillage.x, homeVillage.y, targetX, targetY);
+    if (tiles < 0.01) {
+        return 'At your home village';
+    }
+    const numberLabel = formatDistance(tiles, false);
+    const direction = formatDirection(targetX - homeVillage.x, targetY - homeVillage.y);
+    const directionLabel = direction ? ` ${direction}` : '';
+    const originLabel = homeVillage.name ? ` from ${homeVillage.name}` : ' from home';
+    return `${numberLabel} tiles${directionLabel}${originLabel}`;
+}
+
+function getVillageRelation(village) {
+    const isBarb = village.user_id === null || village.user_id === -1;
+    if (isBarb) return 'barbarian';
+    if (village.user_id === currentUserId) return 'own';
+
+    const player = village.user_id ? mapState.players[village.user_id] : null;
+    const tribeId = mapState.myTribeId || currentUserAllyId;
+    const sameTribe = tribeId && player && player.ally_id === tribeId;
+    if (sameTribe) return 'tribe';
+
+    const dipStatus = player && player.ally_id && mapState.tribeDiplomacy ? mapState.tribeDiplomacy[player.ally_id] : null;
+    const normalizedDip = typeof dipStatus === 'string' ? dipStatus.toLowerCase() : dipStatus;
+    if (normalizedDip === 'ally' || normalizedDip === 'nap') return 'ally';
+    if (normalizedDip === 'enemy') return 'enemy';
+
+    return 'neutral';
+}
+
 function getOverlayIcon(village, annotation = {}) {
     if (annotation.reserved === 'tribe') {
         return overlayIcons.reservedTeam;
@@ -485,43 +548,30 @@ function getOverlayIcon(village, annotation = {}) {
 }
 
 function shouldRenderVillage(village, annotation = {}) {
-    const isBarb = village.user_id === null || village.user_id === -1;
-    const isOwn = village.user_id === currentUserId;
-    const player = village.user_id ? mapState.players[village.user_id] : null;
-    const sameTribe = currentUserAllyId && player && player.ally_id === currentUserAllyId;
-    const dipStatus = player && player.ally_id && mapState.tribeDiplomacy ? mapState.tribeDiplomacy[player.ally_id] : null;
+    const relation = getVillageRelation(village);
 
     if (filters.markedOnly && !annotation.note && !annotation.reserved) {
         return false;
     }
-    if (isBarb && !filters.barbarians) return false;
-    if (isOwn && !filters.own) return false;
-    if (!isBarb && !isOwn) {
-        if (sameTribe && !filters.tribe) return false;
-        if (dipStatus === 'ally' || dipStatus === 'nap') {
-            if (!filters.allies) return false;
-        } else if (dipStatus === 'enemy') {
-            if (!filters.enemies) return false;
-        } else if (!filters.players) {
-            return false;
-        }
-    }
+
+    if (relation === 'barbarian') return filters.barbarians;
+    if (relation === 'own') return filters.own;
+    if (relation === 'tribe') return filters.tribe;
+    if (!filters.players) return false;
+    if (relation === 'ally') return filters.allies;
+    if (relation === 'enemy') return filters.enemies;
+    if (relation === 'neutral') return filters.neutral;
+
     return true;
 }
 
 function getVillageRelationClass(village) {
-    const isBarb = village.user_id === null || village.user_id === -1;
-    const isOwn = village.user_id === currentUserId;
-    const player = village.user_id ? mapState.players[village.user_id] : null;
-    const sameTribe = currentUserAllyId && player && player.ally_id === currentUserAllyId;
-
-    if (isOwn) return 'relation-own';
-    if (isBarb) return 'relation-barb';
-    if (sameTribe) return 'relation-ally';
-    const dipStatus = player && player.ally_id && mapState.tribeDiplomacy ? mapState.tribeDiplomacy[player.ally_id] : null;
-    if (dipStatus === 'ally' || dipStatus === 'nap') return 'relation-ally';
-    if (dipStatus === 'enemy') return 'relation-enemy';
-    return 'relation-enemy';
+    const relation = getVillageRelation(village);
+    if (relation === 'barbarian') return 'relation-barb';
+    if (relation === 'own') return 'relation-own';
+    if (relation === 'tribe' || relation === 'ally') return 'relation-ally';
+    if (relation === 'enemy') return 'relation-enemy';
+    return 'relation-neutral';
 }
 
 function indexVillages(villages, playersMap) {
@@ -589,6 +639,8 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
         mapState.players = indexPlayers(data.players || []);
         mapState.tribes = indexTribes(data.tribes || data.allies || []);
         mapState.byCoord = indexVillages(data.villages || [], mapState.players);
+        mapState.tribeDiplomacy = data.diplomacy || data.tribeDiplomacy || {};
+        mapState.myTribeId = data.my_tribe_id || currentUserAllyId || null;
         worldBounds = data.world_bounds || worldBounds;
         renderMap();
         renderMiniMap();
@@ -774,6 +826,7 @@ function showVillagePopup(x, y) {
     const popupVillageName = document.getElementById('popup-village-name');
     const popupVillageOwner = document.getElementById('popup-village-owner');
     const popupVillageCoords = document.getElementById('popup-village-coords');
+    const popupVillageDistance = document.getElementById('popup-village-distance');
     const popupVillagePoints = document.getElementById('popup-village-points');
     const popupSendUnitsButton = document.getElementById('popup-send-units');
     const popupAttackButton = document.getElementById('popup-attack');
@@ -791,6 +844,11 @@ function showVillagePopup(x, y) {
     popupVillageName.textContent = village.name;
     popupVillageOwner.textContent = ownerLabel;
     popupVillageCoords.textContent = `${x}|${y} (${formatContinent(x, y)})`;
+    if (popupVillageDistance) {
+        const distanceLabel = formatDistanceFromHome(x, y);
+        popupVillageDistance.textContent = distanceLabel;
+        popupVillageDistance.style.display = distanceLabel ? 'inline-block' : 'none';
+    }
     popupVillagePoints.textContent = `${village.points || 0} pts${village.is_protected ? ' • Protected' : ''}`;
 
     popupSendUnitsButton.dataset.villageId = village.id;
@@ -877,10 +935,14 @@ function renderMiniMap() {
         const relX = (v.x - minX) * scaleX + pad;
         const relY = (v.y - minY) * scaleY + pad;
         const relation = getVillageRelationClass(v);
-        ctx.fillStyle = relation === 'relation-own' ? '#2c7be5'
-            : relation === 'relation-ally' ? '#4caf50'
-            : relation === 'relation-enemy' ? '#c0392b'
-            : '#7f8c8d';
+        const relationColors = {
+            'relation-own': '#2c7be5',
+            'relation-ally': '#4caf50',
+            'relation-enemy': '#c0392b',
+            'relation-neutral': '#d1a23d',
+            'relation-barb': '#7f8c8d'
+        };
+        ctx.fillStyle = relationColors[relation] || relationColors['relation-neutral'];
         ctx.fillRect(relX - 2, relY - 2, 4, 4);
     });
 
@@ -952,6 +1014,12 @@ function renderMiniMap() {
     align-items: center;
     font-size: 13px;
     color: #4a3c30;
+}
+
+.secondary-filters {
+    margin-top: 6px;
+    color: #5c4735;
+    font-size: 12px;
 }
 
 .filter-hint {
@@ -1260,6 +1328,7 @@ function renderMiniMap() {
 .owner-pill { background: #e6f2ff; border-color: #aac6f1; }
 .coords-pill { background: #e7f6e8; border-color: #b6dfc1; }
 .points-pill { background: #f6e7d3; border-color: #e0c59a; }
+.distance-pill { background: #eef1ff; border-color: #c3c8f7; color: #1f2a44; }
 .protected-pill {
     margin-left: 6px;
     padding: 2px 6px;

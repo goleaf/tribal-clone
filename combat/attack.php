@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attack'])) {
     $target_building = !empty($_POST['target_building']) ? $_POST['target_building'] : null;
     
     // Validate attack type
-    if (!in_array($attack_type, ['attack', 'raid', 'support', 'spy'])) {
+    if (!in_array($attack_type, ['attack', 'raid', 'support', 'spy', 'fake'])) {
         $message = "Select a valid attack type.";
         $message_type = "error";
     } else {
@@ -201,13 +201,13 @@ $target_village_id = $_GET['target_village_id'] ?? null;
 $default_attack_type = 'attack';
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['preferred_attack_type'])) {
     $maybeType = $_GET['preferred_attack_type'];
-    if (in_array($maybeType, ['attack', 'raid', 'support', 'spy'], true)) {
+    if (in_array($maybeType, ['attack', 'raid', 'support', 'spy', 'fake'], true)) {
         $default_attack_type = $maybeType;
     }
 }
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attack_type'])) {
     $maybeType = $_POST['attack_type'];
-    if (in_array($maybeType, ['attack', 'raid', 'support', 'spy'], true)) {
+    if (in_array($maybeType, ['attack', 'raid', 'support', 'spy', 'fake'], true)) {
         $default_attack_type = $maybeType;
     }
 }
@@ -456,6 +456,9 @@ if (!$is_ajax) {
                                         </label><br>
                                         <label>
                                             <input type="radio" name="attack_type" value="spy" <?php echo $default_attack_type === 'spy' ? 'checked' : ''; ?>> Spy (scouting)
+                                        </label><br>
+                                        <label>
+                                            <input type="radio" name="attack_type" value="fake" <?php echo $default_attack_type === 'fake' ? 'checked' : ''; ?>> Fake (feint)
                                         </label>
                                     </div>
                                     
@@ -511,6 +514,7 @@ if (!$is_ajax) {
                                             case 'raid': echo 'Raid'; break;
                                             case 'support': echo 'Support'; break;
                                             case 'spy': echo 'Spy'; break;
+                                            case 'fake': echo 'Fake'; break;
                                             case 'return': echo 'Return'; break;
                                             default: echo ucfirst($attack['attack_type']); break;
                                         }
@@ -568,6 +572,7 @@ if (!$is_ajax) {
                                             case 'raid': echo 'Raid'; break;
                                             case 'support': echo 'Support'; break;
                                             case 'spy': echo 'Spy'; break;
+                                            case 'fake': echo 'Fake'; break;
                                         }
                                         ?>
                                     </h4>

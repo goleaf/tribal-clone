@@ -16,6 +16,9 @@ class WorldManager
         'build_speed' => "REAL NOT NULL DEFAULT 1.0",
         'train_speed' => "REAL NOT NULL DEFAULT 1.0",
         'research_speed' => "REAL NOT NULL DEFAULT 1.0",
+        'night_bonus_enabled' => "INTEGER NOT NULL DEFAULT 0",
+        'night_start_hour' => "INTEGER NOT NULL DEFAULT 22",
+        'night_end_hour' => "INTEGER NOT NULL DEFAULT 6",
         'enable_archer' => "INTEGER NOT NULL DEFAULT 1",
         'enable_paladin' => "INTEGER NOT NULL DEFAULT 1",
         'enable_paladin_weapons' => "INTEGER NOT NULL DEFAULT 1",
@@ -50,6 +53,9 @@ class WorldManager
             'build_speed' => 1.0,
             'train_speed' => 1.0,
             'research_speed' => 1.0,
+            'night_bonus_enabled' => false,
+            'night_start_hour' => 22,
+            'night_end_hour' => 6,
             'enable_archer' => true,
             'enable_paladin' => true,
             'enable_paladin_weapons' => true,
@@ -77,8 +83,10 @@ class WorldManager
                                     $defaults[$key] = (float)$val;
                                 } elseif ($key === 'tribe_member_limit' || $key === 'victory_value') {
                                     $defaults[$key] = $val === null ? null : (int)$val;
-                                } elseif (in_array($key, ['enable_archer', 'enable_paladin', 'enable_paladin_weapons'], true)) {
+                                } elseif (in_array($key, ['enable_archer', 'enable_paladin', 'enable_paladin_weapons', 'night_bonus_enabled'], true)) {
                                     $defaults[$key] = (bool)$val;
+                                } elseif (in_array($key, ['night_start_hour', 'night_end_hour'], true)) {
+                                    $defaults[$key] = (int)$val;
                                 } else {
                                     $defaults[$key] = $val;
                                 }
@@ -122,6 +130,20 @@ class WorldManager
     {
         $settings = $this->getSettings($worldId);
         return max(0.1, (float)($settings['research_speed'] ?? 1.0));
+    }
+
+    public function isNightBonusEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        return (bool)($this->getSettings($worldId)['night_bonus_enabled'] ?? false);
+    }
+
+    public function getNightBonusWindow(int $worldId = CURRENT_WORLD_ID): array
+    {
+        $settings = $this->getSettings($worldId);
+        return [
+            'start' => (int)($settings['night_start_hour'] ?? 22),
+            'end' => (int)($settings['night_end_hour'] ?? 6),
+        ];
     }
 
     public function isArcherEnabled(int $worldId = CURRENT_WORLD_ID): bool
@@ -205,6 +227,9 @@ class WorldManager
             'build_speed' => 1.0,
             'train_speed' => 1.0,
             'research_speed' => 1.0,
+            'night_bonus_enabled' => 0,
+            'night_start_hour' => 22,
+            'night_end_hour' => 6,
             'enable_archer' => 1,
             'enable_paladin' => 1,
             'enable_paladin_weapons' => 1,
@@ -233,7 +258,7 @@ class WorldManager
             return;
         }
 
-        $stmtInsert = $this->conn->prepare("INSERT INTO worlds (name, world_speed, troop_speed, build_speed, train_speed, research_speed, enable_archer, enable_paladin, enable_paladin_weapons, tech_mode, tribe_member_limit, victory_type, victory_value) VALUES ('World 1', 1.0, 1.0, 1.0, 1.0, 1.0, 1, 1, 1, 'normal', NULL, NULL, NULL)");
+        $stmtInsert = $this->conn->prepare("INSERT INTO worlds (name, world_speed, troop_speed, build_speed, train_speed, research_speed, night_bonus_enabled, night_start_hour, night_end_hour, enable_archer, enable_paladin, enable_paladin_weapons, tech_mode, tribe_member_limit, victory_type, victory_value) VALUES ('World 1', 1.0, 1.0, 1.0, 1.0, 1.0, 0, 22, 6, 1, 1, 1, 'normal', NULL, NULL, NULL)");
         if ($stmtInsert) {
             $stmtInsert->execute();
             $stmtInsert->close();

@@ -18,6 +18,7 @@ require_once $root . '/lib/managers/BuildingManager.php';
 require_once $root . '/lib/managers/VillageManager.php';
 require_once $root . '/lib/managers/BattleManager.php';
 require_once $root . '/lib/managers/NotificationManager.php';
+require_once $root . '/lib/managers/TribeManager.php';
 require_once $root . '/lib/managers/CronRunner.php';
 
 $start = microtime(true);
@@ -27,7 +28,8 @@ $buildingManager = new BuildingManager($conn, $buildingConfigManager);
 $villageManager = new VillageManager($conn);
 $battleManager = new BattleManager($conn, $villageManager, $buildingManager);
 $notificationManager = new NotificationManager($conn);
-$cron = new CronRunner($conn, $villageManager, $battleManager, $notificationManager);
+$tribeManager = new TribeManager($conn);
+$cron = new CronRunner($conn, $villageManager, $battleManager, $notificationManager, $tribeManager);
 
 $summary = $cron->run();
 $duration = microtime(true) - $start;
@@ -37,5 +39,11 @@ echo "Completed task messages: {$summary['task_messages']}\n";
 echo "Attack resolutions: {$summary['attack_messages']}\n";
 if (!empty($summary['abandoned_converted'])) {
     echo "Converted {$summary['abandoned_converted']} village(s) to barbarian due to inactivity\n";
+}
+if (!empty($summary['wars_started'])) {
+    echo "Wars started after prep: {$summary['wars_started']}\n";
+}
+if (!empty($summary['tribes_disbanded'])) {
+    echo "Auto-disbanded {$summary['tribes_disbanded']} inactive tribe(s)\n";
 }
 echo "Elapsed: " . number_format($duration, 3) . "s\n";

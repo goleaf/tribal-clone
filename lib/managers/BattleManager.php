@@ -19,9 +19,14 @@ class BattleManager
     private const WINNER_MINIMUM_LOSS = 0.05; // winner always loses at least 5% of troops
     private const RAID_CASUALTY_FACTOR = 0.65; // raids inflict/take fewer losses
     private const RAID_LOOT_FACTOR = 0.6; // raids cap loot to 60% of stored resources
+    private const FAKE_TURNBACK_RATIO = 0.8; // fake attacks turn back after 80% of the path
     private const WALL_BONUS_PER_LEVEL = 0.08;
     private const BEGINNER_PROTECTION_POINTS = 200;
     private const WORLD_UNIT_SPEED = 1.0; // fields per hour baseline
+    private const MIN_ATTACK_POP = 5; // Minimum population for an outgoing attack unless siege present
+    private const TARGET_COMMAND_CAP = 200; // Max concurrent incoming commands per target village
+    private const SIEGE_UNIT_INTERNALS = ['ram', 'catapult', 'trebuchet'];
+    private const LOYALTY_UNIT_INTERNALS = ['noble', 'chieftain', 'senator', 'chief'];
     private const PHASE_ORDER = ['infantry', 'cavalry', 'archer'];
     private const RESEARCH_BONUS_PER_LEVEL = 0.10; // +10% per smithy level
     private const LOYALTY_MIN = 0;
@@ -30,6 +35,8 @@ class BattleManager
     private const LOYALTY_DROP_MAX = 35;
     private const LOYALTY_FAIL_DROP_MIN = 5;
     private const LOYALTY_FAIL_DROP_MAX = 10;
+    private const OFFENSIVE_ATTACK_TYPES = ['attack', 'raid', 'spy', 'fake'];
+    private const MAX_ATTACKS_PER_TARGET_PER_DAY = 10;
 
     /**
      * @param mysqli $conn Database connection
@@ -75,6 +82,7 @@ class BattleManager
     {
         $attack_type = in_array($attack_type, ['attack', 'raid', 'support', 'spy', 'fake'], true) ? $attack_type : 'attack';
         $missionType = is_string($options['mission_type'] ?? null) ? $options['mission_type'] : 'light_scout';
+        $allowFriendlyFireOverride = !empty($options['allow_friendly_fire']);
 
         // Ensure both villages exist
         $stmt_check_villages = $this->conn->prepare("
@@ -105,6 +113,15 @@ class BattleManager
         $defender_points = $this->getUserPoints($defender_user_id);
         $attacker_protected = $this->isBeginnerProtected($attacker_points);
         $defender_protected = $this->isBeginnerProtected($defender_points);
+        $capCheck = $this->enforceAttackCap($attacker_user_id, $defender_user_id);
+        if ($capCheck !== true) {
+            return [
+                'success' => false,
+                'error' => is_string($capCheck) ? $capCheck : 'Attack limit reached for this target.'
+            ];
+        }
+        $attackerTribeId = $this->getUserTribeId($attacker_user_id);
+        $defenderTribeId = $this->getUserTribeId($defender_user_id);
 
         if (!$target_is_barb && $attack_type !== 'support') {
             if ($attacker_protected && !$defender_protected) {
@@ -127,6 +144,31 @@ class BattleManager
                 'success' => false,
                 'error' => 'You cannot attack your own villages.'
             ];
+        }
+
+        // Friendly fire: block attacking same tribe or allied/NAP tribes unless override is explicitly allowed.
+        if ($attack_type !== 'support') {
+            if ($attackerTribeId && $defenderTribeId) {
+                if ($attackerTribeId === $defenderTribeId && !$allowFriendlyFireOverride) {
+                    return [
+                        'success' => false,
+                        'error' => 'Attacks against your own tribe members are blocked.'
+                    ];
+                }
+                $dipStatus = $this->getDiplomacyStatus($attackerTribeId, $defenderTribeId);
+                if (in_array($dipStatus, ['ally', 'nap'], true) && !$allowFriendlyFireOverride) {
+                    return [
+                        'success' => false,
+                        'error' => 'Attacks against allied/NAP tribes are blocked. Request a leadership override to proceed.'
+                    ];
+                }
+                if ($allowFriendlyFireOverride && in_array($dipStatus, ['ally', 'nap'], true)) {
+                    $this->logTribeAction($attackerTribeId, (int)$villages['source_user_id'], 'friendly_fire_override', [
+                        'target_tribe_id' => $defenderTribeId,
+                        'attack_type' => $attack_type
+                    ]);
+                }
+            }
         }
 
         // Beginner protection checks (skip for supports)
@@ -179,9 +221,11 @@ class BattleManager
                 ];
             }
         }
-        
+
         // Require at least one unit to be sent
         $total_units = 0;
+        $total_pop = 0;
+        $hasSiege = false;
         foreach ($units_sent as $count) {
             $total_units += $count;
         }
@@ -193,13 +237,30 @@ class BattleManager
             ];
         }
 
+        // Enforce minimum payload anti-abuse rule: 5 pop or any siege unit.
+        foreach ($units_sent as $unit_type_id => $count) {
+            if (!isset($unit_meta[$unit_type_id])) {
+                continue;
+            }
+            $total_pop += ((int)$unit_meta[$unit_type_id]['population']) * $count;
+            if (in_array($unit_meta[$unit_type_id]['internal_name'], self::SIEGE_UNIT_INTERNALS, true) && $count > 0) {
+                $hasSiege = true;
+            }
+        }
+        if ($total_pop < self::MIN_ATTACK_POP && !$hasSiege) {
+            return [
+                'success' => false,
+                'error' => sprintf('Minimum payload is %d population or at least one siege unit.', self::MIN_ATTACK_POP)
+            ];
+        }
+
         // Load unit metadata for validation and speed calculation
         $unit_type_ids = array_keys($units_sent);
         $unit_meta = [];
         $placeholders = implode(',', array_map('intval', $unit_type_ids));
 
         $stmt_get_units = $this->conn->prepare("
-            SELECT id, internal_name, speed
+            SELECT id, internal_name, speed, population
             FROM unit_types
             WHERE id IN ($placeholders)
         ");
@@ -227,6 +288,34 @@ class BattleManager
             $villages['source_x'], $villages['source_y'],
             $villages['target_x'], $villages['target_y']
         );
+
+        // Per-target incoming cap to prevent command spam
+        $stmt_count_commands = $this->conn->prepare("
+            SELECT COUNT(*) AS cnt
+            FROM attacks
+            WHERE target_village_id = ?
+              AND is_completed = 0
+              AND is_canceled = 0
+              AND arrival_time > NOW()
+              AND attack_type IN ('attack','raid','spy','fake')
+        ");
+        if ($stmt_count_commands) {
+            $stmt_count_commands->bind_param("i", $target_village_id);
+            $stmt_count_commands->execute();
+            $countRow = $stmt_count_commands->get_result()->fetch_assoc();
+            $stmt_count_commands->close();
+            $incomingCount = (int)($countRow['cnt'] ?? 0);
+            if ($incomingCount >= self::TARGET_COMMAND_CAP) {
+                return [
+                    'success' => false,
+                    'error' => sprintf(
+                        'Target command cap reached for this village (%d/%d). Try again later.',
+                        $incomingCount,
+                        self::TARGET_COMMAND_CAP
+                    )
+                ];
+            }
+        }
 
         // If attacker is protected and attacks a non-barbarian target, drop protection
         if ($attack_type !== 'support' && (int)$villages['target_user_id'] > 0) {
@@ -269,6 +358,10 @@ class BattleManager
         $effectiveSpeed = self::WORLD_UNIT_SPEED * $worldSpeed * $troopSpeed * $unitSpeedMultiplier;
         $travel_time = (int)ceil(($distance * $slowest_speed / $effectiveSpeed) * 3600);
         $start_time = time();
+        // Fake attacks should turn around before hitting the target.
+        if ($attack_type === 'fake') {
+            $travel_time = max(1, (int)floor($travel_time * self::FAKE_TURNBACK_RATIO));
+        }
         $arrival_time = $start_time + $travel_time;
         
         // Begin transaction
@@ -338,16 +431,20 @@ class BattleManager
 
             // Attach scouting mission metadata for spy attacks
             if ($attack_type === 'spy') {
-                $stmtMission = $this->conn->prepare("
-                    INSERT IGNORE INTO scout_missions (
-                        attack_id, mission_type, requested_by_user_id, requested_by_village_id
-                    ) VALUES (?, ?, ?, ?)
-                ");
-                if ($stmtMission) {
-                    $sourceUserId = (int)($villages['source_user_id'] ?? 0);
-                    $stmtMission->bind_param("isii", $attack_id, $missionType, $sourceUserId, $source_village_id);
-                    $stmtMission->execute();
-                    $stmtMission->close();
+                try {
+                    $stmtMission = $this->conn->prepare("
+                        INSERT IGNORE INTO scout_missions (
+                            attack_id, mission_type, requested_by_user_id, requested_by_village_id
+                        ) VALUES (?, ?, ?, ?)
+                    ");
+                    if ($stmtMission) {
+                        $sourceUserId = (int)($villages['source_user_id'] ?? 0);
+                        $stmtMission->bind_param("isii", $attack_id, $missionType, $sourceUserId, $source_village_id);
+                        $stmtMission->execute();
+                        $stmtMission->close();
+                    }
+                } catch (Throwable $e) {
+                    error_log('Failed to record scout mission meta: ' . $e->getMessage());
                 }
             }
             
@@ -562,6 +659,8 @@ class BattleManager
                 $battle_result = $this->processSupportArrival($attack['id']);
             } elseif ($attack['attack_type'] === 'return') {
                 $battle_result = $this->processReturnArrival($attack['id']);
+            } elseif ($attack['attack_type'] === 'fake') {
+                $battle_result = $this->processFakeArrival($attack['id']);
             } else {
                 $battle_result = $this->processBattle($attack['id']);
             }
@@ -583,6 +682,21 @@ class BattleManager
                 $stmt_details->close();
 
                 if ($attack_details) {
+                    if (in_array($attack_details['attack_type'], ['support', 'return', 'fake'], true)) {
+                        // Optional light-touch messaging for non-combat commands
+                        $source_name = htmlspecialchars($attack_details['source_name']);
+                        $target_name = htmlspecialchars($attack_details['target_name']);
+                        if ($attack_details['attack_type'] === 'support' && in_array($attack['target_village_id'], $user_village_ids)) {
+                            $messages[] = "<p class='info-message'>Support from <b>{$source_name}</b> has arrived at <b>{$target_name}</b>.</p>";
+                        }
+                        if ($attack_details['attack_type'] === 'return' && in_array($attack['target_village_id'], $user_village_ids)) {
+                            $messages[] = "<p class='info-message'>Troops returned to <b>{$target_name}</b>.</p>";
+                        }
+                        if ($attack_details['attack_type'] === 'fake' && in_array($attack['source_village_id'], $user_village_ids)) {
+                            $messages[] = "<p class='info-message'>Your fake attack from <b>{$source_name}</b> has turned around.</p>";
+                        }
+                        continue;
+                    }
                     // Fetch the battle report to identify the winner and loot (if any)
                     // processBattle/processSpyMission creates the report, so fetch it immediately after.
                     $report = $this->getBattleReportForAttack($attack['id']); // Dedicated helper
@@ -812,6 +926,93 @@ class BattleManager
         }
 
         return ['success' => true];
+    }
+
+    /**
+     * Handle fake attack arrival (no battle; troops turn around).
+     */
+    private function processFakeArrival(int $attack_id): array
+    {
+        $stmt = $this->conn->prepare("
+            SELECT *
+            FROM attacks
+            WHERE id = ? AND is_completed = 0 AND is_canceled = 0
+            LIMIT 1
+        ");
+        if ($stmt === false) {
+            return ['success' => false, 'error' => 'Failed to load fake attack.'];
+        }
+        $stmt->bind_param("i", $attack_id);
+        $stmt->execute();
+        $attack = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$attack || $attack['attack_type'] !== 'fake') {
+            return ['success' => false, 'error' => 'Fake attack not found.'];
+        }
+
+        $units = $this->getAttackUnits($attack_id);
+        $unitsMap = [];
+        foreach ($units as $unit) {
+            $unitsMap[$unit['unit_type_id']] = (int)$unit['count'];
+        }
+
+        $startTs = strtotime($attack['start_time']);
+        $arrivalTs = strtotime($attack['arrival_time']);
+        $travel = max(1, $arrivalTs - $startTs);
+
+        $returnStart = time();
+        $returnArrival = $returnStart + $travel;
+
+        $this->conn->begin_transaction();
+        try {
+            // Mark fake as completed
+            $stmt_complete = $this->conn->prepare("UPDATE attacks SET is_completed = 1 WHERE id = ?");
+            $stmt_complete->bind_param("i", $attack_id);
+            $stmt_complete->execute();
+            $stmt_complete->close();
+
+            // Insert return march
+            $stmt_return = $this->conn->prepare("
+                INSERT INTO attacks (
+                    source_village_id, target_village_id,
+                    attack_type, start_time, arrival_time,
+                    is_completed, is_canceled, target_building
+                ) VALUES (?, ?, 'return', FROM_UNIXTIME(?), FROM_UNIXTIME(?), 0, 0, NULL)
+            ");
+            $stmt_return->bind_param(
+                "iiii",
+                $attack['target_village_id'],
+                $attack['source_village_id'],
+                $returnStart,
+                $returnArrival
+            );
+            $stmt_return->execute();
+            $returnAttackId = $stmt_return->insert_id;
+            $stmt_return->close();
+
+            foreach ($unitsMap as $unit_type_id => $count) {
+                $stmt_add_units = $this->conn->prepare("
+                    INSERT INTO attack_units (attack_id, unit_type_id, count)
+                    VALUES (?, ?, ?)
+                ");
+                $stmt_add_units->bind_param("iii", $returnAttackId, $unit_type_id, $count);
+                $stmt_add_units->execute();
+                $stmt_add_units->close();
+            }
+
+            $this->conn->commit();
+            return [
+                'success' => true,
+                'message' => 'Fake attack turned around.',
+                'return_attack_id' => $returnAttackId,
+                'return_arrival' => $returnArrival
+            ];
+        } catch (\Throwable $e) {
+            $this->conn->rollback();
+            error_log('Fake arrival failed: ' . $e->getMessage());
+            return ['success' => false, 'error' => 'Fake attack resolution failed.'];
+        }
     }
 
     /**
@@ -1808,6 +2009,47 @@ class BattleManager
         return ['allowed' => true];
     }
 
+    /**
+     * Enforce per-attacker->defender daily attack cap for offensive missions.
+     * Returns true if allowed, otherwise an error message string.
+     */
+    private function enforceAttackCap(int $attackerUserId, int $defenderUserId)
+    {
+        if (self::MAX_ATTACKS_PER_TARGET_PER_DAY <= 0) {
+            return true;
+        }
+        if ($attackerUserId <= 0 || $defenderUserId <= 0 || $attackerUserId === $defenderUserId) {
+            return true; // ignore barb/self/support cases
+        }
+
+        $windowStart = time() - 86400;
+        $sql = "
+            SELECT COUNT(*) AS cnt
+            FROM attacks a
+            JOIN villages sv ON a.source_village_id = sv.id
+            JOIN villages tv ON a.target_village_id = tv.id
+            WHERE sv.user_id = ?
+              AND tv.user_id = ?
+              AND a.is_canceled = 0
+              AND a.attack_type IN ('attack','raid','spy','fake')
+              AND UNIX_TIMESTAMP(a.start_time) >= ?
+        ";
+        $stmt = $this->conn->prepare($sql);
+        if ($stmt === false) {
+            return true; // fail open to avoid blocking on DB error
+        }
+        $stmt->bind_param("iii", $attackerUserId, $defenderUserId, $windowStart);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        $count = (int)($row['cnt'] ?? 0);
+        if ($count >= self::MAX_ATTACKS_PER_TARGET_PER_DAY) {
+            return sprintf('Attack limit reached: max %d attacks to this player per 24h.', self::MAX_ATTACKS_PER_TARGET_PER_DAY);
+        }
+        return true;
+    }
+
     private function isUnderProtection(array $userRow, DateTimeImmutable $now, array $config): bool
     {
         if (isset($userRow['is_protected']) && (int)$userRow['is_protected'] === 0) {
@@ -2667,6 +2909,70 @@ class BattleManager
     }
 
     /**
+     * Helper: get diplomacy status between two tribes (ally/nap/enemy/etc).
+     */
+    private function getDiplomacyStatus(?int $tribeA, ?int $tribeB): ?string
+    {
+        if (!$tribeA || !$tribeB || $tribeA === $tribeB) {
+            return null;
+        }
+        $stmt = $this->conn->prepare("
+            SELECT status
+            FROM tribe_diplomacy
+            WHERE tribe_id = ? AND target_tribe_id = ?
+            LIMIT 1
+        ");
+        if ($stmt) {
+            $stmt->bind_param("ii", $tribeA, $tribeB);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $row = $res ? $res->fetch_assoc() : null;
+            $stmt->close();
+            if ($row && isset($row['status'])) {
+                return $row['status'];
+            }
+        }
+        $stmt2 = $this->conn->prepare("
+            SELECT status
+            FROM tribe_diplomacy
+            WHERE tribe_id = ? AND target_tribe_id = ?
+            LIMIT 1
+        ");
+        if ($stmt2) {
+            $stmt2->bind_param("ii", $tribeB, $tribeA);
+            $stmt2->execute();
+            $res2 = $stmt2->get_result();
+            $row2 = $res2 ? $res2->fetch_assoc() : null;
+            $stmt2->close();
+            if ($row2 && isset($row2['status'])) {
+                return $row2['status'];
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Helper: record tribe activity such as friendly fire overrides.
+     */
+    private function logTribeAction(int $tribeId, int $actorUserId, string $action, array $meta = []): void
+    {
+        if ($tribeId <= 0) {
+            return;
+        }
+        $metaJson = json_encode($meta);
+        $stmt = $this->conn->prepare("
+            INSERT INTO tribe_activity_log (tribe_id, actor_user_id, action, meta, created_at)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ");
+        if (!$stmt) {
+            return;
+        }
+        $stmt->bind_param("iiss", $tribeId, $actorUserId, $action, $metaJson);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    /**
      * Helper: return research snapshot (unlocked tech levels) for a village.
      */
     private function getResearchSnapshot(int $villageId): array
@@ -2811,6 +3117,31 @@ class BattleManager
         $stmt->close();
         
         return $units;
+    }
+    
+    /**
+     * Quick access check for a battle report.
+     */
+    public function userCanViewReport(int $reportId, int $userId): bool
+    {
+        $stmt = $this->conn->prepare("
+            SELECT 1
+            FROM battle_reports br
+            JOIN villages sv ON br.source_village_id = sv.id
+            JOIN villages tv ON br.target_village_id = tv.id
+            WHERE br.id = ? AND (sv.user_id = ? OR tv.user_id = ?)
+            LIMIT 1
+        ");
+        if ($stmt === false) {
+            return false;
+        }
+
+        $stmt->bind_param("iii", $reportId, $userId, $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $exists = $result ? $result->num_rows > 0 : false;
+        $stmt->close();
+        return $exists;
     }
     
     /**
@@ -2973,6 +3304,8 @@ class BattleManager
                 return $this->processSupportArrival($attack_id);
             case 'return':
                 return $this->processReturnArrival($attack_id);
+            case 'fake':
+                return $this->processFakeArrival($attack_id);
             default:
                 return $this->processBattle($attack_id);
         }
@@ -3065,4 +3398,5 @@ class BattleManager
 
         return $countResult['total'] ?? 0;
     }
+
 } 

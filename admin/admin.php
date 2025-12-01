@@ -117,7 +117,24 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'barb_details' && isset($_GET['id'
     $stmt->close();
     if (!$v) { echo '<div style="color:#c0392b;">Village not found.</div>'; exit; }
     $buildings = ['main'=>'Town hall','barracks'=>'Barracks','stable'=>'Stable','garage'=>'Workshop','smithy'=>'Smithy','market'=>'Market','wood'=>'Timber camp','clay'=>'Clay pit','iron'=>'Iron mine','farm'=>'Farm','storage'=>'Warehouse','wall'=>'Wall'];
-    $units = ['spear'=>'Spearman','sword'=>'Swordsman','axe'=>'Axeman','archer'=>'Archer','scout'=>'Scout','light'=>'Light cavalry','heavy'=>'Heavy cavalry','ram'=>'Ram','catapult'=>'Catapult'];
+    $units = [
+        'tribesman' => 'Tribesman',
+        'spearguard' => 'Spearguard',
+        'axe_warrior' => 'Axe Warrior',
+        'bowman' => 'Bowman',
+        'slinger' => 'Slinger',
+        'scout' => 'Scout',
+        'raider' => 'Raider',
+        'lancer' => 'Lancer',
+        'horse_archer' => 'Horse Archer',
+        'supply_cart' => 'Supply Cart',
+        'battering_ram' => 'Battering Ram',
+        'catapult' => 'Catapult',
+        'berserker' => 'Berserker',
+        'shieldmaiden' => 'Shieldmaiden',
+        'warlord' => 'Warlord',
+        'rune_priest' => 'Rune Priest'
+    ];
     echo '<div style="display:flex;gap:32px;align-items:flex-start;">';
     echo '<img src="img/ds_graphic/map/village_barb.png" alt="Barbarian" style="width:64px;height:64px;box-shadow:0 2px 8px #ccc;border-radius:8px;">';
     echo '<div>';

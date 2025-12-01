@@ -34,25 +34,22 @@ INSERT INTO `unit_types` (
   `required_tech`, `required_tech_level`, `required_building_level`,
   `training_time_base`, `is_active`, `points`
 ) VALUES
--- Barracks
-('spear', 'Spearman', 'Basic infantry, strong against cavalry.', 'barracks', 10, 15, 45, 20, 14, 25, 1, 50, 30, 10, NULL, 0, 1, 90, 1, 1),
-('sword', 'Swordsman', 'Stronger infantry, solid versus other infantry.', 'barracks', 25, 50, 40, 30, 14, 15, 1, 30, 30, 70, NULL, 0, 1, 110, 1, 1),
-('axe', 'Axeman', 'Powerful infantry attacker.', 'barracks', 40, 10, 5, 10, 14, 10, 1, 60, 30, 40, NULL, 0, 2, 95, 1, 2),
-('archer', 'Archer', 'Ranged infantry for attack and defense.', 'barracks', 15, 50, 40, 5, 18, 10, 1, 100, 30, 60, 'improved_axe', 1, 5, 1800, 1, 2),
-
--- Stable
-('spy', 'Scout', 'Fast cavalry scout.', 'stable', 0, 2, 2, 2, 9, 0, 2, 50, 50, 20, NULL, 0, 1, 900, 1, 2),
-('light', 'Light Cavalry', 'Fast attacking cavalry.', 'stable', 130, 30, 40, 30, 9, 80, 4, 125, 100, 250, NULL, 0, 1, 400, 1, 4),
-('heavy', 'Heavy Cavalry', 'Powerful cavalry for attack and defense.', 'stable', 150, 200, 150, 120, 11, 50, 6, 200, 150, 600, 'improved_sword', 2, 3, 900, 1, 6),
-('marcher', 'Mounted Archer', 'Ranged cavalry unit.', 'stable', 120, 50, 40, 150, 10, 50, 5, 250, 100, 150, 'horseshoe', 1, 3, 700, 1, 5),
-
--- Workshop
-('ram', 'Ram', 'Siege unit for breaking walls.', 'workshop', 2, 20, 50, 20, 30, 0, 5, 300, 200, 200, NULL, 0, 1, 600, 1, 5),
-('catapult', 'Catapult', 'Siege unit for destroying buildings.', 'workshop', 100, 100, 100, 100, 30, 0, 8, 320, 400, 100, 'improved_catapult', 1, 2, 900, 1, 8),
-
--- Academy / Statue
-('noble', 'Nobleman', 'Reduces loyalty and conquers villages.', 'academy', 30, 100, 50, 50, 35, 0, 100, 40000, 50000, 50000, NULL, 0, 1, 18000, 1, 80),
-('paladin', 'Paladin', 'Heroic leader that boosts armies.', 'statue', 150, 250, 200, 180, 10, 100, 20, 20000, 20000, 40000, NULL, 0, 1, 3600, 1, 10);
+('tribesman', 'Tribesman', 'Basic infantry unit, defensive backbone.', 'barracks', 12, 20, 15, 10, 18, 25, 1, 40, 30, 20, NULL, 0, 1, 300, 1, 1),
+('spearguard', 'Spearguard', 'Anti-cavalry specialist, defensive formation fighter.', 'barracks', 10, 30, 60, 20, 20, 15, 1, 50, 60, 30, 'spear_training', 1, 5, 420, 1, 1),
+('axe_warrior', 'Axe Warrior', 'Offensive infantry, breakthrough unit.', 'barracks', 45, 20, 15, 10, 18, 35, 1, 70, 40, 60, 'advanced_weapons', 1, 6, 480, 1, 2),
+('bowman', 'Bowman', 'Basic ranged unit, defensive support.', 'barracks', 25, 10, 20, 5, 18, 20, 1, 60, 30, 40, 'archery', 1, 2, 600, 1, 1),
+('slinger', 'Slinger', 'Anti-armor ranged, siege support.', 'barracks', 25, 12, 30, 8, 18, 15, 1, 40, 40, 20, 'ranged_warfare', 1, 4, 540, 1, 1),
+('scout', 'Scout', 'Intelligence gathering, fastest unit.', 'barracks', 0, 2, 2, 2, 5, 0, 1, 50, 30, 20, NULL, 0, 1, 180, 1, 1),
+('raider', 'Raider', 'Fast raiding cavalry.', 'stable', 60, 20, 15, 15, 8, 80, 2, 100, 50, 80, 'horse_breeding', 1, 1, 600, 1, 3),
+('lancer', 'Lancer', 'Heavy cavalry, shock troops.', 'stable', 150, 60, 40, 30, 9, 40, 3, 150, 120, 200, 'heavy_cavalry', 1, 5, 1200, 1, 5),
+('horse_archer', 'Horse Archer', 'Mobile ranged harassment, skirmisher.', 'stable', 80, 35, 30, 40, 9, 30, 3, 140, 80, 160, 'mounted_archery', 1, 10, 1200, 1, 5),
+('supply_cart', 'Supply Cart', 'Army logistics, extended campaigns.', 'workshop', 0, 10, 5, 5, 30, 500, 4, 200, 200, 100, 'logistics', 1, 3, 1800, 1, 4),
+('battering_ram', 'Battering Ram', 'Wall breaching, gate destruction.', 'workshop', 2, 20, 50, 20, 30, 0, 5, 300, 200, 200, 'siege_warfare', 1, 8, 2400, 1, 5),
+('catapult', 'Catapult', 'Long-range siege, wall destruction.', 'workshop', 100, 100, 100, 100, 35, 0, 8, 320, 400, 150, 'artillery', 1, 12, 3000, 1, 8),
+('berserker', 'Berserker', 'Elite shock infantry, morale breaker.', 'barracks', 200, 60, 40, 40, 15, 30, 2, 160, 120, 150, 'battle_rage', 1, 15, 2400, 1, 6),
+('shieldmaiden', 'Shieldmaiden', 'Elite defensive unit, formation anchor.', 'barracks', 60, 220, 220, 180, 20, 20, 2, 120, 160, 150, 'elite_training', 1, 15, 2400, 1, 6),
+('warlord', 'Warlord', 'Army commander, cavalry elite.', 'stable', 220, 180, 150, 150, 9, 50, 5, 400, 300, 300, 'leadership', 1, 20, 7200, 1, 10),
+('rune_priest', 'Rune Priest', 'Mystical support, morale and blessing.', 'church', 0, 30, 30, 30, 20, 0, 3, 150, 150, 200, 'divine_blessing', 1, 15, 3600, 1, 4);
 
 -- Village units table
 CREATE TABLE IF NOT EXISTS `village_units` (

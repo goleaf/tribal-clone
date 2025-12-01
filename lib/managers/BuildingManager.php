@@ -585,7 +585,7 @@ class BuildingManager {
 
     private function getActivePendingQueueCount(int $villageId): int
     {
-        $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM building_queue WHERE village_id = ? AND status IN ('active','pending')");
+        $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM building_queue WHERE village_id = ? AND (status IS NULL OR status IN ('active','pending'))");
         if ($stmt === false) {
             error_log("Prepare failed for getActivePendingQueueCount: " . $this->conn->error);
             return 0;
