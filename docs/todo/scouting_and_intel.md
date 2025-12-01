@@ -1582,7 +1582,12 @@ ASSESSMENT: Easy target. Weak defenses. Offline player. High loot potential.
 **Time Investment:**
 - Intel gathering should require active play
 - But not be overwhelming time sink
-- Automation options for routine tasks
+- Automation options for routine tasks:
+  - Saved scout routes with cooldowns and max-distance limits to prevent spam
+  - Auto-refresh watchlist: resend light scouts to selected targets when intel is stale
+  - One-tap presets from rally point (e.g., "Light probe", "Deep scout", "Fake siege")
+  - Report digests that summarize changes since last scan instead of flooding inbox
+  - Safety rails: daily cap and randomization to avoid automated abuse
 - Strategic depth for dedicated players
 
 **Tribe Coordination:**

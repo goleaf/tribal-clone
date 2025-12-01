@@ -380,18 +380,10 @@ class BuildingManager {
             }
         }
         
-        $stmt_queue = $this->conn->prepare("SELECT COUNT(*) as count FROM building_queue WHERE village_id = ?");
-         if ($stmt_queue === false) {
-             error_log("Prepare failed for queue check: " . $this->conn->error);
-             return ['success' => false, 'message' => 'Server error while checking the queue.'];
-        }
-        $stmt_queue->bind_param("i", $villageId);
-        $stmt_queue->execute();
-        $queue_result = $stmt_queue->get_result()->fetch_assoc();
-        $stmt_queue->close();
-        
-        if ($queue_result['count'] > 0) {
-            return ['success' => false, 'message' => 'Another upgrade is already in progress in this village.'];
+        $queueCount = $this->getActivePendingQueueCount($villageId);
+        $maxQueueItems = $this->getQueueLimit();
+        if ($queueCount >= $maxQueueItems) {
+            return ['success' => false, 'message' => "Build queue is full (max {$maxQueueItems} items)."];
         }
 
         $nextLevel = $currentLevel + 1;
@@ -573,19 +565,43 @@ class BuildingManager {
      */
     public function isAnyBuildingInQueue(int $villageId): bool
     {
-        $stmt = $this->conn->prepare("SELECT COUNT(*) FROM building_queue WHERE village_id = ? LIMIT 1");
-         if ($stmt === false) {
-             error_log("Prepare failed for isAnyBuildingInQueue: " . $this->conn->error);
-             return false;
+        return $this->getActivePendingQueueCount($villageId) > 0;
+    }
+
+    /**
+     * Returns queue usage data for a village.
+     */
+    public function getQueueUsage(int $villageId): array
+    {
+        $count = $this->getActivePendingQueueCount($villageId);
+        $limit = $this->getQueueLimit();
+
+        return [
+            'count' => $count,
+            'limit' => $limit,
+            'is_full' => $count >= $limit,
+        ];
+    }
+
+    private function getActivePendingQueueCount(int $villageId): int
+    {
+        $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM building_queue WHERE village_id = ? AND status IN ('active','pending')");
+        if ($stmt === false) {
+            error_log("Prepare failed for getActivePendingQueueCount: " . $this->conn->error);
+            return 0;
         }
 
         $stmt->bind_param("i", $villageId);
         $stmt->execute();
-        $result = $stmt->get_result();
-        $row = $result->fetch_row();
+        $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        return (int)($row[0] ?? 0) > 0;
+        return $row ? (int)$row['cnt'] : 0;
+    }
+
+    private function getQueueLimit(): int
+    {
+        return defined('BUILDING_QUEUE_MAX_ITEMS') ? (int)BUILDING_QUEUE_MAX_ITEMS : 10;
     }
 
     /**
@@ -631,7 +647,8 @@ class BuildingManager {
 
         // 2. Fetch the current build queue item for this village
         $queueItem = $this->getBuildingQueueItem($villageId);
-        $hasQueuedBuild = $queueItem !== null;
+        $queueCount = $this->getActivePendingQueueCount($villageId);
+        $maxQueueItems = $this->getQueueLimit();
 
         // 3. Fetch village resources once (used for every upgrade check)
         $villageResources = $this->getVillageResources($villageId);
@@ -683,7 +700,8 @@ class BuildingManager {
                     $config,
                     $current_level,
                     $villageResources,
-                    $hasQueuedBuild,
+                    $queueCount,
+                    $maxQueueItems,
                     $villageBuildingsLevels,
                     $buildingNames
                 );
@@ -814,7 +832,8 @@ class BuildingManager {
         array $config,
         int $currentLevel,
         ?array $villageResources,
-        bool $hasQueuedBuild,
+        int $queueCount,
+        int $maxQueueItems,
         array $villageBuildingLevels,
         array $buildingNames
     ): array {
@@ -824,8 +843,8 @@ class BuildingManager {
             return ['success' => false, 'message' => 'Maximum level reached for this building.', 'upgrade_costs' => null];
         }
 
-        if ($hasQueuedBuild) {
-            return ['success' => false, 'message' => 'Another upgrade is already in progress in this village.', 'upgrade_costs' => null];
+        if ($queueCount >= $maxQueueItems) {
+            return ['success' => false, 'message' => "Build queue is full (max {$maxQueueItems} items).", 'upgrade_costs' => null];
         }
 
         $upgradeCosts = $this->buildingConfigManager->calculateUpgradeCost($internalName, $currentLevel);

@@ -643,25 +643,25 @@ Distance: 45 tiles (4.5 hours cavalry)
 
 #### Filters & Toggles
 
-**Village Type Filters:**
-- [ ] Show own villages
-- [ ] Show tribe villages
-- [ ] Show allied villages
-- [ ] Show enemy villages
-- [ ] Show neutral villages
-- [ ] Show barbarian villages
-- [ ] Show protected villages
-- [ ] Show special objectives
+**Village Type Filters (sticky pill toggles, saved per player):**
+- Own villages: always on, bright outline and glow; double-click isolates only own villages
+- Tribe villages: on by default, tribe-color fill; hides sitter villages only if player opts out
+- Allied villages: on by default, tinted with ally color; hover shows alliance name
+- Enemy villages: on by default, red markers; quick-toggle button "Only enemies" filters out all others
+- Neutral villages: on by default, muted gray markers to reduce clutter
+- Barbarian villages: on by default on desktop, off by default on mobile to declutter
+- Protected villages: off by default; shield icon indicates beginner protection or truce state
+- Special objectives: on by default; shows wonders, event nodes, and map objectives with unique icons
 
-**Information Overlays:**
-- [ ] Show village names
-- [ ] Show player names
-- [ ] Show coordinates
-- [ ] Show points
-- [ ] Show troop movements
-- [ ] Show sector boundaries
-- [ ] Show tribe territories
-- [ ] Show distance circles
+**Information Overlays (independent toggles, stackable):**
+- Village names: label overlay that auto-hides when zoomed far out; tap to force-show for 5 seconds
+- Player names: shows `Player (Tribe Tag)` under the village label; off by default on mobile
+- Coordinates: small `123|456` badge; always visible in "War Room" preset
+- Points: shows current village points with tiny trend arrow if scouted recently
+- Troop movements: animated arrows with ETA badges; throttled when >500 movements on screen
+- Sector boundaries: gridlines every 20×20 tiles; highlight current sector with bold border
+- Tribe territories: shaded polygons with opacity slider; overlapping alliances use striped fill
+- Distance circles: configurable radii (5/10/20/50 tiles) from selected village; color-coded per radius
 
 **Point Range Filter:**
 - Slider: 0 to 50,000 points
@@ -1506,4 +1506,3 @@ The world map is the heart of the game, where strategy, diplomacy, and warfare c
 - **Engagement:** Real-time updates and interactive tools keep players engaged
 
 The map should feel alive, constantly updating with troop movements, battles, and territorial changes. It should empower players to make informed strategic decisions while remaining accessible to newcomers. Whether planning a solo raid or coordinating a massive tribal war, the map is the essential tool that brings the medieval world to life.
-

@@ -136,7 +136,8 @@ function createSchema(SQLiteAdapter $conn): array
             building_type_id INTEGER NOT NULL,
             level INTEGER NOT NULL,
             starts_at TEXT,
-            finish_time TEXT
+            finish_time TEXT,
+            status TEXT NOT NULL DEFAULT 'active'
         );
     ");
 
@@ -211,7 +212,7 @@ function seedBuildingQueue(SQLiteAdapter $conn, int $villageId, int $villageBuil
 
 $runner = new TinyTestRunner();
 
-$runner->add('Blocking upgrade when queue exists', function () {
+$runner->add('Allows upgrade queuing when an item is already active', function () {
     $conn = new SQLiteAdapter(':memory:');
     createSchema($conn);
     $buildingTypeMap = seedBuildingTypes($conn);
@@ -229,8 +230,35 @@ $runner->add('Blocking upgrade when queue exists', function () {
     seedBuildingQueue($conn, 1, $buildingIds['sawmill'], $buildingTypeMap['sawmill'], 2, '2024-01-01 00:00:00', '2024-01-01 01:00:00');
 
     $result = $buildingManager->canUpgradeBuilding(1, 'main_building');
-    assertFalse($result['success'], 'Upgrade should be blocked while queue is occupied');
-    assertEquals('Another upgrade is already in progress in this village.', $result['message'], 'Should surface queue-in-progress message');
+    assertTrue($result['success'], 'Upgrade should be allowed while queue has room');
+});
+
+$runner->add('Blocks when build queue reaches capacity', function () {
+    $conn = new SQLiteAdapter(':memory:');
+    createSchema($conn);
+    $buildingTypeMap = seedBuildingTypes($conn);
+    $configManager = new BuildingConfigManager($conn);
+    $buildingManager = new BuildingManager($conn, $configManager);
+
+    $buildingIds = seedVillage(
+        $conn,
+        $buildingTypeMap,
+        1,
+        ['wood' => 50000, 'clay' => 50000, 'iron' => 50000],
+        ['main_building' => 3, 'sawmill' => 1]
+    );
+
+    // Seed queue to max capacity (default 10 active+pending)
+    $start = strtotime('2024-01-01 00:00:00');
+    for ($i = 0; $i < 10; $i++) {
+        $st = date('Y-m-d H:i:s', $start + ($i * 3600));
+        $ft = date('Y-m-d H:i:s', $start + (($i + 1) * 3600));
+        seedBuildingQueue($conn, 1, $buildingIds['sawmill'], $buildingTypeMap['sawmill'], $i + 2, $st, $ft);
+    }
+
+    $result = $buildingManager->canUpgradeBuilding(1, 'main_building');
+    assertFalse($result['success'], 'Upgrade should be blocked when queue is full');
+    assertEquals('Build queue is full (max 10 items).', $result['message'], 'Should surface queue-full message');
 });
 
 $runner->add('Building view exposes queue timestamps', function () {

@@ -141,6 +141,7 @@ header('Content-Security-Policy: ' . implode('; ', $csp));
                 <!-- Navigation for logged-in users -->
                 <a href="/game/game.php" class="<?= $current_page === 'game.php' ? 'active' : '' ?>"><i class="fas fa-home"></i> Overview</a>
                 <a href="/map/map.php" class="<?= $current_page === 'map.php' ? 'active' : '' ?>"><i class="fas fa-map"></i> Map</a>
+                <a href="/game/intel.php" class="<?= $current_page === 'intel.php' ? 'active' : '' ?>"><i class="fas fa-eye"></i> Intel</a>
                 <a href="/messages/reports.php" class="<?= $current_page === 'reports.php' ? 'active' : '' ?>"><i class="fas fa-scroll"></i> Reports</a>
                 <a href="/messages/messages.php" class="<?= $current_page === 'messages.php' ? 'active' : '' ?>"><i class="fas fa-envelope"></i> Messages</a>
                 <a href="/player/tribe.php" class="<?= $current_page === 'tribe.php' ? 'active' : '' ?>"><i class="fas fa-users"></i> Tribe</a>

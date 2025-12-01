@@ -155,6 +155,11 @@ The old version of the engine (VeryOldTemplate) was used as inspiration for the 
 Detailed documentation of the code and database can be found in the `docs/` directory (if it exists). It may contain files such as `database.md`, `api.md`, etc.
 
 - Resource & Economy Design: `docs/resource-economy-design.md`
+- Village & Building System: `docs/village-building-system.md`
+- Core Gameplay Loop: `docs/core-gameplay-loop.md`
+- Tribes & Diplomacy: `docs/tribes-and-diplomacy.md`
+- Combat & Battles: `docs/combat-and-battles.md`
+- Units & Roles: `docs/units-and-roles.md`
 
 ## Further Development
 

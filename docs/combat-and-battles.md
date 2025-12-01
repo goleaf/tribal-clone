@@ -1691,3 +1691,458 @@ Some game variants allow intercepting attacks in transit:
 - Example: "Harvest Festival" with increased resource plunder
 - Limited-time events create variety and excitement
 
+
+
+**World Wonders:**
+
+- Late-game objectives that tribes compete to build and defend
+- Require massive resource investment and coordination
+- Attacking world wonders is extremely difficult
+- First tribe to complete world wonder wins the game world
+- Creates endgame focus and conclusion to server
+
+### Battle Simulation and Planning Tools
+
+**In-Game Simulator:**
+
+- Tool that predicts battle outcomes based on input forces
+- Helps players plan attacks and assess risks
+- Shows estimated casualties and success probability
+- May or may not account for luck variance
+- Encourages strategic planning over blind attacking
+
+**External Calculators:**
+
+- Community-created tools for battle simulation
+- More detailed than in-game tools
+- May include advanced features (optimal unit composition, timing calculators)
+- Part of meta-game and community engagement
+
+### Anti-Cheating Measures
+
+**Multi-Accounting Prevention:**
+
+- Detect and ban players controlling multiple accounts
+- Prevent self-supporting or self-farming
+- IP tracking, behavior analysis, timing patterns
+- Community reporting of suspected multi-accounters
+
+**Bot Detection:**
+
+- Detect automated scripts or bots
+- Unusual timing precision or inhuman reaction speeds
+- Captcha challenges for suspicious activity
+- Ban players using automation tools
+
+**Exploit Prevention:**
+
+- Prevent resource duplication exploits
+- Prevent timing exploits or server manipulation
+- Regular security audits and penetration testing
+- Quick response to discovered exploits
+
+
+
+---
+
+## Combat Balance Considerations
+
+### Unit Balance
+
+**Rock-Paper-Scissors Design:**
+
+- Spearmen counter cavalry
+- Cavalry counters archers
+- Archers counter infantry
+- Siege weapons counter walls
+- No single unit type dominates all scenarios
+
+**Cost-Effectiveness:**
+
+- Expensive units should be proportionally more effective
+- Cheap units should have niche uses
+- Balance between training time, resource cost, and combat power
+- Consider population space (expensive units take more space)
+
+### Defender Advantage
+
+**Why Defenders Should Have Advantage:**
+
+- Encourages building defenses and infrastructure
+- Prevents constant successful raiding (would make game frustrating)
+- Rewards preparation and planning
+- Makes conquest challenging and meaningful
+- Walls and fortifications should matter
+
+**Balancing Defender Advantage:**
+
+- Too strong: no one can successfully attack, game stagnates
+- Too weak: constant raiding, no one can build up, chaos
+- Sweet spot: well-planned attacks succeed, poorly-planned attacks fail
+- Defender advantage should scale with investment (wall level, etc.)
+
+### Attacker Incentives
+
+**Why Players Should Attack:**
+
+- Resource gain from plunder
+- Territory expansion through conquest
+- Weakening competitors
+- Tribal warfare objectives
+- Ranking and prestige
+
+
+
+**Making Attacks Worthwhile:**
+
+- Plunder should exceed attack cost (for successful attacks)
+- Conquest should provide long-term strategic value
+- Attacking should be more profitable than pure farming/building
+- Risk-reward balance: high risk attacks have high rewards
+
+### New Player Protection
+
+**Protecting Beginners:**
+
+- Beginner protection period (3-7 days)
+- Morale system penalizes attacking much weaker players
+- Tutorial guidance on defense and survival
+- Starter resources and troops
+- Tribe recruitment and mentorship programs
+
+**Graduation to Full Game:**
+
+- Protection ends when player attacks someone
+- Protection ends when player reaches point threshold
+- Protection ends after time limit
+- Gradual exposure to full game mechanics
+
+### Endgame Balance
+
+**Late Game Challenges:**
+
+- Prevent dominant players/tribes from becoming unbeatable
+- World wonders or victory conditions create endpoints
+- Diminishing returns on expansion (harder to defend many villages)
+- Coalition mechanics allow smaller tribes to unite against dominant tribe
+- Server resets or new worlds provide fresh starts
+
+---
+
+## Implementation Priorities
+
+### Phase 1: Core Combat (MVP)
+
+- Basic attack and defense resolution
+- Simple power calculation (attack vs defense)
+- Troop casualties and death
+- Resource plunder for attacker victories
+- Basic battle reports
+- Wall defensive bonus
+
+
+
+### Phase 2: Attack Variety
+
+- Multiple attack types (normal, raid, siege)
+- Scouting missions
+- Support movements
+- Attack cancellation
+- Fake attacks
+
+### Phase 3: Advanced Mechanics
+
+- Morale system
+- Luck variance
+- Terrain modifiers
+- Time of day effects
+- Unit-specific bonuses (cavalry vs archers, etc.)
+
+### Phase 4: Conquest System
+
+- Noble/chieftain units
+- Loyalty mechanics
+- Village conquest
+- Post-conquest protection
+
+### Phase 5: Polish and Balance
+
+- Detailed battle reports with multiple examples
+- Battle simulator tool
+- Advanced tactics support (timing, coordination)
+- Balance tuning based on player feedback
+- Edge case handling
+
+### Phase 6: Social and Tribal Features
+
+- Tribe warfare mechanics
+- Coordinated attack tools
+- Shared intelligence
+- Tribe vs tribe wars
+- World wonders and victory conditions
+
+---
+
+## Testing and Balancing
+
+### Combat Testing Scenarios
+
+**Basic Combat Tests:**
+
+- Equal forces should result in close battle
+- 2x forces should win decisively
+- 10x forces should win overwhelmingly
+- Wall bonus should significantly help defender
+- Morale should penalize attacking weaker players
+
+
+
+**Unit Balance Tests:**
+
+- Each unit type should have situations where it excels
+- No unit should be universally best
+- Cost should correlate with effectiveness
+- Counter-units should provide significant advantage
+
+**Edge Case Tests:**
+
+- Simultaneous attacks resolve correctly
+- Multiple supporters combine properly
+- Cancelled attacks don't cause bugs
+- Offline defenders are handled correctly
+- Server lag doesn't break timing
+
+**Exploit Testing:**
+
+- Cannot duplicate resources through combat
+- Cannot exploit timing to avoid casualties
+- Cannot manipulate battle reports
+- Cannot cheat with multiple accounts
+
+### Balance Metrics to Monitor
+
+**Attack Success Rate:**
+
+- Overall: should be 40-60% (balanced)
+- Too high: defenders too weak, game too chaotic
+- Too low: attackers too weak, game too static
+
+**Resource Flow:**
+
+- Plunder should be significant part of economy
+- But not so much that building is pointless
+- Monitor total resources plundered vs produced
+
+**Player Retention:**
+
+- Are new players surviving and growing?
+- Are players quitting due to being farmed?
+- Are endgame players staying engaged?
+
+**Tribal Activity:**
+
+- Are tribes coordinating attacks?
+- Are tribe wars happening?
+- Is tribal cooperation meaningful?
+
+
+
+### Tuning Parameters
+
+Key parameters that can be adjusted for balance:
+
+**Combat Parameters:**
+- Base attack/defense values for each unit
+- Wall defensive bonus multiplier
+- Siege weapon wall damage
+- Casualty distribution algorithm
+- Luck range (±10%, ±25%, etc.)
+- Morale minimum and curve
+
+**Economic Parameters:**
+- Plunder carrying capacity
+- Resource hiding protection
+- Plunder priority order
+- Building damage rates
+
+**Timing Parameters:**
+- Unit movement speeds
+- Attack visibility timing
+- Support arrival requirements
+- Noble loyalty reduction amount
+
+**Protection Parameters:**
+- Beginner protection duration
+- Offline protection (if any)
+- Post-conquest protection duration
+- Morale penalties for attacking weak players
+
+---
+
+## Future Enhancements
+
+### Advanced Combat Features
+
+**Hero Units:**
+- Special unique units with special abilities
+- Level up through combat experience
+- Can turn tide of close battles
+- Provide strategic depth and personalization
+
+**Formations and Tactics:**
+- Choose battle formations (defensive, aggressive, balanced)
+- Formations affect combat outcome
+- Adds strategic layer beyond just unit counts
+
+**Weather System:**
+- Dynamic weather affects battles
+- Rain slows cavalry, fog helps attackers, etc.
+- Adds unpredictability and realism
+
+
+
+**Terrain Variety:**
+- Different terrain types with unique effects
+- Mountains, rivers, forests, swamps, etc.
+- Terrain affects movement and combat differently
+- Strategic value of different locations
+
+**Naval Combat:**
+- Ships and naval units
+- Island maps with water barriers
+- Naval invasions and transport ships
+- Expands strategic possibilities
+
+**Siege Warfare:**
+- Extended sieges lasting hours or days
+- Siege camps outside enemy villages
+- Supply lines and attrition
+- More realistic medieval warfare
+
+**Espionage and Sabotage:**
+- Spy units that gather intelligence
+- Saboteurs that damage buildings or kill troops
+- Counter-intelligence to catch spies
+- Adds covert operations layer
+
+**Mercenaries and Allies:**
+- Hire NPC mercenary troops
+- Temporary alliances with other players
+- Mercenaries cost gold but available immediately
+- Provides flexibility for players without large armies
+
+**Battle Replays:**
+- Visual replay of battles
+- See how battle unfolded round by round
+- Educational for learning combat mechanics
+- Engaging and immersive
+
+**Achievements and Titles:**
+- Combat achievements (100 victories, conquered 10 villages, etc.)
+- Titles based on combat prowess
+- Leaderboards for various combat metrics
+- Provides goals and recognition
+
+
+
+### Quality of Life Features
+
+**Attack Templates:**
+- Save common attack compositions
+- Quick-send attacks with saved templates
+- Reduces repetitive clicking
+
+**Mass Operations:**
+- Send same attack from multiple villages
+- Coordinate timing across villages
+- Bulk support sending
+
+**Attack Planner:**
+- Visual timeline of planned attacks
+- Coordinate complex multi-wave operations
+- See all incoming and outgoing attacks at once
+
+**Mobile Notifications:**
+- Push notifications for incoming attacks
+- Alerts when battles resolve
+- Allows defensive response even when away from computer
+
+**Battle Statistics:**
+- Personal combat statistics dashboard
+- Win/loss ratio, total kills, resources plundered
+- Compare with other players
+- Track improvement over time
+
+---
+
+## Conclusion
+
+The combat system is the most complex and important part of the game. It must be:
+
+- **Fair**: Skill and preparation should determine outcomes, not just luck or time investment
+- **Engaging**: Combat should be exciting, strategic, and rewarding
+- **Balanced**: No dominant strategies; multiple viable approaches
+- **Accessible**: New players can understand basics quickly
+- **Deep**: Advanced players can master complex tactics
+- **Social**: Encourages cooperation and tribal warfare
+- **Performant**: Server can handle thousands of simultaneous battles
+
+Start with core mechanics (Phase 1-2), test thoroughly, gather player feedback, and iterate. Add advanced features (Phase 3-6) based on player demand and game balance needs.
+
+
+
+The combat system should evolve with the game. Monitor metrics, listen to community feedback, and continuously refine balance. A well-designed combat system will keep players engaged for months or years, creating memorable battles and epic tribal wars that players will talk about long after the game world ends.
+
+---
+
+## Quick Reference Tables
+
+### Attack Type Comparison
+
+| Attack Type | Speed | Primary Goal | Wall Damage | Plunder | Visibility | Risk Level |
+|-------------|-------|--------------|-------------|---------|------------|------------|
+| Normal Attack | 100% | Kill troops, plunder | Moderate | Standard | High | Medium |
+| Raid | 150% | Fast plunder | None | +25% capacity | Medium | Low |
+| Siege | 75% | Destroy walls, conquer | High | Low priority | Very High | High |
+| Scout | 200% | Intelligence | None | None | Low | Very Low |
+| Fake | 100% | Deception | None | None | High | None |
+| Noble | 80% | Conquest | None | Low | Very High | Very High |
+| Support | 100% | Defend ally | N/A | N/A | Low | Varies |
+
+### Morale System Options Summary
+
+| Option | Basis | Pros | Cons | Recommended For |
+|--------|-------|------|------|-----------------|
+| Village Points | Single village strength | Simple, intuitive | Doesn't account for player's other villages | Casual servers |
+| Player Points | Total player strength | Fair, prevents farming | More complex | Competitive servers |
+| Battle History | Recent wins/losses | Dynamic, rewards success | Can snowball | Experimental servers |
+| Distance | Geographic proximity | Encourages local warfare | May feel arbitrary | Roleplay servers |
+| Hybrid | Multiple factors | Most realistic | Most complex | Hardcore servers |
+
+
+
+### Battle Outcome Scenarios
+
+| Scenario | Attacker Result | Defender Result | Resources | Loyalty | Typical Cause |
+|----------|----------------|-----------------|-----------|---------|---------------|
+| Crushing Attacker Win | <20% casualties | 100% casualties | Full plunder | Reduced if noble | Overwhelming force |
+| Narrow Attacker Win | 50-80% casualties | 100% casualties | Partial plunder | Reduced if noble | Close battle |
+| Narrow Defender Win | 100% casualties | 80-95% casualties | None | No change | Close battle, good luck |
+| Crushing Defender Win | 100% casualties | <20% casualties | None | No change | Strong defense, poor attack |
+| Mutual Destruction | 100% casualties | 100% casualties | None | No change | Perfectly matched forces |
+| Failed Scout | All scouts killed | No casualties | None | No change | Strong counter-scouts |
+| Successful Scout | No casualties | No casualties | Intelligence gained | No change | Weak/no counter-scouts |
+
+### Recommended Starting Values
+
+| Parameter | Recommended Value | Rationale |
+|-----------|------------------|-----------|
+| Luck Range | ±15% | Enough variance to matter, not enough to dominate |
+| Minimum Morale | 50% | Protects weak players without eliminating attacks |
+| Wall Bonus (Max) | +200% defense | Makes walls valuable without being impenetrable |
+| Beginner Protection | 5 days | Long enough to learn, short enough to stay engaged |
+| Scout Speed | 2x normal | Fast enough for intelligence gathering |
+| Raid Speed | 1.5x normal | Faster than normal but not as fast as scouts |
+| Noble Loyalty Reduction | 25 points | Requires 4 nobles to conquer (100 loyalty) |
+| Plunder Capacity | 50% of troop count | Balanced between profit and military strength |
+

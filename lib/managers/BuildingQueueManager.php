@@ -238,28 +238,7 @@ class BuildingQueueManager
             $stmt->execute();
             $stmt->close();
 
-            if ($wasActive) {
-                $stmt = $this->conn->prepare("SELECT * FROM building_queue WHERE village_id = ? AND status = 'pending' ORDER BY starts_at ASC LIMIT 1");
-                $stmt->bind_param("i", $item['village_id']);
-                $stmt->execute();
-                $nextItem = $stmt->get_result()->fetch_assoc();
-                $stmt->close();
-                
-                if ($nextItem) {
-                    // Recalculate start time to now
-                    $now = time();
-                    $duration = strtotime($nextItem['finish_time']) - strtotime($nextItem['starts_at']);
-                    $newFinish = $now + $duration;
-                    
-                    $stmt = $this->conn->prepare("UPDATE building_queue SET starts_at = ?, finish_time = ?, status = ? WHERE id = ?");
-                    $startsAt = date('Y-m-d H:i:s', $now);
-                    $finishTime = date('Y-m-d H:i:s', $newFinish);
-                    $activeStatus = 'active';
-                    $stmt->bind_param("sssi", $startsAt, $finishTime, $activeStatus, $nextItem['id']);
-                    $stmt->execute();
-                    $stmt->close();
-                }
-            }
+            $this->rebalanceQueue($item['village_id']);
 
             $this->conn->commit();
 
@@ -272,6 +251,129 @@ class BuildingQueueManager
     }
 
     // ========== Private Helper Methods ==========
+
+    private function getQueueItemById(int $queueItemId): ?array
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM building_queue WHERE id = ?");
+        $stmt->bind_param("i", $queueItemId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: null;
+    }
+
+    private function getQueueCount(int $villageId): int
+    {
+        $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM building_queue WHERE village_id = ? AND (status IS NULL OR status IN ('active','pending'))");
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        return $row ? (int)$row['cnt'] : 0;
+    }
+
+    private function getQueueTailFinishTime(int $villageId): ?int
+    {
+        $stmt = $this->conn->prepare("SELECT finish_time FROM building_queue WHERE village_id = ? AND (status IS NULL OR status IN ('active','pending')) ORDER BY finish_time DESC LIMIT 1");
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row && isset($row['finish_time']) ? strtotime($row['finish_time']) : null;
+    }
+
+    private function getActiveQueueItemId(int $villageId): ?int
+    {
+        $active = $this->getActiveQueueItem($villageId);
+        return $active ? (int)$active['id'] : null;
+    }
+
+    private function getActiveQueueItem(int $villageId): ?array
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM building_queue WHERE village_id = ? AND (status = 'active' OR status IS NULL) ORDER BY starts_at ASC LIMIT 1");
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: null;
+    }
+
+    private function getNextPendingItem(int $villageId): ?array
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM building_queue WHERE village_id = ? AND status = 'pending' ORDER BY starts_at ASC, id ASC LIMIT 1");
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: null;
+    }
+
+    private function getPendingItems(int $villageId): array
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM building_queue WHERE village_id = ? AND status = 'pending' ORDER BY starts_at ASC, id ASC");
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows ?: [];
+    }
+
+    private function calculateDuration(array $item): int
+    {
+        $startTs = isset($item['starts_at']) ? strtotime($item['starts_at']) : null;
+        $finishTs = isset($item['finish_time']) ? strtotime($item['finish_time']) : null;
+        if (!$finishTs) {
+            return 1;
+        }
+
+        $duration = $finishTs - ($startTs ?? $finishTs);
+        return max(1, $duration);
+    }
+
+    private function updateQueueItemTiming(int $queueItemId, int $startAt, int $finishAt, ?string $status = null): void
+    {
+        if ($status) {
+            $stmt = $this->conn->prepare("UPDATE building_queue SET starts_at = ?, finish_time = ?, status = ? WHERE id = ?");
+            $startsAt = date('Y-m-d H:i:s', $startAt);
+            $finishTime = date('Y-m-d H:i:s', $finishAt);
+            $stmt->bind_param("sssi", $startsAt, $finishTime, $status, $queueItemId);
+        } else {
+            $stmt = $this->conn->prepare("UPDATE building_queue SET starts_at = ?, finish_time = ? WHERE id = ?");
+            $startsAt = date('Y-m-d H:i:s', $startAt);
+            $finishTime = date('Y-m-d H:i:s', $finishAt);
+            $stmt->bind_param("ssi", $startsAt, $finishTime, $queueItemId);
+        }
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    private function rebalanceQueue(int $villageId): void
+    {
+        $now = time();
+
+        $active = $this->getActiveQueueItem($villageId);
+        if (!$active) {
+            $next = $this->getNextPendingItem($villageId);
+            if ($next) {
+                $duration = $this->calculateDuration($next);
+                $startAt = $now;
+                $finishAt = $startAt + $duration;
+                $this->updateQueueItemTiming((int)$next['id'], $startAt, $finishAt, 'active');
+                $active = $this->getActiveQueueItem($villageId);
+            }
+        }
+
+        $baseStart = $active ? max(strtotime($active['finish_time']), $now) : $now;
+        $pendingItems = $this->getPendingItems($villageId);
+        foreach ($pendingItems as $item) {
+            $duration = $this->calculateDuration($item);
+            $startAt = $baseStart;
+            $finishAt = $startAt + $duration;
+            $this->updateQueueItemTiming((int)$item['id'], $startAt, $finishAt, 'pending');
+            $baseStart = $finishAt;
+        }
+    }
 
     private function getBuildingLevel(int $villageId, string $internalName): int
     {

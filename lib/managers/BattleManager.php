@@ -10,6 +10,7 @@ class BattleManager
     private $notificationManager; // Persistent in-game notifications
     private $reportManager; // Generic report log
     private $tribeWarManager; // Tribe war tracking
+    private $intelManager; // Scouting/intel logging
 
     private const RANDOM_VARIANCE = 0.25; // +/- 25% luck
     private const FAITH_DEFENSE_PER_LEVEL = 0.05; // 5% per church level
@@ -52,7 +53,11 @@ class BattleManager
         if (!class_exists('TribeWarManager')) {
             require_once __DIR__ . '/TribeWarManager.php';
         }
-            $this->tribeWarManager = new TribeWarManager($conn);
+        $this->tribeWarManager = new TribeWarManager($conn);
+        if (!class_exists('IntelManager')) {
+            require_once __DIR__ . '/IntelManager.php';
+        }
+        $this->intelManager = new IntelManager($conn);
     }
     
     /**
@@ -63,11 +68,13 @@ class BattleManager
      * @param array $units_sent Map of unit type IDs to counts
      * @param string $attack_type Attack type ('attack', 'raid', 'support', 'spy')
      * @param string|null $target_building Target building for catapults
+     * @param array $options Additional options (e.g., ['mission_type' => 'deep_spy'])
      * @return array Operation status
      */
-    public function sendAttack($source_village_id, $target_village_id, $units_sent, $attack_type = 'attack', $target_building = null)
+    public function sendAttack($source_village_id, $target_village_id, $units_sent, $attack_type = 'attack', $target_building = null, array $options = [])
     {
         $attack_type = in_array($attack_type, ['attack', 'raid', 'support', 'spy', 'fake'], true) ? $attack_type : 'attack';
+        $missionType = is_string($options['mission_type'] ?? null) ? $options['mission_type'] : 'light_scout';
 
         // Ensure both villages exist
         $stmt_check_villages = $this->conn->prepare("
@@ -327,6 +334,21 @@ class BattleManager
                 $stmt_add_units->bind_param("iii", $attack_id, $unit_type_id, $count);
                 $stmt_add_units->execute();
                 $stmt_add_units->close();
+            }
+
+            // Attach scouting mission metadata for spy attacks
+            if ($attack_type === 'spy') {
+                $stmtMission = $this->conn->prepare("
+                    INSERT IGNORE INTO scout_missions (
+                        attack_id, mission_type, requested_by_user_id, requested_by_village_id
+                    ) VALUES (?, ?, ?, ?)
+                ");
+                if ($stmtMission) {
+                    $sourceUserId = (int)($villages['source_user_id'] ?? 0);
+                    $stmtMission->bind_param("isii", $attack_id, $missionType, $sourceUserId, $source_village_id);
+                    $stmtMission->execute();
+                    $stmtMission->close();
+                }
             }
             
             // Commit transaction
@@ -1645,6 +1667,25 @@ class BattleManager
                 );
             }
 
+            // Persist intel snapshot & mark mission resolved
+            $missionType = $this->getMissionTypeForAttack($attack_id);
+            if ($this->intelManager) {
+                try {
+                    $this->intelManager->recordSpyReport([
+                        'attack_id' => $attack_id,
+                        'mission_type' => $missionType,
+                        'source_village_id' => $attack['source_village_id'],
+                        'target_village_id' => $attack['target_village_id'],
+                        'source_user_id' => $users['attacker_user_id'] ?? 0,
+                        'target_user_id' => $users['defender_user_id'] ?? null,
+                        'details' => $details,
+                    ]);
+                } catch (Throwable $e) {
+                    error_log('Intel snapshot failed for attack ' . $attack_id . ': ' . $e->getMessage());
+                }
+            }
+            $this->markScoutMissionResolved($attack_id);
+
             $this->conn->commit();
             return ['success' => true];
         } catch (Exception $e) {
@@ -2568,6 +2609,42 @@ class BattleManager
         $res = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         return $res['name'] ?? '';
+    }
+
+    /**
+     * Resolve mission type for a given attack (defaults to light_scout).
+     */
+    private function getMissionTypeForAttack(int $attackId): string
+    {
+        $stmt = $this->conn->prepare("SELECT mission_type FROM scout_missions WHERE attack_id = ? LIMIT 1");
+        if ($stmt === false) {
+            return 'light_scout';
+        }
+        $stmt->bind_param("i", $attackId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = $res ? $res->fetch_assoc() : null;
+        $res && $res->free();
+        $stmt->close();
+        return $row['mission_type'] ?? 'light_scout';
+    }
+
+    /**
+     * Mark a scout mission as resolved once the spy report is processed.
+     */
+    private function markScoutMissionResolved(int $attackId): void
+    {
+        $stmt = $this->conn->prepare("
+            UPDATE scout_missions
+            SET status = 'resolved', resolved_at = UNIX_TIMESTAMP()
+            WHERE attack_id = ?
+        ");
+        if ($stmt === false) {
+            return;
+        }
+        $stmt->bind_param("i", $attackId);
+        $stmt->execute();
+        $stmt->close();
     }
 
     /**

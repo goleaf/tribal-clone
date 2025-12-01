@@ -114,11 +114,9 @@ try {
     } else {
         // If not upgrading, check whether the next level can be started
         if ($current_level < $max_level) {
-            // Check if any building is already in the queue for this village
-            $isAnyBuildingInQueue = $buildingManager->isAnyBuildingInQueue($village_id); // Needs implementation
-
-            if ($isAnyBuildingInQueue) {
-                 $response['upgrade_not_available_reason'] = 'Another building is already upgrading in this village.';
+            $queueUsage = $buildingManager->getQueueUsage($village_id);
+            if ($queueUsage['is_full']) {
+                 $response['upgrade_not_available_reason'] = 'Build queue is full (max ' . $queueUsage['limit'] . ' items).';
             } else {
                 // Calculate costs/time for next level
                 $next_level = $current_level + 1;

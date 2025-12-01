@@ -1007,6 +1007,15 @@ When clicking a building, show:
 3. **Priority System**: Set building priorities (high/medium/low)
 4. **Smart Queue**: AI fills queue based on village specialization
 
+**Smart Queue Details (per-village toggle):**
+- **Inputs**: Village specialization tag (e.g., "econ", "defense", "offense"), current building levels, storage caps, worker availability, and resource/hour.
+- **Logic**: Maintains a rolling 3-item queue; always includes one production/storage item, one military/research item, and a filler upgrade with the best ROI for the specialization. Skips items that block due to prereqs or storage caps.
+- **Constraints**: Respects player-set max level per building, resource thresholds, and queue slot limits; pauses when building slot is occupied by player manual build.
+- **Resource Safety**: Auto-trims upgrade choices to keep at least X hours of idle resources as buffer (configurable).
+- **Transparency**: Shows "Why picked" tooltip (e.g., "+180 wood/hr, pays back in 26m; unlocks Stables req").
+- **Overrides**: Player can pin specific buildings to always prioritize or ban items entirely (e.g., "never queue Wall").
+- **Failover**: If specialization unknown, defaults to balanced template; if resources insufficient for 10 minutes, auto-downgrades to cheaper picks.
+
 #### Batch Operations:
 1. **Upgrade All**: Upgrade all buildings of same type across villages
 2. **Sync Villages**: Keep multiple villages at same building levels
