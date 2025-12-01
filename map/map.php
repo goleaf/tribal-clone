@@ -144,6 +144,9 @@ require '../header.php';
         <div class="map-alert" id="map-rate-warning" style="display:none;">
             Map updates are temporarily slowed. Please wait a moment before panning again.
         </div>
+        <div class="map-alert" id="offline-warning" style="display:none;">
+            Offline mode is ON. Showing cached map data; turn off to refresh.
+        </div>
 
             <div class="map-wrapper">
                 <div class="map-grid-shell">
@@ -330,7 +333,6 @@ const OFFLINE_MODE_KEY = 'map_offline_mode';
 let mapHighContrast = false;
 let mapReducedMotion = false;
 let mapOfflineMode = false;
-let lastOfflineError = null;
 const MAP_PERF_SAMPLE_RATE = 0.1; // 10% sampling to limit noise
 let lastMapPayloadBytes = null;
 let lastMapFetchMs = null;

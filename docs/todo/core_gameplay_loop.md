@@ -157,6 +157,14 @@ Players manage villages to grow resources, build and upgrade structures, train a
 - [ ] Loop pacing knobs: per-world settings for queue slot unlocks, task cadence, event frequency; exposed in admin UI with audit to tune casual vs hardcore worlds.
 - [ ] QA: simulate core session flows (tutorial → first raid → tribe join → first conquest) across desktop/mobile; measure time-to-critical actions and verify protection/quiet-hour/anti-abuse behaviors.
 
+### Loop-Specific Tutorials/Tooltips (Implementation Notes)
+- Trigger points: empty build/recruit/research queue, overcap warehouse/granary, stale intel (>12h), unclaimed tasks within 1h of expiry, missing wall repair after hit, quiet-hours not set after X alerts/day.
+- Delivery: lightweight inline toasts/cards with one-click actions (queue preset, open scout dialog, claim tasks, repair wall). Include “snooze 24h” and “don’t show again” per category stored server-side.
+- Personalization: copy variants per segment (casual vs hardcore) and per world archetype; honor localization keys and feature flags.
+- Reason codes: each tip logged with `reason_code` (e.g., `EMPTY_QUEUE`, `OVERCAP`, `STALE_INTEL`, `TASK_EXPIRING`, `QUIET_HOURS_MISSING`, `WALL_DAMAGED`) for telemetry/abuse detection.
+- Suppression: cooldown per category (e.g., min 2h between same tip) and global daily cap; respect quiet hours/DND; do not fire if queues full or player opted out.
+- Surfacing: UI badge for “Help” panel listing recent suppressed tips with quick actions; clears when acted on or snoozed.
+
 ### Quiet Hours & Anti-Burnout Spec
 - **Quiet Hours:** Per-player configurable window (e.g., 22:00–07:00 local) stored server-side; notifications during this window are suppressed or batched unless marked critical (incoming attack threshold configurable per world). Defaults vary by world type; players can override within bounds.
 - **Flood Auto-Snooze:** If >N attack commands land in a rolling 5-minute window on the player, auto-snooze non-critical notifications for 30 minutes and send a single “Flood in progress, snoozed non-critical alerts” message. Player can override to resume.

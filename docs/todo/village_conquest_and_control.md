@@ -108,10 +108,10 @@
 - [ ] Tests: unit tests for drop/regen math, anti-snipe floor, random band distribution, wall reduction, and capture threshold; property tests for clamping and overflow safety.
 
 ### Regen Rules — Decisions to Unblock Impl
-- Base tick: `ALLEG_REGEN_PER_HOUR` default 2.0; applied continuously using elapsed seconds; clamp to 100.
-- Multipliers: Shrine/Temple +2% per level (cap +20%), Hall of Banners +0.25 flat per level, tribe tech “Steadfast” +15% multiplicative capped by `MAX_REGEN_MULT=1.75`.
-- Pauses: during anti-snipe, active combat tick, occupation/uptime window, or when hostile command ETA ≤ `REGEN_PAUSE_WINDOW_MS` (default 5000). Regen resumes next tick without “catch-up”.
-- Decay (optional, off by default): `ABANDON_DECAY_PER_HOUR=0.5` when owner offline > 72h and no garrison; clamp floor 0.
+- [x] Base tick: `ALLEG_REGEN_PER_HOUR` default 2.0; applied continuously using elapsed seconds; clamp to 100. _(wired via AllegianceService using config constants)_
+- [x] Multipliers: Shrine/Temple +2% per level (cap +20%), Hall of Banners +0.25 flat per level, tribe tech “Steadfast” +15% multiplicative capped by `MAX_REGEN_MULT=1.75`. _(configurable bonuses applied in regen calc with multiplier clamp)_
+- [x] Pauses: during anti-snipe, active combat tick, occupation/uptime window, or when hostile command ETA ≤ `REGEN_PAUSE_WINDOW_MS` (default 5000). Regen resumes next tick without “catch-up”. _(regen helper now respects pause flags + hostile ETA window)_
+- [x] Decay (optional, off by default): `ALLEG_ABANDON_DECAY_PER_HOUR` when owner offline > 72h and no garrison; clamp floor 0. _(context flag and inactivity check trigger decay when enabled)_
 - Persistence: every regen tick writes `last_allegiance_update` and current allegiance; batch write once per tick per village to avoid churn; add Prometheus counter for paused ticks vs applied ticks.
 - Config surface: add to `worlds/<world>.json` keys: `alleg_regen_per_hour`, `max_regen_mult`, `regen_pause_window_ms`, `abandon_decay_per_hour`, `shrine_regen_bonus_per_level`, `hall_regen_flat_per_level`, `tribe_regen_mult`. Docs must reflect per-world overrides for UI tooltips.
 
