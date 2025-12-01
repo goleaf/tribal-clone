@@ -87,7 +87,10 @@ function setupMarketListeners() {
         try {
             const response = await fetch(form.action, {
                 method: 'POST',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
                 body: new URLSearchParams(formData).toString()
             });
             const data = await response.json();
@@ -133,7 +136,10 @@ function setupMarketListeners() {
             try {
                 const response = await fetch('/ajax/trade/accept_offer.php', {
                     method: 'POST',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
                     body: new URLSearchParams({ offer_id: offerId, village_id: villageId, csrf_token: csrf }).toString()
                 });
                 const data = await response.json();
@@ -164,7 +170,10 @@ function setupMarketListeners() {
             try {
                 const response = await fetch('/ajax/trade/cancel_offer.php', {
                     method: 'POST',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
                     body: new URLSearchParams({ offer_id: offerId, village_id: villageId, csrf_token: csrf }).toString()
                 });
                 const data = await response.json();

@@ -3229,6 +3229,13 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     color: var(--color-muted);
 }
 
+#popup-action-content .market-warning {
+    padding: var(--spacing-sm);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--border-radius-small);
+    background-color: var(--color-background-alt);
+}
+
 #popup-action-content .send-resources h4,
 #popup-action-content .active-trades h4,
 #popup-action-content .market-offers h4 {

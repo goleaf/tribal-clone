@@ -195,6 +195,7 @@ $target_village_id = $_GET['target_village_id'] ?? null;
 
 if (!$is_ajax) {
     $database->closeConnection();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -556,12 +557,11 @@ if (!$is_ajax) {
                         </div>
                     <?php endif; ?>
                 </div>
-            <?php if (!$is_ajax): ?>
+            <?php endif; ?>
             </main>
         </div>
     </div>
-            <?php endif; ?>
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Tab handling
