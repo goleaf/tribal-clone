@@ -193,11 +193,13 @@
 - [ ] Backward-compatible API responses for trade/aid/minting while new caps/fields propagate; include versioning.
 - [ ] Release comms: explain decay/DR/taxes and fair-play safeguards; UI tooltips updated with formulas/examples.
 - [ ] Monitoring: dashboards for economy metrics (production/sinks, trade/aid volume, cap hits, decay/DR events); alerts on anomalies with runbooks/owners.
+- [ ] Guardrail logging: emit metrics/logs when dynamic cost scalers/event modifiers hit min/max bounds or conquest cost scaling applies; surface in admin dashboards to catch misconfigurations.
 
 ## Monitoring Plan
 - Track economy tick latency, decay/DR application counts, and empire surcharge hits; alert on spikes or missed applications.
 - Monitor trade/aid/minting error rates and cap hits; alert on surges indicating misconfigurations or abuse.
 - Watch event token expiries and shop purchase caps; alert if expiries fail or caps are bypassed.
+- Track pricing guardrail clamps (min/max scalers, conquest cost scaling, event modifier bounds); alert if clamp rates spike or stay at bound, suggesting mis-tuned configs.
 - Dashboard for trade/aid volumes, average payload sizes, and rate-limit hits to catch regressions.
 
 ### Resource Sink Plan

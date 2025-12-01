@@ -164,6 +164,7 @@
 - Monitor hospital recovery applications and report generation time; alert on anomalies or missing recovery entries.
 - Track outpost creation/expiry events and cleanup jobs; alert on orphaned markers/queues.
 - Monitor wall damage/repair events and decay toggles per world; alert on unexpected level changes or decay when disabled.
+- Dashboard per world: queue uptime %, avg building level by village archetype, watchtower detection volume, hospital recovery counts, outpost churn, and wall repair volume.
 
 ## QA & Tests
 - Queue validation: prereq/pop/resource caps return correct reason codes; reorder/cancel refunds match spec; parallel queue rules enforced per world.
