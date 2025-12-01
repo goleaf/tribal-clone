@@ -90,6 +90,7 @@ if (!isset($_GET['source_village']) && !isset($_POST['source_village'])) {
 
 // Fetch units available in the source village
 $units = $unitManager->getVillageUnits($source_village_id);
+$rally_point_level = $buildingManager->getBuildingLevel($source_village_id, 'rally_point');
 
 // Handle attack submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attack'])) {
@@ -117,18 +118,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attack'])) {
             $message = "You must send at least one unit.";
             $message_type = "error";
         } else {
-            // Send the attack
-            $result = $battleManager->sendAttack($source_village_id, $target_village_id, $units_sent, $attack_type, $target_building);
-            
-            if ($result['success']) {
-                $message = $result['message'];
-                $message_type = "success";
-                
-                // Refresh unit list
-                $units = $unitManager->getVillageUnits($source_village_id);
-            } else {
-                $message = $result['error'];
+            if ($rally_point_level <= 0) {
+                $message = "Build a Rally Point before sending troops.";
                 $message_type = "error";
+            } else {
+                // Send the attack
+                $result = $battleManager->sendAttack($source_village_id, $target_village_id, $units_sent, $attack_type, $target_building);
+                
+                if ($result['success']) {
+                    $message = $result['message'];
+                    $message_type = "success";
+                    
+                    // Refresh unit list
+                    $units = $unitManager->getVillageUnits($source_village_id);
+                } else {
+                    $message = $result['error'];
+                    $message_type = "error";
+                }
             }
         }
     }
@@ -383,6 +389,9 @@ if (!$is_ajax) {
                 <?php elseif (isset($_SESSION['message'])): ?>
                     <p class="<?php echo $_SESSION['message_type']; ?>-message"><?php echo $_SESSION['message']; ?></p>
                     <?php unset($_SESSION['message'], $_SESSION['message_type']); ?>
+                <?php endif; ?>
+                <?php if ($rally_point_level <= 0): ?>
+                    <p class="error-message">You need a Rally Point to send troops from this village.</p>
                 <?php endif; ?>
                 
                 <!-- Village selection -->

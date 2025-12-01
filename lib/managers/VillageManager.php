@@ -166,6 +166,10 @@ class VillageManager
         $achievementManager = new AchievementManager($this->conn);
         $tradeManager = new TradeManager($this->conn);
         $notificationManager = new NotificationManager($this->conn);
+        if (!class_exists('ReportManager')) {
+            require_once __DIR__ . '/ReportManager.php';
+        }
+        $reportManager = class_exists('ReportManager') ? new ReportManager($this->conn) : null;
         // BattleManager could be added here when needed.
 
         // Evaluate snapshot-based achievements and resource milestones
@@ -186,6 +190,14 @@ class VillageManager
                     'success',
                     '/game/game.php'
                 );
+                if ($reportManager) {
+                    $reportManager->addReport(
+                        $userId,
+                        'system',
+                        sprintf('Building completed: %s %s', $item['name'], $item['level']),
+                        ['village_id' => $village_id, 'building' => $item['internal_name'], 'level' => (int)$item['level']]
+                    );
+                }
             }
         }
 
@@ -202,6 +214,14 @@ class VillageManager
                         'success',
                         '/game/game.php'
                     );
+                    if ($reportManager) {
+                        $reportManager->addReport(
+                            $userId,
+                            'system',
+                            sprintf('Recruitment completed: %d × %s', $queue['count'], $queue['unit_name']),
+                            ['village_id' => $village_id, 'unit_type_id' => $queue['unit_type_id'] ?? null, 'count' => $queue['count']]
+                        );
+                    }
                 }
             }
         }
@@ -226,6 +246,14 @@ class VillageManager
                         'info',
                         '/game/game.php'
                     );
+                    if ($reportManager) {
+                        $reportManager->addReport(
+                            $userId,
+                            'system',
+                            sprintf('Research completed: %s %d', $research['research_name'], $research['level']),
+                            ['village_id' => $village_id, 'research' => $research['research_name'], 'level' => $research['level']]
+                        );
+                    }
                 }
             }
         }

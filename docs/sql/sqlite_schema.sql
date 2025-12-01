@@ -414,6 +414,39 @@ CREATE TABLE IF NOT EXISTS tribe_invitations (
     FOREIGN KEY (inviter_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS tribe_diplomacy (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tribe_id INTEGER NOT NULL,
+    target_tribe_id INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    created_by INTEGER NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(tribe_id, target_tribe_id),
+    FOREIGN KEY (tribe_id) REFERENCES tribes(id) ON DELETE CASCADE,
+    FOREIGN KEY (target_tribe_id) REFERENCES tribes(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS tribe_forum_threads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tribe_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    author_id INTEGER NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tribe_id) REFERENCES tribes(id) ON DELETE CASCADE,
+    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS tribe_forum_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    thread_id INTEGER NOT NULL,
+    author_id INTEGER NOT NULL,
+    body TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (thread_id) REFERENCES tribe_forum_threads(id) ON DELETE CASCADE,
+    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Performance indexes for hot lookups
 CREATE INDEX IF NOT EXISTS idx_villages_user ON villages(user_id);
 CREATE INDEX IF NOT EXISTS idx_village_buildings_village ON village_buildings(village_id);

@@ -7,6 +7,7 @@ class BattleManager
     private $conn;
     private $villageManager;
     private $buildingManager; // BuildingManager dependency
+    private $reportManager; // Generic report log
 
     private const RANDOM_VARIANCE = 0.25; // +/- 25% luck
     private const FAITH_DEFENSE_PER_LEVEL = 0.05; // 5% per church level
@@ -34,6 +35,11 @@ class BattleManager
         $this->conn = $conn;
         $this->villageManager = $villageManager;
         $this->buildingManager = $buildingManager;
+        // Lazy-load ReportManager if available
+        if (!class_exists('ReportManager')) {
+            require_once __DIR__ . '/ReportManager.php';
+        }
+        $this->reportManager = new ReportManager($conn);
     }
     
     /**
@@ -794,6 +800,42 @@ class BattleManager
         $defender_losses = $battleOutcome['defender_losses'];
         $remaining_attacking_units = $battleOutcome['remaining_attacking_units'];
         $remaining_defending_units = $battleOutcome['remaining_defending_units'];
+
+        // --- LOYALTY / CONQUEST (NOBLES) ---
+        $loyalty_report = null;
+        $villageConquered = false;
+        $attacker_user_id = null;
+        $defender_user_id = null;
+        $stmt_users = $this->conn->prepare("SELECT v1.user_id as attacker_user_id, v2.user_id as defender_user_id FROM villages v1, villages v2 WHERE v1.id = ? AND v2.id = ?");
+        $stmt_users->bind_param("ii", $attack['source_village_id'], $attack['target_village_id']);
+        $stmt_users->execute();
+        $users = $stmt_users->get_result()->fetch_assoc();
+        $stmt_users->close();
+        if ($users) {
+            $attacker_user_id = (int)$users['attacker_user_id'];
+            $defender_user_id = (int)$users['defender_user_id'];
+        }
+
+        if ($attacker_win && $this->villageHasLoyalty()) {
+            $survivingNobles = $this->countUnitsByInternalName($remaining_attacking_units, $attacking_units, ['noble', 'nobleman']);
+            if ($survivingNobles > 0) {
+                $currentLoyalty = $this->getVillageLoyalty($attack['target_village_id']);
+                $drop = random_int(20, 35);
+                $newLoyalty = max(0, $currentLoyalty - $drop);
+                $loyalty_report = [
+                    'before' => $currentLoyalty,
+                    'after' => $newLoyalty,
+                    'change' => -$drop,
+                    'nobles' => $survivingNobles
+                ];
+                if ($newLoyalty <= 0 && $attacker_user_id !== null) {
+                    $villageConquered = true;
+                    $newLoyalty = 25; // standard post-conquest loyalty
+                    $loyalty_report['after'] = $newLoyalty;
+                    $loyalty_report['conquered'] = true;
+                }
+            }
+        }
         // --- LOOT ---
         $loot = [ 'wood' => 0, 'clay' => 0, 'iron' => 0 ];
         if ($attacker_win && !empty($remaining_attacking_units)) {
@@ -941,6 +983,98 @@ class BattleManager
                 );
             }
 
+            // Loyalty handling
+            if ($this->villageHasLoyalty() && $loyalty_report !== null) {
+                $this->updateVillageLoyalty($attack['target_village_id'], (int)$loyalty_report['after']);
+            }
+
+            // Conquest handling
+            if ($villageConquered && $attacker_user_id !== null) {
+                $stmt_update_owner = $this->conn->prepare("UPDATE villages SET user_id = ?, loyalty = ? WHERE id = ?");
+                $newLoyaltyVal = $loyalty_report['after'] ?? 25;
+                $stmt_update_owner->bind_param("iii", $attacker_user_id, $newLoyaltyVal, $attack['target_village_id']);
+                $stmt_update_owner->execute();
+                $stmt_update_owner->close();
+
+                // Remove defender units and set attacker survivors as new garrison
+                $stmt_delete_all = $this->conn->prepare("DELETE FROM village_units WHERE village_id = ?");
+                $stmt_delete_all->bind_param("i", $attack['target_village_id']);
+                $stmt_delete_all->execute();
+                $stmt_delete_all->close();
+
+                foreach ($remaining_attacking_units as $unit_type_id => $count) {
+                    $stmt_insert = $this->conn->prepare("
+                        INSERT INTO village_units (village_id, unit_type_id, count)
+                        VALUES (?, ?, ?)
+                    ");
+                    $stmt_insert->bind_param("iii", $attack['target_village_id'], $unit_type_id, $count);
+                    $stmt_insert->execute();
+                    $stmt_insert->close();
+                }
+                // No return for conquering armies
+                $remaining_attacking_units = [];
+                $remaining_defending_units = [];
+            } else {
+                // Update defending units in the village
+                foreach ($defending_units as $unit_type_id => $unit) {
+                    $new_count = isset($remaining_defending_units[$unit_type_id]) ? $remaining_defending_units[$unit_type_id] : 0;
+                    if ($new_count > 0) {
+                        $stmt_update = $this->conn->prepare("
+                            UPDATE village_units 
+                            SET count = ? 
+                            WHERE village_id = ? AND unit_type_id = ?
+                        ");
+                        $stmt_update->bind_param("iii", $new_count, $attack['target_village_id'], $unit_type_id);
+                        $stmt_update->execute();
+                        $stmt_update->close();
+                    } else {
+                        $stmt_delete = $this->conn->prepare("
+                            DELETE FROM village_units 
+                            WHERE village_id = ? AND unit_type_id = ?
+                        ");
+                        $stmt_delete->bind_param("ii", $attack['target_village_id'], $unit_type_id);
+                        $stmt_delete->execute();
+                        $stmt_delete->close();
+                    }
+                }
+
+                // Return remaining attacking units to the source village
+                foreach ($remaining_attacking_units as $unit_type_id => $count) {
+                    $stmt_check_existing = $this->conn->prepare("
+                        SELECT id, count 
+                        FROM village_units 
+                        WHERE village_id = ? AND unit_type_id = ?
+                    ");
+                    $stmt_check_existing->bind_param("ii", $attack['source_village_id'], $unit_type_id);
+                    $stmt_check_existing->execute();
+                    $existing_result = $stmt_check_existing->get_result();
+                    if ($existing_result->num_rows > 0) {
+                        // Update existing units
+                        $existing = $existing_result->fetch_assoc();
+                        $new_count = $existing['count'] + $count;
+                        $stmt_update = $this->conn->prepare("
+                            UPDATE village_units 
+                            SET count = ? 
+                            WHERE id = ?
+                        ");
+                        $stmt_update->bind_param("ii", $new_count, $existing['id']);
+                        $stmt_update->execute();
+                        $stmt_update->close();
+                    } else {
+                        // Insert new unit records
+                        $stmt_insert = $this->conn->prepare("
+                            INSERT INTO village_units (
+                                village_id, unit_type_id, count
+                            ) VALUES (?, ?, ?)
+                        ");
+                        $stmt_insert->bind_param("iii", $attack['source_village_id'], $unit_type_id, $count);
+                        $stmt_insert->execute();
+                        $stmt_insert->close();
+                    }
+                    $stmt_check_existing->close();
+                }
+            }
+
             // Mark the attack as completed
             $stmt_complete_attack = $this->conn->prepare("
                 UPDATE attacks 
@@ -950,71 +1084,6 @@ class BattleManager
             $stmt_complete_attack->bind_param("i", $attack_id);
             $stmt_complete_attack->execute();
             $stmt_complete_attack->close();
-            // Update defending units in the village
-            foreach ($defending_units as $unit_type_id => $unit) {
-                $new_count = isset($remaining_defending_units[$unit_type_id]) ? $remaining_defending_units[$unit_type_id] : 0;
-                if ($new_count > 0) {
-                    $stmt_update = $this->conn->prepare("
-                        UPDATE village_units 
-                        SET count = ? 
-                        WHERE village_id = ? AND unit_type_id = ?
-                    ");
-                    $stmt_update->bind_param("iii", $new_count, $attack['target_village_id'], $unit_type_id);
-                    $stmt_update->execute();
-                    $stmt_update->close();
-                } else {
-                    $stmt_delete = $this->conn->prepare("
-                        DELETE FROM village_units 
-                        WHERE village_id = ? AND unit_type_id = ?
-                    ");
-                    $stmt_delete->bind_param("ii", $attack['target_village_id'], $unit_type_id);
-                    $stmt_delete->execute();
-                    $stmt_delete->close();
-                }
-            }
-            // Return remaining attacking units to the source village
-            foreach ($remaining_attacking_units as $unit_type_id => $count) {
-                $stmt_check_existing = $this->conn->prepare("
-                    SELECT id, count 
-                    FROM village_units 
-                    WHERE village_id = ? AND unit_type_id = ?
-                ");
-                $stmt_check_existing->bind_param("ii", $attack['source_village_id'], $unit_type_id);
-                $stmt_check_existing->execute();
-                $existing_result = $stmt_check_existing->get_result();
-                if ($existing_result->num_rows > 0) {
-                    // Update existing units
-                    $existing = $existing_result->fetch_assoc();
-                    $new_count = $existing['count'] + $count;
-                    $stmt_update = $this->conn->prepare("
-                        UPDATE village_units 
-                        SET count = ? 
-                        WHERE id = ?
-                    ");
-                    $stmt_update->bind_param("ii", $new_count, $existing['id']);
-                    $stmt_update->execute();
-                    $stmt_update->close();
-                } else {
-                    // Insert new unit records
-                    $stmt_insert = $this->conn->prepare("
-                        INSERT INTO village_units (
-                            village_id, unit_type_id, count
-                        ) VALUES (?, ?, ?)
-                    ");
-                    $stmt_insert->bind_param("iii", $attack['source_village_id'], $unit_type_id, $count);
-                    $stmt_insert->execute();
-                    $stmt_insert->close();
-                }
-                $stmt_check_existing->close();
-            }
-            // Get user IDs for the report
-            $stmt_users = $this->conn->prepare("SELECT v1.user_id as attacker_user_id, v2.user_id as defender_user_id FROM villages v1, villages v2 WHERE v1.id = ? AND v2.id = ?");
-            $stmt_users->bind_param("ii", $attack['source_village_id'], $attack['target_village_id']);
-            $stmt_users->execute();
-            $users = $stmt_users->get_result()->fetch_assoc();
-            $stmt_users->close();
-            $attacker_user_id = $users['attacker_user_id'];
-            $defender_user_id = $users['defender_user_id'];
 
             // Add battle report (with JSON details)
             $details = [
@@ -1037,7 +1106,9 @@ class BattleManager
                 'hiding_place_level' => $this->buildingManager->getBuildingLevel($attack['target_village_id'], 'hiding_place'),
                 'hidden_per_resource' => $this->getHiddenResourcesPerType($attack['target_village_id']),
                 'attack_power' => $attackPower,
-                'defense_power' => $defensePower
+                'defense_power' => $defensePower,
+                'loyalty' => $loyalty_report,
+                'conquered' => $villageConquered
             ];
             $report_data_json = json_encode($details);
             $attacker_won_int = $attacker_win ? 1 : 0;
@@ -1057,6 +1128,26 @@ class BattleManager
             );
             $stmt_add_report->execute();
             $stmt_add_report->close();
+
+            // Generic reports for attacker/defender
+            $attackerTitle = ucfirst($attack['attack_type'] === 'raid' ? 'Raid' : 'Attack') . " on " . $this->getVillageName($attack['target_village_id']);
+            $defenderTitle = "Defense at " . $this->getVillageName($attack['target_village_id']);
+            if ($this->reportManager) {
+                $this->reportManager->addReport(
+                    $attacker_user_id,
+                    $attack['attack_type'] === 'support' ? 'support' : 'attack',
+                    $attackerTitle,
+                    $details,
+                    $attack_id
+                );
+                $this->reportManager->addReport(
+                    $defender_user_id,
+                    $attack['attack_type'] === 'support' ? 'support' : 'defense',
+                    $defenderTitle,
+                    $details,
+                    $attack_id
+                );
+            }
 
             $this->conn->commit();
             return [ 'success' => true ];
@@ -1308,6 +1399,26 @@ class BattleManager
             );
             $stmt_add_report->execute();
             $stmt_add_report->close();
+
+            // Generic reports: scout for attacker, defense for defender
+            if ($this->reportManager) {
+                $attackerTitle = "Scout report: " . $this->getVillageName($attack['target_village_id']);
+                $defenderTitle = "Scouts near " . $this->getVillageName($attack['target_village_id']);
+                $this->reportManager->addReport(
+                    $users['attacker_user_id'],
+                    'scout',
+                    $attackerTitle,
+                    $details,
+                    $attack_id
+                );
+                $this->reportManager->addReport(
+                    $users['defender_user_id'],
+                    'defense',
+                    $defenderTitle,
+                    $details,
+                    $attack_id
+                );
+            }
 
             $this->conn->commit();
             return ['success' => true];
@@ -1739,6 +1850,22 @@ class BattleManager
         }
         $stmt->close();
         return $units;
+    }
+
+    /**
+     * Helper: village name by ID (empty string on failure).
+     */
+    private function getVillageName(int $villageId): string
+    {
+        $stmt = $this->conn->prepare("SELECT name FROM villages WHERE id = ? LIMIT 1");
+        if ($stmt === false) {
+            return '';
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $res = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $res['name'] ?? '';
     }
 
     /**

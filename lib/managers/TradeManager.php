@@ -529,6 +529,25 @@ class TradeManager {
             $stmt->close();
 
             $this->conn->commit();
+
+            // Optional report entry for the offer owner
+            if (!class_exists('ReportManager')) {
+                require_once __DIR__ . '/ReportManager.php';
+            }
+            if (class_exists('ReportManager')) {
+                $reportManager = new ReportManager($this->conn);
+                $reportManager->addReport(
+                    (int)$village['user_id'],
+                    'trade',
+                    'Trade offer posted',
+                    [
+                        'offer' => $offerResources,
+                        'request' => $requestResources,
+                        'village_id' => $villageId
+                    ],
+                    $offerId
+                );
+            }
             return ['success' => true, 'offer_id' => $offerId];
         } catch (Exception $e) {
             $this->conn->rollback();
