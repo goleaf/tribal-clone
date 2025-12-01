@@ -96,14 +96,15 @@ class BuildingUpgradeValidationTest {
         $stmt->close();
         
         // Create test village
-        $stmt = $this->db->prepare("INSERT INTO villages (user_id, name, x, y, wood, clay, iron) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $worldId = 1; // Default world
+        $stmt = $this->db->prepare("INSERT INTO villages (user_id, world_id, name, x, y, wood, clay, iron) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $villageName = 'Test Village';
         $x = 500;
         $y = 500;
         $wood = 10000;
         $clay = 10000;
         $iron = 10000;
-        $stmt->bind_param("isiiiii", $this->testUserId, $villageName, $x, $y, $wood, $clay, $iron);
+        $stmt->bind_param("iisiiiii", $this->testUserId, $worldId, $villageName, $x, $y, $wood, $clay, $iron);
         $stmt->execute();
         $this->testVillageId = $this->db->insert_id;
         $stmt->close();
