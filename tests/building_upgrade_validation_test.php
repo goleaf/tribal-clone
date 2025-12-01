@@ -117,12 +117,22 @@ class BuildingUpgradeValidationTest {
             
             $stmt = $this->db->prepare("INSERT INTO village_buildings (village_id, building_type_id, level) VALUES (?, ?, ?)");
             $stmt->bind_param("iii", $this->testVillageId, $buildingTypeId, $level);
-            $stmt->execute();
+            if (!$stmt->execute()) {
+                echo "Setup ERROR: Failed to insert building {$row['internal_name']}: " . $stmt->error . "\n";
+            }
             $stmt->close();
             $count++;
         }
         
         echo "Setup: Created $count building entries for village {$this->testVillageId}\n";
+        
+        // Verify the setup
+        $verifyStmt = $this->db->prepare("SELECT COUNT(*) as cnt FROM village_buildings WHERE village_id = ?");
+        $verifyStmt->bind_param("i", $this->testVillageId);
+        $verifyStmt->execute();
+        $actualCount = $verifyStmt->get_result()->fetch_assoc()['cnt'];
+        $verifyStmt->close();
+        echo "Setup: Verified $actualCount rows in database\n";
     }
     
     private function cleanupTestData() {
@@ -252,14 +262,12 @@ class BuildingUpgradeValidationTest {
     }
     
     private function testMissingPrerequisites() {
+        // Get building type ID
+        $mainBuildingTypeId = $this->db->query("SELECT id FROM building_types WHERE internal_name = 'main_building'")->fetch_assoc()['id'];
+        
         // Try to upgrade stable without meeting main_building requirement
-        $stmt = $this->db->prepare("
-            UPDATE village_buildings 
-            SET level = 0 
-            WHERE village_id = ? 
-            AND building_type_id = (SELECT id FROM building_types WHERE internal_name = 'main_building')
-        ");
-        $stmt->bind_param("i", $this->testVillageId);
+        $stmt = $this->db->prepare("UPDATE village_buildings SET level = 0 WHERE village_id = ? AND building_type_id = ?");
+        $stmt->bind_param("ii", $this->testVillageId, $mainBuildingTypeId);
         $stmt->execute();
         $stmt->close();
         
@@ -270,13 +278,8 @@ class BuildingUpgradeValidationTest {
         );
         
         // Restore main_building level
-        $stmt = $this->db->prepare("
-            UPDATE village_buildings 
-            SET level = 5 
-            WHERE village_id = ? 
-            AND building_type_id = (SELECT id FROM building_types WHERE internal_name = 'main_building')
-        ");
-        $stmt->bind_param("i", $this->testVillageId);
+        $stmt = $this->db->prepare("UPDATE village_buildings SET level = 10 WHERE village_id = ? AND building_type_id = ?");
+        $stmt->bind_param("ii", $this->testVillageId, $mainBuildingTypeId);
         $stmt->execute();
         $stmt->close();
         
