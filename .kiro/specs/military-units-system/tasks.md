@@ -6,20 +6,20 @@
   - Add elite_unit_caps table for per-account tracking
   - _Requirements: 10.1, 10.2, 9.2_
 
-- [-] 1.2 Create database migration for worlds table extensions
+- [x] 1.2 Create database migration for worlds table extensions
   - Add feature flag columns (conquest_units_enabled, seasonal_units_enabled, healer_enabled)
   - Add training multiplier columns (train_multiplier_inf, train_multiplier_cav, train_multiplier_rng, train_multiplier_siege)
   - Add healer_recovery_cap column
   - _Requirements: 11.1, 11.2, 15.5_
 
-- [ ] 1.3 Create database migration for unit_types table extensions
+- [x] 1.3 Create database migration for unit_types table extensions
   - Add category column for unit classification
   - Add rps_bonuses JSON column for combat modifiers
   - Add special_abilities JSON column for unit abilities
   - Add aura_config JSON column for support units
   - _Requirements: 1.4, 6.3, 14.2_
 
-- [ ] 1.4 Populate data/units.json with complete 16+ unit roster
+- [-] 1.4 Populate data/units.json with complete 16+ unit roster
   - Add infantry units (Pikeneer, Shieldbearer, Raider, Warden)
   - Add ranged units (Militia Bowman, Longbow Scout, Ranger)
   - Add cavalry units (Skirmisher Cavalry, Lancer)
