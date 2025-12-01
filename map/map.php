@@ -126,6 +126,7 @@ require '../header.php';
                 <div class="filter-row secondary-filters">
                     <label><input type="checkbox" id="high-contrast-toggle"> High-contrast map</label>
                     <label><input type="checkbox" id="reduced-motion-toggle"> Reduced motion</label>
+                    <label><input type="checkbox" id="offline-mode-toggle"> Offline cache</label>
                 </div>
             </div>
             <div class="filter-card" style="max-width:320px;">
@@ -325,8 +326,10 @@ let frameMonitorStarted = false;
 let lastSkeletonSize = null;
 const HIGH_CONTRAST_KEY = 'map_high_contrast';
 const REDUCED_MOTION_KEY = 'map_reduced_motion';
+const OFFLINE_MODE_KEY = 'map_offline_mode';
 let mapHighContrast = false;
 let mapReducedMotion = false;
+let lastOfflineError = null;
 const MAP_PERF_SAMPLE_RATE = 0.1; // 10% sampling to limit noise
 let lastMapPayloadBytes = null;
 let lastMapFetchMs = null;
@@ -375,11 +378,14 @@ const mapSkeletonEl = document.getElementById('map-skeleton');
 const highContrastToggle = document.getElementById('high-contrast-toggle');
 const reducedMotionToggle = document.getElementById('reduced-motion-toggle');
 const lowPerfToggle = document.getElementById('filter-low-perf');
+const offlineToggle = document.getElementById('offline-mode-toggle');
 let mapSkeletonTimer = null;
 const movementsWarningEl = document.getElementById('movements-warning');
 const mapRateWarningEl = document.getElementById('map-rate-warning');
+const offlineWarningEl = document.getElementById('offline-warning');
 const interactiveSelectors = ['input', 'textarea', 'select', 'button', '[contenteditable="true"]'];
 let lowPerfMode = false;
+let mapOfflineMode = false;
 
 function syncSkeletonGrid(size) {
     if (!mapSkeletonEl) return;

@@ -16,6 +16,8 @@ class TradeManager {
     private const MAX_FAIR_RATE = 4.0;  // offered/requested upper bound (400%)
     private const PUSH_POINTS_RATIO = 5; // block aid when sender points exceed target by 5x and target is protected/low points
     private const ACTIVE_ROUTE_SOFT_LIMIT = 5000; // soft global cap for in-flight trade routes
+    private const AID_DAILY_SEND_CAP = 500000;    // Total resources a user can send per 24h
+    private const AID_DAILY_RECEIVE_CAP = 500000; // Total resources a user can receive per 24h
     private int $lastLoadCheckTs = 0;
     private bool $lastLoadCheckBusy = false;
 
@@ -148,8 +150,9 @@ class TradeManager {
             'clay' => max(0, (int)($resources['clay'] ?? 0)),
             'iron' => max(0, (int)($resources['iron'] ?? 0)),
         ];
+        $totalPayload = $resources['wood'] + $resources['clay'] + $resources['iron'];
 
-        if ($resources['wood'] + $resources['clay'] + $resources['iron'] <= 0) {
+        if ($totalPayload <= 0) {
             return [
                 'success' => false,
                 'message' => 'Select at least one resource to send.',
@@ -245,6 +248,16 @@ class TradeManager {
         $capacityCheck = $this->checkStorageHeadroom($targetVillage, $resources);
         if ($capacityCheck !== true) {
             return $capacityCheck;
+        }
+
+        // Aid caps (anti-pushing): enforce daily send/receive totals per user.
+        $sendCapCheck = $this->checkAidCap((int)$village['user_id'], $totalPayload, 'send');
+        if ($sendCapCheck !== true) {
+            return $sendCapCheck;
+        }
+        $recvCapCheck = $this->checkAidCap((int)$targetVillage['user_id'], $totalPayload, 'receive');
+        if ($recvCapCheck !== true) {
+            return $recvCapCheck;
         }
 
         $this->conn->begin_transaction();

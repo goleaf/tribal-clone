@@ -16,7 +16,10 @@ async function fetchAndRenderMainBuildingPanel(villageId, buildingInternalName) 
     const popupBuildingName = document.getElementById('popup-building-name');
     const popupCurrentLevel = document.getElementById('popup-current-level');
     const popupBuildingDescription = document.getElementById('popup-building-description');
-    if (!actionContent || !detailsContent || !villageId || buildingInternalName !== 'main_building') {
+    const normalizedInternalName = buildingInternalName === 'main_building_flag' ? 'main_building' : buildingInternalName;
+    const endpoints = window.buildingEndpoints || { action: '/buildings/get_building_action.php' };
+
+    if (!actionContent || !detailsContent || !villageId || normalizedInternalName !== 'main_building') {
         console.error('Missing elements or parameters for Main Building panel or wrong building type.');
         return;
     }
@@ -37,7 +40,18 @@ async function fetchAndRenderMainBuildingPanel(villageId, buildingInternalName) 
 
     try {
         // Use the existing get_building_action.php endpoint
-        const response = await fetch(`/buildings/get_building_action.php?village_id=${villageId}&building_type=${buildingInternalName}`);
+        const params = new URLSearchParams({
+            village_id: villageId,
+            building_internal_name: normalizedInternalName
+        });
+        const response = await fetch(`${endpoints.action}?${params.toString()}`, {
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to load main building panel (status ${response.status})`);
+        }
         const data = await response.json();
 
         if (data.status === 'success' && data.action_type === 'manage_village') {
@@ -112,7 +126,7 @@ async function fetchAndRenderMainBuildingPanel(villageId, buildingInternalName) 
             if (popupBuildingDescription) popupBuildingDescription.textContent = 'Manage your village from the town hall.';
 
             // Setup event listeners for any buttons/forms within the panel
-            setupMainBuildingListeners(villageId, buildingInternalName);
+            setupMainBuildingListeners(villageId, normalizedInternalName);
 
         } else if (data.error) {
             actionContent.innerHTML = '<p>Error loading Main Building panel: ' + data.error + '</p>';
@@ -124,7 +138,9 @@ async function fetchAndRenderMainBuildingPanel(villageId, buildingInternalName) 
     } catch (error) {
         console.error('Error fetching Main Building panel via AJAX:', error);
         actionContent.innerHTML = '<p>Server communication error.</p>';
-        window.toastManager.showToast('Server communication error while fetching Main Building panel.', 'error');
+        if (window.toastManager) {
+            window.toastManager.showToast('Server communication error while fetching Main Building panel.', 'error');
+        }
     }
 }
 

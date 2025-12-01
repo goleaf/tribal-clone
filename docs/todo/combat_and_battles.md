@@ -188,7 +188,7 @@
 - Report generation: measure cost of full-fidelity vs redacted reports at volume; optimize serialization if needed.
 
 ## Rollout Checklist
-- [ ] Feature flags for new combat rules (overstack penalties, night/weather, min-pop enforcement) to enable gradual rollout per world.
+- [x] Feature flags for new combat rules (overstack penalties, night/weather, min-pop enforcement) to enable gradual rollout per world. _(World settings now include overstack/min-pop toggles + values; weather gated by world/config flags; min payload + overstack respect per-world overrides)_
 - [ ] Migration scripts for any schema changes (allegiance fields, report tables) with rollback steps tested.
 - [x] Backward-compatible report rendering while new fields propagate; add versioning to reports to avoid client breaks. _(report_version included in battle details)_
 - [ ] Release comms: patch notes covering combat changes, min-pop rules, and reporting improvements; include example reports.

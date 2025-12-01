@@ -485,12 +485,9 @@ class BattleManager
         // Sitter restrictions: no loyalty attacks and stricter command cap.
         $worldId = isset($villages['source_world_id']) ? (int)$villages['source_world_id'] : (defined('CURRENT_WORLD_ID') ? (int)CURRENT_WORLD_ID : 1);
         if ($sitterContext['is_sitter']) {
-            if (!class_exists('WorldManager')) {
-                require_once __DIR__ . '/WorldManager.php';
-            }
-            $wm = class_exists('WorldManager') ? new WorldManager($this->conn) : null;
-            $sitterAttackAllowed = $wm ? $wm->areSitterAttacksEnabled($worldId) : true;
-            $sitterSupportAllowed = $wm ? $wm->areSitterSupportsEnabled($worldId) : true;
+            $sitterPerms = $this->getSitterPermissions($worldId);
+            $sitterAttackAllowed = $sitterPerms['attack'];
+            $sitterSupportAllowed = $sitterPerms['support'];
             if (!$sitterAttackAllowed && $attack_type !== 'support') {
                 $this->logSitterAction([
                     'action' => 'blocked',
@@ -3534,6 +3531,31 @@ class BattleManager
             }
         }
         return $total;
+    }
+
+    /**
+     * Sitter permission switches per world (default allow).
+     */
+    private function getSitterPermissions(int $worldId): array
+    {
+        if (!class_exists('WorldManager')) {
+            require_once __DIR__ . '/WorldManager.php';
+        }
+        $wm = class_exists('WorldManager') ? new WorldManager($this->conn) : null;
+        return [
+            'attack' => $wm ? $wm->areSitterAttacksEnabled($worldId) : true,
+            'support' => $wm ? $wm->areSitterSupportsEnabled($worldId) : true
+        ];
+    }
+
+    /**
+     * Append sitter action/audit log.
+     */
+    private function logSitterAction(array $payload): void
+    {
+        $payload['ts'] = $payload['ts'] ?? time();
+        $logPath = __DIR__ . '/../../logs/sitter_actions.log';
+        @file_put_contents($logPath, json_encode($payload) . PHP_EOL, FILE_APPEND);
     }
 
     /**

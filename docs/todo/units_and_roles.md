@@ -146,6 +146,26 @@ Status markers:
 - **Reporting:** Battle reports list RPS modifiers that fired (e.g., “Pike vs Cav bonus x1.4”, “Mantlet reduced ranged damage by 30%”) for transparency.
 - **Tests:** Unit tests cover matchups (cav vs ranged, pike vs cav, ranger vs siege, mantlet effect) under wall/terrain conditions; integration sims validate expected loss patterns.
 
+### Unit Stat Baselines (seed values for units.json/DB)
+- Pikeneer: atk 25; def 65/20/15 (inf/cav/rng); speed 6; carry 10; pop 1; train 00:45.
+- Shieldbearer: atk 35; def 45/45/35; speed 7; carry 15; pop 1; train 01:00.
+- Raider: atk 55; def 20/15/10; speed 8; carry 40; pop 1; train 00:50.
+- Militia Bowman: atk 15; def 15/15/35; speed 7; carry 10; pop 1; train 00:50.
+- Longbow Scout: atk 35; def 20/20/55; speed 9; carry 10; pop 1; train 01:10.
+- Skirmisher Cav: atk 70; def 25/35/20; speed 18; carry 60; pop 2; train 01:30.
+- Lancer: atk 120; def 60/60/70; speed 13; carry 50; pop 3; train 02:30.
+- Pathfinder: atk 0; def 2/2/2; speed 20; carry 0; pop 1; train 00:30 (scout strength 15).
+- Shadow Rider: atk 5; def 8/8/8; speed 16; carry 0; pop 2; train 01:40 (scout strength 35).
+- Banner Guard: atk 25; def 45/45/45; speed 8; carry 10; pop 2; train 01:50 (aura tier 1).
+- War Healer: atk 10; def 25/25/25; speed 8; carry 10; pop 2; train 02:00 (heal cap 12% base).
+- Battering Ram: atk 40; def 30/50/10; speed 4; carry 0; pop 3; train 02:30 (wall dmg base 18).
+- Stone Hurler: atk 50; def 40/40/10; speed 3; carry 0; pop 4; train 03:30 (bldg dmg base 20).
+- Mantlet Crew: atk 10; def 35/35/65; speed 4; carry 0; pop 2; train 02:00 (ranged reduction 30%).
+- Standard Bearer: atk 30; def 30/30/30; speed 4; carry 0; pop 8; train 03:30 (allegiance drop 18–28 band).
+- Warden: atk 60; def 120/110/110; speed 6; carry 15; pop 3; train 03:00.
+- Ranger: atk 110; def 45/35/85; speed 10; carry 15; pop 2; train 02:40.
+- Tempest Knight: atk 140; def 70/70/70; speed 20; carry 50; pop 3; train 02:50 (event; weather immunity flag).
+
 ## Implementation TODOs
 - [ ] Define unit stats/costs/pop/speed/carry in `units.json` and DB seeds; ensure RPS relationships match design (pikes > cav, ranged > inf blobs, cav > ranged in open).
 - [ ] Add unlock requirements per unit (building levels, research nodes, world flags); gate seasonal/event units behind time windows and caps.

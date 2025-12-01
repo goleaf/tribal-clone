@@ -79,7 +79,7 @@ class WorldManager
             'night_bonus_enabled' => false,
             'night_start_hour' => 22,
             'night_end_hour' => 6,
-            'weather_enabled' => false,
+            'weather_enabled' => defined('FEATURE_WEATHER_COMBAT_ENABLED') ? (bool)FEATURE_WEATHER_COMBAT_ENABLED : false,
             'resource_production_multiplier' => 1.0,
             'resource_multiplier' => 1.0,
             'vault_protection_percent' => 0.0,
@@ -87,12 +87,12 @@ class WorldManager
             'resource_decay_enabled' => false,
             'resource_decay_threshold_pct' => 0.8,
             'resource_decay_rate_per_hour' => 0.01,
-            'overstack_enabled' => false,
-            'overstack_pop_threshold' => 0,
-            'overstack_penalty_rate' => 0.1,
-            'overstack_min_multiplier' => 0.4,
-            'min_attack_pop_enabled' => true,
-            'min_attack_pop' => 5,
+            'overstack_enabled' => defined('OVERSTACK_ENABLED') ? (bool)OVERSTACK_ENABLED : false,
+            'overstack_pop_threshold' => defined('OVERSTACK_POP_THRESHOLD') ? (int)OVERSTACK_POP_THRESHOLD : 30000,
+            'overstack_penalty_rate' => defined('OVERSTACK_PENALTY_RATE') ? (float)OVERSTACK_PENALTY_RATE : 0.1,
+            'overstack_min_multiplier' => defined('OVERSTACK_MIN_MULTIPLIER') ? (float)OVERSTACK_MIN_MULTIPLIER : 0.4,
+            'min_attack_pop_enabled' => defined('FEATURE_MIN_PAYLOAD_ENABLED') ? (bool)FEATURE_MIN_PAYLOAD_ENABLED : true,
+            'min_attack_pop' => defined('MIN_ATTACK_POP') ? (int)MIN_ATTACK_POP : 5,
             'terrain_attack_multiplier' => 1.0,
             'terrain_defense_multiplier' => 1.0,
             'weather_attack_multiplier' => 1.0,
@@ -141,6 +141,22 @@ class WorldManager
 
         $this->settingsCache[$worldId] = $defaults;
         return $defaults;
+    }
+
+    public function areSitterAttacksEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        if (defined('SITTER_ATTACKS_ENABLED')) {
+            return (bool)SITTER_ATTACKS_ENABLED;
+        }
+        return true;
+    }
+
+    public function areSitterSupportsEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        if (defined('SITTER_SUPPORT_ENABLED')) {
+            return (bool)SITTER_SUPPORT_ENABLED;
+        }
+        return true;
     }
 
     public function getWorldSpeed(int $worldId = CURRENT_WORLD_ID): float
@@ -342,16 +358,16 @@ class WorldManager
             'night_bonus_enabled' => 0,
             'night_start_hour' => 22,
             'night_end_hour' => 6,
-            'weather_enabled' => 0,
+            'weather_enabled' => defined('FEATURE_WEATHER_COMBAT_ENABLED') && FEATURE_WEATHER_COMBAT_ENABLED ? 1 : 0,
             'resource_production_multiplier' => 1.0,
             'vault_protection_percent' => 0.0,
             'resource_decay_enabled' => 0,
-            'overstack_enabled' => 0,
-            'overstack_pop_threshold' => 0,
-            'overstack_penalty_rate' => 0.1,
-            'overstack_min_multiplier' => 0.4,
-            'min_attack_pop_enabled' => 1,
-            'min_attack_pop' => 5,
+            'overstack_enabled' => defined('OVERSTACK_ENABLED') && OVERSTACK_ENABLED ? 1 : 0,
+            'overstack_pop_threshold' => defined('OVERSTACK_POP_THRESHOLD') ? (int)OVERSTACK_POP_THRESHOLD : 30000,
+            'overstack_penalty_rate' => defined('OVERSTACK_PENALTY_RATE') ? (float)OVERSTACK_PENALTY_RATE : 0.1,
+            'overstack_min_multiplier' => defined('OVERSTACK_MIN_MULTIPLIER') ? (float)OVERSTACK_MIN_MULTIPLIER : 0.4,
+            'min_attack_pop_enabled' => defined('FEATURE_MIN_PAYLOAD_ENABLED') && FEATURE_MIN_PAYLOAD_ENABLED ? 1 : 1,
+            'min_attack_pop' => defined('MIN_ATTACK_POP') ? (int)MIN_ATTACK_POP : 5,
             'terrain_attack_multiplier' => 1.0,
             'terrain_defense_multiplier' => 1.0,
             'weather_attack_multiplier' => 1.0,

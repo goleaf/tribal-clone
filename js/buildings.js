@@ -503,10 +503,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (button) {
             event.preventDefault();
             const villageId = window.currentVillageId || button.dataset.villageId;
-            const buildingInternalName = button.dataset.buildingInternalName;
+            const buildingInternalName = (button.dataset.buildingInternalName || '').trim();
+            const normalizedInternalName = buildingInternalName === 'main_building_flag' ? 'main_building' : buildingInternalName;
 
             const recruitmentBuildings = ['barracks', 'stable', 'workshop'];
-            if (recruitmentBuildings.includes(buildingInternalName)) {
+            if (recruitmentBuildings.includes(normalizedInternalName)) {
                 return;
             }
 
@@ -516,7 +517,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            openActionPopupShell(buildingInternalName, {
+            // Main building has a dedicated panel; handle it directly for reliability
+            if (normalizedInternalName === 'main_building') {
+                openActionPopupShell(normalizedInternalName, {
+                    name: button.dataset.buildingName,
+                    level: button.dataset.buildingLevel,
+                    description: button.dataset.buildingDescription
+                });
+                if (typeof fetchAndRenderMainBuildingPanel === 'function') {
+                    fetchAndRenderMainBuildingPanel(villageId, normalizedInternalName);
+                } else {
+                    popupActionContent.innerHTML = '<p>Town hall panel is unavailable right now.</p>';
+                    popupActionContent.style.display = 'block';
+                    buildingDetailsContent.style.display = 'none';
+                }
+                return;
+            }
+
+            openActionPopupShell(normalizedInternalName, {
                 name: button.dataset.buildingName,
                 level: button.dataset.buildingLevel,
                 description: button.dataset.buildingDescription
@@ -538,9 +556,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 wall: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null
             };
 
-            const handler = specialPanelHandlers[buildingInternalName];
+            const handler = specialPanelHandlers[normalizedInternalName];
             if (handler) {
-                handler(villageId, buildingInternalName);
+                handler(villageId, normalizedInternalName);
                 return;
             }
 
