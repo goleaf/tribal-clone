@@ -40,7 +40,7 @@
   - Categories: 'infantry', 'cavalry', 'ranged', 'siege', 'scout', 'support', 'conquest'
   - _Requirements: 1.4, 3.3, 8.4_
 
-- [-] 2.2 Implement isUnitAvailable() method
+- [x] 2.2 Implement isUnitAvailable() method
   - Check world feature flags (conquest, seasonal, healer)
   - Check seasonal window if applicable
   - Return boolean availability
