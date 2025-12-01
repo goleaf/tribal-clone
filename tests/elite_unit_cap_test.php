@@ -22,78 +22,92 @@ function testEliteUnitCap() {
     $village2 = createTestVillage($conn, $testUserId, "Test Village 2");
     echo "Created test villages: $village1, $village2\n";
     
-    // Get warden unit type
-    $wardenUnit = getUnitByInternal($conn, 'warden');
-    if (!$wardenUnit) {
-        echo "ERROR: Warden unit not found in database\n";
-        cleanup($conn, $testUserId);
-        return false;
-    }
-    echo "Found warden unit (ID: {$wardenUnit['id']})\n\n";
-    
     $unitManager = new UnitManager($conn);
     
-    // Test 1: Check cap with no existing units
+    // Test 1: Check cap with no existing units (using mock elite unit)
     echo "Test 1: Check cap with no existing units\n";
+    // First, let's test with a unit that's not in the elite list
+    $result = $unitManager->checkEliteUnitCap($testUserId, 'spear', 10);
+    assert($result['can_train'] === true, "Should be able to train non-elite units");
+    assert($result['max'] === -1, "Max should be -1 for non-elite units");
+    echo "✓ Non-elite units have no cap\n\n";
+    
+    // Test 2: Manually insert a warden unit type for testing
+    echo "Test 2: Creating test elite unit (warden)\n";
+    $conn->query("
+        INSERT INTO unit_types (internal_name, name, building_type, required_building_level, 
+                                cost_wood, cost_clay, cost_iron, population, attack, 
+                                defense_infantry, defense_cavalry, defense_ranged, 
+                                speed, carry, training_time_base, category, is_active)
+        VALUES ('warden', 'Warden', 'barracks', 10, 200, 150, 100, 3, 50, 80, 80, 80, 20, 15, 7200, 'infantry', 1)
+    ");
+    $wardenUnit = getUnitByInternal($conn, 'warden');
+    echo "✓ Created warden unit (ID: {$wardenUnit['id']})\n\n";
+    
+    // Test 3: Check cap with no existing units
+    echo "Test 3: Check cap with no existing warden units\n";
     $result = $unitManager->checkEliteUnitCap($testUserId, 'warden', 10);
     assert($result['can_train'] === true, "Should be able to train with no existing units");
     assert($result['current'] === 0, "Current count should be 0");
     assert($result['max'] === 100, "Max cap should be 100 for warden");
     echo "✓ Can train 10 wardens (0/100)\n\n";
     
-    // Test 2: Add some units to village 1
-    echo "Test 2: Add 30 wardens to village 1\n";
+    // Test 4: Add some units to village 1
+    echo "Test 4: Add 30 wardens to village 1\n";
     addUnitsToVillage($conn, $village1, $wardenUnit['id'], 30);
     $result = $unitManager->checkEliteUnitCap($testUserId, 'warden', 10);
     assert($result['can_train'] === true, "Should be able to train more");
     assert($result['current'] === 30, "Current count should be 30");
     echo "✓ Can train 10 more wardens (30/100)\n\n";
     
-    // Test 3: Add units to village 2
-    echo "Test 3: Add 40 wardens to village 2\n";
+    // Test 5: Add units to village 2
+    echo "Test 5: Add 40 wardens to village 2\n";
     addUnitsToVillage($conn, $village2, $wardenUnit['id'], 40);
     $result = $unitManager->checkEliteUnitCap($testUserId, 'warden', 10);
     assert($result['can_train'] === true, "Should be able to train more");
     assert($result['current'] === 70, "Current count should be 70 (30+40)");
     echo "✓ Can train 10 more wardens (70/100)\n\n";
     
-    // Test 4: Try to exceed cap
-    echo "Test 4: Try to train 40 wardens (would exceed cap)\n";
+    // Test 6: Try to exceed cap
+    echo "Test 6: Try to train 40 wardens (would exceed cap)\n";
     $result = $unitManager->checkEliteUnitCap($testUserId, 'warden', 40);
     assert($result['can_train'] === false, "Should NOT be able to train (would exceed cap)");
     assert($result['current'] === 70, "Current count should still be 70");
     assert($result['max'] === 100, "Max cap should be 100");
     echo "✓ Cannot train 40 wardens (70/100) - would exceed cap\n\n";
     
-    // Test 5: Train exactly to cap
-    echo "Test 5: Train exactly 30 wardens (to reach cap)\n";
+    // Test 7: Train exactly to cap
+    echo "Test 7: Train exactly 30 wardens (to reach cap)\n";
     $result = $unitManager->checkEliteUnitCap($testUserId, 'warden', 30);
     assert($result['can_train'] === true, "Should be able to train exactly to cap");
     assert($result['current'] === 70, "Current count should be 70");
     echo "✓ Can train exactly 30 wardens to reach cap (70/100)\n\n";
     
-    // Test 6: Add queued units
-    echo "Test 6: Add 20 wardens to queue\n";
+    // Test 8: Add queued units
+    echo "Test 8: Add 20 wardens to queue\n";
     addUnitsToQueue($conn, $village1, $wardenUnit['id'], 20);
     $result = $unitManager->checkEliteUnitCap($testUserId, 'warden', 15);
     assert($result['can_train'] === false, "Should NOT be able to train (queued units count)");
     assert($result['current'] === 90, "Current count should be 90 (70 existing + 20 queued)");
     echo "✓ Cannot train 15 more (90/100 with queued units)\n\n";
     
-    // Test 7: Non-elite unit (no cap)
-    echo "Test 7: Check non-elite unit (pikeneer)\n";
-    $result = $unitManager->checkEliteUnitCap($testUserId, 'pikeneer', 1000);
-    assert($result['can_train'] === true, "Should be able to train any amount of non-elite units");
-    assert($result['max'] === -1, "Max should be -1 for non-elite units");
-    echo "✓ No cap for non-elite units\n\n";
-    
-    // Test 8: Different elite unit (ranger)
-    echo "Test 8: Check different elite unit (ranger)\n";
+    // Test 9: Create ranger unit for testing different elite unit
+    echo "Test 9: Creating test elite unit (ranger)\n";
+    $conn->query("
+        INSERT INTO unit_types (internal_name, name, building_type, required_building_level, 
+                                cost_wood, cost_clay, cost_iron, population, attack, 
+                                defense_infantry, defense_cavalry, defense_ranged, 
+                                speed, carry, training_time_base, category, is_active)
+        VALUES ('ranger', 'Ranger', 'barracks', 8, 180, 140, 90, 2, 45, 60, 60, 75, 18, 20, 6000, 'ranged', 1)
+    ");
     $result = $unitManager->checkEliteUnitCap($testUserId, 'ranger', 50);
     assert($result['can_train'] === true, "Should be able to train rangers (different unit)");
     assert($result['current'] === 0, "Current ranger count should be 0");
     assert($result['max'] === 100, "Max cap should be 100 for ranger");
     echo "✓ Can train rangers (separate cap from wardens)\n\n";
+    
+    // Cleanup test units
+    $conn->query("DELETE FROM unit_types WHERE internal_name IN ('warden', 'ranger')");
     
     // Cleanup
     cleanup($conn, $testUserId);
