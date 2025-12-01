@@ -197,8 +197,6 @@ $units = array_merge($units, [
 ]);
 
 // Continue with remaining unit categories...
-echo json_encode($units, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-
 
 // Add Scout Units
 $units = array_merge($units, [

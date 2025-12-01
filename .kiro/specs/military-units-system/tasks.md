@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [-] 1. Set up database schema and data structures
+- [x] 1. Set up database schema and data structures
 - [x] 1.1 Create database migration for new tables (seasonal_units, elite_unit_caps)
   - Add seasonal_units table with event windows and caps
   - Add elite_unit_caps table for per-account tracking
@@ -19,7 +19,7 @@
   - Add aura_config JSON column for support units
   - _Requirements: 1.4, 6.3, 14.2_
 
-- [-] 1.4 Populate data/units.json with complete 16+ unit roster
+- [x] 1.4 Populate data/units.json with complete 16+ unit roster
   - Add infantry units (Pikeneer, Shieldbearer, Raider, Warden)
   - Add ranged units (Militia Bowman, Longbow Scout, Ranger)
   - Add cavalry units (Skirmisher Cavalry, Lancer)
