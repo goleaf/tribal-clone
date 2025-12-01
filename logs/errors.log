@@ -347,3 +347,15 @@ Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/t
 --------------------------------------------------------------------------------
 [2025-12-01 23:16:21] ERROR: Trying to access array offset on null in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/conquest_resource_deduction_test.php line 130
 --------------------------------------------------------------------------------
+[2025-12-01 23:16:49] ERROR: Trying to access array offset on null in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/conquest_resource_deduction_test.php line 92
+--------------------------------------------------------------------------------
+[2025-12-01 23:16:49] ERROR: Trying to access array offset on null in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/conquest_resource_deduction_test.php line 143
+--------------------------------------------------------------------------------
+[2025-12-01 23:17:19] ERROR: Trying to access array offset on null in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/conquest_resource_deduction_test.php line 92
+--------------------------------------------------------------------------------
+[2025-12-01 23:17:19] ERROR: Trying to access array offset on null in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/conquest_resource_deduction_test.php line 143
+--------------------------------------------------------------------------------
+[2025-12-01 23:17:37] ERROR: Trying to access array offset on null in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/conquest_resource_deduction_test.php line 102
+--------------------------------------------------------------------------------
+[2025-12-01 23:17:37] ERROR: Trying to access array offset on null in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/conquest_resource_deduction_test.php line 153
+--------------------------------------------------------------------------------

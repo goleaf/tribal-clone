@@ -24,6 +24,11 @@ $testWorldId = 1;
 $testUserId = 9999;
 $testVillageId = 9999;
 
+// Set CURRENT_WORLD_ID constant BEFORE creating UnitManager
+if (!defined('CURRENT_WORLD_ID')) {
+    define('CURRENT_WORLD_ID', $testWorldId);
+}
+
 // Clean up any existing test data
 $conn->query("DELETE FROM villages WHERE id = $testVillageId");
 $conn->query("DELETE FROM users WHERE id = $testUserId");
@@ -42,11 +47,6 @@ $conn->query("INSERT INTO villages (id, user_id, world_id, name, x_coord, y_coor
               wood, clay, iron, farm_capacity, noble_coins, standards) 
               VALUES ($testVillageId, $testUserId, $testWorldId, 'Test Village', 500, 500, 
               10000, 10000, 10000, 1000, 5, 3)");
-
-// Set CURRENT_WORLD_ID constant for UnitManager
-if (!defined('CURRENT_WORLD_ID')) {
-    define('CURRENT_WORLD_ID', $testWorldId);
-}
 
 // Create required buildings for conquest units
 // Get building type IDs
@@ -81,6 +81,16 @@ if (!$nobleId && !$standardId) {
 $unitManager = new UnitManager($conn);
 $testsPassed = 0;
 $testsFailed = 0;
+
+// Debug: Check what units are loaded
+$allUnits = $unitManager->getAllUnitTypes();
+echo "DEBUG: Loaded " . count($allUnits) . " unit types\n";
+foreach ($allUnits as $id => $unit) {
+    if (in_array($unit['internal_name'], ['noble', 'nobleman', 'standard_bearer', 'envoy'])) {
+        echo "DEBUG: Found conquest unit: " . $unit['internal_name'] . " (ID: $id)\n";
+    }
+}
+echo "\n";
 
 // Test 1: Train noble with sufficient coins
 if ($nobleId) {
