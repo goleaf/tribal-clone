@@ -514,7 +514,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  // Fetch and render content based on building internal name
                  // This uses the get_building_action.php endpoint
                  // Pass village_id and internal_name
-                 const response = await fetch(`${buildingEndpoints.action}?village_id=${villageId}&building_type=${buildingInternalName}`); // Zmieniono parametr building_type na building_internal_name
+                 const response = await fetch(`${buildingEndpoints.action}?village_id=${villageId}&building_internal_name=${buildingInternalName}`);
                  const data = await response.json();
 
                  if (data.status === 'success' && actionContent) {
@@ -641,6 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 buildingQueueList.innerHTML = ''; // Clear the current queue
 
                 if (queueItem) {
+                    const startAttr = queueItem.start_time ? ` data-start-time="${queueItem.start_time}"` : '';
                     const queueHtml = `
                         <div class="queue-item current" data-building-internal-name="${queueItem.building_internal_name}"> <!-- Dodano atrybut building-internal-name -->
                             <div class="item-header">
@@ -656,7 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="progress-bar">
                                     <div class="progress-fill" style="width: 0%;"></div>
                                 </div>
-                                <div class="progress-time" data-ends-at="${queueItem.finish_time}" data-start-time="${queueItem.start_time}"></div>
+                                <div class="progress-time" data-ends-at="${queueItem.finish_time}"${startAttr}></div>
                             </div>
                         </div>
                     `;

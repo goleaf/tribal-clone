@@ -45,7 +45,8 @@ CREATE TABLE IF NOT EXISTS users (
     is_banned INTEGER NOT NULL DEFAULT 0,
     points INTEGER NOT NULL DEFAULT 0,
     ally_id INTEGER DEFAULT NULL,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    last_activity_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS tribes (
@@ -409,6 +410,20 @@ CREATE TABLE IF NOT EXISTS tribe_invitations (
     FOREIGN KEY (inviter_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
+-- Performance indexes for hot lookups
+CREATE INDEX IF NOT EXISTS idx_villages_user ON villages(user_id);
+CREATE INDEX IF NOT EXISTS idx_village_buildings_village ON village_buildings(village_id);
+CREATE INDEX IF NOT EXISTS idx_village_buildings_type ON village_buildings(building_type_id);
+CREATE INDEX IF NOT EXISTS idx_building_queue_village_finish ON building_queue(village_id, finish_time);
+CREATE INDEX IF NOT EXISTS idx_building_queue_building ON building_queue(village_building_id);
+CREATE INDEX IF NOT EXISTS idx_unit_queue_village_finish ON unit_queue(village_id, finish_at);
+CREATE INDEX IF NOT EXISTS idx_research_queue_village_finish ON research_queue(village_id, ends_at);
+CREATE INDEX IF NOT EXISTS idx_trade_routes_source_arrival ON trade_routes(source_village_id, arrival_time);
+CREATE INDEX IF NOT EXISTS idx_trade_routes_offer ON trade_routes(offer_id);
+CREATE INDEX IF NOT EXISTS idx_trade_routes_target ON trade_routes(target_village_id);
+CREATE INDEX IF NOT EXISTS idx_trade_offers_status ON trade_offers(status);
+CREATE INDEX IF NOT EXISTS idx_trade_offers_source ON trade_offers(source_village_id);
+
 -- Seed data
 INSERT INTO worlds (id, name, created_at) VALUES (1, 'World 1', CURRENT_TIMESTAMP);
 INSERT OR IGNORE INTO users (id, username, email, password, is_admin, is_banned, created_at) VALUES (-1, 'Barbarians', 'barbarians@localhost', '', 0, 0, CURRENT_TIMESTAMP);
@@ -419,27 +434,35 @@ INSERT INTO building_types (internal_name, name, description, max_level, base_bu
 ('clay_pit', 'Clay Pit', 'Produces clay. Higher levels increase production.', 30, 600, 1.18, 65, 50, 40, 1.26, 'clay', 30, 1.16, 1.0, 0, 1),
 ('iron_mine', 'Iron Mine', 'Produces iron. Higher levels increase production.', 30, 720, 1.18, 75, 65, 60, 1.26, 'iron', 30, 1.16, 1.0, 0, 1),
 ('warehouse', 'Warehouse', 'Stores your resources. Higher levels increase capacity.', 30, 800, 1.15, 60, 50, 40, 1.22, NULL, 1000, 1.227, 1.0, 0, 1),
-('farm', 'Farm', 'Increases village population capacity.', 30, 1000, 1.2, 80, 100, 70, 1.28, NULL, 240, 1.17, 1.0, 0, 1),
+('farm', 'Farm', 'Increases village population capacity.', 30, 1000, 1.2, 80, 100, 70, 1.28, NULL, 240, 1.172, 1.0, 0, 1),
 ('barracks', 'Barracks', 'Train infantry units.', 25, 1200, 1.22, 200, 170, 90, 1.26, NULL, NULL, NULL, 1.0, 0, 1),
 ('stable', 'Stable', 'Train cavalry units.', 20, 1500, 1.25, 270, 240, 260, 1.28, NULL, NULL, NULL, 1.0, 0, 1),
 ('workshop', 'Workshop', 'Build siege engines.', 15, 2000, 1.3, 300, 320, 290, 1.3, NULL, NULL, NULL, 1.0, 0, 1),
 ('smithy', 'Smithy', 'Improve weapons and armor.', 20, 1100, 1.24, 180, 250, 220, 1.24, NULL, NULL, NULL, 1.0, 0, 1),
 ('market', 'Market', 'Trade resources with other players.', 25, 1300, 1.22, 150, 200, 130, 1.23, NULL, NULL, NULL, 1.0, 0, 1),
 ('wall', 'Wall', 'Provides defense against enemy attacks.', 20, 1400, 1.26, 100, 300, 200, 1.25, NULL, NULL, NULL, 1.0, 0, 1),
-('academy', 'Academy', 'Research new technologies.', 20, 1600, 1.28, 260, 300, 220, 1.27, NULL, NULL, NULL, 1.0, 0, 1);
+('academy', 'Academy', 'Research new technologies.', 20, 1600, 1.28, 260, 300, 220, 1.27, NULL, NULL, NULL, 1.0, 0, 1),
+('rally_point', 'Rally Point', 'Coordinate and launch troop movements.', 20, 600, 1.18, 80, 70, 60, 1.2, NULL, NULL, NULL, 1.0, 0, 1),
+('statue', 'Statue', 'Train nobles; levels drop by 5 per noble trained.', 15, 1200, 1.22, 220, 220, 180, 1.22, NULL, NULL, NULL, 1.0, 0, 1),
+('church', 'Church', 'Provides faith radius and defensive bonuses nearby.', 3, 2400, 1.25, 500, 500, 400, 1.25, NULL, NULL, NULL, 1.0, 0, 1),
+('first_church', 'First Church', 'Unique first church built by a player.', 1, 1800, 1.22, 300, 300, 250, 1.22, NULL, NULL, NULL, 1.0, 0, 1),
+('hiding_place', 'Hiding Place', 'Protects a portion of resources from raids.', 20, 600, 1.18, 50, 60, 50, 1.25, NULL, NULL, NULL, 1.0, 0, 1);
 
 INSERT INTO building_requirements (building_type_id, required_building, required_level) VALUES
 ((SELECT id FROM building_types WHERE internal_name = 'barracks'), 'main_building', 3),
-((SELECT id FROM building_types WHERE internal_name = 'stable'), 'barracks', 3),
-((SELECT id FROM building_types WHERE internal_name = 'stable'), 'smithy', 2),
-((SELECT id FROM building_types WHERE internal_name = 'workshop'), 'stable', 3),
-((SELECT id FROM building_types WHERE internal_name = 'workshop'), 'smithy', 3),
+((SELECT id FROM building_types WHERE internal_name = 'stable'), 'barracks', 10),
+((SELECT id FROM building_types WHERE internal_name = 'stable'), 'smithy', 5),
+((SELECT id FROM building_types WHERE internal_name = 'workshop'), 'smithy', 10),
 ((SELECT id FROM building_types WHERE internal_name = 'smithy'), 'main_building', 3),
 ((SELECT id FROM building_types WHERE internal_name = 'market'), 'main_building', 3),
 ((SELECT id FROM building_types WHERE internal_name = 'market'), 'warehouse', 2),
 ((SELECT id FROM building_types WHERE internal_name = 'wall'), 'barracks', 1),
 ((SELECT id FROM building_types WHERE internal_name = 'academy'), 'main_building', 5),
-((SELECT id FROM building_types WHERE internal_name = 'academy'), 'smithy', 1);
+((SELECT id FROM building_types WHERE internal_name = 'academy'), 'smithy', 1),
+((SELECT id FROM building_types WHERE internal_name = 'rally_point'), 'main_building', 1),
+((SELECT id FROM building_types WHERE internal_name = 'statue'), 'academy', 1),
+((SELECT id FROM building_types WHERE internal_name = 'church'), 'main_building', 5),
+((SELECT id FROM building_types WHERE internal_name = 'first_church'), 'main_building', 2);
 
 INSERT INTO unit_types (internal_name, name, description, building_type, attack, defense, speed, carry_capacity, population, cost_wood, cost_clay, cost_iron, required_tech, required_tech_level, required_building_level, training_time_base, is_active, points) VALUES
 ('spear', 'Spearman', 'Basic infantry, strong against cavalry.', 'barracks', 10, 15, 18, 25, 1, 50, 30, 10, NULL, 0, 1, 900, 1, 1),
@@ -470,3 +493,21 @@ INSERT OR IGNORE INTO achievements (internal_name, name, description, category, 
 ('resource_keeper', 'Well Stocked', 'Hold at least 5,000 of each resource in one village.', 'economy', 'resource_stock', 'balanced', 5000, 500, 500, 500, 2),
 ('recruiter_50', 'Drill Sergeant', 'Train a total of 50 units.', 'military', 'units_trained', 'any', 50, 300, 300, 200, 3),
 ('recruiter_200', 'Army Quartermaster', 'Train a total of 200 units.', 'military', 'units_trained', 'any', 200, 600, 600, 400, 5);
+
+-- Guides / documentation
+CREATE TABLE IF NOT EXISTS guides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    body_html TEXT NOT NULL,
+    tags TEXT DEFAULT '',
+    category TEXT DEFAULT 'general',
+    status TEXT NOT NULL DEFAULT 'draft',
+    version INTEGER NOT NULL DEFAULT 1,
+    locale TEXT NOT NULL DEFAULT 'en',
+    author_id INTEGER NULL,
+    reviewer_id INTEGER NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

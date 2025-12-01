@@ -13,7 +13,13 @@ if (!isset($_SESSION['user_id'])) {
 validateCSRF(); // CSRF token validation
 
 $user_id = $_SESSION['user_id'];
-$notification_id = isset($_POST['notification_id']) ? (int)$_POST['notification_id'] : null;
+$notification_id = null;
+if (isset($_POST['notification_id'])) {
+    $notification_id = (int)$_POST['notification_id'];
+} elseif (isset($_POST['id'])) {
+    // Backward compatibility with older JS callers
+    $notification_id = (int)$_POST['id'];
+}
 
 if (!$notification_id) {
     echo json_encode(['status' => 'error', 'message' => 'Missing notification ID.']);

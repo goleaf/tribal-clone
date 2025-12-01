@@ -47,25 +47,33 @@ INSERT INTO `building_types` (`internal_name`, `name`, `description`, `max_level
 ('clay_pit', 'Clay Pit', 'Produces clay. Higher levels increase production.', 30, 600, 1.18, 65, 50, 40, 1.26, 'clay', 30, 1.16, 1.0),
 ('iron_mine', 'Iron Mine', 'Produces iron. Higher levels increase production.', 30, 720, 1.18, 75, 65, 60, 1.26, 'iron', 30, 1.16, 1.0),
 ('warehouse', 'Warehouse', 'Stores your resources. Higher levels increase capacity.', 30, 800, 1.15, 60, 50, 40, 1.22, NULL, 1000, 1.227, 1.0),
-('farm', 'Farm', 'Increases village population capacity.', 30, 1000, 1.2, 80, 100, 70, 1.28, NULL, 240, 1.17, 1.0),
+('farm', 'Farm', 'Increases village population capacity.', 30, 1000, 1.2, 80, 100, 70, 1.28, NULL, 240, 1.172, 1.0),
 ('barracks', 'Barracks', 'Train infantry units.', 25, 1200, 1.22, 200, 170, 90, 1.26, NULL, NULL, NULL, 1.0),
 ('stable', 'Stable', 'Train cavalry units.', 20, 1500, 1.25, 270, 240, 260, 1.28, NULL, NULL, NULL, 1.0),
 ('workshop', 'Workshop', 'Build siege engines.', 15, 2000, 1.3, 300, 320, 290, 1.3, NULL, NULL, NULL, 1.0),
 ('smithy', 'Smithy', 'Research and improve weapons and armor.', 20, 1100, 1.24, 180, 250, 220, 1.24, NULL, NULL, NULL, 1.0),
 ('market', 'Market', 'Trade resources with other players.', 25, 1300, 1.22, 150, 200, 130, 1.23, NULL, NULL, NULL, 1.0),
 ('wall', 'Wall', 'Provides defense against enemy attacks.', 20, 1400, 1.26, 100, 300, 200, 1.25, NULL, NULL, NULL, 1.0),
-('academy', 'Academy', 'Research new technologies.', 20, 1600, 1.28, 260, 300, 220, 1.27, NULL, NULL, NULL, 1.0);
+('academy', 'Academy', 'Research new technologies.', 20, 1600, 1.28, 260, 300, 220, 1.27, NULL, NULL, NULL, 1.0),
+('rally_point', 'Rally Point', 'Coordinate and launch troop movements.', 20, 600, 1.18, 80, 70, 60, 1.2, NULL, NULL, NULL, 1.0),
+('statue', 'Statue', 'Train nobles; levels drop by 5 per noble trained.', 15, 1200, 1.22, 220, 220, 180, 1.22, NULL, NULL, NULL, 1.0),
+('church', 'Church', 'Provides faith radius and defensive bonuses nearby.', 3, 2400, 1.25, 500, 500, 400, 1.25, NULL, NULL, NULL, 1.0),
+('first_church', 'First Church', 'Unique first church built by a player.', 1, 1800, 1.22, 300, 300, 250, 1.22, NULL, NULL, NULL, 1.0),
+('hiding_place', 'Hiding Place', 'Protects a portion of resources from raids.', 20, 600, 1.18, 50, 60, 50, 1.25, NULL, NULL, NULL, 1.0);
 
 -- Building requirements
 INSERT INTO `building_requirements` (`building_type_id`, `required_building`, `required_level`) VALUES
 ((SELECT id FROM building_types WHERE internal_name = 'barracks'), 'main_building', 3),
-((SELECT id FROM building_types WHERE internal_name = 'stable'), 'barracks', 3),
-((SELECT id FROM building_types WHERE internal_name = 'stable'), 'smithy', 2),
-((SELECT id FROM building_types WHERE internal_name = 'workshop'), 'stable', 3),
-((SELECT id FROM building_types WHERE internal_name = 'workshop'), 'smithy', 3),
+((SELECT id FROM building_types WHERE internal_name = 'stable'), 'barracks', 10),
+((SELECT id FROM building_types WHERE internal_name = 'stable'), 'smithy', 5),
+((SELECT id FROM building_types WHERE internal_name = 'workshop'), 'smithy', 10),
 ((SELECT id FROM building_types WHERE internal_name = 'smithy'), 'main_building', 3),
 ((SELECT id FROM building_types WHERE internal_name = 'market'), 'main_building', 3),
 ((SELECT id FROM building_types WHERE internal_name = 'market'), 'warehouse', 2),
 ((SELECT id FROM building_types WHERE internal_name = 'wall'), 'barracks', 1),
 ((SELECT id FROM building_types WHERE internal_name = 'academy'), 'main_building', 5),
-((SELECT id FROM building_types WHERE internal_name = 'academy'), 'smithy', 1);
+((SELECT id FROM building_types WHERE internal_name = 'academy'), 'smithy', 1),
+((SELECT id FROM building_types WHERE internal_name = 'rally_point'), 'main_building', 1),
+((SELECT id FROM building_types WHERE internal_name = 'statue'), 'academy', 1),
+((SELECT id FROM building_types WHERE internal_name = 'church'), 'main_building', 5),
+((SELECT id FROM building_types WHERE internal_name = 'first_church'), 'main_building', 2);

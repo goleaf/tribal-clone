@@ -39,6 +39,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt_check_village->execute();
                 $stmt_check_village->store_result();
 
+                // Touch last_activity_at for inactivity tracking
+                if (dbColumnExists($conn, 'users', 'last_activity_at')) {
+                    $touch = $conn->prepare("UPDATE users SET last_activity_at = NOW() WHERE id = ?");
+                    if ($touch) {
+                        $touch->bind_param("i", $id);
+                        $touch->execute();
+                        $touch->close();
+                    }
+                }
+
                 if ($stmt_check_village->num_rows > 0) {
                     $stmt_check_village->close();
                     // Redirect to world selection or the game

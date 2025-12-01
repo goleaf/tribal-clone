@@ -110,6 +110,13 @@ function generateToken(int $length = 32): string {
 }
 
 /**
+ * Calculates continent (K value) for map coordinates.
+ */
+function getContinent(int $x, int $y): int {
+    return ((int)floor($x / 100) * 10) + (int)floor($y / 100);
+}
+
+/**
  * Calculates distance between two map points.
  */
 function calculateDistance(float $x1, float $y1, float $x2, float $y2): float {

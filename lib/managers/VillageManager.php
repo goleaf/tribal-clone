@@ -165,6 +165,7 @@ class VillageManager
         $researchManager = new ResearchManager($this->conn);
         $achievementManager = new AchievementManager($this->conn);
         $tradeManager = new TradeManager($this->conn);
+        $notificationManager = new NotificationManager($this->conn);
         // BattleManager could be added here when needed.
 
         // Evaluate snapshot-based achievements and resource milestones
@@ -179,6 +180,12 @@ class VillageManager
             $messages[] = "<p class='success-message'>Upgrade completed: <b>" . htmlspecialchars($item['name']) . "</b> to level " . $item['level'] . ".</p>";
             if ($userId) {
                 $achievementManager->checkBuildingLevel($userId, $item['internal_name'], (int)$item['level'], $village_id);
+                $notificationManager->addNotification(
+                    $userId,
+                    sprintf('Upgrade completed: %s to level %d.', $item['name'], $item['level']),
+                    'success',
+                    '/game/game.php'
+                );
             }
         }
 
@@ -189,6 +196,12 @@ class VillageManager
                 $messages[] = "<p class='success-message'>Recruitment completed: " . $queue['count'] . " units of '" . htmlspecialchars($queue['unit_name']) . "'.</p>";
                 if ($userId) {
                     $achievementManager->addUnitsTrainedProgress($userId, (int)($queue['produced_now'] ?? $queue['count'] ?? 0));
+                    $notificationManager->addNotification(
+                        $userId,
+                        sprintf('Recruitment completed: %d × %s.', $queue['count'], $queue['unit_name']),
+                        'success',
+                        '/game/game.php'
+                    );
                 }
             }
         }
@@ -206,6 +219,14 @@ class VillageManager
          if (!empty($researchUpdate['completed_research'])) {
             foreach ($researchUpdate['completed_research'] as $research) {
                 $messages[] = "<p class='success-message'>Research completed: <b>" . htmlspecialchars($research['research_name']) . "</b> to level " . $research['level'] . ".</p>";
+                if ($userId) {
+                    $notificationManager->addNotification(
+                        $userId,
+                        sprintf('Research completed: %s to level %d.', $research['research_name'], $research['level']),
+                        'info',
+                        '/game/game.php'
+                    );
+                }
             }
         }
 
@@ -213,6 +234,14 @@ class VillageManager
         $tradeMessages = $tradeManager->processArrivedTradesForVillage($village_id);
         foreach ($tradeMessages as $tradeMessage) {
             $messages[] = "<p class='success-message'>" . htmlspecialchars($tradeMessage) . "</p>";
+            if ($userId) {
+                $notificationManager->addNotification(
+                    $userId,
+                    $tradeMessage,
+                    'success',
+                    '/game/game.php'
+                );
+            }
         }
 
         // 6. Attack processing is handled in BattleManager (see game.php usage).

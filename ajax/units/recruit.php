@@ -4,12 +4,14 @@ require_once __DIR__ . '/../../lib/managers/UnitManager.php';
 require_once __DIR__ . '/../../lib/managers/VillageManager.php';
 require_once __DIR__ . '/../../lib/managers/BuildingManager.php';
 require_once __DIR__ . '/../../lib/managers/BuildingConfigManager.php';
+require_once __DIR__ . '/../../lib/managers/ResourceManager.php';
 
 // Initialize managers
 $unitManager = new UnitManager($conn);
 $villageManager = new VillageManager($conn);
 $buildingConfigManager = new BuildingConfigManager($conn);
 $buildingManager = new BuildingManager($conn, $buildingConfigManager);
+$resourceManager = new ResourceManager($conn, $buildingManager);
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -97,16 +99,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // Use a transaction to ensure atomicity
     $conn->begin_transaction();
     try {
-        // Deduct resources
+        // Deduct resources via ResourceManager (validates again)
         $costs = $resource_check['total_costs'];
-        $villageManager->updateVillageResources($village_id, -$costs['wood'], -$costs['clay'], -$costs['iron']);
+        $spend = $resourceManager->spendResources($village_id, $costs);
+        if (!$spend['success']) {
+            throw new Exception($spend['message']);
+        }
 
         // Add to recruitment queue
         $result = $unitManager->recruitUnits($village_id, $unit_id, $count, $building_level);
 
         if ($result['success']) {
             $conn->commit();
-            echo json_encode(['success' => true, 'message' => $result['message']]);
+            echo json_encode(['success' => true, 'message' => $result['message'], 'resources' => $spend['resources']]);
         } else {
             throw new Exception($result['error']);
         }

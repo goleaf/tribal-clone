@@ -56,14 +56,15 @@ Modern PHP remake of the Tribal Wars browser engine with real-time building, rec
    - Manual: import the `docs/sql/sql_create_*.sql` files into your MySQL database (or adapt them for SQLite).
 4. Serve the project (example): `php -S localhost:8000 -t /path/to/tribal-clone`.
 5. Visit `http://localhost:8000/`, register a user, and create your first village. Use `map/map.php` for the world view and `game/game.php` for the village overview.
+6. (Optional) Run cron-style processing so queues and attacks finish even when nobody is online: `php jobs/process_queues.php` (also converts long-inactive villages to barbarian; see `INACTIVE_TO_BARBARIAN_DAYS`).
 
 ## Roadmap
 - [x] Implement trade routes, trader limits, and market offers (create/accept/cancel).
 - [x] Implement tribe/alliance data model, tribe rankings, and invite/role flows.
-- [ ] Harden combat formulas (wall/ram/catapult balance, spy/scout actions) and add automated report links in UI.
+- [ ] Combat depth: separate spy/scout intel, richer battle reports, movement queues on the map, and wall/ram/catapult tuning (see `docs/roadmap.md`).
 - [ ] Complete messaging UI integration and validation (attachments, blocking, spam controls).
-- [ ] Wire notifications into all major events (build/recruit/research complete, attacks, messages).
-- [ ] Add automated jobs/cron to process queues and attacks without page loads.
+- [x] Wire notifications into all major events (build/recruit/research complete, attacks, messages).
+- [x] Add automated jobs/cron to process queues and attacks without page loads.
 - [ ] Improve responsive layout and accessibility across `game/` and `map/`.
 - [ ] Add tests/fixtures for managers and AJAX endpoints plus seed/demo data.
 
@@ -75,3 +76,7 @@ Modern PHP remake of the Tribal Wars browser engine with real-time building, rec
 - `css/`, `js/`, `img/` - frontend styling, scripts, and assets.
 - `docs/` - notes and SQL schema files.
 - `admin/` - installer verification and admin utilities.
+
+## Documentation
+- Roadmaps: `docs/roadmap.md`
+- Guides section plan: `docs/guides_section_plan.md`

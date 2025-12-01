@@ -21,14 +21,17 @@ define('INITIAL_POPULATION', 1);
 define('WAREHOUSE_BASE_CAPACITY', 1000); // Capacity of the warehouse at level 1
 define('WAREHOUSE_CAPACITY_FACTOR', 1.227); // Capacity multiplier for subsequent warehouse levels
 
-// Main building time reduction factor (each town hall level reduces time by this factor ^ (level-1))
-// Example: 0.95 means 5% faster per level compared to the previous one
-define('MAIN_BUILDING_TIME_REDUCTION_FACTOR', 0.95);
+// Global speed/balance knobs
+define('WORLD_SPEED', 1.0); // Higher values speed up all construction times proportionally
+define('BUILD_TIME_LEVEL_FACTOR', 1.18); // base_time * factor^level for construction scaling
+define('MAIN_BUILDING_TIME_REDUCTION_PER_LEVEL', 0.02); // HQ reduces build times by 2% per level
+define('FARM_GROWTH_FACTOR', 1.172); // Farm capacity scaling per level
 
 // Paths and game constants
 define('BASE_URL', 'http://localhost:8000/'); // Change to the appropriate URL if the project is not in the htdocs root
 define('TRADER_SPEED', 100); // Trader speed in fields per hour
 define('TRADER_CAPACITY', 1000); // Resources one trader can carry
+define('INACTIVE_TO_BARBARIAN_DAYS', 30); // Days of inactivity before a player village becomes barbarian (cron-driven)
 
 // Default world ID
 define('INITIAL_WORLD_ID', 1);

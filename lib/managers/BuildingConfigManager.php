@@ -95,46 +95,50 @@ class BuildingConfigManager {
         }
 
         // Base time for level $currentLevel + 1
-        $nextLevel = $currentLevel + 1;
-        $baseTime = round($config['base_build_time_initial'] * ($config['build_time_factor'] ** $currentLevel));
+        $levelFactor = defined('BUILD_TIME_LEVEL_FACTOR') ? BUILD_TIME_LEVEL_FACTOR : 1.18;
+        $baseTime = round($config['base_build_time_initial'] * ($levelFactor ** $currentLevel));
 
-        // Calculate town hall bonus
-        $mainBuildingConfig = $this->getBuildingConfig('main_building');
-        $timeReductionFactor = $mainBuildingConfig['bonus_time_reduction_factor'] ?? 1.0;
-        
-        // Town hall bonus is typically exponential/percentage:
-        // time * (reduction_factor ^ town_hall_level). Example factor 0.95: level 1 => time*0.95, level 2 => time*0.95^2, etc.
-        $reducedTime = $baseTime * ($timeReductionFactor ** $mainBuildingLevel);
+        // Global world speed
+        $worldSpeed = defined('WORLD_SPEED') ? max(0.1, WORLD_SPEED) : 1.0;
+
+        // Headquarters (main_building) reduces build time by 2% per level: divide by (1 + 0.02 * level)
+        $hqBonus = 1 + (max(0, $mainBuildingLevel) * (defined('MAIN_BUILDING_TIME_REDUCTION_PER_LEVEL') ? MAIN_BUILDING_TIME_REDUCTION_PER_LEVEL : 0.02));
+        $effectiveTime = $baseTime / max(0.1, $worldSpeed * $hqBonus);
 
         // Minimal build time (e.g., 1 second)
-        return (int)max(1, round($reducedTime));
+        return (int)max(1, (int)ceil($effectiveTime));
     }
 
      // Calculate resource production for a given building and level
     public function calculateProduction(string $internalName, int $level): ?float {
+        if ($level <= 0) {
+            return 0.0;
+        }
+
         $config = $this->getBuildingConfig($internalName);
 
         if (!$config || $config['production_type'] === NULL) {
             return null; // Does not produce resources
         }
 
-        // Production for the given level
-        $production = $config['production_initial'] * ($config['production_factor'] ** ($level - 1));
-        
-        return $production;
+        // Resource production is standardized for the three mines:
+        // base 30 per hour * 1.163 ^ level
+        if (in_array($internalName, ['sawmill', 'clay_pit', 'iron_mine'], true)) {
+            $base = 30;
+            $factor = 1.163;
+            return $base * pow($factor, $level);
+        }
+
+        // Fallback to config for any other producing building types
+        return $config['production_initial'] * ($config['production_factor'] ** ($level - 1));
     }
     
     // Calculate warehouse capacity for a given level
     public function calculateWarehouseCapacity(int $level): ?int {
-         $config = $this->getBuildingConfig('warehouse');
-         
-         if (!$config) {
-             return null; // Warehouse config not found
-         }
-         
-         // Capacity model: initial * (factor ^ level)
-         $capacity = $config['production_initial'] * ($config['production_factor'] ** $level);
-         
+         // Formula: 1000 * 1.229 ^ level
+         $base = 1000;
+         $factor = 1.229;
+         $capacity = $base * pow($factor, $level);
          return (int) round($capacity);
     }
     
@@ -146,8 +150,10 @@ class BuildingConfigManager {
             return null; // Farm config not found
         }
         
-        // Farm capacity
-        $capacity = $config['production_initial'] * ($config['production_factor'] ** ($level - 1));
+        // Farm capacity: 240 * 1.172^level
+        $base = $config['production_initial'] ?? 240;
+        $factor = defined('FARM_GROWTH_FACTOR') ? FARM_GROWTH_FACTOR : ($config['production_factor'] ?? 1.172);
+        $capacity = $base * pow($factor, $level);
         
         return (int) round($capacity);
     }

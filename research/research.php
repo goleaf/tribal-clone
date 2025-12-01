@@ -58,7 +58,7 @@ $db->closeConnection();
         </div>
         <div class="header-user">Welcome, <b><?php echo htmlspecialchars($username); ?></b></div>
     </header>
-    <div id="main-content">
+    <div id="main-content" class="with-sidebar">
         <nav id="sidebar">
             <ul>
                 <li><a href="../game/game.php">Village</a></li>

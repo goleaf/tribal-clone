@@ -89,26 +89,93 @@ class ResourceManager {
         $produced_clay = ($rates['clay'] / 3600) * $elapsed;
         $produced_iron = ($rates['iron'] / 3600) * $elapsed;
 
-        // Warehouse capacity from current village data
-        $warehouse_capacity = $village['warehouse_capacity'];
+        // Warehouse capacity based on the current warehouse level
+        $warehouse_level = $this->buildingManager->getBuildingLevel($village_id, 'warehouse');
+        $warehouse_capacity = $this->buildingManager->getWarehouseCapacityByLevel($warehouse_level);
 
         $village['wood'] = min($village['wood'] + $produced_wood, $warehouse_capacity);
         $village['clay'] = min($village['clay'] + $produced_clay, $warehouse_capacity);
         $village['iron'] = min($village['iron'] + $produced_iron, $warehouse_capacity);
 
+        $nowSql = date('Y-m-d H:i:s', $now);
+
         $stmt = $this->conn->prepare(
             "UPDATE villages
-             SET wood = ?, clay = ?, iron = ?, last_resource_update = NOW()
+             SET wood = ?, clay = ?, iron = ?, warehouse_capacity = ?, last_resource_update = ?
              WHERE id = ?"
         );
         // Bind numeric (double) values for resources
-        $stmt->bind_param("dddi", $village['wood'], $village['clay'], $village['iron'], $village_id);
+        $stmt->bind_param("dddisi", $village['wood'], $village['clay'], $village['iron'], $warehouse_capacity, $nowSql, $village_id);
         $stmt->execute();
         $stmt->close();
 
-        $village['last_resource_update'] = date('Y-m-d H:i:s', $now);
+        $village['warehouse_capacity'] = $warehouse_capacity;
+        $village['last_resource_update'] = $nowSql;
         
         // Return the updated village array
         return $village;
+    }
+
+    /**
+     * Attempts to deduct the given resource costs from a village.
+     *
+     * @param int $villageId
+     * @param array $costs ['wood' => int, 'clay' => int, 'iron' => int]
+     * @return array ['success' => bool, 'message' => string, 'resources' => array|null]
+     */
+    public function spendResources(int $villageId, array $costs): array
+    {
+        $costs = [
+            'wood' => (int)($costs['wood'] ?? 0),
+            'clay' => (int)($costs['clay'] ?? 0),
+            'iron' => (int)($costs['iron'] ?? 0),
+        ];
+
+        $stmt = $this->conn->prepare("SELECT wood, clay, iron FROM villages WHERE id = ?");
+        if ($stmt === false) {
+            return ['success' => false, 'message' => 'Cannot load village resources.', 'resources' => null];
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $res = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$res) {
+            return ['success' => false, 'message' => 'Village not found.', 'resources' => null];
+        }
+
+        if ($res['wood'] < $costs['wood'] || $res['clay'] < $costs['clay'] || $res['iron'] < $costs['iron']) {
+            return ['success' => false, 'message' => 'Not enough resources.', 'resources' => $res];
+        }
+
+        $newWood = $res['wood'] - $costs['wood'];
+        $newClay = $res['clay'] - $costs['clay'];
+        $newIron = $res['iron'] - $costs['iron'];
+
+        $stmtUpdate = $this->conn->prepare("
+            UPDATE villages
+            SET wood = ?, clay = ?, iron = ?
+            WHERE id = ?
+        ");
+        if ($stmtUpdate === false) {
+            return ['success' => false, 'message' => 'Failed to prepare resource update.', 'resources' => $res];
+        }
+        $stmtUpdate->bind_param("iiii", $newWood, $newClay, $newIron, $villageId);
+        $ok = $stmtUpdate->execute();
+        $stmtUpdate->close();
+
+        if (!$ok) {
+            return ['success' => false, 'message' => 'Failed to update resources.', 'resources' => $res];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Resources deducted.',
+            'resources' => [
+                'wood' => $newWood,
+                'clay' => $newClay,
+                'iron' => $newIron
+            ]
+        ];
     }
 } 

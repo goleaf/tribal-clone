@@ -192,6 +192,19 @@ $is_ajax = isset($_REQUEST['ajax']) && $_REQUEST['ajax'] == 1;
 
 // Fetch target village details if provided
 $target_village_id = $_GET['target_village_id'] ?? null;
+$default_attack_type = 'attack';
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['preferred_attack_type'])) {
+    $maybeType = $_GET['preferred_attack_type'];
+    if (in_array($maybeType, ['attack', 'raid', 'support', 'spy'], true)) {
+        $default_attack_type = $maybeType;
+    }
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attack_type'])) {
+    $maybeType = $_POST['attack_type'];
+    if (in_array($maybeType, ['attack', 'raid', 'support', 'spy'], true)) {
+        $default_attack_type = $maybeType;
+    }
+}
 
 if (!$is_ajax) {
     $database->closeConnection();
@@ -350,7 +363,7 @@ if (!$is_ajax) {
             <div class="header-user">Welcome, <b><?php echo htmlspecialchars($username); ?></b></div>
         </header>
         
-        <div id="main-content">
+        <div id="main-content" class="with-sidebar">
             <div id="sidebar">
                 <ul>
                     <li><a href="game.php">Village overview</a></li>
@@ -424,16 +437,16 @@ if (!$is_ajax) {
                                     <div class="attack-type-selector">
                                         <h3>Attack type</h3>
                                         <label>
-                                            <input type="radio" name="attack_type" value="attack" checked> Attack (normal)
+                                            <input type="radio" name="attack_type" value="attack" <?php echo $default_attack_type === 'attack' ? 'checked' : ''; ?>> Attack (normal)
                                         </label><br>
                                         <label>
-                                            <input type="radio" name="attack_type" value="raid"> Raid (resources only)
+                                            <input type="radio" name="attack_type" value="raid" <?php echo $default_attack_type === 'raid' ? 'checked' : ''; ?>> Raid (resources only)
                                         </label><br>
                                         <label>
-                                            <input type="radio" name="attack_type" value="support"> Support (for ally)
+                                            <input type="radio" name="attack_type" value="support" <?php echo $default_attack_type === 'support' ? 'checked' : ''; ?>> Support (for ally)
                                         </label><br>
                                         <label>
-                                            <input type="radio" name="attack_type" value="spy"> Spy (scouting)
+                                            <input type="radio" name="attack_type" value="spy" <?php echo $default_attack_type === 'spy' ? 'checked' : ''; ?>> Spy (scouting)
                                         </label>
                                     </div>
                                     
@@ -489,6 +502,8 @@ if (!$is_ajax) {
                                             case 'raid': echo 'Raid'; break;
                                             case 'support': echo 'Support'; break;
                                             case 'spy': echo 'Spy'; break;
+                                            case 'return': echo 'Return'; break;
+                                            default: echo ucfirst($attack['attack_type']); break;
                                         }
                                         ?>
                                     </h4>
@@ -499,7 +514,11 @@ if (!$is_ajax) {
                                         Owner: <?php echo htmlspecialchars($attack['defender_name']); ?>
                                     </div>
                                     <div class="attack-time">
-                                        Arrival: <?php echo $attack['formatted_remaining_time']; ?>
+                                        Departure: <?php echo htmlspecialchars($attack['formatted_start_time'] ?? ''); ?> |
+                                        Arrival: <?php echo htmlspecialchars($attack['formatted_arrival_time'] ?? $attack['formatted_remaining_time']); ?> (ETA <?php echo $attack['formatted_remaining_time']; ?>)
+                                        <?php if (!empty($attack['formatted_return_time'])): ?>
+                                            <br>Return ETA: <?php echo htmlspecialchars($attack['formatted_return_time']); ?> (<?php echo htmlspecialchars($attack['formatted_return_remaining']); ?>)
+                                        <?php endif; ?>
                                     </div>
                                     
                                     <div class="attack-units">

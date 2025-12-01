@@ -274,6 +274,14 @@ document.addEventListener('DOMContentLoaded', () => {
             html += `</ul></div>`;
         }
 
+        if (intel.research) {
+            html += `<div class="village-changes"><h4>Research intel</h4><ul>`;
+            Object.entries(intel.research).forEach(([key, value]) => {
+                html += `<li>${escapeHTML(value.name || key)}: level ${value.level ?? 0}</li>`;
+            });
+            html += `</ul></div>`;
+        }
+
         html += `</div>`;
         return html;
     }

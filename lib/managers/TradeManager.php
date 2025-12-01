@@ -29,7 +29,8 @@ class TradeManager {
      */
     public function getTraderSlots(int $marketLevel): int
     {
-        return max(1, 3 + (int)floor($marketLevel * 0.7));
+        // Requirement: merchants equal to market level (0 when no market)
+        return max(0, $marketLevel);
     }
 
     /**
@@ -242,7 +243,10 @@ class TradeManager {
         $messages = [];
 
         $stmt = $this->conn->prepare("
-            SELECT * FROM trade_routes
+            SELECT tr.*, 
+                   sv.x_coord AS source_x, sv.y_coord AS source_y
+            FROM trade_routes tr
+            JOIN villages sv ON tr.source_village_id = sv.id
             WHERE arrival_time <= NOW()
               AND (source_village_id = ? OR target_village_id = ?)
         ");
@@ -253,32 +257,72 @@ class TradeManager {
         while ($route = $result->fetch_assoc()) {
             $this->conn->begin_transaction();
             try {
+                $hasPayload = ((int)$route['wood'] + (int)$route['clay'] + (int)$route['iron']) > 0;
                 $targetId = $route['target_village_id'] ?: $route['source_village_id'];
 
-                // Deliver resources
-                $stmtAdd = $this->conn->prepare("UPDATE villages SET wood = wood + ?, clay = clay + ?, iron = iron + ? WHERE id = ?");
-                $stmtAdd->bind_param("iiii", $route['wood'], $route['clay'], $route['iron'], $targetId);
-                $stmtAdd->execute();
-                $stmtAdd->close();
+                if ($hasPayload) {
+                    // Deliver resources
+                    $stmtAdd = $this->conn->prepare("UPDATE villages SET wood = wood + ?, clay = clay + ?, iron = iron + ? WHERE id = ?");
+                    $stmtAdd->bind_param("iiii", $route['wood'], $route['clay'], $route['iron'], $targetId);
+                    $stmtAdd->execute();
+                    $stmtAdd->close();
 
-                // Remove the route
-                $stmtDel = $this->conn->prepare("DELETE FROM trade_routes WHERE id = ?");
-                $stmtDel->bind_param("i", $route['id']);
-                $stmtDel->execute();
-                $stmtDel->close();
+                    // Mark offers as completed (only on delivery)
+                    if (!empty($route['offer_id'])) {
+                        $this->markOfferIfCompleted((int)$route['offer_id']);
+                    }
 
-                if (!empty($route['offer_id'])) {
-                    $this->markOfferIfCompleted((int)$route['offer_id']);
+                    // Start the return trip: reuse the same route row with zero payload
+                    $distance = calculateDistance(
+                        (float)$route['source_x'],
+                        (float)$route['source_y'],
+                        (float)$route['target_x'],
+                        (float)$route['target_y']
+                    );
+                    $speed = defined('TRADER_SPEED') ? TRADER_SPEED : 100;
+                    $timeSec = calculateTravelTime($distance, $speed);
+                    $nowTime = date('Y-m-d H:i:s');
+                    $returnArrival = date('Y-m-d H:i:s', time() + (int)$timeSec);
+
+                    $update = $this->conn->prepare("
+                        UPDATE trade_routes
+                           SET wood = 0,
+                               clay = 0,
+                               iron = 0,
+                               target_village_id = ?,
+                               target_x = ?,
+                               target_y = ?,
+                               departure_time = ?,
+                               arrival_time = ?
+                         WHERE id = ?
+                    ");
+                    $update->bind_param(
+                        "iiissi",
+                        $route['source_village_id'],
+                        $route['source_x'],
+                        $route['source_y'],
+                        $nowTime,
+                        $returnArrival,
+                        $route['id']
+                    );
+                    $update->execute();
+                    $update->close();
+
+                    $messages[] = sprintf(
+                        "Trade delivered: +%d wood, +%d clay, +%d iron. Merchants returning.",
+                        $route['wood'],
+                        $route['clay'],
+                        $route['iron']
+                    );
+                } else {
+                    // Return leg finished: free merchants by deleting the route
+                    $stmtDel = $this->conn->prepare("DELETE FROM trade_routes WHERE id = ?");
+                    $stmtDel->bind_param("i", $route['id']);
+                    $stmtDel->execute();
+                    $stmtDel->close();
                 }
 
                 $this->conn->commit();
-
-                $messages[] = sprintf(
-                    "Trade delivered: +%d wood, +%d clay, +%d iron.",
-                    $route['wood'],
-                    $route['clay'],
-                    $route['iron']
-                );
             } catch (Exception $e) {
                 $this->conn->rollback();
             }
@@ -304,9 +348,11 @@ class TradeManager {
             LEFT JOIN users tu ON tv.user_id = tu.id
             WHERE (tr.source_village_id = ? OR tr.target_village_id = ?)
               AND tr.arrival_time > NOW()
+              AND sv.world_id = ?
             ORDER BY tr.arrival_time ASC
         ");
-        $stmt->bind_param("ii", $villageId, $villageId);
+        $currentWorld = defined('CURRENT_WORLD_ID') ? CURRENT_WORLD_ID : 1;
+        $stmt->bind_param("iii", $villageId, $villageId, $currentWorld);
         $stmt->execute();
         $result = $stmt->get_result();
 
@@ -317,10 +363,11 @@ class TradeManager {
             $arrivalTs = strtotime($row['arrival_time']);
             $remaining = max(0, $arrivalTs - $now);
             $isOutgoing = (int)$row['source_village_id'] === $villageId;
+            $isReturning = ((int)$row['wood'] + (int)$row['clay'] + (int)$row['iron']) === 0;
 
             $active[] = [
                 'id' => (int)$row['id'],
-                'direction' => $isOutgoing ? 'outgoing' : 'incoming',
+                'direction' => $isReturning ? 'returning' : ($isOutgoing ? 'outgoing' : 'incoming'),
                 'wood' => (int)$row['wood'],
                 'clay' => (int)$row['clay'],
                 'iron' => (int)$row['iron'],
@@ -349,15 +396,18 @@ class TradeManager {
         }
 
         $stmt = $this->conn->prepare("
-            SELECT o.*, v.name AS village_name, v.x_coord, v.y_coord, u.username
+            SELECT o.*, v.name AS village_name, v.x_coord, v.y_coord, v.world_id, u.username
             FROM trade_offers o
             JOIN villages v ON o.source_village_id = v.id
             JOIN users u ON v.user_id = u.id
-            WHERE o.status = 'open' AND o.source_village_id <> ?
+            WHERE o.status = 'open' 
+              AND o.source_village_id <> ?
+              AND v.world_id = ?
             ORDER BY o.created_at DESC
             LIMIT ?
         ");
-        $stmt->bind_param("ii", $villageId, $limit);
+        $currentWorld = defined('CURRENT_WORLD_ID') ? CURRENT_WORLD_ID : 1;
+        $stmt->bind_param("iii", $villageId, $currentWorld, $limit);
         $stmt->execute();
         $result = $stmt->get_result();
 
@@ -383,10 +433,11 @@ class TradeManager {
             SELECT o.*, v.name AS village_name, v.x_coord, v.y_coord
             FROM trade_offers o
             JOIN villages v ON o.source_village_id = v.id
-            WHERE o.source_village_id = ?
+            WHERE o.source_village_id = ? AND v.world_id = ?
             ORDER BY o.created_at DESC
         ");
-        $stmt->bind_param("i", $villageId);
+        $currentWorld = defined('CURRENT_WORLD_ID') ? CURRENT_WORLD_ID : 1;
+        $stmt->bind_param("ii", $villageId, $currentWorld);
         $stmt->execute();
         $result = $stmt->get_result();
 
@@ -722,10 +773,116 @@ class TradeManager {
         return $exists;
     }
 
+    private function ensureTradeTables(): void
+    {
+        if ($this->tradeTablesEnsured) {
+            return;
+        }
+
+        $this->tradeTablesEnsured = true;
+
+        try {
+            if ($this->isSqlite()) {
+                $this->conn->query("
+                    CREATE TABLE IF NOT EXISTS trade_offers (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        source_village_id INTEGER NOT NULL,
+                        offered_wood INTEGER NOT NULL DEFAULT 0,
+                        offered_clay INTEGER NOT NULL DEFAULT 0,
+                        offered_iron INTEGER NOT NULL DEFAULT 0,
+                        requested_wood INTEGER NOT NULL DEFAULT 0,
+                        requested_clay INTEGER NOT NULL DEFAULT 0,
+                        requested_iron INTEGER NOT NULL DEFAULT 0,
+                        merchants_required INTEGER NOT NULL DEFAULT 1,
+                        status TEXT NOT NULL DEFAULT 'open',
+                        accepted_village_id INTEGER NULL,
+                        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        accepted_at TEXT NULL,
+                        completed_at TEXT NULL,
+                        FOREIGN KEY (source_village_id) REFERENCES villages(id) ON DELETE CASCADE,
+                        FOREIGN KEY (accepted_village_id) REFERENCES villages(id) ON DELETE SET NULL
+                    )
+                ");
+
+                $this->conn->query("
+                    CREATE TABLE IF NOT EXISTS trade_routes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        source_village_id INTEGER NOT NULL,
+                        target_village_id INTEGER NULL,
+                        target_x INTEGER NOT NULL,
+                        target_y INTEGER NOT NULL,
+                        wood INTEGER NOT NULL,
+                        clay INTEGER NOT NULL,
+                        iron INTEGER NOT NULL,
+                        traders_count INTEGER NOT NULL DEFAULT 1,
+                        departure_time TEXT NOT NULL,
+                        arrival_time TEXT NOT NULL,
+                        offer_id INTEGER NULL,
+                        FOREIGN KEY (source_village_id) REFERENCES villages(id) ON DELETE CASCADE,
+                        FOREIGN KEY (target_village_id) REFERENCES villages(id) ON DELETE CASCADE,
+                        FOREIGN KEY (offer_id) REFERENCES trade_offers(id) ON DELETE SET NULL
+                    )
+                ");
+            } else {
+                $this->conn->query("
+                    CREATE TABLE IF NOT EXISTS `trade_offers` (
+                        `id` INT AUTO_INCREMENT PRIMARY KEY,
+                        `source_village_id` INT NOT NULL,
+                        `offered_wood` INT NOT NULL DEFAULT 0,
+                        `offered_clay` INT NOT NULL DEFAULT 0,
+                        `offered_iron` INT NOT NULL DEFAULT 0,
+                        `requested_wood` INT NOT NULL DEFAULT 0,
+                        `requested_clay` INT NOT NULL DEFAULT 0,
+                        `requested_iron` INT NOT NULL DEFAULT 0,
+                        `merchants_required` INT NOT NULL DEFAULT 1,
+                        `status` VARCHAR(20) NOT NULL DEFAULT 'open',
+                        `accepted_village_id` INT NULL,
+                        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        `accepted_at` DATETIME NULL,
+                        `completed_at` DATETIME NULL,
+                        FOREIGN KEY (`source_village_id`) REFERENCES villages(id) ON DELETE CASCADE,
+                        FOREIGN KEY (`accepted_village_id`) REFERENCES villages(id) ON DELETE SET NULL
+                    )
+                ");
+
+                $this->conn->query("
+                    CREATE TABLE IF NOT EXISTS `trade_routes` (
+                        `id` INT AUTO_INCREMENT PRIMARY KEY,
+                        `source_village_id` INT NOT NULL,
+                        `target_village_id` INT NULL,
+                        `target_x` INT NOT NULL,
+                        `target_y` INT NOT NULL,
+                        `wood` INT NOT NULL,
+                        `clay` INT NOT NULL,
+                        `iron` INT NOT NULL,
+                        `traders_count` INT NOT NULL DEFAULT 1,
+                        `departure_time` DATETIME NOT NULL,
+                        `arrival_time` DATETIME NOT NULL,
+                        `offer_id` INT NULL,
+                        FOREIGN KEY (`source_village_id`) REFERENCES villages(id) ON DELETE CASCADE,
+                        FOREIGN KEY (`target_village_id`) REFERENCES villages(id) ON DELETE CASCADE,
+                        FOREIGN KEY (`offer_id`) REFERENCES trade_offers(id) ON DELETE SET NULL
+                    )
+                ");
+            }
+
+            // Reset cache so the next check reflects current state.
+            $this->tradeOffersTableExists = null;
+        } catch (Throwable $e) {
+            error_log("TradeManager::ensureTradeTables failed: " . $e->getMessage());
+        }
+    }
+
+    private function isSqlite(): bool
+    {
+        return is_object($this->conn) && method_exists($this->conn, 'getPdo');
+    }
+
     private function getVillageByCoords(int $x, int $y): ?array
     {
-        $stmt = $this->conn->prepare("SELECT * FROM villages WHERE x_coord = ? AND y_coord = ? LIMIT 1");
-        $stmt->bind_param("ii", $x, $y);
+        $world = defined('CURRENT_WORLD_ID') ? CURRENT_WORLD_ID : 1;
+        $stmt = $this->conn->prepare("SELECT * FROM villages WHERE x_coord = ? AND y_coord = ? AND world_id = ? LIMIT 1");
+        $stmt->bind_param("iii", $x, $y, $world);
         $stmt->execute();
         $village = $stmt->get_result()->fetch_assoc();
         $stmt->close();

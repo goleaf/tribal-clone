@@ -155,11 +155,12 @@ if ($allyResult) {
     while ($allyRow = $allyResult->fetch_assoc()) {
         $allies[] = [
             'id' => (int)$allyRow['id'],
-                'name' => $allyRow['name'],
-                'points' => (int)($allyRow['points'] ?? 0),
-                'short' => $allyRow['tag'] ?? ''
-            ];
-        }
+            'name' => $allyRow['name'],
+            'points' => (int)($allyRow['points'] ?? 0),
+            'short' => $allyRow['tag'] ?? '',
+            'tag' => $allyRow['tag'] ?? ''
+        ];
+    }
         $allyResult->close();
     }
 }

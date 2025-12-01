@@ -39,6 +39,7 @@ $processedVillages = 0;
 $taskMessages = 0;
 $attackMessages = 0;
 $userIds = [];
+$abandonedCount = 0;
 
 foreach ($villages as $village) {
     $vid = (int)$village['id'];
@@ -76,9 +77,71 @@ foreach (array_keys($userIds) as $uid) {
     }
 }
 
+// Convert inactive player villages to barbarian (requires last_activity_at column)
+if (defined('INACTIVE_TO_BARBARIAN_DAYS') && dbColumnExists($conn, 'users', 'last_activity_at')) {
+    $abandonedCount = convertInactivePlayersToBarbarians($conn, (int)INACTIVE_TO_BARBARIAN_DAYS);
+}
+
 $duration = microtime(true) - $start;
 
 echo "Processed {$processedVillages} village(s)\n";
 echo "Completed task messages: {$taskMessages}\n";
 echo "Attack resolutions: {$attackMessages}\n";
+if ($abandonedCount > 0) {
+    echo "Converted {$abandonedCount} village(s) to barbarian due to inactivity\n";
+}
 echo "Elapsed: " . number_format($duration, 3) . "s\n";
+
+/**
+ * Demotes villages of players inactive for a configurable number of days.
+ */
+function convertInactivePlayersToBarbarians($conn, int $days): int {
+    if ($days <= 0) return 0;
+
+    $isSQLite = is_object($conn) && method_exists($conn, 'getPdo');
+    $thresholdSql = $isSQLite
+        ? "datetime('now', '-{$days} days')"
+        : "DATE_SUB(NOW(), INTERVAL {$days} DAY)";
+
+    $stmt = $conn->prepare("
+        SELECT id FROM users 
+        WHERE is_admin = 0 AND is_banned = 0 
+          AND (last_activity_at IS NULL OR last_activity_at <= {$thresholdSql})
+    ");
+    if (!$stmt) {
+        return 0;
+    }
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $inactiveUsers = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+    $stmt->close();
+
+    if (empty($inactiveUsers)) {
+        return 0;
+    }
+
+    $converted = 0;
+    foreach ($inactiveUsers as $userRow) {
+        $uid = (int)$userRow['id'];
+        // Convert all villages of this user to barbarian (-1)
+        $stmtVillages = $conn->prepare("SELECT id, x_coord, y_coord FROM villages WHERE user_id = ?");
+        $stmtVillages->bind_param("i", $uid);
+        $stmtVillages->execute();
+        $villages = $stmtVillages->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmtVillages->close();
+
+        foreach ($villages as $v) {
+            $vid = (int)$v['id'];
+            $name = sprintf("Abandoned (%d|%d)", $v['x_coord'], $v['y_coord']);
+
+            $stmtUpdate = $conn->prepare("UPDATE villages SET user_id = -1, name = ? WHERE id = ?");
+            $stmtUpdate->bind_param("si", $name, $vid);
+            if ($stmtUpdate->execute()) {
+                $converted++;
+            }
+            $stmtUpdate->close();
+        }
+    }
+
+    return $converted;
+}

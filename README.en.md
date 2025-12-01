@@ -51,7 +51,7 @@ The main functionalities implemented in the project are:
         -   Ability for rams to destroy walls.
         -   Ability for catapults to target and destroy buildings.
     -   Ability to send attacks and support to other villages.
-    -   Scout missions that gather intel on enemy villages, improved by the Espionage research.
+    -   Scout missions that gather intel on enemy villages, improved by the Espionage research (including buildings, garrisons, and research levels at higher tiers).
 
 8.  **Messaging and Reporting System**
     -   Sending messages between players (in progress).
@@ -145,6 +145,11 @@ The old version of the engine (VeryOldTemplate) was used as inspiration for the 
 4.  Run locally (example): `php -S localhost:8000 -t .` then open `http://localhost:8000/`.
 5.  Follow the on-screen instructions (registration, village creation).
 
+### Background Jobs
+- Optional cron-style processing of queues and attacks: `php jobs/process_queues.php`
+  - Run this every minute to keep building/unit/research/trade completion and attack resolution up to date even when players are offline.
+  - Also converts long-inactive player villages to barbarian (configurable via `INACTIVE_TO_BARBARIAN_DAYS`).
+
 ## Documentation
 
 Detailed documentation of the code and database can be found in the `docs/` directory (if it exists). It may contain files such as `database.md`, `api.md`, etc.
@@ -154,11 +159,12 @@ Detailed documentation of the code and database can be found in the `docs/` dire
 The project can be further developed by implementing and expanding planned functionalities, such as:
 1.  Deeper tribe features (roles beyond leader/member, diplomacy, shared forums).
 2.  Advanced trading improvements (filters, ratios, alliance restrictions).
-3.  Rewards and achievements system.
-4.  Further balancing of units and the combat system.
-5.  Refining the spying system (balance tweaks, clearer reports).
-6.  Completing action panels for the remaining buildings (Smithy, Market, etc.).
-7.  Further improvements to UI/UX and responsiveness.
+3.  Combat depth: scouts/spy balance, richer battle reports, movement queues on the map, and wall/ram/catapult tuning.
+4.  Rewards and achievements system.
+5.  Further balancing of units and the combat system.
+6.  Refining the spying system (balance tweaks, clearer reports).
+7.  Completing action panels for the remaining buildings (Smithy, Market, etc.).
+8.  Further improvements to UI/UX and responsiveness.
 
 ## Authors
 

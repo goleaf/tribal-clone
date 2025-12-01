@@ -4,6 +4,7 @@ declare(strict_types=1);
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
+$IS_CLI = (php_sapi_name() === 'cli');
 
 // Load configuration
 require_once 'config/config.php';
@@ -79,6 +80,16 @@ if (isset($_SESSION['user_id'])) {
     $_SESSION['username'] = $user['username'];
     $_SESSION['is_admin'] = $user['is_admin'];
 
+    // Track last activity for inactivity-based systems
+    if (dbColumnExists($conn, 'users', 'last_activity_at')) {
+        $stmtUpdateActivity = $conn->prepare("UPDATE users SET last_activity_at = NOW() WHERE id = ?");
+        if ($stmtUpdateActivity) {
+            $stmtUpdateActivity->bind_param("i", $user_id);
+            $stmtUpdateActivity->execute();
+            $stmtUpdateActivity->close();
+        }
+    }
+
     // Check and process completed tasks for the user's active village
     if (isset($_SESSION['village_id'])) {
         // Ensure VillageManager is loaded (Autoloader should handle it)
@@ -88,9 +99,9 @@ if (isset($_SESSION['user_id'])) {
         // Left for when ResourceManager and full processing in game.php are implemented
     }
 
-} else {
+} elseif (!$IS_CLI) {
     // If the user is not logged in, redirect to login unless this is a public page
-    $public_pages = ['index.php', 'auth/login.php', 'auth/register.php', 'install.php', 'admin/', 'admin/admin_login.php', 'admin/db_verify.php', 'favicon.ico', 'css/', 'js/', 'img/', 'ajax/', 'help.php', 'terms.php']; // Add other public paths (folders and ajax)
+    $public_pages = ['index.php', 'auth/login.php', 'auth/register.php', 'install.php', 'admin/', 'admin/admin_login.php', 'admin/db_verify.php', 'favicon.ico', 'css/', 'js/', 'img/', 'ajax/', 'help.php', 'terms.php', 'guides.php']; // Add other public paths (folders and ajax)
     $current_path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     $current_path = trim($current_path, '/');
     
@@ -117,11 +128,13 @@ if (isset($_SESSION['user_id'])) {
          // If this is an AJAX request for a non-public resource and the user is not logged in, end it as well
          // (CSRF check should also catch this, but this is additional protection)
          // You can return JSON or 401/403 status
-         header('HTTP/1.1 401 Unauthorized');
-         header('Content-Type: application/json');
-         echo json_encode(['error' => 'Login required.']);
-         exit();
-    }
+        header('HTTP/1.1 401 Unauthorized');
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Login required.']);
+        exit();
+   }
+} else {
+    // CLI context with no active user: allow execution without redirects.
 }
 
 // Setting an active village (if not set and user is logged in)

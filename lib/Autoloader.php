@@ -34,6 +34,8 @@ class Autoloader
             'lib/managers/',
             'lib/models/',
             'lib/utils/',
+            'app/core/',
+            'app/controllers/',
         ];
         
         // Check each path

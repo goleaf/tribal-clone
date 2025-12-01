@@ -19,6 +19,7 @@ require 'header.php';
         <li>Recruit units in the barracks, stable, and workshop once unlocked.</li>
         <li>Research upgrades in the smithy and academy to strengthen your army.</li>
         <li>Use the map to scout nearby villages and plan attacks or support.</li>
+        <li>Academy research unlocks advanced troops; each research has building level requirements and takes time/resources. Noble research needs minted coins before noblemen can be trained.</li>
     </ul>
 
     <h3>Need more help?</h3>

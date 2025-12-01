@@ -22,7 +22,7 @@ class BuildingManager {
             return 0;
         }
         
-        return floor($this->buildingConfigManager->calculateProduction($building_internal_name, $level));
+        return (float)$this->buildingConfigManager->calculateProduction($building_internal_name, $level);
     }
 
     /**
@@ -157,6 +157,35 @@ class BuildingManager {
         return ['success' => true, 'message' => 'Requirements met.'];
     }
 
+    /**
+     * Checks if the player already owns a First Church in another village.
+     */
+    private function userHasBuiltFirstChurch(int $userId, int $currentVillageId): bool
+    {
+        $stmt = $this->conn->prepare("
+            SELECT COUNT(*) as cnt
+            FROM village_buildings vb
+            JOIN building_types bt ON vb.building_type_id = bt.id
+            JOIN villages v ON v.id = vb.village_id
+            WHERE bt.internal_name = 'first_church'
+              AND vb.level > 0
+              AND v.user_id = ?
+              AND vb.village_id <> ?
+        ");
+
+        if ($stmt === false) {
+            error_log("Prepare failed for userHasBuiltFirstChurch: " . $this->conn->error);
+            return false;
+        }
+
+        $stmt->bind_param("ii", $userId, $currentVillageId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        return isset($result['cnt']) && (int)$result['cnt'] > 0;
+    }
+
     public function getBuildingLevel(int $villageId, string $internalName): int
     {
         $stmt = $this->conn->prepare("
@@ -185,7 +214,7 @@ class BuildingManager {
         return 0;
     }
 
-    public function canUpgradeBuilding(int $villageId, string $internalName): array
+    public function canUpgradeBuilding(int $villageId, string $internalName, ?int $userId = null): array
     {
         $currentLevel = $this->getBuildingLevel($villageId, $internalName);
         
@@ -196,6 +225,12 @@ class BuildingManager {
         
         if ($currentLevel >= $config['max_level']) {
             return ['success' => false, 'message' => 'Maximum level reached for this building.'];
+        }
+
+        if ($userId !== null && $internalName === 'first_church') {
+            if ($this->userHasBuiltFirstChurch($userId, $villageId)) {
+                return ['success' => false, 'message' => 'You can only have one First Church across all villages.'];
+            }
         }
         
         $stmt_queue = $this->conn->prepare("SELECT COUNT(*) as count FROM building_queue WHERE village_id = ?");
@@ -672,7 +707,7 @@ class BuildingManager {
 
     /**
      * Calculates the defense bonus granted by the wall at a given level.
-     * Bonus grows exponentially, e.g. 1.04^wall_level.
+     * Bonus grows linearly: +8% defense per level.
      * @param int $wall_level Wall level.
      * @return float Defense multiplier.
      */
@@ -682,10 +717,7 @@ class BuildingManager {
             return 1.0; // No bonus
         }
 
-        // Example: 4% compound bonus per level
-        $base_factor = 1.04;
-
-        return pow($base_factor, $wall_level);
+        return 1 + (0.08 * $wall_level);
     }
 
     /**

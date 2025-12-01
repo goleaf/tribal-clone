@@ -102,6 +102,19 @@ require '../header.php';
             <div class="map-grid-shell">
                 <div id="map-grid" class="map-grid" role="grid" aria-label="World map"></div>
             </div>
+            <aside class="mini-map-card">
+                <div class="mini-map-header">
+                    <span>Minimap</span>
+                    <button id="mini-center-home" class="btn-ghost" title="Center on home">⌂</button>
+                </div>
+                <canvas id="mini-map" width="180" height="180" aria-label="Minimap"></canvas>
+                <div class="mini-map-legend">
+                    <span class="legend own"></span> You
+                    <span class="legend ally"></span> Ally
+                    <span class="legend enemy"></span> Other
+                    <span class="legend barb"></span> Barb
+                </div>
+            </aside>
             <aside class="map-legend">
                 <h4>Legend</h4>
                 <div class="legend-row"><img src="../img/tw_map/map_v6.png" alt="Own"> <span>Your village</span></div>
@@ -216,6 +229,10 @@ const mapState = {
     tribes: {}
 };
 let annotations = loadAnnotations();
+let mapFetchInFlight = false;
+let mapPollInterval = null;
+let worldBounds = null;
+const mapPollMs = 15000;
 const filters = {
     barbarians: true,
     players: true,
@@ -305,6 +322,10 @@ document.addEventListener('DOMContentLoaded', () => {
             showVillagePopup(x, y);
         }
     });
+    const miniHomeBtn = document.getElementById('mini-center-home');
+    if (miniHomeBtn) {
+        miniHomeBtn.addEventListener('click', jumpToHome);
+    }
 
     document.querySelector('#map-popup .popup-close-btn').addEventListener('click', hideVillagePopup);
 
@@ -373,7 +394,15 @@ document.addEventListener('DOMContentLoaded', () => {
         event.stopPropagation();
     });
 
-    loadMap(mapState.center.x, mapState.center.y, mapState.size);
+    loadMap(mapState.center.x, mapState.center.y, mapState.size).then(() => {
+        startMapPolling();
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && !mapFetchInFlight) {
+            loadMap(mapState.center.x, mapState.center.y, mapState.size, { skipUrl: true });
+        }
+    });
 });
 
 function normalizeSize(rawSize) {
@@ -413,6 +442,15 @@ function getVillageSprite(village) {
     return `${assetBase}/${prefix}${level}.png`;
 }
 
+function getContinentNumber(x, y) {
+    return Math.floor(x / 100) * 10 + Math.floor(y / 100);
+}
+
+function formatContinent(x, y) {
+    const k = getContinentNumber(x, y);
+    return `K${String(k).padStart(2, '0')}`;
+}
+
 function getOverlayIcon(village, annotation = {}) {
     if (annotation.reserved === 'tribe') {
         return overlayIcons.reservedTeam;
@@ -449,6 +487,18 @@ function shouldRenderVillage(village, annotation = {}) {
         if (!sameTribe && !filters.players) return false;
     }
     return true;
+}
+
+function getVillageRelationClass(village) {
+    const isBarb = village.user_id === null || village.user_id === -1;
+    const isOwn = village.user_id === currentUserId;
+    const player = village.user_id ? mapState.players[village.user_id] : null;
+    const sameTribe = currentUserAllyId && player && player.ally_id === currentUserAllyId;
+
+    if (isOwn) return 'relation-own';
+    if (isBarb) return 'relation-barb';
+    if (sameTribe) return 'relation-ally';
+    return 'relation-enemy';
 }
 
 function indexVillages(villages, playersMap) {
@@ -505,7 +555,9 @@ function openAttackModal(targetVillageId, preferredType) {
         .catch(error => console.error('Error loading attack form:', error));
 }
 
-async function loadMap(targetX, targetY, targetSize) {
+async function loadMap(targetX, targetY, targetSize, options = {}) {
+    const { skipUrl = false } = options;
+    mapFetchInFlight = true;
     try {
         const size = normalizeSize(targetSize);
         const data = await fetchMapData(targetX, targetY, size);
@@ -514,12 +566,27 @@ async function loadMap(targetX, targetY, targetSize) {
         mapState.players = indexPlayers(data.players || []);
         mapState.tribes = indexTribes(data.tribes || data.allies || []);
         mapState.byCoord = indexVillages(data.villages || [], mapState.players);
+        worldBounds = data.world_bounds || worldBounds;
         renderMap();
+        renderMiniMap();
         updateControls();
-        updateUrl(mapState.center.x, mapState.center.y, mapState.size);
+        if (!skipUrl) {
+            updateUrl(mapState.center.x, mapState.center.y, mapState.size);
+        }
     } catch (error) {
         console.error('Failed to load map data:', error);
+    } finally {
+        mapFetchInFlight = false;
     }
+}
+
+function startMapPolling() {
+    if (mapPollInterval) return;
+    mapPollInterval = setInterval(() => {
+        if (document.hidden) return;
+        if (mapFetchInFlight) return;
+        loadMap(mapState.center.x, mapState.center.y, mapState.size, { skipUrl: true });
+    }, mapPollMs);
 }
 
 function renderMap() {
@@ -548,6 +615,10 @@ function renderMap() {
             const showVillage = village && shouldRenderVillage(village, annotation);
 
             if (village && showVillage) {
+                const relationClass = getVillageRelationClass(village);
+                if (relationClass) {
+                    tile.classList.add(relationClass);
+                }
                 const villageLayer = document.createElement('div');
                 villageLayer.classList.add('village-layer');
                 villageLayer.style.backgroundImage = `url(${getVillageSprite(village)})`;
@@ -587,6 +658,12 @@ function renderMap() {
                 label.classList.add('village-label');
                 label.textContent = village.name;
                 tile.appendChild(label);
+
+                const meta = document.createElement('div');
+                meta.classList.add('village-meta');
+                const ownerName = village.owner || 'Barbarian';
+                meta.textContent = `${ownerName} · ${village.points || 0} pts`;
+                tile.appendChild(meta);
             } else {
                 tile.classList.add('empty');
                 if (village && !showVillage) {
@@ -601,7 +678,7 @@ function renderMap() {
 
             const coordsEl = document.createElement('div');
             coordsEl.classList.add('coords');
-            coordsEl.textContent = `${coordX}|${coordY}`;
+            coordsEl.textContent = `${coordX}|${coordY} (${formatContinent(coordX, coordY)})`;
             tile.appendChild(coordsEl);
 
             fragment.appendChild(tile);
@@ -614,7 +691,7 @@ function renderMap() {
 function updateControls() {
     const centerDisplay = document.getElementById('toolbar-center');
     if (centerDisplay) {
-        centerDisplay.textContent = `${mapState.center.x}|${mapState.center.y}`;
+        centerDisplay.textContent = `${mapState.center.x}|${mapState.center.y} (${formatContinent(mapState.center.x, mapState.center.y)})`;
     }
     const sizeInput = document.getElementById('map-size');
     const sizeLabel = document.getElementById('map-size-label');
@@ -681,7 +758,7 @@ function showVillagePopup(x, y) {
 
     popupVillageName.textContent = village.name;
     popupVillageOwner.textContent = ownerLabel;
-    popupVillageCoords.textContent = `${x}|${y}`;
+    popupVillageCoords.textContent = `${x}|${y} (${formatContinent(x, y)})`;
     popupVillagePoints.textContent = `${village.points || 0} pts`;
 
     popupSendUnitsButton.dataset.villageId = village.id;
@@ -736,6 +813,59 @@ function hideVillagePopup() {
     if (popup) {
         popup.style.display = 'none';
     }
+}
+
+function renderMiniMap() {
+    const canvas = document.getElementById('mini-map');
+    if (!canvas || !worldBounds) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const pad = 8;
+    const width = canvas.width;
+    const height = canvas.height;
+    ctx.clearRect(0, 0, width, height);
+
+    const minX = worldBounds.min_x;
+    const maxX = worldBounds.max_x;
+    const minY = worldBounds.min_y;
+    const maxY = worldBounds.max_y;
+    const spanX = Math.max(1, maxX - minX);
+    const spanY = Math.max(1, maxY - minY);
+
+    ctx.fillStyle = '#f4efe6';
+    ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = '#c8b79a';
+    ctx.strokeRect(0.5, 0.5, width - 1, height - 1);
+
+    const scaleX = (width - 2 * pad) / spanX;
+    const scaleY = (height - 2 * pad) / spanY;
+
+    Object.values(mapState.byCoord || {}).forEach(v => {
+        const relX = (v.x - minX) * scaleX + pad;
+        const relY = (v.y - minY) * scaleY + pad;
+        const relation = getVillageRelationClass(v);
+        ctx.fillStyle = relation === 'relation-own' ? '#2c7be5'
+            : relation === 'relation-ally' ? '#4caf50'
+            : relation === 'relation-enemy' ? '#c0392b'
+            : '#7f8c8d';
+        ctx.fillRect(relX - 2, relY - 2, 4, 4);
+    });
+
+    const radius = Math.floor((mapState.size - 1) / 2);
+    const viewMinX = mapState.center.x - radius;
+    const viewMaxX = mapState.center.x + radius;
+    const viewMinY = mapState.center.y - radius;
+    const viewMaxY = mapState.center.y + radius;
+
+    const rectX = (viewMinX - minX) * scaleX + pad;
+    const rectY = (viewMinY - minY) * scaleY + pad;
+    const rectW = (viewMaxX - viewMinX) * scaleX;
+    const rectH = (viewMaxY - viewMinY) * scaleY;
+
+    ctx.strokeStyle = '#2c7be5';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(rectX, rectY, rectW, rectH);
 }
 </script>
 

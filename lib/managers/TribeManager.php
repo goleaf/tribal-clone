@@ -5,13 +5,56 @@ require_once __DIR__ . '/../functions.php';
 
 class TribeManager
 {
-    private const ALLOWED_ROLES = ['leader', 'baron', 'diplomat', 'recruiter', 'member'];
+    // Canonical roles exposed to the app.
+    private const ROLES = ['leader', 'co_leader', 'officer', 'member'];
+    // Backward-compatible aliases stored in legacy data.
+    private const LEGACY_ROLE_ALIASES = [
+        'baron' => 'co_leader',
+        'diplomat' => 'officer',
+        'recruiter' => 'officer',
+    ];
+    // Values persisted to legacy DB enum columns.
+    private const ROLE_DB_MAP = [
+        'leader' => 'leader',
+        'co_leader' => 'baron',
+        'officer' => 'diplomat',
+        'member' => 'member',
+    ];
+    // Capability matrix for tribe roles.
+    private const PERMISSIONS = [
+        'invite' => ['leader', 'co_leader', 'officer'],
+        'diplomacy' => ['leader', 'co_leader'],
+        'forum' => ['leader', 'co_leader', 'officer', 'member'],
+        'manage_roles' => ['leader', 'co_leader'],
+    ];
 
     private $conn;
 
     public function __construct($conn)
     {
         $this->conn = $conn;
+    }
+
+    private function canonicalizeRole(string $role): string
+    {
+        $role = strtolower(trim($role));
+        if (isset(self::LEGACY_ROLE_ALIASES[$role])) {
+            return self::LEGACY_ROLE_ALIASES[$role];
+        }
+        return in_array($role, self::ROLES, true) ? $role : 'member';
+    }
+
+    private function encodeRoleForDb(string $canonical): string
+    {
+        $canonical = $this->canonicalizeRole($canonical);
+        return self::ROLE_DB_MAP[$canonical] ?? 'member';
+    }
+
+    public function roleHasPermission(string $role, string $permission): bool
+    {
+        $role = $this->canonicalizeRole($role);
+        $allowed = self::PERMISSIONS[$permission] ?? [];
+        return in_array($role, $allowed, true);
     }
 
     public function createTribe(int $founderId, string $name, string $tag, string $description = '', string $internalText = ''): array
@@ -107,6 +150,10 @@ class TribeManager
         $tribe = $result ? $result->fetch_assoc() : null;
         $stmt->close();
 
+        if ($tribe) {
+            $tribe['role'] = $this->canonicalizeRole($tribe['role'] ?? 'member');
+        }
+
         return $tribe ?: null;
     }
 
@@ -151,6 +198,7 @@ class TribeManager
         $result = $stmt->get_result();
         $members = [];
         while ($row = $result->fetch_assoc()) {
+            $row['role'] = $this->canonicalizeRole($row['role'] ?? 'member');
             $members[] = $row;
         }
         $stmt->close();
@@ -550,19 +598,24 @@ class TribeManager
         $row = $res ? $res->fetch_assoc() : null;
         $stmt->close();
 
+        if ($row) {
+            $row['role'] = $this->canonicalizeRole($row['role'] ?? 'member');
+        }
+
         return $row ?: null;
     }
 
     private function addMember(int $tribeId, int $userId, string $role = 'member'): array
     {
         $role = $this->sanitizeRole($role);
+        $dbRole = $this->encodeRoleForDb($role);
 
         $stmt = $this->conn->prepare("INSERT INTO tribe_members (tribe_id, user_id, role) VALUES (?, ?, ?)");
         if ($stmt === false) {
             error_log("TribeManager::addMember prepare failed: " . $this->conn->error);
             return ['success' => false, 'message' => 'Unable to add member.'];
         }
-        $stmt->bind_param("iis", $tribeId, $userId, $role);
+        $stmt->bind_param("iis", $tribeId, $userId, $dbRole);
         if (!$stmt->execute()) {
             $stmt->close();
             return ['success' => false, 'message' => 'Unable to add member to the tribe.'];
@@ -590,8 +643,7 @@ class TribeManager
 
     private function sanitizeRole(string $role): string
     {
-        $role = strtolower(trim($role));
-        return in_array($role, self::ALLOWED_ROLES, true) ? $role : 'member';
+        return $this->canonicalizeRole($role);
     }
 
     public function changeMemberRole(int $tribeId, int $actorUserId, int $targetUserId, string $newRole): array

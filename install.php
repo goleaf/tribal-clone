@@ -449,6 +449,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 }
             }
 
+            // Ensure users table has last_activity_at for inactivity tracking
+            if ($sql_file === 'docs/sql/sql_create_users_table.sql') {
+                echo "<li>Ensuring `last_activity_at` column exists on `users`: ";
+                $alter_sql = "ALTER TABLE `users` ADD COLUMN `last_activity_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP";
+                if ($conn->query($alter_sql) === TRUE) {
+                    echo "<span class='success'>Added.</span></li>";
+                } else {
+                    // Ignore duplicate column errors gracefully
+                    if (strpos(strtolower($conn->error), 'duplicate') !== false || strpos(strtolower($conn->error), 'exists') !== false) {
+                        echo "<span class='success'>Already existed.</span></li>";
+                    } else {
+                        echo "<span class='error'>&#10060; Error: " . $conn->error . "</span></li>";
+                    }
+                }
+            }
+
             // After unit_types script, verify the unit_types table structure
             if ($sql_file === 'docs/sql/sql_create_unit_types.sql') {
                 echo "<li>Checking `unit_types` table structure: ";
