@@ -67,7 +67,7 @@
 - Payloads: test JSON vs binary delta payloads for size and CPU cost; choose defaults per world type; document thresholds to auto-switch.
 
 ## Rollout Checklist
-- [ ] Feature flags per world for batching/pagination/clustering/fallback mode; enable gradually by archetype.
+- [x] Feature flags per world for batching/pagination/clustering/fallback mode; enable gradually by archetype. _(world settings now include map_batching/map_clustering/map_delta/map_fallback booleans surfaced via map_data payload)_
 - [ ] Schema/config changes (if any) for map settings validated with rollback; ensure new settings are read with sane defaults when absent.
 - [ ] Backward compatibility: maintain legacy map endpoints/fields while new deltas/clustering roll out; version responses to avoid client breaks.
 - [x] Release comms/help: explain new map performance modes (conditional requests, clustering, fallback) and how to toggle high-contrast/reduced-motion. _(see docs/map_performance_comms.md for release copy + FAQ)_

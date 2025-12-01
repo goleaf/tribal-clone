@@ -3784,15 +3784,34 @@ class BattleManager
     private function transferVillageOwnership(int $villageId, int $newUserId, int $loyaltyAfter): void
     {
         $setClauses = "user_id = ?, loyalty = ?, last_loyalty_update = CURRENT_TIMESTAMP";
+        $types = "ii";
+        $params = [];
         if ($this->villageColumnExists('conquered_at')) {
             $setClauses .= ", conquered_at = CURRENT_TIMESTAMP";
         }
+        $loyaltyAfter = $this->clampLoyalty($villageId, $loyaltyAfter);
+        $params[] = &$newUserId;
+        $params[] = &$loyaltyAfter;
+
+        if ($this->villageColumnExists('capture_cooldown_until')) {
+            $cooldownUntil = date('Y-m-d H:i:s', time() + (self::CONQUEST_IMMUNITY_HOURS * 3600));
+            $setClauses .= ", capture_cooldown_until = ?";
+            $types .= "s";
+            $params[] = &$cooldownUntil;
+        }
+
+        $types .= "i";
+        $params[] = &$villageId;
+
         $stmt = $this->conn->prepare("UPDATE villages SET {$setClauses} WHERE id = ?");
         if ($stmt === false) {
             return;
         }
-        $loyaltyAfter = $this->clampLoyalty($villageId, $loyaltyAfter);
-        $stmt->bind_param("iii", $newUserId, $loyaltyAfter, $villageId);
+        array_unshift($params, $types);
+        foreach ($params as $key => $value) {
+            $params[$key] = &$params[$key];
+        }
+        call_user_func_array([$stmt, 'bind_param'], $params);
         $stmt->execute();
         $stmt->close();
     }

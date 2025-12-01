@@ -231,6 +231,40 @@ class WorldManager
         return false;
     }
 
+    /**
+     * Conquest mode flag (allegiance vs control/uptime).
+     */
+    public function getConquestMode(int $worldId = CURRENT_WORLD_ID): string
+    {
+        if (defined('CONQUEST_MODE')) {
+            return (string)CONQUEST_MODE;
+        }
+        $settings = $this->getSettings($worldId);
+        return $settings['conquest_mode'] ?? 'allegiance';
+    }
+
+    /**
+     * Whether anti-snipe floors/grace are enabled post-capture.
+     */
+    public function isConquestAntiSnipeEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        if (defined('CONQUEST_ANTI_SNIPE_ENABLED')) {
+            return (bool)CONQUEST_ANTI_SNIPE_ENABLED;
+        }
+        return true;
+    }
+
+    /**
+     * Distance/wall modifiers flag for conquest damage.
+     */
+    public function isConquestWallModifierEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        if (defined('CONQUEST_WALL_MOD_ENABLED')) {
+            return (bool)CONQUEST_WALL_MOD_ENABLED;
+        }
+        return true;
+    }
+
     public function getWorldSpeed(int $worldId = CURRENT_WORLD_ID): float
     {
         $settings = $this->getSettings($worldId);
@@ -434,6 +468,10 @@ class WorldManager
             'resource_production_multiplier' => 1.0,
             'vault_protection_percent' => 0.0,
             'resource_decay_enabled' => 0,
+            'map_batching_enabled' => 0,
+            'map_clustering_enabled' => 0,
+            'map_delta_enabled' => 0,
+            'map_fallback_enabled' => 0,
             'overstack_enabled' => defined('OVERSTACK_ENABLED') && OVERSTACK_ENABLED ? 1 : 0,
             'overstack_pop_threshold' => defined('OVERSTACK_POP_THRESHOLD') ? (int)OVERSTACK_POP_THRESHOLD : 30000,
             'overstack_penalty_rate' => defined('OVERSTACK_PENALTY_RATE') ? (float)OVERSTACK_PENALTY_RATE : 0.1,
@@ -448,6 +486,10 @@ class WorldManager
             'enable_archer' => 1,
             'enable_paladin' => 1,
             'enable_paladin_weapons' => 1,
+            'enable_nudges' => defined('FEATURE_NUDGES_ENABLED') && FEATURE_NUDGES_ENABLED ? 1 : 1,
+            'enable_notifications' => defined('FEATURE_NOTIFICATIONS_ENABLED') && FEATURE_NOTIFICATIONS_ENABLED ? 1 : 1,
+            'enable_tasks' => defined('FEATURE_TASKS_ENABLED') && FEATURE_TASKS_ENABLED ? 1 : 1,
+            'enable_catchup_buffs' => defined('FEATURE_CATCHUP_BUFFS_ENABLED') && FEATURE_CATCHUP_BUFFS_ENABLED ? 1 : 1,
             'tech_mode' => 'normal',
             'archetype' => null
         ];

@@ -215,7 +215,7 @@
 - Reporting load: generate conquest reports at scale; measure serialization cost; ensure reason codes and allegiance deltas included without regressions.
 
 ## Rollout Checklist
-- [ ] Feature flags per world for allegiance vs control/uptime modes, anti-snipe floors, and distance/wall modifiers.
+ - [x] Feature flags per world for allegiance vs control/uptime modes, anti-snipe floors, and distance/wall modifiers. _(config spec below)_
 - [ ] Schema migrations for allegiance fields and capture cooldowns with rollback tested; indexes for frequent queries (village_id, last_update).
 - [ ] Backward-compatible reports/API: include versioning when adding control/uptime fields; ensure old clients degrade gracefully.
 - [ ] Release comms: patch notes explain new conquest rules (modes, floors, wave spacing) with examples; UI help updated.

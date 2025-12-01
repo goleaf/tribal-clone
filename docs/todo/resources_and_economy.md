@@ -188,7 +188,7 @@
 - Pricing guardrails: test min/max dynamic cost scalers per archetype, event modifier bounds, and conquest cost scaling curves; ensure costs clamp to bounds, alerts fire on violations, and reports/logs show applied scalers.
 
 ## Rollout Checklist
-- [x] Feature flags for decay/DR/empire surcharges, trade/aid taxes, and event token expiry per world; default off on legacy worlds. _(WorldManager now exposes per-world toggles for decay, plunder DR, and empire surcharge; defaults remain legacy-friendly via constants)_
+- [x] Feature flags for decay and plunder DR per world; defaults remain legacy-friendly via constants. _(WorldManager exposes `resource_decay_*` and new `plunder_dr_enabled`; other flags like empire surcharge/trade/event expiry still TODO)_
 - [ ] Schema migrations for economy caps/logs tested with rollback; ensure indexes for high-churn tables (trade/aid logs).
 - [ ] Backward-compatible API responses for trade/aid/minting while new caps/fields propagate; include versioning.
 - [ ] Release comms: explain decay/DR/taxes and fair-play safeguards; UI tooltips updated with formulas/examples.
