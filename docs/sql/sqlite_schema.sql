@@ -667,3 +667,7 @@ VALUES ('envoy', 'Envoy', 'Control unit for conquest', 30, 40, 35, 0, 80, 'acade
 
 ALTER TABLE users ADD COLUMN catchup_expires_at DATETIME NULL;
 ALTER TABLE users ADD COLUMN catchup_multiplier REAL NOT NULL DEFAULT 1.0;
+
+-- Diminishing returns toggle per world
+
+ALTER TABLE worlds ADD COLUMN plunder_dr_enabled INTEGER NOT NULL DEFAULT 1;

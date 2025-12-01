@@ -188,6 +188,11 @@
 - Report generation: measure cost of full-fidelity vs redacted reports at volume; optimize serialization if needed.
 - Siege hold/occupy: soak tests for occupation timers, attrition/upkeep application, and conflict resolution when defender breaks occupation.
 
+## Telemetry & Monitoring
+- Metrics: battles resolved per tick, resolver latency p50/p95/p99, rate-limit error counts, protected-target blocks, plunder DR applications, and overstack/occupation occurrences.
+- Logs: correlation ids with modifiers applied (night/terrain/weather/overstack/aura/healer/mantlet), command ordering decisions, and reason codes for blocks.
+- Dashboards: per world showing battle volume, outcome ratios, cap hits (min-pop/fake), and allegiance captures/blocks; alerts on latency/error spikes and abnormal DR/overstack/occupation rates.
+
 ## Rollout Checklist
 - [x] Feature flags for new combat rules (overstack penalties, night/weather, min-pop enforcement) to enable gradual rollout per world. _(World settings now include overstack/min-pop toggles + values; weather gated by world/config flags; min payload + overstack respect per-world overrides)_
 - [ ] Migration scripts for any schema changes (allegiance fields, report tables) with rollback steps tested.

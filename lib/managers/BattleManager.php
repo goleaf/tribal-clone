@@ -2840,6 +2840,10 @@ class BattleManager
         if ($attackerUserId <= 0 || $targetVillageId <= 0) {
             return 1.0;
         }
+        $settings = $this->getWorldSettings();
+        if (array_key_exists('plunder_dr_enabled', $settings) && !$settings['plunder_dr_enabled']) {
+            return 1.0;
+        }
         $windowStart = time() - self::PLUNDER_DR_WINDOW_SEC;
         $stmt = $this->conn->prepare("
             SELECT COUNT(*) AS cnt
@@ -3637,21 +3641,31 @@ class BattleManager
     /**
      * Determine effective loyalty floor for an attack (e.g., Vasco's Scepter).
      */
-    private function getEffectiveLoyaltyFloor(array $attackingUnits, ?int $targetVillageId = null): int
+    private function getEffectiveLoyaltyFloor(array $attackingUnits, ?int $targetVillageId = null, ?int $targetConqueredAt = null, ?int $captureCooldownUntilTs = null): int
     {
         $floor = self::LOYALTY_MIN;
         if ($this->hasPaladin($attackingUnits) && $this->getPaladinWeapon() === 'vascos_scepter') {
             $floor = max($floor, 30);
         }
 
+        $now = time();
+
+        if ($captureCooldownUntilTs === null && $targetVillageId) {
+            $captureCooldownUntilTs = $this->getCaptureCooldownUntil($targetVillageId);
+        }
+        if ($captureCooldownUntilTs !== null && $captureCooldownUntilTs > $now) {
+            $remaining = $captureCooldownUntilTs - $now;
+            $floor = max($floor, $remaining <= self::RECENT_CAPTURE_WINDOW_SECONDS ? self::RECENT_CAPTURE_FLOOR : 1);
+        }
+
         // Anti-rebound: recently captured villages cannot be dropped below a buffer for a short window
-        if ($targetVillageId) {
-            $conqueredAt = $this->getVillageConqueredAt($targetVillageId);
-            if ($conqueredAt) {
-                $elapsed = time() - $conqueredAt;
-                if ($elapsed >= 0 && $elapsed <= self::RECENT_CAPTURE_WINDOW_SECONDS) {
-                    $floor = max($floor, self::RECENT_CAPTURE_FLOOR);
-                }
+        if ($targetConqueredAt === null && $targetVillageId) {
+            $targetConqueredAt = $this->getVillageConqueredAt($targetVillageId);
+        }
+        if ($targetConqueredAt) {
+            $elapsed = $now - $targetConqueredAt;
+            if ($elapsed >= 0 && $elapsed <= self::RECENT_CAPTURE_WINDOW_SECONDS) {
+                $floor = max($floor, self::RECENT_CAPTURE_FLOOR);
             }
         }
 
@@ -3729,6 +3743,29 @@ class BattleManager
             return null;
         }
         $ts = strtotime($row['conquered_at']);
+        return $ts !== false ? $ts : null;
+    }
+
+    /**
+     * Fetch capture cooldown end time (unix timestamp) if present.
+     */
+    private function getCaptureCooldownUntil(int $villageId): ?int
+    {
+        if (!$this->villageColumnExists('capture_cooldown_until')) {
+            return null;
+        }
+        $stmt = $this->conn->prepare("SELECT capture_cooldown_until FROM villages WHERE id = ? LIMIT 1");
+        if ($stmt === false) {
+            return null;
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$row || empty($row['capture_cooldown_until'])) {
+            return null;
+        }
+        $ts = strtotime($row['capture_cooldown_until']);
         return $ts !== false ? $ts : null;
     }
 

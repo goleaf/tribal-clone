@@ -107,6 +107,10 @@ class WorldManager
             'min_attack_pop_enabled' => defined('FEATURE_MIN_PAYLOAD_ENABLED') ? (bool)FEATURE_MIN_PAYLOAD_ENABLED : true,
             'min_attack_pop' => defined('MIN_ATTACK_POP') ? (int)MIN_ATTACK_POP : 5,
             'plunder_dr_enabled' => defined('PLUNDER_DR_ENABLED') ? (bool)PLUNDER_DR_ENABLED : true,
+            'map_batching_enabled' => false,
+            'map_clustering_enabled' => false,
+            'map_delta_enabled' => false,
+            'map_fallback_enabled' => false,
             'terrain_attack_multiplier' => 1.0,
             'terrain_defense_multiplier' => 1.0,
             'weather_attack_multiplier' => 1.0,
@@ -122,6 +126,7 @@ class WorldManager
             'tribe_member_limit' => null,
             'victory_type' => null,
             'victory_value' => null,
+            'archetype' => null
         ];
 
         $columns = $this->getWorldColumns();
@@ -142,7 +147,7 @@ class WorldManager
                                     $defaults[$key] = (float)$val;
                                 } elseif ($key === 'tribe_member_limit' || $key === 'victory_value' || $key === 'overstack_pop_threshold' || $key === 'min_attack_pop') {
                                     $defaults[$key] = $val === null ? null : (int)$val;
-                                } elseif (in_array($key, ['enable_archer', 'enable_paladin', 'enable_paladin_weapons', 'night_bonus_enabled', 'resource_decay_enabled', 'overstack_enabled', 'min_attack_pop_enabled', 'weather_enabled', 'plunder_dr_enabled'], true)) {
+                                } elseif (in_array($key, ['enable_archer', 'enable_paladin', 'enable_paladin_weapons', 'night_bonus_enabled', 'resource_decay_enabled', 'overstack_enabled', 'min_attack_pop_enabled', 'weather_enabled', 'plunder_dr_enabled', 'map_batching_enabled', 'map_clustering_enabled', 'map_delta_enabled', 'map_fallback_enabled', 'enable_nudges', 'enable_notifications', 'enable_tasks', 'enable_catchup_buffs'], true)) {
                                     $defaults[$key] = (bool)$val;
                                 } elseif (in_array($key, ['night_start_hour', 'night_end_hour'], true)) {
                                     $defaults[$key] = (int)$val;

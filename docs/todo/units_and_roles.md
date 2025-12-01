@@ -166,6 +166,13 @@ Status markers:
 - Ranger: atk 110; def 45/35/85; speed 10; carry 15; pop 2; train 02:40.
 - Tempest Knight: atk 140; def 70/70/70; speed 20; carry 50; pop 3; train 02:50 (event; weather immunity flag).
 
+### Data Seeding & Validation Plan
+- Seed `data/units.json` and DB seeds with baseline stats/costs/pop/speed/carry/train times; add per-world override tables for archetypes.
+- Add lint to ensure RPS monotony (pike>cav defense, cav>ranged attack, ranged>inf defense behind wall) and pop/cost sanity (no negative/zero).
+- Diff tool: generate human-readable diff on stat changes between builds; require ack in changelog to avoid stealth balance shifts.
+- Validation endpoint: admin-only API to dump effective unit stats per world (after overrides) for QA snapshots; compare to baseline checksum.
+- Telemetry: emit counts of recruits per unit and world; monitor adoption anomalies after balance changes; alert on spikes/drops post-patch.
+
 ## Implementation TODOs
 - [ ] Define unit stats/costs/pop/speed/carry in `units.json` and DB seeds; ensure RPS relationships match design (pikes > cav, ranged > inf blobs, cav > ranged in open).
 - [ ] Add unlock requirements per unit (building levels, research nodes, world flags); gate seasonal/event units behind time windows and caps.
