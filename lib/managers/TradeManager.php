@@ -1469,6 +1469,56 @@ class TradeManager {
         return true;
     }
 
+    /**
+     * Enforce daily aid send/receive caps per user (simple 24h rolling window).
+     */
+    private function checkAidCap(int $userId, int $payload, string $direction)
+    {
+        if ($userId <= 0 || $payload <= 0) {
+            return true;
+        }
+        $cap = $direction === 'receive' ? self::AID_DAILY_RECEIVE_CAP : self::AID_DAILY_SEND_CAP;
+        if ($cap <= 0) {
+            return true;
+        }
+        $since = date('Y-m-d H:i:s', time() - 86400);
+        $column = $direction === 'receive' ? 'target_village_id' : 'source_village_id';
+        $sql = "
+            SELECT COALESCE(SUM(tr.wood + tr.clay + tr.iron), 0) AS total
+            FROM trade_routes tr
+            JOIN villages v ON tr.{$column} = v.id
+            WHERE v.user_id = ?
+              AND tr.departure_time >= ?
+        ";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return true;
+        }
+        $stmt->bind_param("is", $userId, $since);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        $total = (int)($row['total'] ?? 0);
+        if ($total + $payload > $cap) {
+            return [
+                'success' => false,
+                'message' => sprintf(
+                    'Aid %s cap reached: %d/%d in the last 24h.',
+                    $direction,
+                    $total,
+                    $cap
+                ),
+                'code' => EconomyError::ERR_CAP,
+                'details' => [
+                    'cap_type' => $direction,
+                    'cap' => $cap,
+                    'used' => $total
+                ]
+            ];
+        }
+        return true;
+    }
+
     private function formatCoords(?int $x, ?int $y): string
     {
         if ($x === null || $y === null) {

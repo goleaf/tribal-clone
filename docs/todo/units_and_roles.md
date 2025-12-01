@@ -198,6 +198,12 @@ Status markers:
 - Gate checks: hardcore world disables/tightens seasonal/elite units as configured; attempts to train blocked with audited errors.
 - Anti-abuse: fuzz concurrent recruit requests to ensure caps are enforced atomically; duplicate/replay tokens rejected with reason codes and logged.
 
+## Telemetry & Monitoring
+- Track recruit attempts, cap hits, and reasons (`ERR_CAP`, `ERR_PREREQ`, `ERR_RES`, `ERR_POP`) per world; alert on spikes.
+- Log usage of Banner aura, Healer recovery, and mantlet effects in combat; monitor frequency and impact for balance tuning.
+- Monitor seasonal/event unit lifecycle events (spawn/expiry, conversions) and gate blocks on hardcore worlds.
+- Dashboards per world showing unit mix, cap-hit rates, and support effect usage to spot balance drift.
+
 ### Aura & Healer Stacking Spec
 - **Banner Guard Aura:** Does not stack additively. Use highest-level aura in a battle (based on Banner Guard tier/upgrade). Additional Banner Guards beyond first grant no extra buff but still fight normally. Aura applies to defender only; attacker aura applies to attacker side if world enables offensive banners.
 - **Aura Values:** Configurable per level (`BANNER_AURA_DEF_MULT`, `BANNER_AURA_RESOLVE_BONUS`). Applied after overstack and before wall/terrain/morale in defense calc.

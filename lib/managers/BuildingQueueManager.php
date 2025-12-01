@@ -18,6 +18,7 @@ class BuildingQueueManager
     private int $baseSlots;
     private int $hqMilestoneStep;
     private int $maxSlots;
+    private string $logFile;
 
     public function __construct($conn, BuildingConfigManager $configManager)
     {
@@ -27,6 +28,11 @@ class BuildingQueueManager
         $this->baseSlots = defined('BUILDING_BASE_QUEUE_SLOTS') ? (int)BUILDING_BASE_QUEUE_SLOTS : 1;
         $this->hqMilestoneStep = defined('BUILDING_HQ_MILESTONE_STEP') ? (int)BUILDING_HQ_MILESTONE_STEP : 5;
         $this->maxSlots = defined('BUILDING_MAX_QUEUE_SLOTS') ? (int)BUILDING_MAX_QUEUE_SLOTS : 3;
+        $logDir = __DIR__ . '/../../logs';
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0777, true);
+        }
+        $this->logFile = $logDir . '/build_queue.log';
     }
 
     /**

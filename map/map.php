@@ -329,6 +329,7 @@ const REDUCED_MOTION_KEY = 'map_reduced_motion';
 const OFFLINE_MODE_KEY = 'map_offline_mode';
 let mapHighContrast = false;
 let mapReducedMotion = false;
+let mapOfflineMode = false;
 let lastOfflineError = null;
 const MAP_PERF_SAMPLE_RATE = 0.1; // 10% sampling to limit noise
 let lastMapPayloadBytes = null;
@@ -385,7 +386,6 @@ const mapRateWarningEl = document.getElementById('map-rate-warning');
 const offlineWarningEl = document.getElementById('offline-warning');
 const interactiveSelectors = ['input', 'textarea', 'select', 'button', '[contenteditable="true"]'];
 let lowPerfMode = false;
-let mapOfflineMode = false;
 
 function syncSkeletonGrid(size) {
     if (!mapSkeletonEl) return;
@@ -935,6 +935,14 @@ function movementVisible(move) {
 }
 
 async function fetchMapData(targetX, targetY, targetSize, controller) {
+    if (mapOfflineMode && window.__mapCache) {
+        return {
+            ...window.__mapCache,
+            center: { x: targetX, y: targetY },
+            size: targetSize,
+            offline_stale: true
+        };
+    }
     const url = `map_data.php?x=${encodeURIComponent(targetX)}&y=${encodeURIComponent(targetY)}&size=${encodeURIComponent(targetSize)}&lowperf=${lowPerfMode ? 1 : 0}`;
     const headers = {};
     if (window.__mapETag) {
@@ -1067,6 +1075,14 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
             movementsWarningEl.textContent = data.low_perf
                 ? 'Low performance mode enabled: movements hidden for speed.'
                 : 'Movements capped; zoom in or adjust filters to see more.';
+        }
+        if (offlineWarningEl) {
+            offlineWarningEl.style.display = mapOfflineMode ? 'block' : 'none';
+            if (mapOfflineMode) {
+                offlineWarningEl.textContent = data.offline_stale
+                    ? 'Offline mode is ON. Showing cached map data; turn off to refresh.'
+                    : 'Offline mode is ON.';
+            }
         }
         mapState.center = data.center || { x: targetX, y: targetY };
         mapState.size = data.size || normalizedSize;

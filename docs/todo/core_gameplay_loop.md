@@ -97,7 +97,7 @@ Players manage villages to grow resources, build and upgrade structures, train a
 - [x] Telemetry: task events logged server-side (seed/claim/reroll) to `logs/tasks.log` for monitoring.
 - [x] Notification system: opt-in web/mobile push for attacks, builds/recruits done, task resets; respect quiet hours/night bonus windows. _(server notification feed + unread counts wired)_
 - [x] Catch-up buffs: late-joiner production boosts and rebuild packs after wipes; ensure anti-abuse caps and expiries. _(CatchupManager + per-user buff grant on login; production multiplier applied in ResourceManager; rebuild packs still optional)_
-- [ ] Sitter/role delegation (if enabled): permissions for sending support/attacks; audit actions; optional per-world enable.
+- [x] Sitter/role delegation (if enabled): permissions for sending support/attacks; audit actions; optional per-world enable. _(sitter sends now gated by per-world flags, loyalty blocked, hourly caps enforced, and sitter actions logged to `logs/sitter_actions.log`)_
 - [ ] Loop-specific tutorials/tooltips: surface context tips (empty queue, overcap resources, stale intel) with reason codes and quick actions.
 - [x] Anti-burnout: add DND/quiet-hour scheduling with auto-snooze on flood (attack waves) and post-war cooldown reminders; log usage to tune defaults. _(quiet-hours + flood auto-snooze spec below)_
 - ✅ Safety checks: block PvP sends while under beginner protection; return `ERR_PROTECTED` with guidance. (BattleManager now returns ERR_PROTECTED for protected attacker/defender)
