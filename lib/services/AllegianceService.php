@@ -1,198 +1,327 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../managers/WorldManager.php';
+
 /**
- * AllegianceService - encapsulates allegiance (loyalty/control) math for conquest.
+ * AllegianceService - Core calculation engine for conquest allegiance/control mechanics
+ * 
+ * Handles:
+ * - Allegiance drop calculations with wall reduction
+ * - Time-based regeneration with bonuses
+ * - Anti-snipe floor enforcement
+ * - Capture detection for both modes
  */
 class AllegianceService
 {
-    private float $baseRegenPerHour;
-    private float $wallReductionPerLevel;
-    private int $floorAfterCapture;
-    private int $antiSnipeFloor;
-    private int $antiSnipeSeconds;
-    private float $maxRegenMultiplier;
-    private int $regenPauseWindowMs;
-    private float $abandonDecayPerHour;
-    private float $shrineBonusPerLevel;
-    private float $hallFlatPerLevel;
-    private float $tribeRegenMult;
+    private $conn;
+    private WorldManager $worldManager;
 
-    public function __construct(
-        float $baseRegenPerHour = null,
-        float $wallReductionPerLevel = 0.02,
-        int $floorAfterCapture = 25,
-        int $antiSnipeFloor = 10,
-        int $antiSnipeSeconds = 900,
-        float $maxRegenMultiplier = null,
-        int $regenPauseWindowMs = null,
-        float $abandonDecayPerHour = null,
-        float $shrineBonusPerLevel = null,
-        float $hallFlatPerLevel = null,
-        float $tribeRegenMult = null
-    ) {
-        $this->baseRegenPerHour = $baseRegenPerHour ?? (defined('ALLEG_REGEN_PER_HOUR') ? (float)ALLEG_REGEN_PER_HOUR : 2.0);
-        $this->wallReductionPerLevel = $wallReductionPerLevel;
-        $this->floorAfterCapture = $floorAfterCapture;
-        $this->antiSnipeFloor = $antiSnipeFloor;
-        $this->antiSnipeSeconds = $antiSnipeSeconds;
-        $this->maxRegenMultiplier = $maxRegenMultiplier ?? (defined('ALLEG_MAX_REGEN_MULT') ? (float)ALLEG_MAX_REGEN_MULT : 1.75);
-        $this->regenPauseWindowMs = $regenPauseWindowMs ?? (defined('ALLEG_REGEN_PAUSE_WINDOW_MS') ? (int)ALLEG_REGEN_PAUSE_WINDOW_MS : 5000);
-        $this->abandonDecayPerHour = $abandonDecayPerHour ?? (defined('ALLEG_ABANDON_DECAY_PER_HOUR') ? (float)ALLEG_ABANDON_DECAY_PER_HOUR : 0.0);
-        $this->shrineBonusPerLevel = $shrineBonusPerLevel ?? (defined('ALLEG_SHRINE_REGEN_BONUS_PER_LEVEL') ? (float)ALLEG_SHRINE_REGEN_BONUS_PER_LEVEL : 0.02);
-        $this->hallFlatPerLevel = $hallFlatPerLevel ?? (defined('ALLEG_HALL_REGEN_FLAT_PER_LEVEL') ? (float)ALLEG_HALL_REGEN_FLAT_PER_LEVEL : 0.25);
-        $this->tribeRegenMult = $tribeRegenMult ?? (defined('ALLEG_TRIBE_REGEN_MULT') ? (float)ALLEG_TRIBE_REGEN_MULT : 0.15);
+    public function __construct($conn)
+    {
+        $this->conn = $conn;
+        $this->worldManager = new WorldManager($conn);
     }
 
     /**
-     * Apply a standard bearer wave to current allegiance.
-     *
-     * @param int $current Current allegiance 0-100
-     * @param int $survivingBearers Count of standard bearers alive
-     * @param int $wallLevel Defender wall level
-     * @param bool $attackerWon Whether the attacker won the battle
-     * @param float|null $multiplier Optional global conquest multiplier
-     * @param bool $antiSnipeActive If anti-snipe grace prevents capture
-     * @return array [new_allegiance, captured(bool), drop(int), reason(string|null)]
+     * Calculate allegiance drop from a conquest wave
+     * 
+     * @param int $villageId Target village ID
+     * @param int $survivingEnvoys Number of Envoys that survived the battle
+     * @param int $wallLevel Current wall level of target village
+     * @param array $modifiers Additional modifiers (tech bonuses, etc.)
+     * @param int $worldId World ID for configuration
+     * @return array ['new_allegiance', 'drop_amount', 'captured', 'clamped']
      */
-    public function applyWave(
-        int $current,
-        int $survivingBearers,
+    public function calculateDrop(
+        int $villageId,
+        int $survivingEnvoys,
         int $wallLevel,
-        bool $attackerWon,
-        ?float $multiplier = null,
-        bool $antiSnipeActive = false
+        array $modifiers = [],
+        int $worldId = CURRENT_WORLD_ID
     ): array {
-        $current = $this->clamp($current);
-        if (!$attackerWon || $survivingBearers <= 0) {
-            return [$current, false, 0, 'no_bearer_or_loss'];
+        if ($survivingEnvoys <= 0) {
+            return [
+                'new_allegiance' => null,
+                'drop_amount' => 0,
+                'captured' => false,
+                'clamped' => false
+            ];
         }
 
-        $mult = $multiplier ?? 1.0;
-        $baseDropPerBearer = random_int(18, 28);
-        $rawDrop = $baseDropPerBearer * $survivingBearers * $mult;
-        $wallReduction = max(0.0, min(0.5, $wallLevel * $this->wallReductionPerLevel));
-        $effectiveDrop = max(1, (int)round($rawDrop * (1 - $wallReduction)));
+        // Get current allegiance
+        $stmt = $this->conn->prepare("SELECT allegiance, anti_snipe_until, allegiance_floor FROM villages WHERE id = ?");
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $village = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
 
-        $newAllegiance = max(0, $current - $effectiveDrop);
-        $captured = !$antiSnipeActive && $newAllegiance <= 0;
-        $floorApplied = null;
-        if ($captured) {
-            $newAllegiance = max(0, $this->floorAfterCapture);
-            $floorApplied = $this->floorAfterCapture;
-        } elseif ($antiSnipeActive && $newAllegiance < $this->antiSnipeFloor) {
-            $floorApplied = $this->antiSnipeFloor;
-            $newAllegiance = $this->antiSnipeFloor;
+        if (!$village) {
+            return ['new_allegiance' => null, 'drop_amount' => 0, 'captured' => false, 'clamped' => false];
         }
-        return [$newAllegiance, $captured, $effectiveDrop, $floorApplied];
-    }
 
-    /**
-     * Apply regeneration over elapsed seconds.
-     */
-    public function regen(int $current, int $elapsedSeconds, bool $paused = false, array $context = []): int
-    {
-        return $this->doRegen($current, $elapsedSeconds, $paused, $context)[0];
-    }
+        $currentAllegiance = (int)$village['allegiance'];
+        $config = $this->worldManager->getConquestSettings($worldId);
 
-    /**
-     * Get anti-snipe configuration (floor and duration).
-     */
-    public function getAntiSnipeSettings(): array
-    {
+        // Calculate base drop per Envoy (random between min and max)
+        $dropPerEnvoy = random_int($config['alleg_drop_min'], $config['alleg_drop_max']);
+        
+        // Apply wall reduction factor
+        $wallReduction = 1.0 - min(0.5, $wallLevel * $config['alleg_wall_reduction_per_level']);
+        
+        // Apply world multiplier (if any)
+        $worldMultiplier = $modifiers['world_multiplier'] ?? 1.0;
+        
+        // Calculate total drop
+        $totalDrop = (int)floor($dropPerEnvoy * $survivingEnvoys * $wallReduction * $worldMultiplier);
+        
+        // Calculate new allegiance
+        $newAllegiance = $currentAllegiance - $totalDrop;
+        
+        // Check anti-snipe floor
+        $antiSnipeUntil = $village['anti_snipe_until'] ? strtotime($village['anti_snipe_until']) : null;
+        $isAntiSnipeActive = $antiSnipeUntil && $antiSnipeUntil > time();
+        $floor = $isAntiSnipeActive ? (int)$village['allegiance_floor'] : 0;
+        
+        $clamped = false;
+        if ($newAllegiance < $floor) {
+            $newAllegiance = $floor;
+            $clamped = true;
+        }
+        
+        // Clamp to valid range [0, 100]
+        $newAllegiance = max(0, min(100, $newAllegiance));
+        
+        // Check if captured
+        $captured = $newAllegiance <= 0 && !$isAntiSnipeActive;
+        
         return [
-            'floor' => $this->antiSnipeFloor,
-            'duration_seconds' => $this->antiSnipeSeconds
+            'new_allegiance' => $newAllegiance,
+            'drop_amount' => $totalDrop,
+            'captured' => $captured,
+            'clamped' => $clamped,
+            'wall_reduction' => $wallReduction,
+            'floor_active' => $isAntiSnipeActive
         ];
     }
 
     /**
-     * Full resolution helper: regen tick + wave application + anti-snipe metadata.
+     * Apply regeneration tick to a village
+     * 
+     * @param int $villageId Village ID
+     * @param int $currentAllegiance Current allegiance value
+     * @param int $elapsedSeconds Seconds since last update
+     * @param array $bonuses Building and tech bonuses
+     * @param int $worldId World ID for configuration
+     * @return int New allegiance value
      */
-    public function resolveWaveWithRegen(
-        int $current,
+    public function applyRegeneration(
+        int $villageId,
+        int $currentAllegiance,
         int $elapsedSeconds,
-        int $survivingBearers,
-        int $wallLevel,
-        bool $attackerWon,
-        bool $antiSnipeActive,
-        ?float $multiplier = null,
-        ?int $antiSnipeUntil = null,
-        array $regenContext = []
-    ): AllegianceResult {
-        [$regenValue, $regenApplied, $regenReason] = $this->doRegen($current, $elapsedSeconds, $antiSnipeActive, $regenContext);
-        [$afterDrop, $captured, $dropApplied, $floorApplied] = $this->applyWave(
-            $regenValue,
-            $survivingBearers,
-            $wallLevel,
-            $attackerWon,
-            $multiplier,
-            $antiSnipeActive
-        );
+        array $bonuses = [],
+        int $worldId = CURRENT_WORLD_ID
+    ): int {
+        // Check if anti-snipe is active (pauses regeneration)
+        $stmt = $this->conn->prepare("SELECT anti_snipe_until FROM villages WHERE id = ?");
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $village = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
 
-        $nextTickAt = time();
-        return new AllegianceResult(
-            $afterDrop,
-            $captured,
-            $dropApplied,
-            $regenApplied,
-            $floorApplied,
-            $nextTickAt,
-            $antiSnipeActive,
-            $antiSnipeUntil,
-            $regenReason
-        );
+        if (!$village) {
+            return $currentAllegiance;
+        }
+
+        $antiSnipeUntil = $village['anti_snipe_until'] ? strtotime($village['anti_snipe_until']) : null;
+        $isAntiSnipeActive = $antiSnipeUntil && $antiSnipeUntil > time();
+
+        // Pause regeneration during anti-snipe period
+        if ($isAntiSnipeActive) {
+            return $currentAllegiance;
+        }
+
+        // Already at max
+        if ($currentAllegiance >= 100) {
+            return 100;
+        }
+
+        $config = $this->worldManager->getConquestSettings($worldId);
+        
+        // Calculate base regeneration
+        $baseRatePerHour = $config['alleg_regen_per_hour'];
+        $regenPerSecond = $baseRatePerHour / 3600.0;
+        
+        // Apply bonuses (building multipliers, tech bonuses, etc.)
+        $buildingMultiplier = $bonuses['building_multiplier'] ?? 1.0;
+        $techMultiplier = $bonuses['tech_multiplier'] ?? 1.0;
+        $totalMultiplier = $buildingMultiplier * $techMultiplier;
+        
+        // Cap multiplier at reasonable maximum (e.g., 3x)
+        $totalMultiplier = min(3.0, $totalMultiplier);
+        
+        // Calculate regeneration amount
+        $regenAmount = $regenPerSecond * $elapsedSeconds * $totalMultiplier;
+        
+        // Apply regeneration
+        $newAllegiance = $currentAllegiance + (int)floor($regenAmount);
+        
+        // Clamp to [0, 100]
+        return max(0, min(100, $newAllegiance));
     }
 
-    private function clamp(int $val): int
-    {
-        return max(0, min(100, $val));
+    /**
+     * Enforce anti-snipe floor
+     * 
+     * @param int $villageId Village ID
+     * @param int $proposedAllegiance Proposed new allegiance value
+     * @param int $worldId World ID for configuration
+     * @return int Clamped allegiance value
+     */
+    public function enforceFloor(
+        int $villageId,
+        int $proposedAllegiance,
+        int $worldId = CURRENT_WORLD_ID
+    ): int {
+        $stmt = $this->conn->prepare("SELECT anti_snipe_until, allegiance_floor FROM villages WHERE id = ?");
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $village = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$village) {
+            return $proposedAllegiance;
+        }
+
+        $antiSnipeUntil = $village['anti_snipe_until'] ? strtotime($village['anti_snipe_until']) : null;
+        $isAntiSnipeActive = $antiSnipeUntil && $antiSnipeUntil > time();
+
+        if (!$isAntiSnipeActive) {
+            return $proposedAllegiance;
+        }
+
+        $floor = (int)$village['allegiance_floor'];
+        return max($proposedAllegiance, $floor);
     }
 
-    private function doRegen(int $current, int $elapsedSeconds, bool $paused, array $context): array
-    {
-        $current = $this->clamp($current);
-        if ($paused || $elapsedSeconds <= 0) {
-            return [$current, 0, $paused ? 'paused' : null];
-        }
-        $hostileEtaMs = isset($context['hostile_eta_ms']) ? (int)$context['hostile_eta_ms'] : null;
-        if ($hostileEtaMs !== null && $hostileEtaMs <= $this->regenPauseWindowMs) {
-            return [$current, 0, 'hostile_eta'];
-        }
-        if (!empty($context['is_occupied']) || !empty($context['uptime_active'])) {
-            return [$current, 0, 'occupied'];
+    /**
+     * Check if capture conditions are met
+     * 
+     * @param int $villageId Village ID
+     * @param int $allegiance Current allegiance value
+     * @param int $worldId World ID for configuration
+     * @return bool True if village should be captured
+     */
+    public function checkCapture(
+        int $villageId,
+        int $allegiance,
+        int $worldId = CURRENT_WORLD_ID
+    ): bool {
+        $config = $this->worldManager->getConquestSettings($worldId);
+        $mode = $config['mode'];
+
+        // Check anti-snipe and cooldown
+        $stmt = $this->conn->prepare("
+            SELECT anti_snipe_until, capture_cooldown_until, control_meter, uptime_started_at 
+            FROM villages WHERE id = ?
+        ");
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $village = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$village) {
+            return false;
         }
 
-        $regenPerHour = $this->computeRegenPerHour($context);
-        $perSecond = $regenPerHour / 3600.0;
-        $regenAmount = $perSecond * $elapsedSeconds;
-
-        $decayAmount = 0.0;
-        $reason = null;
-        $ownerInactiveHours = isset($context['owner_inactive_hours']) ? (int)$context['owner_inactive_hours'] : 0;
-        $applyDecay = !empty($context['apply_decay']) || ($ownerInactiveHours >= 72 && empty($context['has_garrison']));
-        if ($this->abandonDecayPerHour > 0 && $applyDecay) {
-            $decayPerSecond = $this->abandonDecayPerHour / 3600.0;
-            $decayAmount = $decayPerSecond * $elapsedSeconds;
-            $reason = 'decay';
+        // Check cooldown
+        $cooldownUntil = $village['capture_cooldown_until'] ? strtotime($village['capture_cooldown_until']) : null;
+        if ($cooldownUntil && $cooldownUntil > time()) {
+            return false;
         }
 
-        $net = $regenAmount - $decayAmount;
-        $newValue = $this->clamp((int)round($current + $net));
-        return [$newValue, (int)round($net), $reason];
+        // Check anti-snipe
+        $antiSnipeUntil = $village['anti_snipe_until'] ? strtotime($village['anti_snipe_until']) : null;
+        if ($antiSnipeUntil && $antiSnipeUntil > time()) {
+            return false;
+        }
+
+        if ($mode === 'allegiance') {
+            // Allegiance mode: capture when allegiance reaches 0
+            return $allegiance <= 0;
+        } else {
+            // Control/uptime mode: capture when control >= 100 and uptime complete
+            $controlMeter = (int)$village['control_meter'];
+            $uptimeStartedAt = $village['uptime_started_at'] ? strtotime($village['uptime_started_at']) : null;
+
+            if ($controlMeter < 100) {
+                return false;
+            }
+
+            if (!$uptimeStartedAt) {
+                return false;
+            }
+
+            $uptimeDuration = $config['uptime_duration_seconds'];
+            $uptimeElapsed = time() - $uptimeStartedAt;
+
+            return $uptimeElapsed >= $uptimeDuration;
+        }
     }
 
-    private function computeRegenPerHour(array $context): float
+    /**
+     * Update village allegiance in database
+     * 
+     * @param int $villageId Village ID
+     * @param int $newAllegiance New allegiance value
+     * @return bool Success
+     */
+    public function updateAllegiance(int $villageId, int $newAllegiance): bool
     {
-        $base = isset($context['base_regen_per_hour']) ? (float)$context['base_regen_per_hour'] : $this->baseRegenPerHour;
-        $shrineLevel = isset($context['shrine_level']) ? (int)$context['shrine_level'] : 0;
-        $hallLevel = isset($context['hall_level']) ? (int)$context['hall_level'] : 0;
-        $tribeMult = isset($context['tribe_regen_mult']) ? (float)$context['tribe_regen_mult'] : $this->tribeRegenMult;
+        $stmt = $this->conn->prepare("
+            UPDATE villages 
+            SET allegiance = ?, allegiance_last_update = CURRENT_TIMESTAMP 
+            WHERE id = ?
+        ");
+        $stmt->bind_param("ii", $newAllegiance, $villageId);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
 
-        $multiplier = 1.0 + max(0.0, $tribeMult) + max(0.0, $shrineLevel * $this->shrineBonusPerLevel);
-        $multiplier = min($this->maxRegenMultiplier, max(0.0, $multiplier));
-        $regen = $base * $multiplier;
-        $regen += max(0, $hallLevel) * $this->hallFlatPerLevel;
-        return max(0.0, $regen);
+    /**
+     * Initialize post-capture state
+     * 
+     * @param int $villageId Village ID
+     * @param int $worldId World ID for configuration
+     * @return bool Success
+     */
+    public function initializePostCapture(int $villageId, int $worldId = CURRENT_WORLD_ID): bool
+    {
+        $config = $this->worldManager->getConquestSettings($worldId);
+        
+        $postCaptureStart = $config['post_capture_start'];
+        $antiSnipeFloor = $config['anti_snipe_floor'];
+        $antiSnipeSeconds = $config['anti_snipe_seconds'];
+        $cooldownSeconds = $config['capture_cooldown_seconds'];
+
+        $antiSnipeUntil = date('Y-m-d H:i:s', time() + $antiSnipeSeconds);
+        $cooldownUntil = date('Y-m-d H:i:s', time() + $cooldownSeconds);
+
+        $stmt = $this->conn->prepare("
+            UPDATE villages 
+            SET allegiance = ?,
+                allegiance_floor = ?,
+                anti_snipe_until = ?,
+                capture_cooldown_until = ?,
+                allegiance_last_update = CURRENT_TIMESTAMP,
+                control_meter = 0,
+                uptime_started_at = NULL
+            WHERE id = ?
+        ");
+        $stmt->bind_param("iissi", $postCaptureStart, $antiSnipeFloor, $antiSnipeUntil, $cooldownUntil, $villageId);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
     }
 }

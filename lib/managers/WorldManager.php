@@ -65,7 +65,32 @@ class WorldManager
         'victory_at' => "TEXT DEFAULT NULL",
         'archetype' => "TEXT DEFAULT NULL",
         'preset_enforcement_enabled' => "INTEGER NOT NULL DEFAULT 0",
-        'kpi_dashboards_enabled' => "INTEGER NOT NULL DEFAULT 0"
+        'kpi_dashboards_enabled' => "INTEGER NOT NULL DEFAULT 0",
+        // Conquest system configuration
+        'conquest_enabled' => "INTEGER NOT NULL DEFAULT 1",
+        'conquest_mode' => "TEXT NOT NULL DEFAULT 'allegiance'",
+        'alleg_regen_per_hour' => "REAL NOT NULL DEFAULT 2.0",
+        'alleg_wall_reduction_per_level' => "REAL NOT NULL DEFAULT 0.02",
+        'alleg_drop_min' => "INTEGER NOT NULL DEFAULT 18",
+        'alleg_drop_max' => "INTEGER NOT NULL DEFAULT 28",
+        'anti_snipe_floor' => "INTEGER NOT NULL DEFAULT 10",
+        'anti_snipe_seconds' => "INTEGER NOT NULL DEFAULT 900",
+        'post_capture_start' => "INTEGER NOT NULL DEFAULT 25",
+        'capture_cooldown_seconds' => "INTEGER NOT NULL DEFAULT 900",
+        'uptime_duration_seconds' => "INTEGER NOT NULL DEFAULT 900",
+        'control_gain_rate_per_min' => "INTEGER NOT NULL DEFAULT 5",
+        'control_decay_rate_per_min' => "INTEGER NOT NULL DEFAULT 3",
+        'wave_spacing_ms' => "INTEGER NOT NULL DEFAULT 300",
+        'max_envoys_per_command' => "INTEGER NOT NULL DEFAULT 1",
+        'conquest_daily_mint_cap' => "INTEGER NOT NULL DEFAULT 5",
+        'conquest_daily_train_cap' => "INTEGER NOT NULL DEFAULT 3",
+        'conquest_min_defender_points' => "INTEGER NOT NULL DEFAULT 1000",
+        'conquest_building_loss_enabled' => "INTEGER NOT NULL DEFAULT 0",
+        'conquest_building_loss_chance' => "REAL NOT NULL DEFAULT 0.100",
+        'conquest_resource_transfer_pct' => "REAL NOT NULL DEFAULT 1.000",
+        'conquest_abandonment_decay_enabled' => "INTEGER NOT NULL DEFAULT 0",
+        'conquest_abandonment_threshold_hours' => "INTEGER NOT NULL DEFAULT 168",
+        'conquest_abandonment_decay_rate' => "REAL NOT NULL DEFAULT 1.0"
     ];
 
     public function __construct($conn)
@@ -262,6 +287,18 @@ class WorldManager
     }
 
     /**
+     * Whether conquest system is enabled for this world.
+     */
+    public function isConquestEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        if (defined('FEATURE_CONQUEST_ENABLED')) {
+            return (bool)FEATURE_CONQUEST_ENABLED;
+        }
+        $settings = $this->getSettings($worldId);
+        return !empty($settings['conquest_enabled']);
+    }
+
+    /**
      * Whether anti-snipe floors/grace are enabled post-capture.
      */
     public function isConquestAntiSnipeEnabled(int $worldId = CURRENT_WORLD_ID): bool
@@ -281,6 +318,41 @@ class WorldManager
             return (bool)CONQUEST_WALL_MOD_ENABLED;
         }
         return true;
+    }
+
+    /**
+     * Get all conquest configuration settings for a world.
+     */
+    public function getConquestSettings(int $worldId = CURRENT_WORLD_ID): array
+    {
+        $settings = $this->getSettings($worldId);
+        
+        return [
+            'enabled' => !empty($settings['conquest_enabled']),
+            'mode' => $settings['conquest_mode'] ?? 'allegiance',
+            'alleg_regen_per_hour' => (float)($settings['alleg_regen_per_hour'] ?? 2.0),
+            'alleg_wall_reduction_per_level' => (float)($settings['alleg_wall_reduction_per_level'] ?? 0.02),
+            'alleg_drop_min' => (int)($settings['alleg_drop_min'] ?? 18),
+            'alleg_drop_max' => (int)($settings['alleg_drop_max'] ?? 28),
+            'anti_snipe_floor' => (int)($settings['anti_snipe_floor'] ?? 10),
+            'anti_snipe_seconds' => (int)($settings['anti_snipe_seconds'] ?? 900),
+            'post_capture_start' => (int)($settings['post_capture_start'] ?? 25),
+            'capture_cooldown_seconds' => (int)($settings['capture_cooldown_seconds'] ?? 900),
+            'uptime_duration_seconds' => (int)($settings['uptime_duration_seconds'] ?? 900),
+            'control_gain_rate_per_min' => (int)($settings['control_gain_rate_per_min'] ?? 5),
+            'control_decay_rate_per_min' => (int)($settings['control_decay_rate_per_min'] ?? 3),
+            'wave_spacing_ms' => (int)($settings['wave_spacing_ms'] ?? 300),
+            'max_envoys_per_command' => (int)($settings['max_envoys_per_command'] ?? 1),
+            'conquest_daily_mint_cap' => (int)($settings['conquest_daily_mint_cap'] ?? 5),
+            'conquest_daily_train_cap' => (int)($settings['conquest_daily_train_cap'] ?? 3),
+            'conquest_min_defender_points' => (int)($settings['conquest_min_defender_points'] ?? 1000),
+            'conquest_building_loss_enabled' => !empty($settings['conquest_building_loss_enabled']),
+            'conquest_building_loss_chance' => (float)($settings['conquest_building_loss_chance'] ?? 0.100),
+            'conquest_resource_transfer_pct' => (float)($settings['conquest_resource_transfer_pct'] ?? 1.000),
+            'conquest_abandonment_decay_enabled' => !empty($settings['conquest_abandonment_decay_enabled']),
+            'conquest_abandonment_threshold_hours' => (int)($settings['conquest_abandonment_threshold_hours'] ?? 168),
+            'conquest_abandonment_decay_rate' => (float)($settings['conquest_abandonment_decay_rate'] ?? 1.0),
+        ];
     }
 
     public function isMapBatchingEnabled(int $worldId = CURRENT_WORLD_ID): bool
