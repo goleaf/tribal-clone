@@ -4,7 +4,7 @@ set -euo pipefail
 # Directory of this script (assumed to be the repo root).
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Override to change how often commits are attempted.
-SLEEP_SECONDS="${SLEEP_SECONDS:-10}"
+SLEEP_SECONDS="${SLEEP_SECONDS:-60}"
 # Allow overriding where Codex stores its config/auth to avoid global conflicts.
 CODEX_HOME="${CODEX_HOME_OVERRIDE:-"$REPO_DIR/.codex-autocommit"}"
 CODEX_DATA_DIR="$CODEX_HOME/.codex"
