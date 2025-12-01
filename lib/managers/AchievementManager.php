@@ -98,6 +98,7 @@ class AchievementManager
         }
 
         $this->seedDefaults($driver);
+        $this->syncAllBuildingsMaxCondition();
     }
 
     /**
@@ -290,6 +291,31 @@ class AchievementManager
         }
 
         $stmt->close();
+    }
+
+    /**
+     * Aligns the "all_buildings_max" target with the current number of building types.
+     */
+    private function syncAllBuildingsMaxCondition(): void
+    {
+        if (!$this->tableExists('building_types') || !$this->tableExists('achievements')) {
+            return;
+        }
+        $res = $this->conn->query("SELECT COUNT(*) AS cnt FROM building_types");
+        if (!$res) {
+            return;
+        }
+        $row = $res->fetch_assoc();
+        $total = $row ? (int)$row['cnt'] : 0;
+        if ($total <= 0) {
+            return;
+        }
+        $stmt = $this->conn->prepare("UPDATE achievements SET condition_value = ? WHERE internal_name = 'all_buildings_max'");
+        if ($stmt) {
+            $stmt->bind_param("i", $total);
+            $stmt->execute();
+            $stmt->close();
+        }
     }
 
     /**
@@ -522,7 +548,10 @@ class AchievementManager
             'successful_attack' => (int)($snapshot['successful_attacks'] ?? 0),
             'successful_defense' => (int)($snapshot['successful_defenses'] ?? 0),
             'conquest' => (int)($snapshot['conquests'] ?? 0),
-            'all_buildings_max' => (int)($snapshot['maxed_buildings'] ?? 0),
+            'all_buildings_max' => (int)min(
+                $snapshot['maxed_buildings'] ?? 0,
+                $snapshot['building_types_total'] ?? ($snapshot['maxed_buildings'] ?? 0)
+            ),
             default => (int)$row['progress'],
         };
     }
@@ -716,7 +745,7 @@ class AchievementManager
         $successfulAttacks = $this->countSuccessfulAttacks($userId);
         $successfulDefenses = $this->countSuccessfulDefenses($userId);
         $conquests = $this->countConquests($userId);
-        $maxedBuildings = $this->countMaxedBuildingTypes($userId);
+        [$maxedBuildings, $buildingTypesTotal] = $this->countMaxedBuildingTypes($userId);
 
         return [
             'building_levels' => $buildingLevels,
@@ -728,6 +757,7 @@ class AchievementManager
             'successful_defenses' => $successfulDefenses,
             'conquests' => $conquests,
             'maxed_buildings' => $maxedBuildings,
+            'building_types_total' => $buildingTypesTotal,
         ];
     }
 
@@ -828,10 +858,10 @@ class AchievementManager
         return $row ? (int)$row['cnt'] : 0;
     }
 
-    private function countMaxedBuildingTypes(int $userId): int
+    private function countMaxedBuildingTypes(int $userId): array
     {
         if (!$this->tableExists('building_types') || !$this->tableExists('village_buildings')) {
-            return 0;
+            return [0, 0];
         }
 
         $stmt = $this->conn->prepare("
@@ -842,19 +872,21 @@ class AchievementManager
             GROUP BY bt.id, bt.max_level
         ");
         if (!$stmt) {
-            return 0;
+            return [0, 0];
         }
         $stmt->bind_param("i", $userId);
         $stmt->execute();
         $result = $stmt->get_result();
         $maxed = 0;
+        $total = 0;
         while ($row = $result->fetch_assoc()) {
+            $total++;
             if ((int)$row['lvl'] >= (int)$row['max_level']) {
                 $maxed++;
             }
         }
         $stmt->close();
-        return $maxed;
+        return [$maxed, $total];
     }
 
     private function tableExists(string $table): bool

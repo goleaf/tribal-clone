@@ -25,9 +25,9 @@
                     </td>
                     <td><?= $unit['attack'] ?> / <?= $unit['defense'] ?></td>
                     <td>
-                        <span class="resource wood"><img src="../img/ds_graphic/wood.png" alt="Wood"> <?= $unit['wood_cost'] ?></span>
-                        <span class="resource clay"><img src="../img/ds_graphic/stone.png" alt="Clay"> <?= $unit['clay_cost'] ?></span>
-                        <span class="resource iron"><img src="../img/ds_graphic/iron.png" alt="Iron"> <?= $unit['iron_cost'] ?></span>
+                        <span class="resource wood"><img src="../img/ds_graphic/wood.png" alt="Wood"> <?= $unit['cost_wood'] ?? $unit['wood_cost'] ?></span>
+                        <span class="resource clay"><img src="../img/ds_graphic/stone.png" alt="Clay"> <?= $unit['cost_clay'] ?? $unit['clay_cost'] ?></span>
+                        <span class="resource iron"><img src="../img/ds_graphic/iron.png" alt="Iron"> <?= $unit['cost_iron'] ?? $unit['iron_cost'] ?></span>
                     </td>
                     <td>
                         <?= $village_units[$unit['id']]['count'] ?? 0 ?>

@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS `unit_types` (
   `internal_name` VARCHAR(50) NOT NULL UNIQUE, -- e.g. 'spear', 'sword', 'axe', 'archer'
   `name` VARCHAR(100) NOT NULL, -- Unit name (currently using the existing name column)
   `description` TEXT,
-  `building_type` VARCHAR(50) NULL, -- internal name of the required recruitment building (e.g. 'barracks', 'stable')
+  `building_type` VARCHAR(50) NULL, -- internal name of the required recruitment building (e.g. 'barracks', 'stable', 'workshop', 'academy')
   `attack` INT(11) DEFAULT 0,
   `defense` INT(11) DEFAULT 0,
   `defense_cavalry` INT(11) DEFAULT 0,

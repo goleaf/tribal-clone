@@ -18,6 +18,7 @@ class BattleManager
     private const RAID_CASUALTY_FACTOR = 0.65; // raids inflict/take fewer losses
     private const RAID_LOOT_FACTOR = 0.6; // raids cap loot to 60% of stored resources
     private const WALL_BONUS_PER_LEVEL = 0.08;
+    private const BEGINNER_PROTECTION_POINTS = 200;
     private const WORLD_UNIT_SPEED = 1.0; // fields per hour baseline
     private const PHASE_ORDER = ['infantry', 'cavalry', 'archer'];
     private const RESEARCH_BONUS_PER_LEVEL = 0.10; // +10% per smithy level
@@ -189,6 +190,16 @@ class BattleManager
             $villages['source_x'], $villages['source_y'],
             $villages['target_x'], $villages['target_y']
         );
+
+        // If attacker is protected and attacks a non-barbarian target, drop protection
+        if ($attack_type !== 'support' && (int)$villages['target_user_id'] > 0) {
+            $stmt_drop_prot = $this->conn->prepare("UPDATE users SET is_protected = 0 WHERE id = ?");
+            if ($stmt_drop_prot) {
+                $stmt_drop_prot->bind_param("i", $villages['source_user_id']);
+                $stmt_drop_prot->execute();
+                $stmt_drop_prot->close();
+            }
+        }
         
         // Find the slowest unit
         $slowest_speed = null;
@@ -1570,6 +1581,10 @@ class BattleManager
 
     private function isUnderProtection(array $userRow, DateTimeImmutable $now, array $config): bool
     {
+        if (isset($userRow['is_protected']) && (int)$userRow['is_protected'] === 0) {
+            return false;
+        }
+
         $pointsCap = $config['points_cap'];
         if (($userRow['points'] ?? 0) > $pointsCap) {
             return false;
@@ -1581,7 +1596,7 @@ class BattleManager
         }
 
         $daysSinceCreate = (int)$createdAt->diff($now)->format('%a');
-        return $daysSinceCreate < $config['max_days'];
+        return $daysSinceCreate >= ($config['min_days'] ?? 0) && $daysSinceCreate < $config['max_days'];
     }
 
     /**

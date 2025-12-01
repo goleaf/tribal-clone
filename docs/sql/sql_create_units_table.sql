@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS `unit_types` (
   `internal_name` varchar(50) COLLATE utf8_unicode_ci NOT NULL,
   `name` varchar(100) COLLATE utf8_unicode_ci NOT NULL,
   `description` text COLLATE utf8_unicode_ci,
-  `building_type` varchar(50) COLLATE utf8_unicode_ci NOT NULL COMMENT 'barracks, stable, garage',
+  `building_type` varchar(50) COLLATE utf8_unicode_ci NOT NULL COMMENT 'barracks, stable, workshop/statue/academy',
   `attack` int(11) NOT NULL DEFAULT 0,
   `defense` int(11) NOT NULL DEFAULT 0,
   `defense_cavalry` int(11) NOT NULL DEFAULT 0,
