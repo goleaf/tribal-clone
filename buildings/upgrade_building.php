@@ -83,7 +83,7 @@ try {
          throw new Exception("Building level mismatch. Current level is " . $actualCurrentLevel . ". Please refresh the page.");
     }
 
-    $canUpgradeResult = $buildingManager->canUpgradeBuilding($village_id, $internal_name);
+    $canUpgradeResult = $buildingManager->canUpgradeBuilding($village_id, $internal_name, $user_id);
     if (!$canUpgradeResult['success']) {
         throw new Exception($canUpgradeResult['message']);
     }

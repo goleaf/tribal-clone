@@ -296,8 +296,8 @@ class TribeManager
         if (!$membership || $membership['tribe_id'] !== $tribeId) {
             return ['success' => false, 'message' => 'You are not a member of that tribe.'];
         }
-        if ($membership['role'] !== 'leader') {
-            return ['success' => false, 'message' => 'Only tribe leaders can send invitations.'];
+        if (!$this->roleHasPermission($membership['role'], 'invite')) {
+            return ['success' => false, 'message' => 'You do not have permission to send invitations.'];
         }
 
         $userStmt = $this->conn->prepare("SELECT id, ally_id FROM users WHERE username = ? LIMIT 1");
@@ -363,8 +363,8 @@ class TribeManager
     public function cancelInvitation(int $tribeId, int $actorUserId, int $inviteId): array
     {
         $membership = $this->getMembership($actorUserId);
-        if (!$membership || $membership['tribe_id'] !== $tribeId || $membership['role'] !== 'leader') {
-            return ['success' => false, 'message' => 'Only the tribe leader can cancel invitations.'];
+        if (!$membership || $membership['tribe_id'] !== $tribeId || !$this->roleHasPermission($membership['role'], 'invite')) {
+            return ['success' => false, 'message' => 'You do not have permission to cancel invitations.'];
         }
 
         $stmt = $this->conn->prepare("UPDATE tribe_invitations SET status = 'cancelled', responded_at = CURRENT_TIMESTAMP WHERE id = ? AND tribe_id = ? AND status = 'pending'");
@@ -649,8 +649,8 @@ class TribeManager
     public function changeMemberRole(int $tribeId, int $actorUserId, int $targetUserId, string $newRole): array
     {
         $membership = $this->getMembership($actorUserId);
-        if (!$membership || $membership['tribe_id'] !== $tribeId || $membership['role'] !== 'leader') {
-            return ['success' => false, 'message' => 'Only the tribe leader can change roles.'];
+        if (!$membership || $membership['tribe_id'] !== $tribeId || !$this->roleHasPermission($membership['role'], 'manage_roles')) {
+            return ['success' => false, 'message' => 'You do not have permission to change roles.'];
         }
 
         $newRole = $this->sanitizeRole($newRole);
@@ -666,12 +666,13 @@ class TribeManager
             return ['success' => false, 'message' => 'You cannot change the leader role.'];
         }
 
+        $dbRole = $this->encodeRoleForDb($newRole);
         $stmt = $this->conn->prepare("UPDATE tribe_members SET role = ? WHERE tribe_id = ? AND user_id = ?");
         if ($stmt === false) {
             error_log("TribeManager::changeMemberRole prepare failed: " . $this->conn->error);
             return ['success' => false, 'message' => 'Unable to update role.'];
         }
-        $stmt->bind_param("sii", $newRole, $tribeId, $targetUserId);
+        $stmt->bind_param("sii", $dbRole, $tribeId, $targetUserId);
         $ok = $stmt->execute();
         $stmt->close();
 
@@ -689,8 +690,8 @@ class TribeManager
         }
 
         $membership = $this->getMembership($actorUserId);
-        if (!$membership || $membership['tribe_id'] !== $tribeId || $membership['role'] !== 'leader') {
-            return ['success' => false, 'message' => 'Only the tribe leader can remove members.'];
+        if (!$membership || $membership['tribe_id'] !== $tribeId || !$this->roleHasPermission($membership['role'], 'manage_roles')) {
+            return ['success' => false, 'message' => 'You do not have permission to remove members.'];
         }
 
         $target = $this->getMembership($targetUserId);

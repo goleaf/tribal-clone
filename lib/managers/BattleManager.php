@@ -48,6 +48,8 @@ class BattleManager
      */
     public function sendAttack($source_village_id, $target_village_id, $units_sent, $attack_type = 'attack', $target_building = null)
     {
+        $attack_type = in_array($attack_type, ['attack', 'raid', 'support', 'spy', 'fake'], true) ? $attack_type : 'attack';
+
         // Ensure both villages exist
         $stmt_check_villages = $this->conn->prepare("
             SELECT 
@@ -728,7 +730,8 @@ class BattleManager
         $isRaid = $attack['attack_type'] === 'raid';
         // Fetch attacking units
         $stmt_get_attack_units = $this->conn->prepare("
-            SELECT au.unit_type_id, au.count, ut.attack, ut.defense, ut.name, ut.carry_capacity, ut.internal_name
+            SELECT au.unit_type_id, au.count, ut.attack, ut.defense, ut.name, ut.carry_capacity, ut.internal_name,
+                   ut.defense_cavalry, ut.defense_archer
             FROM attack_units au
             JOIN unit_types ut ON au.unit_type_id = ut.id
             WHERE au.attack_id = ?
@@ -745,7 +748,8 @@ class BattleManager
         $stmt_get_attack_units->close();
         // Fetch defending units
         $stmt_get_defense_units = $this->conn->prepare("
-            SELECT vu.unit_type_id, vu.count, ut.attack, ut.defense, ut.name
+            SELECT vu.unit_type_id, vu.count, ut.attack, ut.defense, ut.name, ut.internal_name,
+                   ut.defense_cavalry, ut.defense_archer
             FROM village_units vu
             JOIN unit_types ut ON vu.unit_type_id = ut.id
             WHERE vu.village_id = ?
