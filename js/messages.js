@@ -26,6 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const update = () => {
             const remaining = max ? (max - target.value.length) : target.value.length;
             counter.textContent = max ? `${remaining} chars left` : `${remaining} chars`;
+            if (max) {
+                const pct = (target.value.length / max) * 100;
+                counter.classList.toggle('near-limit', pct >= 90);
+            }
         };
 
         target.addEventListener('input', update);

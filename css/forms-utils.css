@@ -42,6 +42,22 @@ button:focus-visible {
   color: #6a4a3a;
 }
 
+.input-error {
+  border-color: #e76f51 !important;
+  background: #fff3f0 !important;
+}
+
+.input-success {
+  border-color: #2f9e44 !important;
+  background: #f1fff5 !important;
+}
+
+.form-error {
+  color: #c0392b;
+  font-size: 0.9rem;
+  margin-top: 6px;
+}
+
 .btn--quiet {
   background: transparent;
   border: 1px dashed var(--form-border);

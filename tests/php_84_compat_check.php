@@ -35,6 +35,9 @@ $report = [
         'mbstring',
         'json',
         'curl',
+        'ctype',
+        'filter',
+        'openssl',
     ]),
     'ini' => [
         'display_errors' => ini_get('display_errors'),
