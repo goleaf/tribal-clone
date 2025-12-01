@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [-] 1. Set up database schema and migrations
+- [x] 1. Set up database schema and migrations
   - Create migration for allegiance/control columns on villages table
   - Create conquest_attempts audit log table
   - Add indexes for performance (village_id, last_allegiance_update, capture_cooldown_until)
