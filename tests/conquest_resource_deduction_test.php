@@ -39,8 +39,8 @@ $conn->query("DELETE FROM unit_queue WHERE village_id = $testVillageId");
 $conn->query("UPDATE worlds SET conquest_units_enabled = 1 WHERE id = $testWorldId");
 
 // Create test user
-$userInsert = $conn->query("INSERT INTO users (id, username, email, password, world_id) 
-              VALUES ($testUserId, 'test_conquest_user', 'test@conquest.com', 'hash', $testWorldId)");
+$userInsert = $conn->query("INSERT INTO users (id, username, email, password) 
+              VALUES ($testUserId, 'test_conquest_user', 'test@conquest.com', 'hash')");
 
 if (!$userInsert) {
     echo "ERROR: Failed to create test user: " . $conn->error . "\n";
@@ -91,16 +91,6 @@ if (!$nobleId && !$standardId) {
 $unitManager = new UnitManager($conn);
 $testsPassed = 0;
 $testsFailed = 0;
-
-// Debug: Check what units are loaded
-$allUnits = $unitManager->getAllUnitTypes();
-echo "DEBUG: Loaded " . count($allUnits) . " unit types\n";
-foreach ($allUnits as $id => $unit) {
-    if (in_array($unit['internal_name'], ['noble', 'nobleman', 'standard_bearer', 'envoy'])) {
-        echo "DEBUG: Found conquest unit: " . $unit['internal_name'] . " (ID: $id)\n";
-    }
-}
-echo "\n";
 
 // Test 1: Train noble with sufficient coins
 if ($nobleId) {
