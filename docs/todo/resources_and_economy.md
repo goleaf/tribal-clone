@@ -211,6 +211,7 @@
 - Watch event token expiries and shop purchase caps; alert if expiries fail or caps are bypassed.
 - Track pricing guardrail clamps (min/max scalers, conquest cost scaling, event modifier bounds); alert if clamp rates spike or stay at bound, suggesting mis-tuned configs.
 - Dashboard for trade/aid volumes, average payload sizes, and rate-limit hits to catch regressions.
+- Segment monitoring by world archetype (casual/classic/hardcore/seasonal) to tune decay/DR/tax defaults and catch outliers per archetype.
 
 ### Resource Sink Plan
 - **Minting:** Coins/Seals/Standards crafted in Hall/Academy with rising costs; daily mint cap per account; consumes wood/clay/iron and optional token sink. Required for Standard Bearers.
