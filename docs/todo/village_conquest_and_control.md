@@ -156,6 +156,12 @@
 - Should anti-snipe floors block control gain entirely or just floor the minimum (e.g., cannot drop below 10 but can still gain)? Clarify to avoid exploits.
 - What are default distance/wall modifiers for allegiance drop, and are they world-specific? Need documented defaults for UI.
 
+## Acceptance Criteria
+- Allegiance resolver applies drops, regen, and floors correctly across configs; clamps [0,100]; captures only on win + bearer survival.
+- Protection/safe-zone/hand­over blocks return reason codes and log attempts; anti-snipe floor prevents re-capture ping-pong.
+- Reports show morale/luck, allegiance delta, regen, anti-snipe status, surviving SBs, and block reasons when applicable.
+- Training/minting enforce prereqs/caps and reason codes; queues stable under load; refunds behave per spec.
+- Load/concurrency tests meet p95 targets for waves/tick and regen ticks; no race conditions on multi-wave trains.
 ## Profiling & Load Plan
 - Conquest resolver soak: simulate 1k+ waves/tick with varying SB counts and wall levels; measure p50/p95/p99 latency and capture correctness under concurrency.
 - Regen/anti-snipe tick: stress regen processing across many villages; ensure floors/cooldowns applied without race conditions.

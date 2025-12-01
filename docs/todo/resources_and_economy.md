@@ -86,9 +86,9 @@
 - [x] Resource config per world: production rates, storage/vault protection %, decay toggles, dynamic cost scalers, aid caps/taxes. _(config/config.php covers baseline knobs; add DB schema & world-level overrides)_
 - [x] Resource sinks: implement minting (coins/seals/standards), tribe projects currency, megaproject deliveries (wonders/beacons), and occupation taxes. _(sink plan below)_
 - [x] Anti-hoarding: overflow loss/decay above threshold (world-optional), diminishing plunder returns per attacker→target cooldown, rising conquest costs for large empires. _(anti-hoard spec below; decay implemented via RESOURCE_DECAY_* constants in ResourceManager)_
-- [ ] Trade system: offer/accept APIs with tax by distance/power delta; fixed/open rate modes; aid board with caps and audit logs; balancer with fees and cap checks.
+ - [x] Trade system: offer/accept APIs with tax by distance/power delta; fixed/open rate modes; aid board with caps and audit logs; balancer with fees and cap checks. _(trade system spec below)_
 - [ ] Event economy: token balances with expiry, event shops with caps, harvest/trade wind modifiers applied per world.
-- [ ] Catch-up buffs: late-joiner production bonuses and protection; ensure non-stacking with beginner protection abuse; expiration rules.
+ - [x] Catch-up buffs: late-joiner production bonuses and protection; ensure non-stacking with beginner protection abuse; expiration rules. _(buff spec below)_
 - [ ] Telemetry: metrics on production, sinks (minting, tribe projects), trade volumes, plunder/decay losses, and aid flows; alerts on anomalies.
 - [ ] Safeguards: cap storage overflows, block trades/aid to protected alts (power delta + IP/alt flags), and enforce fair-market bounds on offers to reduce pushing.
 - [x] Error codes: standardize economy errors (`ERR_CAP`, `ERR_TAX`, `ERR_ALT_BLOCK`, `ERR_RATE_LIMIT`) and surface retry/next steps in UI. _(see error code spec below)_
@@ -122,6 +122,23 @@
 - Load shedding on trade/aid spikes returns queue/try-later with backpressure metrics; no DB timeouts.
 - Validation rejects zero/negative sends, enforces storage limits at send/receive, and blocks extreme exchange ratios; tests cover these cases.
 - Vault math validated: loot calculations use max(vault_pct, hiding_place) per resource; reports show protected amount and applied percentage correctly.
+
+### Catch-Up Buffs Spec
+- **Eligibility:** Players whose account age or points are below configured thresholds relative to world age (e.g., joined >7 days after world start or below 50% of median points).
+- **Buffs:** +X% production (time-limited, e.g., 72h), reduced build/recruit times by Y%, and temporary protection against plunder/aid abuse caps adjusted. Buffs do not stack with beginner protection; if beginner is active, catch-up waits or applies reduced effect.
+- **Delivery:** Granted on login or world join; visible banner in UI with remaining duration; one-time per season/world. Rebuild packs (small resource bundles) optionally granted on wipe events, capped per day.
+- **Anti-abuse:** Disable buffs when player exceeds point threshold or after duration ends; strip on PvP attack initiation if world rules require. Log activations and expiries; rate-limit rebuild pack requests and tie to recent losses.
+- **Config:** Per-world settings for production %, time %, duration, point thresholds, and rebuild pack contents; admin audit when changed.
+- **Telemetry:** Emit buff grants, expiries, and abuse blocks; monitor adoption and churn deltas for tuning.
+
+### Trade System Spec
+- **Modes:** `fixed_rate` (beginner/casual worlds with configured fair ratios and tight bands) and `open_rate` (free market). World flag controls mode; UI shows mode badge.
+- **Offers API:** Create offer with give/get amounts and expiry; validate storage, caravans, and fair-market bounds (ratio band in open mode). Return `ERR_RATIO`/`ERR_RES`/`ERR_CAP` on failure.
+- **Accept API:** Match compatible offers; apply tax = distance factor × power-delta factor with floor/ceiling; compute arrival times using world speed. Reject if storage at target full (`ERR_CAP`) or offer expired.
+- **Aid Board:** Separate endpoint for tribe aid with daily send/receive caps, distance tax, and audit logging. Power-delta guard blocks aid to alts/low-power abuse (`ERR_ALT_BLOCK`).
+- **Resource Balancer:** Server-side balancer to redistribute across owned villages; applies transfer fee; respects storage caps and caps on instant “teleport.” Returns `ERR_CAP`/`ERR_RES`/`ERR_FEE`.
+- **Caravans:** Capacity = base per Market level; speed from world/unit speed; taxed by distance and mode; return trip time included. Aid/offer payload includes ETA and net-after-tax for UI.
+- **Auditing/Telemetry:** Log all create/accept/aid/balancer actions with actor/target, amounts, tax, ip_hash/ua_hash/world_id; emit metrics for volume, tax collected, cap hits, and rate-limit hits.
 
 ### Anti-Hoarding & Anti-Inflation Spec
 - **Overflow/Decay:** Optional per-world `RESOURCE_DECAY_ENABLED` with `DECAY_THRESHOLD_PCT` (default 80%) and `DECAY_RATE_PER_HOUR` (e.g., 1–3% of amount above threshold). Applied in resource tick; decay logged to telemetry; disabled on casual worlds.

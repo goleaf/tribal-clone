@@ -4543,6 +4543,16 @@ body.map-reduced-motion .map-skeleton .skeleton-row {
     background-position: 0 0;
 }
 
+.map-alert {
+    margin: 8px 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #fff7e6;
+    color: #8d5c2c;
+    border: 1px solid #f2c38b;
+    font-size: 14px;
+}
+
 .activity-pill {
     display: inline-block;
     margin-left: 6px;

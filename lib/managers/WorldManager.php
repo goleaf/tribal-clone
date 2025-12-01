@@ -250,6 +250,7 @@ class WorldManager
         $existing = $this->getWorldColumns();
         $missing = array_diff(array_keys($this->knownColumns), $existing);
         if (empty($missing)) {
+            $this->ensureAuditTable();
             return;
         }
 
@@ -287,6 +288,7 @@ class WorldManager
             $quotedVal = is_numeric($val) ? $val : ("'" . $this->conn->real_escape_string((string)$val) . "'");
             $this->conn->query("UPDATE worlds SET {$col} = {$quotedVal} WHERE {$col} IS NULL");
         }
+        $this->ensureAuditTable();
     }
 
     /**

@@ -54,6 +54,13 @@ class BuildingQueueManager
             if ($currentLevel < 0) {
                 $currentLevel = 0;
             }
+
+            // Enforce max level cap
+            $maxLevel = $this->configManager->getMaxLevel($buildingInternalName);
+            if ($maxLevel !== null && $currentLevel >= $maxLevel) {
+                $errorCode = 'ERR_CAP';
+                throw new Exception("{$buildingInternalName} is already at max level ({$maxLevel}).");
+            }
             
             // Calculate costs and time
             $costs = $this->configManager->calculateUpgradeCost($buildingInternalName, $currentLevel);

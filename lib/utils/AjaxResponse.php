@@ -10,6 +10,8 @@ class AjaxResponse
     public const ERR_TAX = 'ERR_TAX';
     public const ERR_ALT_BLOCK = 'ERR_ALT_BLOCK';
     public const ERR_RATE_LIMIT = 'ERR_RATE_LIMIT';
+    public const ERR_RATIO = 'ERR_RATIO';
+    public const ERR_VALIDATION = 'ERR_VALIDATION';
 
     /**
      * Send a success JSON response

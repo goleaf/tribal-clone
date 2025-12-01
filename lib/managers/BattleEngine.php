@@ -309,19 +309,20 @@ class BattleEngine
      */
     private function isNightTime(array $worldConfig): bool
     {
-        if (empty($worldConfig['night_bonus_enabled'])) {
+        $enabled = (bool)($worldConfig['night_bonus_enabled'] ?? false);
+        if (!$enabled) {
             return false;
         }
-        
+
         $hour = (int)date('H');
-        $nightStart = $worldConfig['night_start'] ?? 22;
-        $nightEnd = $worldConfig['night_end'] ?? 6;
-        
+        $nightStart = $worldConfig['night_start_hour'] ?? $worldConfig['night_start'] ?? 22;
+        $nightEnd = $worldConfig['night_end_hour'] ?? $worldConfig['night_end'] ?? 6;
+
         if ($nightStart > $nightEnd) {
             // Night spans midnight
             return $hour >= $nightStart || $hour < $nightEnd;
         }
-        
+
         return $hour >= $nightStart && $hour < $nightEnd;
     }
     

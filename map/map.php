@@ -136,6 +136,9 @@ require '../header.php';
         <div class="map-alert" id="movements-warning" style="display:none;">
             Movement view is limited to prevent slowdowns. Zoom closer or apply filters to see more details.
         </div>
+        <div class="map-alert" id="map-rate-warning" style="display:none;">
+            Map updates are temporarily slowed. Please wait a moment before panning again.
+        </div>
 
             <div class="map-wrapper">
                 <div class="map-grid-shell">
@@ -337,6 +340,7 @@ const highContrastToggle = document.getElementById('high-contrast-toggle');
 const reducedMotionToggle = document.getElementById('reduced-motion-toggle');
 let mapSkeletonTimer = null;
 const movementsWarningEl = document.getElementById('movements-warning');
+const mapRateWarningEl = document.getElementById('map-rate-warning');
 
 function setMapLoading(isLoading) {
     if (mapLoadingEl) {
@@ -943,6 +947,9 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
         if (!data) {
             return;
         }
+        if (movementsWarningEl) {
+            movementsWarningEl.style.display = data.movements_truncated ? 'block' : 'none';
+        }
         mapState.center = data.center || { x: targetX, y: targetY };
         mapState.size = data.size || size;
         mapState.players = indexPlayers(data.players || []);
@@ -960,7 +967,17 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
         }
     } catch (error) {
         if (error.name !== 'AbortError') {
-            console.error('Failed to load map data:', error);
+            const isRate = typeof error.message === 'string' && error.message.startsWith('RATE_LIMIT:');
+            if (isRate) {
+                const parts = error.message.split(':');
+                const retryAfter = parts.length > 1 ? parseInt(parts[1], 10) : 1;
+                console.warn(`Map fetch rate-limited. Retrying in ${retryAfter}s.`);
+                setTimeout(() => {
+                    requestMapLoad(targetX, targetY, targetSize, options);
+                }, Math.max(500, retryAfter * 1000));
+            } else {
+                console.error('Failed to load map data:', error);
+            }
         }
     } finally {
         mapFetchInFlight = false;
@@ -1079,30 +1096,31 @@ function renderMap() {
                 overlay.alt = 'Village marker';
                 tile.appendChild(overlay);
 
-                if (Array.isArray(village.movements) && village.movements.length > 0) {
+                const showMovements = mapState.size <= 21;
+                if (showMovements && Array.isArray(village.movements) && village.movements.length > 0) {
                     const visibleMoves = village.movements.filter(movementVisible);
                     if (visibleMoves.length > 0) {
                         const movementStack = document.createElement('div');
                         movementStack.classList.add('movement-stack');
                         visibleMoves.slice(0, 3).forEach(move => {
-                        const icon = document.createElement('img');
-                        icon.classList.add('movement-icon');
-                        icon.src = movementIcons[move.type] || overlayIcons.incoming;
-                        icon.alt = move.type;
-                        if (move.has_noble) {
-                            icon.classList.add('noble-move');
-                        }
-                        const arrivalLabel = formatArrivalTime(move.arrival);
-                        if (arrivalLabel) {
-                            const directionLabel = move.type.includes('incoming') ? 'Incoming' : (move.type.includes('support') ? 'Support' : 'Outgoing');
-                            const endpoint = move.source ? `${move.source.x}|${move.source.y}` : (move.target ? `${move.target.x}|${move.target.y}` : '');
-                            const nobleTag = move.has_noble ? ' · Noble' : '';
-                            icon.title = `${directionLabel}${endpoint ? ' ' + endpoint : ''} · ETA ${arrivalLabel}${nobleTag}`;
-                        }
-                        movementStack.appendChild(icon);
-                    });
-                    tile.appendChild(movementStack);
-                }
+                            const icon = document.createElement('img');
+                            icon.classList.add('movement-icon');
+                            icon.src = movementIcons[move.type] || overlayIcons.incoming;
+                            icon.alt = move.type;
+                            if (move.has_noble) {
+                                icon.classList.add('noble-move');
+                            }
+                            const arrivalLabel = formatArrivalTime(move.arrival);
+                            if (arrivalLabel) {
+                                const directionLabel = move.type.includes('incoming') ? 'Incoming' : (move.type.includes('support') ? 'Support' : 'Outgoing');
+                                const endpoint = move.source ? `${move.source.x}|${move.source.y}` : (move.target ? `${move.target.x}|${move.target.y}` : '');
+                                const nobleTag = move.has_noble ? ' · Noble' : '';
+                                icon.title = `${directionLabel}${endpoint ? ' ' + endpoint : ''} · ETA ${arrivalLabel}${nobleTag}`;
+                            }
+                            movementStack.appendChild(icon);
+                        });
+                        tile.appendChild(movementStack);
+                    }
                 }
 
                 if (annotation.note) {

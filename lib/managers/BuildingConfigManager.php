@@ -64,12 +64,29 @@ class BuildingConfigManager {
         return $this->buildingConfigs;
     }
 
+    public function getMaxLevel(string $internalName): ?int
+    {
+        $config = $this->getBuildingConfig($internalName);
+        if (!$config) {
+            return null;
+        }
+        if (isset($config['max_level']) && $config['max_level'] !== null) {
+            return (int)$config['max_level'];
+        }
+        return null;
+    }
+
     // Calculate upgrade/build cost to the next level
     public function calculateUpgradeCost(string $internalName, int $currentLevel): ?array {
         $config = $this->getBuildingConfig($internalName);
 
         if (!$config) {
             return null; // Building config not found
+        }
+
+        $maxLevel = $this->getMaxLevel($internalName);
+        if ($maxLevel !== null && $currentLevel >= $maxLevel) {
+            return null; // Already at cap
         }
 
         // Cost for level $currentLevel + 1
@@ -92,6 +109,11 @@ class BuildingConfigManager {
 
         if (!$config) {
             return null; // Building config not found
+        }
+
+        $maxLevel = $this->getMaxLevel($internalName);
+        if ($maxLevel !== null && $currentLevel >= $maxLevel) {
+            return null; // At cap
         }
 
         // Base time for level $currentLevel + 1

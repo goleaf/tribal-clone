@@ -198,32 +198,24 @@ class TradeManager {
         $departure = date('Y-m-d H:i:s');
         $arrival = date('Y-m-d H:i:s', time() + (int)$timeSec);
 
-        // Enforce target storage caps to prevent overflow pushing.
-        $capacity = isset($targetVillage['warehouse_capacity']) ? (int)$targetVillage['warehouse_capacity'] : 0;
-        if ($capacity <= 0) {
-            $capacity = (int)($village['warehouse_capacity'] ?? 0);
+        // Enforce storage caps on both receiver sides
+        $headroomBuyer = $this->checkStorageHeadroom($acceptingVillage, [
+            'wood' => (int)$offer['offered_wood'],
+            'clay' => (int)$offer['offered_clay'],
+            'iron' => (int)$offer['offered_iron'],
+        ]);
+        if ($headroomBuyer !== true) {
+            return $headroomBuyer;
         }
-        if ($capacity > 0) {
-            $projected = [
-                'wood' => (int)$targetVillage['wood'] + $resources['wood'],
-                'clay' => (int)$targetVillage['clay'] + $resources['clay'],
-                'iron' => (int)$targetVillage['iron'] + $resources['iron'],
-            ];
-            foreach ($projected as $resKey => $amt) {
-                if ($amt > $capacity) {
-                    return [
-                        'success' => false,
-                        'message' => 'Target storage capacity exceeded for ' . $resKey . '.',
-                        'code' => EconomyError::ERR_CAP,
-                        'details' => [
-                            'cap_type' => 'storage',
-                            'resource' => $resKey,
-                            'capacity' => $capacity,
-                            'projected' => $projected[$resKey]
-                        ]
-                    ];
-                }
-            }
+        $headroomSeller = $this->checkStorageHeadroom($sourceVillage, $requiredFromAcceptor);
+        if ($headroomSeller !== true) {
+            return $headroomSeller;
+        }
+
+        // Enforce target storage caps to prevent overflow pushing.
+        $capacityCheck = $this->checkStorageHeadroom($targetVillage, $resources);
+        if ($capacityCheck !== true) {
+            return $capacityCheck;
         }
 
         $this->conn->begin_transaction();
@@ -522,7 +514,12 @@ class TradeManager {
             return [
                 'success' => false,
                 'message' => 'Trade offer ratio outside allowed range. Adjust amounts to be fair.',
-                'code' => EconomyError::ERR_TAX
+                'code' => EconomyError::ERR_RATIO,
+                'details' => [
+                    'offered_ratio' => round($ratio, 3),
+                    'min_ratio' => self::MIN_FAIR_RATE,
+                    'max_ratio' => self::MAX_FAIR_RATE
+                ]
             ];
         }
 
@@ -665,10 +662,9 @@ class TradeManager {
 
         $offerStmt = $this->conn->prepare("
             SELECT o.*, sv.x_coord AS source_x, sv.y_coord AS source_y, sv.user_id AS source_user_id,
-                   tv.name AS source_name
+                   sv.name AS source_name
             FROM trade_offers o
             JOIN villages sv ON o.source_village_id = sv.id
-            LEFT JOIN villages tv ON o.source_village_id = tv.id
             WHERE o.id = ? AND o.status = 'open'
             LIMIT 1
         ");
@@ -679,6 +675,11 @@ class TradeManager {
 
         if (!$offer) {
             return ['success' => false, 'message' => 'Offer not available anymore.', 'code' => EconomyError::ERR_CAP];
+        }
+
+        $sourceVillage = $this->getVillageWithOwner((int)$offer['source_village_id']);
+        if (!$sourceVillage) {
+            return ['success' => false, 'message' => 'Source village not found for this offer.', 'code' => EconomyError::ERR_CAP];
         }
 
         $acceptingVillage = $this->getVillageWithOwner($acceptingVillageId);
@@ -967,6 +968,38 @@ class TradeManager {
         $stmt->close();
 
         return $village ?: null;
+    }
+
+    /**
+     * Validate that incoming resources will not exceed target storage capacity.
+     */
+    private function checkStorageHeadroom(array $village, array $incoming)
+    {
+        $capacity = isset($village['warehouse_capacity']) ? (int)$village['warehouse_capacity'] : 0;
+        if ($capacity <= 0) {
+            return true; // no cap data; fail open
+        }
+        $projected = [
+            'wood' => (int)($village['wood'] ?? 0) + ($incoming['wood'] ?? 0),
+            'clay' => (int)($village['clay'] ?? 0) + ($incoming['clay'] ?? 0),
+            'iron' => (int)($village['iron'] ?? 0) + ($incoming['iron'] ?? 0),
+        ];
+        foreach ($projected as $resKey => $amt) {
+            if ($amt > $capacity) {
+                return [
+                    'success' => false,
+                    'message' => 'Target storage capacity exceeded for ' . $resKey . '.',
+                    'code' => EconomyError::ERR_CAP,
+                    'details' => [
+                        'cap_type' => 'storage',
+                        'resource' => $resKey,
+                        'capacity' => $capacity,
+                        'projected' => $projected[$resKey]
+                    ]
+                ];
+            }
+        }
+        return true;
     }
 
     private function formatCoords(?int $x, ?int $y): string

@@ -152,6 +152,7 @@
 - **Split:** Split loot deterministically across carriers; round with stable remainder distribution.
 - **Reporting:** Show available, protected (vault/hiding place), lootable, cap applied, carry used/remaining, and loot per resource; note raid bonuses/DR.
 - **Edge Cases:** No surviving carriers → loot 0; protected >= available → loot 0 with note; clamp negatives to 0; conquest/siege units carry 0.
+- **DR/Band Rules:** If diminishing returns on repeat raids apply, multiply lootable by DR factor per attacker→target window and surface factor in report; ensure DR calculated before capacity split.
 
 ## QA & Acceptance
 - [ ] Unit tests for combat resolver: modifiers (morale/luck/night/terrain), siege damage scaling, overstack penalty, and proportional casualties.
