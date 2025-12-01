@@ -46,7 +46,7 @@ This task list bridges the gap between the current BattleEngine/BattleManager im
   - **Property 18: Overstack Modifier Ordering**
   - **Validates: Requirements 3.1, 3.2, 3.3, 7.1, 8.1, 8.2, 8.3**
 
-- [ ] 1.3 Enhance CombatCalculator component
+- [-] 1.3 Enhance CombatCalculator component
   - Refactor calculateOffensivePower() to use class multipliers
   - Refactor calculateDefensivePower() with weighted defense
   - Implement calculateCasualties() with ratio^1.5 formula
