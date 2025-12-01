@@ -21,8 +21,6 @@ class TradeManager {
     private bool $lastLoadCheckBusy = false;
     private const AID_DAILY_SEND_CAP = 500000;    // Total resources a user can send per 24h
     private const AID_DAILY_RECEIVE_CAP = 500000; // Total resources a user can receive per 24h
-    private int $lastLoadCheckTs = 0;
-    private bool $lastLoadCheckBusy = false;
 
     public function __construct($db_connection) {
         $this->conn = $db_connection;

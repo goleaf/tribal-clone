@@ -30,6 +30,8 @@ $payloadBytes = isset($payload['payload_bytes']) ? (int)$payload['payload_bytes'
 $cacheHitPct = isset($payload['cache_hit_pct']) ? (float)$payload['cache_hit_pct'] : null;
 $requestRate = isset($payload['request_rate']) ? (float)$payload['request_rate'] : null;
 $droppedFrames = isset($payload['dropped_frames']) && $payload['dropped_frames'] !== '' ? (int)$payload['dropped_frames'] : null;
+$cacheStatus = $payload['cache_status'] ?? null;
+$fetchMs = isset($payload['fetch_ms']) ? (int)$payload['fetch_ms'] : null;
 
 $entry = [
     'ts' => date('c'),
@@ -39,6 +41,8 @@ $entry = [
     'cache_hit_pct' => $cacheHitPct,
     'request_rate' => $requestRate,
     'dropped_frames' => $droppedFrames,
+    'cache_status' => $cacheStatus,
+    'fetch_ms' => $fetchMs,
     'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
 ];
 

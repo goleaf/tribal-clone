@@ -492,6 +492,7 @@ $unitSpeeds = [];
     }
 
 $payload = [
+    'map_version' => defined('MAP_API_VERSION') ? (int)MAP_API_VERSION : 1,
     'center' => ['x' => $centerX, 'y' => $centerY],
     'size' => $size,
     'villages' => $villages,
