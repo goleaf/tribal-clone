@@ -4116,6 +4116,46 @@ p.no-reports {
     cursor: pointer;
 }
 
+.note-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: var(--spacing-sm);
+}
+
+.reserve-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.reserve-row select {
+    padding: 6px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-small);
+}
+
+.movement-stack {
+    position: absolute;
+    left: 4px;
+    bottom: 4px;
+    display: flex;
+    gap: 2px;
+}
+
+.movement-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.note-icon {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 16px;
+    height: 16px;
+}
+
 @media (max-width: 800px) {
     .map-controls {
         justify-content: flex-start;

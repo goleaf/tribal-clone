@@ -18,6 +18,15 @@ $username = $_SESSION['username'] ?? '';
 $villageManager = new VillageManager($conn);
 $village_id = $villageManager->getFirstVillage($user_id);
 $village = $village_id ? $villageManager->getVillageInfo($village_id) : null;
+$userAllyId = null;
+$allyStmt = $conn->prepare("SELECT ally_id FROM users WHERE id = ? LIMIT 1");
+if ($allyStmt) {
+    $allyStmt->bind_param("i", $user_id);
+    $allyStmt->execute();
+    $allyResult = $allyStmt->get_result()->fetch_assoc();
+    $userAllyId = $allyResult['ally_id'] ?? null;
+    $allyStmt->close();
+}
 
 $defaultX = $village['x_coord'] ?? 0;
 $defaultY = $village['y_coord'] ?? 0;
@@ -76,6 +85,18 @@ require '../header.php';
                 </form>
             </div>
         </section>
+        <section class="map-subtoolbar">
+            <div class="filter-card">
+                <div class="filter-row">
+                    <label><input type="checkbox" id="filter-barbs" checked> Barbarians</label>
+                    <label><input type="checkbox" id="filter-players" checked> Other players</label>
+                    <label><input type="checkbox" id="filter-tribe" checked> My tribe</label>
+                    <label><input type="checkbox" id="filter-own" checked> My villages</label>
+                    <label><input type="checkbox" id="filter-marked"> Marked only</label>
+                </div>
+                <div class="filter-hint">Filters are instant. Use the popup to mark reservations or add notes.</div>
+            </div>
+        </section>
 
         <div class="map-wrapper">
             <div class="map-grid-shell">
@@ -106,8 +127,28 @@ require '../header.php';
                 </div>
                 <h4 id="popup-village-name"></h4>
                 <div class="popup-actions">
-                    <button id="popup-send-units" class="btn-primary">Send units</button>
+                    <button id="popup-attack" class="btn-primary">Quick attack</button>
+                    <button id="popup-support" class="btn-secondary">Quick support</button>
+                    <button id="popup-send-units" class="btn-ghost">Open command</button>
                     <a id="popup-open-village" class="btn-ghost" href="#">Open profile</a>
+                </div>
+                <div class="note-card">
+                    <div class="reserve-row">
+                        <label class="reserve-toggle">
+                            <input type="checkbox" id="reserve-village">
+                            Reserve this village
+                        </label>
+                        <select id="reserve-scope" aria-label="Reservation scope">
+                            <option value="self">For me</option>
+                            <option value="tribe">For tribe</option>
+                        </select>
+                    </div>
+                    <label for="village-note">Note</label>
+                    <textarea id="village-note" rows="3" placeholder="Add a short note"></textarea>
+                    <div class="note-actions">
+                        <button id="save-note" class="btn-primary">Save note</button>
+                        <span class="note-status" id="note-status"></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -155,6 +196,8 @@ const movementIcons = {
 const tileSize = { width: 53, height: 38 };
 const pointBrackets = [0, 300, 1000, 3000, 9000, 12000];
 
+const currentUserId = <?php echo (int)$user_id; ?>;
+const currentUserAllyId = <?php echo $userAllyId !== null ? (int)$userAllyId : 'null'; ?>;
 const currentVillageId = <?php echo $village_id ?? 'null'; ?>;
 const homeVillage = <?php echo $village ? json_encode([
     'id' => $village['id'],
@@ -168,8 +211,67 @@ const initialSize = <?php echo $size; ?>;
 const mapState = {
     center: { ...initialCenter },
     size: initialSize,
-    byCoord: {}
+    byCoord: {},
+    players: {},
+    tribes: {}
 };
+let annotations = loadAnnotations();
+const filters = {
+    barbarians: true,
+    players: true,
+    tribe: true,
+    own: true,
+    markedOnly: false
+};
+
+function loadAnnotations() {
+    try {
+        const raw = localStorage.getItem('tw_map_annotations');
+        return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+        console.warn('Failed to read map annotations from storage', e);
+        return {};
+    }
+}
+
+function saveAnnotations() {
+    try {
+        localStorage.setItem('tw_map_annotations', JSON.stringify(annotations));
+    } catch (e) {
+        console.warn('Failed to persist map annotations', e);
+    }
+}
+
+function setAnnotation(villageId, data) {
+    const existing = annotations[villageId] || { note: '', reserved: '' };
+    const updated = { ...existing, ...data };
+
+    // Normalize reserved flag to '', 'self', or 'tribe'
+    if (updated.reserved !== 'self' && updated.reserved !== 'tribe') {
+        updated.reserved = '';
+    }
+
+    annotations[villageId] = updated;
+    if (!annotations[villageId].note && !annotations[villageId].reserved) {
+        delete annotations[villageId];
+    }
+    saveAnnotations();
+}
+
+function getAnnotation(villageId) {
+    return annotations[villageId] || { note: '', reserved: '' };
+}
+
+function updateNoteStatus(message) {
+    const status = document.getElementById('note-status');
+    if (!status) return;
+    status.textContent = message || '';
+    if (message) {
+        setTimeout(() => {
+            status.textContent = '';
+        }, 1500);
+    }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const sizeInput = document.getElementById('map-size');
@@ -206,18 +308,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelector('#map-popup .popup-close-btn').addEventListener('click', hideVillagePopup);
 
-    document.getElementById('popup-send-units').addEventListener('click', function() {
-        const targetVillageId = this.dataset.villageId;
-        if (targetVillageId && currentVillageId) {
-            fetch(`../combat/attack.php?target_village_id=${targetVillageId}&source_village_id=${currentVillageId}&ajax=1`)
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById('generic-modal-content').innerHTML = html;
-                    document.getElementById('generic-modal').style.display = 'block';
-                    hideVillagePopup();
-                })
-                .catch(error => console.error('Error loading attack form:', error));
+    document.getElementById('popup-send-units').addEventListener('click', () => {
+        const targetVillageId = document.getElementById('popup-send-units').dataset.villageId;
+        openAttackModal(targetVillageId, null);
+    });
+    document.getElementById('popup-attack').addEventListener('click', () => {
+        const targetVillageId = document.getElementById('popup-attack').dataset.villageId;
+        openAttackModal(targetVillageId, 'attack');
+    });
+    document.getElementById('popup-support').addEventListener('click', () => {
+        const targetVillageId = document.getElementById('popup-support').dataset.villageId;
+        openAttackModal(targetVillageId, 'support');
+    });
+
+    const reserveToggle = document.getElementById('reserve-village');
+    const reserveScope = document.getElementById('reserve-scope');
+    const noteTextarea = document.getElementById('village-note');
+    const saveNoteBtn = document.getElementById('save-note');
+    reserveToggle.addEventListener('change', () => {
+        const vid = reserveToggle.dataset.villageId ? parseInt(reserveToggle.dataset.villageId, 10) : null;
+        if (!vid) return;
+        setAnnotation(vid, { reserved: reserveToggle.checked ? (reserveScope.value || 'self') : '' });
+        renderMap();
+        updateNoteStatus('Reservation updated');
+    });
+    reserveScope.addEventListener('change', () => {
+        const vid = reserveScope.dataset.villageId ? parseInt(reserveScope.dataset.villageId, 10) : null;
+        if (!vid) return;
+        if (reserveToggle.checked) {
+            setAnnotation(vid, { reserved: reserveScope.value || 'self' });
+            renderMap();
+            updateNoteStatus('Reservation scope updated');
         }
+    });
+    saveNoteBtn.addEventListener('click', () => {
+        const vid = noteTextarea.dataset.villageId ? parseInt(noteTextarea.dataset.villageId, 10) : null;
+        if (!vid) return;
+        setAnnotation(vid, { note: noteTextarea.value.trim() });
+        renderMap();
+        updateNoteStatus('Note saved');
+    });
+
+    document.querySelectorAll('.filter-card input[type="checkbox"]').forEach(box => {
+        box.addEventListener('change', () => {
+            filters.barbarians = document.getElementById('filter-barbs').checked;
+            filters.players = document.getElementById('filter-players').checked;
+            filters.tribe = document.getElementById('filter-tribe').checked;
+            filters.own = document.getElementById('filter-own').checked;
+            filters.markedOnly = document.getElementById('filter-marked').checked;
+            renderMap();
+        });
     });
 
     document.addEventListener('click', (event) => {
@@ -273,7 +413,13 @@ function getVillageSprite(village) {
     return `${assetBase}/${prefix}${level}.png`;
 }
 
-function getOverlayIcon(village) {
+function getOverlayIcon(village, annotation = {}) {
+    if (annotation.reserved === 'tribe') {
+        return overlayIcons.reservedTeam;
+    }
+    if (annotation.reserved === 'self') {
+        return overlayIcons.reservedPlayer;
+    }
     if (village.reserved_by) {
         return overlayIcons.reservedPlayer;
     }
@@ -287,10 +433,34 @@ function getOverlayIcon(village) {
     return overlayIcons.tiers[level] || overlayIcons.tiers[overlayIcons.tiers.length - 1];
 }
 
-function indexVillages(villages) {
+function shouldRenderVillage(village, annotation = {}) {
+    const isBarb = village.user_id === null || village.user_id === -1;
+    const isOwn = village.user_id === currentUserId;
+    const player = village.user_id ? mapState.players[village.user_id] : null;
+    const sameTribe = currentUserAllyId && player && player.ally_id === currentUserAllyId;
+
+    if (filters.markedOnly && !annotation.note && !annotation.reserved) {
+        return false;
+    }
+    if (isBarb && !filters.barbarians) return false;
+    if (isOwn && !filters.own) return false;
+    if (!isBarb && !isOwn) {
+        if (sameTribe && !filters.tribe) return false;
+        if (!sameTribe && !filters.players) return false;
+    }
+    return true;
+}
+
+function indexVillages(villages, playersMap) {
     const map = {};
-    villages.forEach(v => {
-        map[`${v.x}:${v.y}`] = v;
+    (villages || []).forEach(v => {
+        const player = v.user_id ? playersMap[v.user_id] : null;
+        const enriched = {
+            ...v,
+            owner: v.owner || (player ? player.username : null),
+            ally_id: v.ally_id || (player ? player.ally_id : null)
+        };
+        map[`${enriched.x}:${enriched.y}`] = enriched;
     });
     return map;
 }
@@ -304,13 +474,46 @@ async function fetchMapData(targetX, targetY, targetSize) {
     return response.json();
 }
 
+function indexPlayers(players) {
+    const map = {};
+    (players || []).forEach(p => {
+        if (!p || typeof p.id === 'undefined') return;
+        map[p.id] = p;
+    });
+    return map;
+}
+
+function indexTribes(tribes) {
+    const map = {};
+    (tribes || []).forEach(t => {
+        if (!t || typeof t.id === 'undefined') return;
+        map[t.id] = t;
+    });
+    return map;
+}
+
+function openAttackModal(targetVillageId, preferredType) {
+    if (!targetVillageId || !currentVillageId) return;
+    const typeParam = preferredType ? `&preferred_attack_type=${preferredType}` : '';
+    fetch(`../combat/attack.php?target_village_id=${targetVillageId}&source_village_id=${currentVillageId}&ajax=1${typeParam}`)
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('generic-modal-content').innerHTML = html;
+            document.getElementById('generic-modal').style.display = 'block';
+            hideVillagePopup();
+        })
+        .catch(error => console.error('Error loading attack form:', error));
+}
+
 async function loadMap(targetX, targetY, targetSize) {
     try {
         const size = normalizeSize(targetSize);
         const data = await fetchMapData(targetX, targetY, size);
-        mapState.center = data.center;
-        mapState.size = data.size;
-        mapState.byCoord = indexVillages(data.villages || []);
+        mapState.center = data.center || { x: targetX, y: targetY };
+        mapState.size = data.size || size;
+        mapState.players = indexPlayers(data.players || []);
+        mapState.tribes = indexTribes(data.tribes || data.allies || []);
+        mapState.byCoord = indexVillages(data.villages || [], mapState.players);
         renderMap();
         updateControls();
         updateUrl(mapState.center.x, mapState.center.y, mapState.size);
@@ -341,7 +544,10 @@ function renderMap() {
             tile.dataset.y = coordY;
             tile.style.backgroundImage = `url(${getTerrainTile(coordX, coordY)})`;
 
-            if (village) {
+            const annotation = village ? getAnnotation(village.id) : {};
+            const showVillage = village && shouldRenderVillage(village, annotation);
+
+            if (village && showVillage) {
                 const villageLayer = document.createElement('div');
                 villageLayer.classList.add('village-layer');
                 villageLayer.style.backgroundImage = `url(${getVillageSprite(village)})`;
@@ -349,7 +555,7 @@ function renderMap() {
 
                 const overlay = document.createElement('img');
                 overlay.classList.add('overlay-icon');
-                overlay.src = getOverlayIcon(village);
+                overlay.src = getOverlayIcon(village, annotation);
                 overlay.alt = 'Village marker';
                 tile.appendChild(overlay);
 
@@ -366,12 +572,15 @@ function renderMap() {
                     tile.appendChild(movementStack);
                 }
 
-                if (village.note) {
+                if (annotation.note) {
                     const noteIcon = document.createElement('img');
                     noteIcon.classList.add('note-icon');
                     noteIcon.src = overlayIcons.note;
                     noteIcon.alt = 'Note';
                     tile.appendChild(noteIcon);
+                }
+                if (annotation.reserved) {
+                    tile.classList.add('reserved');
                 }
 
                 const label = document.createElement('div');
@@ -380,6 +589,9 @@ function renderMap() {
                 tile.appendChild(label);
             } else {
                 tile.classList.add('empty');
+                if (village && !showVillage) {
+                    tile.classList.add('filtered-out');
+                }
                 const freeIcon = document.createElement('img');
                 freeIcon.classList.add('overlay-icon');
                 freeIcon.src = overlayIcons.free;
@@ -455,14 +667,34 @@ function showVillagePopup(x, y) {
     const popupVillageCoords = document.getElementById('popup-village-coords');
     const popupVillagePoints = document.getElementById('popup-village-points');
     const popupSendUnitsButton = document.getElementById('popup-send-units');
+    const popupAttackButton = document.getElementById('popup-attack');
+    const popupSupportButton = document.getElementById('popup-support');
     const popupOpenVillage = document.getElementById('popup-open-village');
+    const reserveToggle = document.getElementById('reserve-village');
+    const reserveScope = document.getElementById('reserve-scope');
+    const noteTextarea = document.getElementById('village-note');
+    const annotation = getAnnotation(village.id);
+    const player = village.user_id ? mapState.players[village.user_id] : null;
+
+    const tribe = player && player.ally_id ? mapState.tribes[player.ally_id] : null;
+    const ownerLabel = player ? `${tribe ? '[' + tribe.tag + '] ' : ''}${player.username}` : (village.owner || 'Barbarian village');
 
     popupVillageName.textContent = village.name;
-    popupVillageOwner.textContent = village.owner || 'Barbarian village';
+    popupVillageOwner.textContent = ownerLabel;
     popupVillageCoords.textContent = `${x}|${y}`;
     popupVillagePoints.textContent = `${village.points || 0} pts`;
 
     popupSendUnitsButton.dataset.villageId = village.id;
+    popupAttackButton.dataset.villageId = village.id;
+    popupSupportButton.dataset.villageId = village.id;
+    reserveToggle.dataset.villageId = village.id;
+    reserveScope.dataset.villageId = village.id;
+    noteTextarea.dataset.villageId = village.id;
+    reserveToggle.checked = !!annotation.reserved;
+    reserveScope.value = annotation.reserved || 'self';
+    noteTextarea.value = annotation.note || '';
+    updateNoteStatus('');
+
     if (village.user_id && village.user_id !== -1) {
         popupOpenVillage.style.display = 'inline-block';
         popupOpenVillage.href = `../player/player.php?id=${village.user_id}`;
@@ -472,8 +704,12 @@ function showVillagePopup(x, y) {
 
     if (village.id === currentVillageId) {
         popupSendUnitsButton.style.display = 'none';
+        popupAttackButton.style.display = 'none';
+        popupSupportButton.style.display = 'none';
     } else {
         popupSendUnitsButton.style.display = 'block';
+        popupAttackButton.style.display = 'inline-block';
+        popupSupportButton.style.display = 'inline-block';
     }
 
     const tileElement = document.querySelector(`.map-tile[data-x="${x}"][data-y="${y}"]`);
@@ -533,6 +769,33 @@ function hideVillagePopup() {
     font-size: 20px;
     font-weight: 700;
     color: #4a2c0f;
+}
+
+.map-subtoolbar {
+    margin: 10px 0 6px 0;
+}
+
+.filter-card {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.filter-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+    color: #4a3c30;
+}
+
+.filter-hint {
+    font-size: 12px;
+    color: #7a6347;
+    margin-top: 6px;
 }
 
 .map-main {
@@ -684,6 +947,14 @@ function hideVillagePopup() {
 .map-tile:hover {
     outline: 1px solid #d19b3a;
     z-index: 2;
+}
+
+.map-tile.reserved {
+    box-shadow: inset 0 0 0 2px rgba(162, 106, 49, 0.4);
+}
+
+.map-tile.filtered-out {
+    opacity: 0.45;
 }
 
 .village-layer {
@@ -849,6 +1120,42 @@ function hideVillagePopup() {
 .btn-ghost {
     background: transparent;
     color: var(--accent-strong);
+}
+
+.note-card {
+    background: #fff;
+    border: 1px solid #e3caa3;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-top: 10px;
+}
+
+.note-card textarea {
+    width: 100%;
+    resize: vertical;
+    border-radius: 6px;
+    border: 1px solid #d6b985;
+    padding: 6px;
+}
+
+.note-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.note-status {
+    font-size: 12px;
+    color: #7a6347;
+}
+
+.reserve-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    color: #6a4a1f;
 }
 
 @media (max-width: 1000px) {
