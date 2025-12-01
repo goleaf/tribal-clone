@@ -107,63 +107,65 @@ $dominanceSnapshot = $endgameManager->getTribeDominanceSnapshot();
 $showDominanceBanner = $endgameManager->shouldShowDominanceWarning($dominanceSnapshot);
 
 $nudges = [];
-if ($build_queue_count === 0) {
-    $nudges[] = [
-        'code' => 'build_queue_idle',
-        'severity' => 'info',
-        'message' => 'Construction queue is idle.',
-        'action' => [
-            'type' => 'building',
-            'label' => 'Open town hall',
-            'internal' => 'main_building',
-            'name' => $buildings_data['main_building']['name'] ?? 'Town hall',
-            'description' => $buildings_data['main_building']['description'] ?? '',
-            'level' => (int)($buildings_data['main_building']['level'] ?? 0),
-        ],
-    ];
-}
-if ($recruit_queue_count === 0 && ($buildings_data['barracks']['level'] ?? 0) > 0) {
-    $nudges[] = [
-        'code' => 'recruit_queue_idle',
-        'severity' => 'info',
-        'message' => 'Recruitment queue is empty.',
-        'action' => [
-            'type' => 'building',
-            'label' => 'Open barracks',
-            'internal' => 'barracks',
-            'name' => $buildings_data['barracks']['name'] ?? 'Barracks',
-            'description' => $buildings_data['barracks']['description'] ?? '',
-            'level' => (int)($buildings_data['barracks']['level'] ?? 0),
-        ],
-    ];
-}
-if (!empty($nearCapResources)) {
-    $nudges[] = [
-        'code' => 'resource_cap',
-        'severity' => 'warning',
-        'message' => implode(', ', $nearCapResources) . ' near storage cap — spend or trade to avoid overflow.',
-        'action' => [
-            'type' => 'building',
-            'label' => 'Upgrade warehouse',
-            'internal' => 'warehouse',
-            'name' => $buildings_data['warehouse']['name'] ?? 'Warehouse',
-            'description' => $buildings_data['warehouse']['description'] ?? '',
-            'level' => (int)($buildings_data['warehouse']['level'] ?? 0),
-        ],
-    ];
-}
-if ($latestIntelAgeSeconds === null || $latestIntelAgeSeconds > 72 * 3600) {
-    $ageLabel = $latestIntelAgeSeconds === null ? 'No intel yet' : 'Last intel is stale';
-    $nudges[] = [
-        'code' => 'stale_intel',
-        'severity' => 'info',
-        'message' => $ageLabel . ' — send scouts to refresh enemy data.',
-        'action' => [
-            'type' => 'link',
-            'label' => 'Open Intel',
-            'href' => '/game/intel.php'
-        ],
-    ];
+if ($enableNudges) {
+    if ($build_queue_count === 0) {
+        $nudges[] = [
+            'code' => 'build_queue_idle',
+            'severity' => 'info',
+            'message' => 'Construction queue is idle.',
+            'action' => [
+                'type' => 'building',
+                'label' => 'Open town hall',
+                'internal' => 'main_building',
+                'name' => $buildings_data['main_building']['name'] ?? 'Town hall',
+                'description' => $buildings_data['main_building']['description'] ?? '',
+                'level' => (int)($buildings_data['main_building']['level'] ?? 0),
+            ],
+        ];
+    }
+    if ($recruit_queue_count === 0 && ($buildings_data['barracks']['level'] ?? 0) > 0) {
+        $nudges[] = [
+            'code' => 'recruit_queue_idle',
+            'severity' => 'info',
+            'message' => 'Recruitment queue is empty.',
+            'action' => [
+                'type' => 'building',
+                'label' => 'Open barracks',
+                'internal' => 'barracks',
+                'name' => $buildings_data['barracks']['name'] ?? 'Barracks',
+                'description' => $buildings_data['barracks']['description'] ?? '',
+                'level' => (int)($buildings_data['barracks']['level'] ?? 0),
+            ],
+        ];
+    }
+    if (!empty($nearCapResources)) {
+        $nudges[] = [
+            'code' => 'resource_cap',
+            'severity' => 'warning',
+            'message' => implode(', ', $nearCapResources) . ' near storage cap — spend or trade to avoid overflow.',
+            'action' => [
+                'type' => 'building',
+                'label' => 'Upgrade warehouse',
+                'internal' => 'warehouse',
+                'name' => $buildings_data['warehouse']['name'] ?? 'Warehouse',
+                'description' => $buildings_data['warehouse']['description'] ?? '',
+                'level' => (int)($buildings_data['warehouse']['level'] ?? 0),
+            ],
+        ];
+    }
+    if ($latestIntelAgeSeconds === null || $latestIntelAgeSeconds > 72 * 3600) {
+        $ageLabel = $latestIntelAgeSeconds === null ? 'No intel yet' : 'Last intel is stale';
+        $nudges[] = [
+            'code' => 'stale_intel',
+            'severity' => 'info',
+            'message' => $ageLabel . ' — send scouts to refresh enemy data.',
+            'action' => [
+                'type' => 'link',
+                'label' => 'Open Intel',
+                'href' => '/game/intel.php'
+            ],
+        ];
+    }
 }
 
 require '../header.php';
