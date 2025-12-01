@@ -61,6 +61,25 @@ class VillageManager
             return;
         }
 
+        // Pause regen during anti-snipe window if configured
+        if ($this->villageColumnExists('anti_snipe_until')) {
+            $antiSnipeRaw = $village['anti_snipe_until'] ?? null;
+            $antiSnipeTs = $antiSnipeRaw ? strtotime((string)$antiSnipeRaw) : null;
+            $wm = class_exists('WorldManager') ? new WorldManager($this->conn) : null;
+            $pauseAntiSnipe = $wm ? (bool)($wm->getSettings(CURRENT_WORLD_ID)['loyalty_regen_pause_antisnipe'] ?? true) : true;
+            if ($pauseAntiSnipe && $antiSnipeTs && $antiSnipeTs > time()) {
+                // Still bump timestamp so regen resumes cleanly after window
+                $village['last_loyalty_update'] = date('Y-m-d H:i:s');
+                $stmt = $this->conn->prepare("UPDATE villages SET last_loyalty_update = CURRENT_TIMESTAMP WHERE id = ?");
+                if ($stmt) {
+                    $stmt->bind_param("i", $village['id']);
+                    $stmt->execute();
+                    $stmt->close();
+                }
+                return;
+            }
+        }
+
         $now = time();
         if (!$lastUpdate || $lastUpdate <= 0) {
             $lastUpdate = $now;
@@ -110,9 +129,14 @@ class VillageManager
         $cap = $context['cap'];
         $hqLevel = $context['hq_level'];
         $churchLevel = $context['church_level'];
+        $wm = class_exists('WorldManager') ? new WorldManager($this->conn) : null;
+        $worldSettings = $wm ? $wm->getSettings(CURRENT_WORLD_ID) : [];
 
-        // Base: 5% of cap per day
-        $perDay = $cap * 0.05;
+        // Base: per-world percent of cap per day (defaults to 5%)
+        $basePctPerDay = isset($worldSettings['loyalty_regen_pct_per_day'])
+            ? max(0.0, (float)$worldSettings['loyalty_regen_pct_per_day'])
+            : 5.0;
+        $perDay = $cap * ($basePctPerDay / 100);
 
         // HQ/Palace bonus: +1% per 5 levels per day (max via cap already bounded)
         $perDay += floor($hqLevel / 5) * 0.01 * $cap;

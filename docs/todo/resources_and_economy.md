@@ -92,11 +92,18 @@
  - [x] Telemetry: metrics on production, sinks (minting, tribe projects), trade volumes, plunder/decay losses, and aid flows; alerts on anomalies. _(economy_metrics.log now records trade sends/offers/accepts with hashed IP/UA + totals; extend to other flows next)_
 - [x] Safeguards: cap storage overflows, block trades/aid to protected alts (power delta + IP/alt flags), and enforce fair-market bounds on offers to reduce pushing. _(TradeManager enforces headroom, fair ratios on create/accept, and now blocks linked/flagged accounts or extreme power gaps with ERR_ALT_BLOCK reasons)_
 - [x] Error codes: standardize economy errors (`ERR_CAP`, `ERR_TAX`, `ERR_ALT_BLOCK`, `ERR_RATE_LIMIT`) and surface retry/next steps in UI. _(see error code spec below)_
- - [x] Auditing: append-only logs for trades/aid/minting with actor, target, amounts, ip_hash/ua_hash, and world_id; retain 180 days. _(trade/a id logger added; writes hashed IP/UA + payload to logs/trade_audit.log)_
+- [x] Auditing: append-only logs for trades/aid/minting with actor, target, amounts, ip_hash/ua_hash, and world_id; retain 180 days. _(trade/a id logger added; writes hashed IP/UA + payload to logs/trade_audit.log)_
 - [x] Load shedding: if trade/aid endpoints face spikes, degrade gracefully (queue/try-later) instead of overloading DB; emit backpressure metric. _(trade manager now polls active routes/open offers with a soft limit + backpressure metric `trade_load_shed` and returns ERR_RATE_LIMIT with retry window)_
 - [x] Validation: block zero/negative resource sends, enforce storage limits at send/receive, and reject offers with extreme exchange ratios outside configured band. _(trade send now checks target storage headroom + ERR_RATIO already enforced on offers)_
 - [ ] Economy tests: unit tests for vault protection math, tax calculation, overflow/decay triggers, and fair-market bounds; integration tests for trade/aid flows with caps and power-delta taxes applied. _(baseline decay + fair-ratio/merchant caps covered in `tests/economy_test.php`; add vault/tax/aid cases next)_
 - [ ] Pricing guardrails: define per-archetype min/max dynamic cost scalers, event modifier bounds, and conquest cost scaling curves to prevent runaway inflation or too-cheap conquest on late worlds. Document defaults and enforcement points in config loader.
+
+### Pricing Guardrails — Implementation Notes
+- Dynamic cost scalers (per archetype): casual 0.9–1.1, classic 1.0–1.2, hardcore 1.0–1.3. Clamp world overrides at load; log clamp with world id and setting. Apply to buildings/tech/minting calculators.
+- Event modifier bounds: `EVENT_PROD_MAX=1.5`, `EVENT_TAX_MIN=0.5`; clamp and log when configs exceed; admin UI shows active modifiers + bounds.
+- Conquest cost scaling: empire surcharge starts at `VILLAGE_THRESHOLD=20`, +2% per 5 villages, capped +30% (hard cap +50%). Applies to minting and conquest-unit training. Reports show “Empire surcharge +X%”.
+- Enforcement points: config loader clamps and emits warning; WorldManager exposes `guardrail_status` for admin; reports/tooltips include applied scaler/modifier/surcharge when non-1.0.
+- Monitoring: metric `economy_guardrail_clamps_total` labelled by type (cost_scaler|event_mod|conquest_scale) and world; alert on sustained clamp rates indicating misconfig.
 
 ### Economy Error Codes (Standard)
 - `ERR_CAP`: storage/aid cap hit. Payload: `{ "retry_after_sec": 0, "cap_type": "send|receive|storage" }`.

@@ -163,7 +163,7 @@ class WorldManager
                                     $defaults[$key] = (float)$val;
                                 } elseif ($key === 'tribe_member_limit' || $key === 'victory_value' || $key === 'overstack_pop_threshold' || $key === 'min_attack_pop') {
                                     $defaults[$key] = $val === null ? null : (int)$val;
-                                } elseif (in_array($key, ['enable_archer', 'enable_paladin', 'enable_paladin_weapons', 'night_bonus_enabled', 'resource_decay_enabled', 'overstack_enabled', 'min_attack_pop_enabled', 'weather_enabled', 'plunder_dr_enabled', 'parallel_queues_enabled', 'watchtower_enabled', 'hospital_enabled', 'outpost_enabled', 'wall_decay_enabled', 'map_batching_enabled', 'map_clustering_enabled', 'map_delta_enabled', 'map_fallback_enabled', 'enable_nudges', 'enable_notifications', 'enable_tasks', 'enable_catchup_buffs', 'loyalty_regen_pause_antisnipe'], true)) {
+                                } elseif (in_array($key, ['enable_archer', 'enable_paladin', 'enable_paladin_weapons', 'night_bonus_enabled', 'resource_decay_enabled', 'overstack_enabled', 'min_attack_pop_enabled', 'weather_enabled', 'plunder_dr_enabled', 'parallel_queues_enabled', 'watchtower_enabled', 'hospital_enabled', 'outpost_enabled', 'wall_decay_enabled', 'map_batching_enabled', 'map_clustering_enabled', 'map_delta_enabled', 'map_fallback_enabled', 'map_pagination_enabled', 'enable_nudges', 'enable_notifications', 'enable_tasks', 'enable_catchup_buffs', 'loyalty_regen_pause_antisnipe'], true)) {
                                     $defaults[$key] = (bool)$val;
                                 } elseif (in_array($key, ['night_start_hour', 'night_end_hour'], true)) {
                                     $defaults[$key] = (int)$val;
@@ -564,6 +564,7 @@ class WorldManager
             'map_clustering_enabled' => 0,
             'map_delta_enabled' => 0,
             'map_fallback_enabled' => 0,
+            'map_pagination_enabled' => 0,
             'overstack_enabled' => defined('OVERSTACK_ENABLED') && OVERSTACK_ENABLED ? 1 : 0,
             'overstack_pop_threshold' => defined('OVERSTACK_POP_THRESHOLD') ? (int)OVERSTACK_POP_THRESHOLD : 30000,
             'overstack_penalty_rate' => defined('OVERSTACK_PENALTY_RATE') ? (float)OVERSTACK_PENALTY_RATE : 0.1,

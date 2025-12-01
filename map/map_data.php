@@ -360,44 +360,62 @@ if (!$lowPerfMode && !$suppressCommands) {
 
             $movementAttackIds[] = (int)$move['id'];
 
-        if (isset($villagesById[$sourceId])) {
-            $villages[$villagesById[$sourceId]]['movements'][] = [
-                'attack_id' => (int)$move['id'],
-                'type' => $move['attack_type'] === 'support' ? 'support' : 'attack',
-                'arrival' => $arrivalTs,
-                'target' => ['x' => (int)$move['target_x'], 'y' => (int)$move['target_y']]
-            ];
-            $summary =& $villages[$villagesById[$sourceId]]['movement_summary'];
-            if ($move['attack_type'] === 'support') {
-                $summary['support']++;
-            } else {
-                $summary['outgoing']++;
+            if (isset($villagesById[$sourceId])) {
+                $villages[$villagesById[$sourceId]]['movements'][] = [
+                    'attack_id' => (int)$move['id'],
+                    'type' => $move['attack_type'] === 'support' ? 'support' : 'attack',
+                    'arrival' => $arrivalTs,
+                    'target' => ['x' => (int)$move['target_x'], 'y' => (int)$move['target_y']]
+                ];
+                addMovementBatch(
+                    $movementBatches,
+                    $movementBatchAttackMap,
+                    (int)$move['id'],
+                    $sourceId,
+                    $move['attack_type'] === 'support' ? 'support_out' : 'outgoing',
+                    $arrivalTs,
+                    ['coord' => ['x' => (int)$move['target_x'], 'y' => (int)$move['target_y']]]
+                );
+                $summary =& $villages[$villagesById[$sourceId]]['movement_summary'];
+                if ($move['attack_type'] === 'support') {
+                    $summary['support']++;
+                } else {
+                    $summary['outgoing']++;
+                }
+                if ($summary['earliest'] === null || $arrivalTs < $summary['earliest']) {
+                    $summary['earliest'] = $arrivalTs;
+                }
             }
-            if ($summary['earliest'] === null || $arrivalTs < $summary['earliest']) {
-                $summary['earliest'] = $arrivalTs;
-            }
-        }
 
-        if (isset($villagesById[$targetId])) {
-            $villages[$villagesById[$targetId]]['movements'][] = [
-                'attack_id' => (int)$move['id'],
-                'type' => $move['attack_type'] === 'support' ? 'support_in' : 'incoming',
-                'arrival' => $arrivalTs,
-                'source' => ['x' => (int)$move['source_x'], 'y' => (int)$move['source_y']]
-            ];
-            $summary =& $villages[$villagesById[$targetId]]['movement_summary'];
-            if ($move['attack_type'] === 'support') {
-                $summary['support']++;
-            } else {
-                $summary['incoming']++;
-            }
-            if ($summary['earliest'] === null || $arrivalTs < $summary['earliest']) {
-                $summary['earliest'] = $arrivalTs;
+            if (isset($villagesById[$targetId])) {
+                $villages[$villagesById[$targetId]]['movements'][] = [
+                    'attack_id' => (int)$move['id'],
+                    'type' => $move['attack_type'] === 'support' ? 'support_in' : 'incoming',
+                    'arrival' => $arrivalTs,
+                    'source' => ['x' => (int)$move['source_x'], 'y' => (int)$move['source_y']]
+                ];
+                addMovementBatch(
+                    $movementBatches,
+                    $movementBatchAttackMap,
+                    (int)$move['id'],
+                    $targetId,
+                    $move['attack_type'] === 'support' ? 'support_in' : 'incoming',
+                    $arrivalTs,
+                    ['coord' => ['x' => (int)$move['source_x'], 'y' => (int)$move['source_y']]]
+                );
+                $summary =& $villages[$villagesById[$targetId]]['movement_summary'];
+                if ($move['attack_type'] === 'support') {
+                    $summary['support']++;
+                } else {
+                    $summary['incoming']++;
+                }
+                if ($summary['earliest'] === null || $arrivalTs < $summary['earliest']) {
+                    $summary['earliest'] = $arrivalTs;
+                }
             }
         }
+        $movementsStmt->close();
     }
-    $movementsStmt->close();
-}
 }
 
 // Flag movements that carry nobles
