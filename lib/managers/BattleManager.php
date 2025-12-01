@@ -1492,6 +1492,11 @@ class BattleManager
         $attackPowerFinal = $this->sumPower($attacking_units, 'attack') * $morale * $attack_random;
         $defensePowerFinal = $this->sumPower($defending_units, 'defense') * $defense_multiplier;
 
+        $mantletReductionApplied = 0.0;
+        foreach ($phaseReports as $phaseReport) {
+            $mantletReductionApplied = max($mantletReductionApplied, (float)($phaseReport['mantlet_reduction'] ?? 0));
+        }
+
         $attacker_win = $attackerAlive && (($defenderAlive === 0) || $attackPowerFinal >= $defensePowerFinal);
         if (!$attacker_win) {
             foreach ($attacking_units as &$unit) {
@@ -1924,7 +1929,11 @@ class BattleManager
                         'weather_attack_multiplier' => $this->getEnvMultiplier('weather_attack_multiplier'),
                         'weather_defense_multiplier' => $this->getEnvMultiplier('weather_defense_multiplier'),
                     ],
-                    'overstack' => $overstack
+                    'overstack' => $overstack,
+                    'mantlet' => [
+                        'applied' => $mantletReductionApplied > 0,
+                        'reduction_percent' => $mantletReductionApplied > 0 ? round($mantletReductionApplied * 100, 1) : 0
+                    ]
                 ],
                 'attack_power' => $attackPowerFinal,
                 'defense_power' => $defensePowerFinal,
@@ -3414,7 +3423,8 @@ class BattleManager
                 'attacker_loss_factor' => 0,
                 'defender_loss_factor' => 0,
                 'attacker_losses' => [],
-                'defender_losses' => []
+                'defender_losses' => [],
+                'mantlet_reduction' => 0
             ];
         }
 

@@ -609,4 +609,19 @@ class BuildingQueueManager
         $stmt->close();
         return $processed;
     }
+
+    /**
+     * Append queue event to audit log.
+     */
+    private function logQueueEvent(string $type, array $payload): void
+    {
+        $payload['type'] = $type;
+        $payload['ts'] = $payload['ts'] ?? time();
+        $payload['date'] = date('c', $payload['ts']);
+        $line = json_encode($payload);
+        if ($line === false) {
+            return;
+        }
+        @file_put_contents($this->logFile, $line . PHP_EOL, FILE_APPEND);
+    }
 }

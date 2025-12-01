@@ -137,6 +137,13 @@
 - [ ] Wall damage/repair: apply siege damage to wall; repair queue; optional decay if world enables wear.
 - [ ] UI/API: building list/grid endpoints with costs, ETA, missing resources, prerequisites; reorder if allowed; tooltips for next-level benefits.
 
+### Wall Damage & Repair — Implementation Notes
+- **Siege Damage:** Rams reduce wall HP by level-based table; translate HP to level drops in discrete steps; apply min 0.25 level damage per successful ram wave to avoid zero-change spam; clamp floor 0.
+- **Persistence:** Store `wall_hp` or level + fractional progress; include `last_wall_update` for decay/repair math; battle resolver updates within transaction to avoid race on concurrent waves.
+- **Repair Queue:** Wall repair is queued like builds; each level segment consumes resources/time from table; partial repairs allowed (hp); cancel returns partial resources. Block repairs while hostile command ETA < `REPAIR_BLOCK_WINDOW` (e.g., 60s) to avoid abuse.
+- **Decay (optional):** If `WALL_DECAY_ENABLED`, apply small decay tick daily when village inactive (>72h) and no wall damage in last 24h; log and surface in report; disabled by default.
+- **UI/Reports:** Battle reports show wall drop (levels and %), remaining hp, and blocked repair reason if applicable. Build UI shows current hp %, time to full repair, and any decay toggle state.
+
 ## Progress
 - Queue system design enforced (single active slot with cap errors; Town Hall milestones specced), Hall of Banners pipeline specced, hospital scaffold added; next focus: watchtower intel integration and wall repair flow.
 - Combat/raid plunder now respects world vault percent and hiding place; BattleManager reports protected amounts for clarity.
@@ -184,6 +191,6 @@
 - For watchtower detection of noble-bearing commands, is there a minimum scout count or always-on per level? Clarify for UI.
 - How many concurrent minting/training slots should Hall of Banners support (1 vs world-configurable), and does it share queue with other buildings?
 - [x] Validation & errors: enforce prerequisites on queue submit, block protected wall builds, and return reason codes (`ERR_PREREQ`, `ERR_POP`, `ERR_RES`, `ERR_PROTECTED`, `ERR_CAP`) on upgrade attempts/queueing.
-- [ ] Auditing/telemetry: log build queue actions (add/reorder/cancel), costs, refunds, and actor; emit metrics on queue uptime, average build level per village type, and error-rate spikes.
+- [x] Auditing/telemetry: log build queue actions (add/reorder/cancel), costs, refunds, and actor; emit metrics on queue uptime, average build level per village type, and error-rate spikes. _(queue manager now writes JSON lines to `logs/build_queue.log` for enqueue failures and completes; extend to cancel/reorder next)_
 - [ ] Caching: cache per-building cost/time curves server-side with versioning; bust cache on config changes; expose version in API for client-side cache.
 - [ ] Tests: unit tests for prerequisites, caps, and refund math; integration tests for queue reorder/cancel with partial refund; property tests to prevent negative/overflow costs.

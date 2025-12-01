@@ -171,7 +171,7 @@ Status markers:
 - [ ] Add unlock requirements per unit (building levels, research nodes, world flags); gate seasonal/event units behind time windows and caps.
 - [ ] Enforce caps: per-village siege cap, per-account elite/event cap, and conquest unit limits; expose errors in recruit UI.
 - [ ] Support units: implement Banner Guard aura (def/resolve buff) and War Healer wounded recovery post-battle (if enabled).
-- [ ] Mantlet effect: reduce ranged damage taken by escorted siege; integrate into combat resolver efficiently.
+- [x] Mantlet effect: reduce ranged damage taken by escorted siege; integrate into combat resolver efficiently. _(mantlets now reduce ranged defense in resolver; battle reports surface mantlet reduction flag/percent in modifiers)_
 - [ ] Seasonal/event unit lifecycle: spawn/expiry dates, sunset handling (auto-convert to resources or disable training), no permanent power creep.
 - [ ] Data audit: battle reports include unit-specific modifiers (aura, mantlet, healer applied) for clarity.
 - [x] Aura/stacking rules: define Banner Guard stacking (cap/overwrite) and Healer recovery caps per battle to prevent runaway buffs; encode in resolver and docs. _(stacking spec below)_
@@ -203,6 +203,7 @@ Status markers:
 - Log usage of Banner aura, Healer recovery, and mantlet effects in combat; monitor frequency and impact for balance tuning.
 - Monitor seasonal/event unit lifecycle events (spawn/expiry, conversions) and gate blocks on hardcore worlds.
 - Dashboards per world showing unit mix, cap-hit rates, and support effect usage to spot balance drift.
+- Alerting: triggers on sudden cap-hit spikes, disabled-unit training attempts, or aura/healer usage skewed heavily to one archetype; include links to recent combat samples for review.
 
 ### Aura & Healer Stacking Spec
 - **Banner Guard Aura:** Does not stack additively. Use highest-level aura in a battle (based on Banner Guard tier/upgrade). Additional Banner Guards beyond first grant no extra buff but still fight normally. Aura applies to defender only; attacker aura applies to attacker side if world enables offensive banners.

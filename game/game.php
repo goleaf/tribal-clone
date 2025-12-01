@@ -183,24 +183,35 @@ require '../header.php';
                 <span class="badge">Storage <?= formatNumber($storage_capacity) ?></span>
                 <span class="badge"><?= ($current_hour >= $day_start_hour && $current_hour < $night_start_hour) ? 'Day cycle' : 'Night cycle' ?> · Server <?= date('H:i') ?></span>
             </div>
+            <?php if (!empty($nudges)): ?>
+                <div class="nudge-deck">
+                    <?php foreach ($nudges as $nudge): ?>
+                        <div class="nudge-card <?= htmlspecialchars($nudge['severity']) ?>" data-nudge-code="<?= htmlspecialchars($nudge['code']) ?>">
+                            <div class="nudge-main">
+                                <span class="nudge-code"><?= htmlspecialchars(strtoupper($nudge['code'])) ?></span>
+                                <p><?= htmlspecialchars($nudge['message']) ?></p>
+                            </div>
+                            <?php if (!empty($nudge['action'])): ?>
+                                <?php if ($nudge['action']['type'] === 'building'): ?>
+                                    <button
+                                        class="action-chip building-action-button"
+                                        data-building-internal-name="<?= htmlspecialchars($nudge['action']['internal']) ?>"
+                                        data-village-id="<?= $village_id ?>"
+                                        data-building-name="<?= htmlspecialchars($nudge['action']['name'], ENT_QUOTES) ?>"
+                                        data-building-level="<?= (int)$nudge['action']['level'] ?>"
+                                        data-building-description="<?= htmlspecialchars($nudge['action']['description'], ENT_QUOTES) ?>"
+                                    ><?= htmlspecialchars($nudge['action']['label']) ?></button>
+                                <?php elseif ($nudge['action']['type'] === 'link'): ?>
+                                    <a class="action-chip" href="<?= htmlspecialchars($nudge['action']['href']) ?>"><?= htmlspecialchars($nudge['action']['label']) ?></a>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
             <?php if (!empty($message)): ?>
                 <div class="game-message accent">
                     <?= $message ?>
-                </div>
-            <?php endif; ?>
-            <?php if (!empty($nearCapResources)): ?>
-                <div class="game-message warning">
-                    <?= implode(', ', array_map('htmlspecialchars', $nearCapResources)) ?> near storage cap — spend or trade to avoid overflow.
-                </div>
-            <?php endif; ?>
-            <?php if ($build_queue_count === 0): ?>
-                <div class="game-message info">
-                    Build queue is idle — start an upgrade to keep growing.
-                </div>
-            <?php endif; ?>
-            <?php if ($recruit_queue_count === 0 && ($buildings_data['barracks']['level'] ?? 0) > 0): ?>
-                <div class="game-message info">
-                    Recruitment queue is empty — train troops to avoid idle time.
                 </div>
             <?php endif; ?>
             <?php if ($showDominanceBanner && isset($dominanceSnapshot['top'])): ?>
