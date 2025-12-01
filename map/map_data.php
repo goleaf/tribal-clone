@@ -24,9 +24,28 @@ $minY = $centerY - $radius;
 $maxY = $centerY + $radius;
 $worldId = CURRENT_WORLD_ID;
 
+function isUnderBeginnerProtection(array $userRow): bool
+{
+    $maxDays = defined('NEWBIE_PROTECTION_DAYS_MAX') ? NEWBIE_PROTECTION_DAYS_MAX : 7;
+    $pointsCap = defined('NEWBIE_PROTECTION_POINTS_CAP') ? NEWBIE_PROTECTION_POINTS_CAP : 200;
+
+    if (isset($userRow['is_protected']) && (int)$userRow['is_protected'] === 0) {
+        return false;
+    }
+    if (($userRow['points'] ?? 0) > $pointsCap) {
+        return false;
+    }
+    if (empty($userRow['created_at'])) {
+        return false;
+    }
+    $createdAt = new DateTimeImmutable($userRow['created_at']);
+    $days = (int)$createdAt->diff(new DateTimeImmutable('now'))->format('%a');
+    return $days < $maxDays;
+}
+
 // Fetch villages with owner info inside the viewport
 $stmt = $conn->prepare("
-    SELECT v.id, v.x_coord, v.y_coord, v.name, v.user_id, v.points, u.username, u.ally_id
+    SELECT v.id, v.x_coord, v.y_coord, v.name, v.user_id, v.points, u.username, u.ally_id, u.is_protected, u.created_at
     FROM villages v
     LEFT JOIN users u ON v.user_id = u.id
     WHERE v.world_id = ? 
@@ -51,6 +70,15 @@ while ($row = $result->fetch_assoc()) {
     $ownerType = ($villageOwnerId === null || $villageOwnerId === -1) ? 'barbarian' : 'player';
     $isOwn = $villageOwnerId === $user_id;
 
+    $userRow = [
+        'id' => $villageOwnerId,
+        'username' => $row['username'] ?? null,
+        'points' => (int)$row['points'],
+        'ally_id' => $row['ally_id'] ?? null,
+        'is_protected' => isset($row['is_protected']) ? (int)$row['is_protected'] : 0,
+        'created_at' => $row['created_at'] ?? null,
+    ];
+
     $villages[] = [
         'id' => (int)$row['id'],
         'x' => (int)$row['x_coord'],
@@ -62,6 +90,7 @@ while ($row = $result->fetch_assoc()) {
         'points' => (int)$row['points'],
         'type' => $ownerType,
         'is_own' => $isOwn,
+        'is_protected' => $villageOwnerId > 0 ? isUnderBeginnerProtection($userRow) : false,
         'continent' => getContinent((int)$row['x_coord'], (int)$row['y_coord']),
         // Reserved and movement flags can be filled once those systems exist.
         'reserved_by' => null,
@@ -70,12 +99,9 @@ while ($row = $result->fetch_assoc()) {
     ];
 
     if ($villageOwnerId && !isset($players[$villageOwnerId])) {
-        $players[$villageOwnerId] = [
-            'id' => $villageOwnerId,
-            'username' => $row['username'],
-            'points' => (int)$row['points'],
-            'ally_id' => $row['ally_id'] ?? null
-        ];
+        $players[$villageOwnerId] = array_merge($userRow, [
+            'protected' => $villageOwnerId > 0 ? isUnderBeginnerProtection($userRow) : false
+        ]);
     }
 }
 $stmt->close();

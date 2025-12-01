@@ -22,5 +22,6 @@ CREATE TABLE IF NOT EXISTS `unit_types` (
   `required_building_level` INT(11) DEFAULT 0, -- required building level
   `training_time_base` INT(11) DEFAULT 0 COMMENT 'Recruitment time in seconds',
   `is_active` TINYINT(1) DEFAULT 1, -- Whether the unit is active
+  `points` INT(11) DEFAULT 1,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
