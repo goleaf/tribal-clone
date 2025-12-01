@@ -286,14 +286,40 @@ document.addEventListener('DOMContentLoaded', () => {
         return html;
     }
 
+    function renderSummaryChips(report) {
+        const chips = [];
+        const details = report.details || {};
+        if (details.morale !== undefined) {
+            chips.push(`<span class="chip">Morale: ${(details.morale * 100).toFixed(0)}%</span>`);
+        }
+        if (details.attack_luck !== undefined) {
+            const pct = ((details.attack_luck - 1) * 100).toFixed(0);
+            chips.push(`<span class="chip">Luck: ${pct > 0 ? '+' : ''}${pct}%</span>`);
+        }
+        if (details.wall_level !== undefined) {
+            const eff = details.effective_wall_level ?? details.wall_level;
+            chips.push(`<span class="chip">Wall: ${details.wall_level} → ${eff}</span>`);
+        }
+        if (details.loyalty && details.loyalty.drop) {
+            chips.push(`<span class="chip">Loyalty: ${details.loyalty.before} → ${details.loyalty.after}</span>`);
+        }
+        return chips.length ? `<div class="report-chips">${chips.join('')}</div>` : '';
+    }
+
     function renderReportDetails(reportData) {
         const report = reportData.report;
         const details = report.details || {};
         const type = report.type || report.attack_type || details.type || 'battle';
         let detailsHtml = `
             <div class="report-details-content">
-                <h3>${type === 'spy' ? 'Spy report' : 'Battle report'} #${report.id}</h3>
-                <p class="battle-village">${escapeHTML(report.attacker_name)} (${escapeHTML(report.source_village_name)} ${report.source_x}|${report.source_y}) → ${escapeHTML(report.defender_name)} (${escapeHTML(report.target_village_name)} ${report.target_x}|${report.target_y})</p>
+                <div class="report-header">
+                    <div>
+                        <h3>${type === 'spy' ? 'Spy report' : 'Battle report'} #${report.id}</h3>
+                        <p class="battle-village">${escapeHTML(report.attacker_name)} (${escapeHTML(report.source_village_name)} ${report.source_x}|${report.source_y}) → ${escapeHTML(report.defender_name)} (${escapeHTML(report.target_village_name)} ${report.target_x}|${report.target_y})</p>
+                        <p class="battle-time">Timestamp: ${formatDateTime(report.battle_time)}</p>
+                    </div>
+                </div>
+                ${renderSummaryChips(report)}
         `;
 
         if (type === 'spy') {
@@ -320,17 +346,63 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }
 
+            if (details.loyalty) {
+                const l = details.loyalty;
+                const change = l.drop ? ` (${l.drop > 0 ? '-' : ''}${l.drop})` : '';
+                const conquered = l.conquered ? '<strong>Village conquered!</strong>' : '';
+                detailsHtml += `
+                    <div class="battle-loyalty">
+                        <h4>Loyalty</h4>
+                        <p>Before: ${l.before ?? '?'} → After: ${l.after ?? '?'}${change} ${conquered}</p>
+                    </div>
+                `;
+            }
+
+            if (details.building_damage) {
+                const b = details.building_damage;
+                detailsHtml += `
+                    <div class="battle-building">
+                        <h4>Building damage</h4>
+                        <p>${escapeHTML(b.building_name || 'Target')}: ${b.initial_level ?? '?'} → ${b.final_level ?? '?'}</p>
+                    </div>
+                `;
+            }
+
+            if (details.wall_damage) {
+                const w = details.wall_damage;
+                detailsHtml += `
+                    <div class="battle-wall">
+                        <h4>Wall damage</h4>
+                        <p>Wall: ${w.initial_level ?? '?'} → ${w.final_level ?? '?'}</p>
+                    </div>
+                `;
+            }
+
             detailsHtml += `</div>`;
         }
 
         detailsHtml += `
-                <div class="report-footer">
-                    Battle time: ${formatDateTime(report.battle_time)}
+                <div class="report-actions">
+                    <button class="btn-secondary copy-link" data-link="reports.php?report_id=${report.id}">Copy share link</button>
+                    <button class="btn-secondary share-tribe" disabled title="Tribe sharing coming soon">Share with tribe</button>
+                    <button class="btn-secondary forward-report" disabled title="Forwarding to players coming soon">Forward to player</button>
                 </div>
             </div>
         `;
 
         reportDetailsArea.innerHTML = detailsHtml;
+
+        // Wire copy action
+        const copyBtn = reportDetailsArea.querySelector('.copy-link');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                const link = copyBtn.dataset.link;
+                navigator.clipboard.writeText(window.location.origin + '/' + link).then(() => {
+                    copyBtn.textContent = 'Link copied';
+                    setTimeout(() => copyBtn.textContent = 'Copy share link', 1500);
+                }).catch(() => alert('Could not copy link'));
+            });
+        }
     }
 
     function loadReportDetails(reportId) {
