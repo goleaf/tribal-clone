@@ -52,3 +52,8 @@ echo json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL;
 if (!$report['meets_minimum']) {
     exit(1);
 }
+
+$missing = array_keys(array_filter($report['extensions'], fn ($loaded) => !$loaded));
+if (!empty($missing)) {
+    exit(2);
+}

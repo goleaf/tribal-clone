@@ -35,3 +35,15 @@ export function once(target, eventName, handler, options = {}) {
     };
     target.addEventListener(eventName, wrapped, options);
 }
+
+/**
+ * Fetch wrapper that always sets no-cache headers by default.
+ */
+export async function fetchNoCache(url, init = {}) {
+    const headers = new Headers(init.headers || {});
+    headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    headers.set('Pragma', 'no-cache');
+    headers.set('Expires', '0');
+    const response = await fetch(url, { ...init, headers });
+    return response;
+}
