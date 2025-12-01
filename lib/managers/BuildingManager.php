@@ -113,6 +113,137 @@ class BuildingManager {
     }
     
     /**
+     * Validate and prepare a demolition (downgrade) of a building by 1 level.
+     * Returns refund, duration, and target level.
+     */
+    public function canDemolishBuilding(int $villageId, string $internalName): array
+    {
+        $currentLevel = $this->getBuildingLevel($villageId, $internalName);
+        if ($currentLevel <= 0) {
+            return ['success' => false, 'message' => 'Building is already at level 0.'];
+        }
+
+        $newLevel = $currentLevel - 1;
+
+        // Do not break prerequisites for other buildings
+        $stmt = $this->conn->prepare("
+            SELECT bt.internal_name AS dependent_internal_name, br.required_level, vb.level
+            FROM building_requirements br
+            JOIN building_types bt ON br.building_type_id = bt.id
+            JOIN village_buildings vb ON vb.building_type_id = bt.id AND vb.village_id = ?
+            WHERE br.required_building = ? AND vb.level > 0 AND br.required_level > ?
+        ");
+        if ($stmt === false) {
+            error_log("Prepare failed for canDemolishBuilding: " . $this->conn->error);
+            return ['success' => false, 'message' => 'Server error while checking prerequisites.'];
+        }
+        $stmt->bind_param("isi", $villageId, $internalName, $newLevel);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $blocking = $result ? $result->fetch_assoc() : null;
+        $stmt->close();
+
+        if ($blocking) {
+            return [
+                'success' => false,
+                'message' => "Cannot demolish below level {$blocking['required_level']} because {$blocking['dependent_internal_name']} depends on it."
+            ];
+        }
+
+        $upgradeCost = $this->buildingConfigManager->calculateUpgradeCost($internalName, $newLevel);
+        if (!$upgradeCost) {
+            return ['success' => false, 'message' => 'Unable to calculate demolition refund.'];
+        }
+        $refund = [
+            'wood' => (int)floor($upgradeCost['wood'] * 0.9),
+            'clay' => (int)floor($upgradeCost['clay'] * 0.9),
+            'iron' => (int)floor($upgradeCost['iron'] * 0.9),
+        ];
+
+        $mainBuildingLevel = $this->getBuildingLevel($villageId, 'main_building');
+        $duration = $this->buildingConfigManager->calculateUpgradeTime($internalName, $newLevel, $mainBuildingLevel);
+
+        return [
+            'success' => true,
+            'message' => 'Demolition possible.',
+            'target_level' => $newLevel,
+            'duration_seconds' => $duration,
+            'refund' => $refund
+        ];
+    }
+
+    /**
+     * Queue a demolition task that downgrades a building by 1 level and refunds 90% of the last level cost.
+     */
+    public function queueDemolition(int $villageId, string $internalName): array
+    {
+        $check = $this->canDemolishBuilding($villageId, $internalName);
+        if (!$check['success']) {
+            return $check;
+        }
+
+        // Block if another build/demolition is in progress
+        $stmt_queue = $this->conn->prepare("SELECT COUNT(*) as count FROM building_queue WHERE village_id = ?");
+        if ($stmt_queue === false) {
+            error_log("Prepare failed for queue check (demolition): " . $this->conn->error);
+            return ['success' => false, 'message' => 'Server error while checking the queue.'];
+        }
+        $stmt_queue->bind_param("i", $villageId);
+        $stmt_queue->execute();
+        $queue_result = $stmt_queue->get_result()->fetch_assoc();
+        $stmt_queue->close();
+        if ($queue_result && (int)$queue_result['count'] > 0) {
+            return ['success' => false, 'message' => 'Another construction task is already in progress.'];
+        }
+
+        $building = $this->getVillageBuilding($villageId, $internalName);
+        if (!$building) {
+            return ['success' => false, 'message' => 'Building not found in this village.'];
+        }
+
+        $finish_time = date('Y-m-d H:i:s', time() + ($check['duration_seconds'] ?? 0));
+
+        $stmt_queue_add = $this->conn->prepare("
+            INSERT INTO building_queue (
+                village_id, village_building_id, building_type_id, level, starts_at, finish_time,
+                is_demolition, refund_wood, refund_clay, refund_iron
+            ) VALUES (?, ?, ?, ?, NOW(), ?, 1, ?, ?, ?)
+        ");
+
+        if ($stmt_queue_add === false) {
+            return ['success' => false, 'message' => 'Database error while queuing demolition.'];
+        }
+
+        $targetLevel = (int)$check['target_level'];
+        $refund = $check['refund'];
+        $stmt_queue_add->bind_param(
+            "iiiisiii",
+            $villageId,
+            $building['village_building_id'],
+            $building['building_type_id'],
+            $targetLevel,
+            $finish_time,
+            $refund['wood'],
+            $refund['clay'],
+            $refund['iron']
+        );
+
+        if (!$stmt_queue_add->execute()) {
+            $stmt_queue_add->close();
+            return ['success' => false, 'message' => 'Failed to queue demolition.'];
+        }
+        $stmt_queue_add->close();
+
+        return [
+            'success' => true,
+            'message' => 'Demolition started.',
+            'target_level' => $targetLevel,
+            'finish_time' => strtotime($finish_time),
+            'refund' => $refund
+        ];
+    }
+    
+    /**
      * Checks whether requirements for other buildings are met to upgrade this building.
      * Inspired by the legacy builds::check_needed method.
      */

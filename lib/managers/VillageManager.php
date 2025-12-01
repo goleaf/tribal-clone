@@ -246,6 +246,11 @@ class VillageManager
 
         // 6. Attack processing is handled in BattleManager (see game.php usage).
 
+        // 7. Refresh points after any building/resource changes
+        require_once __DIR__ . '/PointsManager.php';
+        $pointsManager = new PointsManager($this->conn);
+        $pointsManager->updateVillagePoints($village_id, true);
+
         return $messages;
     }
 
@@ -427,9 +432,9 @@ class VillageManager
         }
         $this->updateVillagePopulation($village_id);
         // Recalculate player points
-        if (method_exists($this, 'recalculatePlayerPoints')) {
-            $this->recalculatePlayerPoints($user_id);
-        }
+        require_once __DIR__ . '/PointsManager.php';
+        $pointsManager = new PointsManager($this->conn);
+        $pointsManager->updateVillagePoints((int)$village_id, true);
 
         // Evaluate starting achievements (e.g., first village, initial buildings)
         require_once __DIR__ . '/AchievementManager.php';
@@ -671,5 +676,25 @@ class VillageManager
         $stmt->close();
 
         return $item;
+    }
+
+    /**
+     * Convenience wrapper to recalculate points for a village and its owner.
+     */
+    public function recalculateVillagePoints(int $villageId): int
+    {
+        require_once __DIR__ . '/PointsManager.php';
+        $pointsManager = new PointsManager($this->conn);
+        return $pointsManager->updateVillagePoints($villageId, true);
+    }
+
+    /**
+     * Convenience wrapper to recalculate points for a player (and their tribe).
+     */
+    public function recalculatePlayerPoints(int $userId): int
+    {
+        require_once __DIR__ . '/PointsManager.php';
+        $pointsManager = new PointsManager($this->conn);
+        return $pointsManager->updatePlayerPoints($userId, true);
     }
 } 

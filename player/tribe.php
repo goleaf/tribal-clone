@@ -196,7 +196,7 @@ require '../header.php';
                                     <div style="font-size:12px;color:#8d5c2c;">Lvl <?= $skill['level'] ?>/<?= $skill['max_level'] ?></div>
                                 </div>
                                 <div style="font-size:12px;color:#5a3b1a;"><?= htmlspecialchars($skill['description'] ?? '') ?></div>
-                                <?php if (in_array($currentTribe['role'], ['leader','baron'], true)): ?>
+                                <?php if ($canManageRoles): ?>
                                     <form method="POST" action="tribe.php">
                                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                                         <input type="hidden" name="action" value="upgrade_skill">
@@ -223,7 +223,7 @@ require '../header.php';
                                 <th>Progress</th>
                                 <th>Reward</th>
                                 <th>Status</th>
-                                <?php if (in_array($currentTribe['role'], ['leader','baron'], true)): ?>
+                                <?php if ($canManageRoles): ?>
                                     <th>Action</th>
                                 <?php endif; ?>
                             </tr>
