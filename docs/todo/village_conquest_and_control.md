@@ -180,6 +180,7 @@
 - [ ] Reports display morale/luck, allegiance drop, regen applied, anti-snipe status, surviving SBs, and block reasons when applicable.
 - [ ] Handover UI: verify opt-in/opt-out flows, cooldowns to prevent abuse, and clear messaging when conquest blocked due to handover settings.
 - [x] Capture aftermath: post-capture start value applied, anti-snipe/grace honored, optional building-loss variant fires at configured odds, allied support handling obeys world flag, and reports show grace duration/fired building-loss if any. _(BattleManager conquest block applies post-capture floor/reset, respects capture cooldown immunity, blocks last-village, and reports reason codes for blocked captures)_
+- [ ] Control-meter worlds: test control gain/decay rates, uptime enforcement, and decay on defender dominance; ensure capture only after uptime holds and reports show control/uptime/decay states.
 
 ## Telemetry & Monitoring
 - Emit metrics for allegiance drops applied/blocked (reason codes), capture success rate, average drops per wave, anti-snipe floor hits, and handover blocks.

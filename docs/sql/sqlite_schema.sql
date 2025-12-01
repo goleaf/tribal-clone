@@ -694,3 +694,7 @@ ALTER TABLE worlds ADD COLUMN map_batching_enabled INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE worlds ADD COLUMN map_clustering_enabled INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE worlds ADD COLUMN map_delta_enabled INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE worlds ADD COLUMN map_fallback_enabled INTEGER NOT NULL DEFAULT 0;
+
+-- Wall decay tracking
+
+ALTER TABLE villages ADD COLUMN last_wall_decay_at TEXT DEFAULT NULL;

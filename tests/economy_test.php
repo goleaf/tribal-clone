@@ -16,6 +16,15 @@ if (!defined('TRADE_MIN_RATIO')) {
 if (!defined('TRADE_MAX_RATIO')) {
     define('TRADE_MAX_RATIO', 10.0);
 }
+if (!defined('TRADE_ACTIVE_ROUTE_SOFT_LIMIT')) {
+    define('TRADE_ACTIVE_ROUTE_SOFT_LIMIT', 1);
+}
+if (!defined('TRADE_OPEN_OFFERS_SOFT_LIMIT')) {
+    define('TRADE_OPEN_OFFERS_SOFT_LIMIT', 1);
+}
+if (!defined('TRADE_LOADCHECK_TTL_SEC')) {
+    define('TRADE_LOADCHECK_TTL_SEC', 0);
+}
 
 require_once __DIR__ . '/../lib/Database.php';
 require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php';
