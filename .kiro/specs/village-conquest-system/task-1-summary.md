@@ -146,12 +146,24 @@ All migrations ran successfully:
 Database verification:
 ```bash
 ✓ conquest_attempts table exists with all columns
-✓ villages table has all allegiance/control columns
-✓ All performance indexes created
-✓ hall_of_banners building type exists
-✓ envoy unit type exists
+✓ villages table has 5 allegiance/control columns
+✓ 13 performance indexes created
+✓ hall_of_banners building type exists (max level 20)
+✓ envoy unit type exists (population 100)
 ✓ conquest_training research exists
-✓ units.json is valid JSON
+✓ units.json is valid JSON with 19 units total
+✓ 3 conquest units: Noble, Standard Bearer, Envoy
+```
+
+Final comprehensive verification passed:
+```
+1. Database Tables: ✓ All required tables exist
+2. Villages Columns: ✓ All 5 conquest columns present
+3. Performance Indexes: ✓ 13 indexes created
+4. Hall of Banners: ✓ Building type added
+5. Envoy Unit: ✓ Unit type added to database
+6. Conquest Research: ✓ Research node added
+7. Units.json Envoy: ✓ Envoy exists in JSON configuration
 ```
 
 ## Requirements Satisfied
