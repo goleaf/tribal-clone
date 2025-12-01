@@ -176,6 +176,8 @@ CREATE TABLE IF NOT EXISTS unit_types (
     building_type TEXT NOT NULL,
     attack INTEGER NOT NULL DEFAULT 0,
     defense INTEGER NOT NULL DEFAULT 0,
+    defense_cavalry INTEGER NOT NULL DEFAULT 0,
+    defense_archer INTEGER NOT NULL DEFAULT 0,
     speed INTEGER NOT NULL DEFAULT 0,
     carry_capacity INTEGER NOT NULL DEFAULT 0,
     population INTEGER NOT NULL DEFAULT 1,
@@ -502,17 +504,26 @@ INSERT INTO building_requirements (building_type_id, required_building, required
 ((SELECT id FROM building_types WHERE internal_name = 'church'), 'main_building', 5),
 ((SELECT id FROM building_types WHERE internal_name = 'first_church'), 'main_building', 2);
 
-INSERT INTO unit_types (internal_name, name, description, building_type, attack, defense, speed, carry_capacity, population, cost_wood, cost_clay, cost_iron, required_tech, required_tech_level, required_building_level, training_time_base, is_active, points) VALUES
-('spear', 'Spearman', 'Basic infantry, strong against cavalry.', 'barracks', 10, 15, 18, 25, 1, 50, 30, 10, NULL, 0, 1, 900, 1, 1),
-('sword', 'Swordsman', 'Stronger infantry, good versus other infantry.', 'barracks', 25, 50, 22, 15, 1, 30, 30, 70, NULL, 0, 1, 1300, 1, 1),
-('axe', 'Axeman', 'Strong infantry attacker.', 'barracks', 40, 10, 18, 10, 1, 60, 30, 40, NULL, 0, 2, 1000, 1, 2),
-('archer', 'Archer', 'Ranged infantry for attack and defense.', 'barracks', 15, 50, 18, 10, 1, 100, 30, 60, 'improved_axe', 1, 5, 1800, 1, 2),
-('spy', 'Scout', 'Fast cavalry scout.', 'stable', 0, 2, 9, 0, 2, 50, 50, 20, NULL, 0, 1, 900, 1, 2),
-('light', 'Light Cavalry', 'Fast attacking cavalry.', 'stable', 130, 30, 10, 80, 4, 125, 100, 250, NULL, 0, 3, 1800, 1, 4),
-('heavy', 'Heavy Cavalry', 'Strong cavalry for attack and defense.', 'stable', 150, 200, 11, 50, 6, 200, 150, 600, 'improved_sword', 2, 10, 3600, 1, 6),
-('marcher', 'Mounted Archer', 'Ranged cavalry unit.', 'stable', 120, 40, 10, 50, 5, 250, 100, 150, 'horseshoe', 1, 5, 2400, 1, 5),
-('ram', 'Ram', 'Siege unit for breaking walls.', 'garage', 2, 20, 30, 0, 5, 300, 200, 100, NULL, 0, 1, 4800, 1, 5),
-('catapult', 'Catapult', 'Siege unit for destroying buildings.', 'garage', 100, 100, 30, 0, 8, 320, 400, 100, 'improved_catapult', 1, 2, 7200, 1, 8);
+INSERT INTO unit_types (
+    internal_name, name, description, building_type,
+    attack, defense, defense_cavalry, defense_archer,
+    speed, carry_capacity, population,
+    cost_wood, cost_clay, cost_iron,
+    required_tech, required_tech_level, required_building_level,
+    training_time_base, is_active, points
+) VALUES
+('spear', 'Spearman', 'Basic infantry, strong against cavalry.', 'barracks', 10, 15, 45, 20, 14, 25, 1, 50, 30, 10, NULL, 0, 1, 90, 1, 1),
+('sword', 'Swordsman', 'Stronger infantry, solid versus other infantry.', 'barracks', 25, 50, 40, 30, 14, 15, 1, 30, 30, 70, NULL, 0, 1, 110, 1, 1),
+('axe', 'Axeman', 'Powerful infantry attacker.', 'barracks', 40, 10, 5, 10, 14, 10, 1, 60, 30, 40, NULL, 0, 2, 95, 1, 2),
+('archer', 'Archer', 'Ranged infantry for attack and defense.', 'barracks', 15, 50, 40, 5, 18, 10, 1, 100, 30, 60, 'improved_axe', 1, 5, 1800, 1, 2),
+('spy', 'Scout', 'Fast cavalry scout.', 'stable', 0, 2, 2, 2, 9, 0, 2, 50, 50, 20, NULL, 0, 1, 900, 1, 2),
+('light', 'Light Cavalry', 'Fast attacking cavalry.', 'stable', 130, 30, 40, 30, 9, 80, 4, 125, 100, 250, NULL, 0, 1, 400, 1, 4),
+('heavy', 'Heavy Cavalry', 'Powerful cavalry for attack and defense.', 'stable', 150, 200, 150, 120, 11, 50, 6, 200, 150, 600, 'improved_sword', 2, 3, 900, 1, 6),
+('marcher', 'Mounted Archer', 'Ranged cavalry unit.', 'stable', 120, 50, 40, 150, 10, 50, 5, 250, 100, 150, 'horseshoe', 1, 3, 700, 1, 5),
+('ram', 'Ram', 'Siege unit for breaking walls.', 'workshop', 2, 20, 50, 20, 30, 0, 5, 300, 200, 200, NULL, 0, 1, 600, 1, 5),
+('catapult', 'Catapult', 'Siege unit for destroying buildings.', 'workshop', 100, 100, 100, 100, 30, 0, 8, 320, 400, 100, 'improved_catapult', 1, 2, 900, 1, 8),
+('noble', 'Nobleman', 'Reduces loyalty and conquers villages.', 'academy', 30, 100, 50, 50, 35, 0, 100, 40000, 50000, 50000, NULL, 0, 1, 18000, 1, 80),
+('paladin', 'Paladin', 'Heroic leader that boosts armies.', 'statue', 150, 250, 200, 180, 10, 100, 20, 20000, 20000, 40000, NULL, 0, 1, 3600, 1, 10);
 
 INSERT INTO research_types (internal_name, name, description, building_type, required_building_level, cost_wood, cost_clay, cost_iron, research_time_base, research_time_factor, max_level, is_active, prerequisite_research_id, prerequisite_research_level) VALUES
 ('improved_axe', 'Improved Axe', 'Increases infantry attack by 10% per level.', 'smithy', 1, 180, 150, 220, 3600, 1.2, 3, 1, NULL, NULL),

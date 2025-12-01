@@ -1,5 +1,9 @@
 <?php
+declare(strict_types=1);
 
+/**
+ * Handles user-facing auth/session helpers.
+ */
 class UserManager
 {
     private $conn;
@@ -9,116 +13,85 @@ class UserManager
         $this->conn = $conn;
     }
 
-    /**
-     * Change a user's email address.
-     *
-     * @param int $user_id User ID.
-     * @param string $new_email New email address.
-     * @return array Operation result (success: bool, message: string).
-     */
-    public function changeEmail(int $user_id, string $new_email): array
+    public function register(string $username, string $email, string $password): array
     {
-        $new_email = trim($new_email);
-
-        if (empty($new_email) || !filter_var($new_email, FILTER_VALIDATE_EMAIL)) {
-            return ['success' => false, 'message' => 'Invalid email address.'];
+        $username = trim($username);
+        $email = trim($email);
+        if ($username === '' || $email === '' || $password === '') {
+            return ['success' => false, 'message' => 'All fields are required.'];
         }
 
-        // Check if email is already taken by another user
-        $stmt = $this->conn->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
-        if ($stmt === false) {
-             error_log("UserManager::changeEmail prepare select failed: " . $this->conn->error);
-             return ['success' => false, 'message' => 'A system error occurred (select).'];
+        // Check duplicates
+        $stmt = $this->conn->prepare("SELECT id FROM users WHERE username = ? OR email = ? LIMIT 1");
+        if (!$stmt) {
+            return ['success' => false, 'message' => 'Registration unavailable.'];
         }
-        $stmt->bind_param("si", $new_email, $user_id);
+        $stmt->bind_param("ss", $username, $email);
         $stmt->execute();
-        $stmt->store_result();
-
-        if ($stmt->num_rows > 0) {
-            $stmt->close();
-            return ['success' => false, 'message' => 'The provided email is already in use.'];
+        $exists = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if ($exists) {
+            return ['success' => false, 'message' => 'Username or email already taken.'];
         }
+
+        $hashed = password_hash($password, PASSWORD_DEFAULT);
+        $stmt = $this->conn->prepare("INSERT INTO users (username, email, password, created_at, last_activity_at) VALUES (?, ?, ?, NOW(), NOW())");
+        if (!$stmt) {
+            return ['success' => false, 'message' => 'Registration unavailable.'];
+        }
+        $stmt->bind_param("sss", $username, $email, $hashed);
+        $ok = $stmt->execute();
+        $userId = $stmt->insert_id;
         $stmt->close();
 
-        // Update the email
-        $stmt_update = $this->conn->prepare("UPDATE users SET email = ? WHERE id = ?");
-         if ($stmt_update === false) {
-             error_log("UserManager::changeEmail prepare update failed: " . $this->conn->error);
-             return ['success' => false, 'message' => 'A system error occurred (update).'];
-        }
-        $stmt_update->bind_param("si", $new_email, $user_id);
-
-        if ($stmt_update->execute()) {
-            $stmt_update->close();
-            return ['success' => true, 'message' => 'Email address has been updated.'];
-        } else {
-            error_log("UserManager::changeEmail execute update failed: " . $this->conn->error);
-            $stmt_update->close();
-            return ['success' => false, 'message' => 'An error occurred while updating the email.'];
-        }
+        return $ok ? ['success' => true, 'user_id' => $userId] : ['success' => false, 'message' => 'Could not create user.'];
     }
 
-    /**
-     * Change a user's password.
-     *
-     * @param int $user_id User ID.
-     * @param string $current_password Current password (plain).
-     * @param string $new_password New password (plain).
-     * @param string $confirm_password Confirmation of the new password (plain).
-     * @return array Operation result (success: bool, message: string).
-     */
-    public function changePassword(int $user_id, string $current_password, string $new_password, string $confirm_password): array
+    public function login(string $username, string $password): array
     {
-        if (empty($current_password) || empty($new_password) || empty($confirm_password)) {
-            return ['success' => false, 'message' => 'All password fields are required.'];
+        $stmt = $this->conn->prepare("SELECT id, password, is_banned FROM users WHERE username = ? LIMIT 1");
+        if (!$stmt) {
+            return ['success' => false, 'message' => 'Login unavailable.'];
         }
-
-        if ($new_password !== $confirm_password) {
-            return ['success' => false, 'message' => 'The new password and confirmation do not match.'];
-        }
-
-        // Verify current password
-        $stmt = $this->conn->prepare("SELECT password FROM users WHERE id = ?");
-         if ($stmt === false) {
-             error_log("UserManager::changePassword prepare select failed: " . $this->conn->error);
-             return ['success' => false, 'message' => 'A system error occurred (select).'];
-        }
-        $stmt->bind_param("i", $user_id);
+        $stmt->bind_param("s", $username);
         $stmt->execute();
-        $stmt->bind_result($hashed_password);
-
-        if (!$stmt->fetch()) {
-            $stmt->close();
-            // User not found, although protected by session check, good practice to handle
-             return ['success' => false, 'message' => 'User not found.'];
-        }
+        $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        if (!password_verify($current_password, $hashed_password)) {
-            return ['success' => false, 'message' => 'The current password is incorrect.'];
+        if (!$row) {
+            return ['success' => false, 'message' => 'Invalid credentials.'];
+        }
+        if ((int)$row['is_banned'] === 1) {
+            return ['success' => false, 'message' => 'Account is banned.'];
+        }
+        if (!password_verify($password, $row['password'])) {
+            return ['success' => false, 'message' => 'Invalid credentials.'];
         }
 
-        // Hash the new password and update
-        $new_hashed = password_hash($new_password, PASSWORD_DEFAULT);
-        $stmt_update = $this->conn->prepare("UPDATE users SET password = ? WHERE id = ?");
-         if ($stmt_update === false) {
-             error_log("UserManager::changePassword prepare update failed: " . $this->conn->error);
-             return ['success' => false, 'message' => 'A system error occurred (update).'];
-        }
-        $stmt_update->bind_param("si", $new_hashed, $user_id);
-
-        if ($stmt_update->execute()) {
-            $stmt_update->close();
-            return ['success' => true, 'message' => 'Password changed successfully.'];
-        } else {
-            error_log("UserManager::changePassword execute update failed: " . $this->conn->error);
-            $stmt_update->close();
-            return ['success' => false, 'message' => 'An error occurred while changing the password.'];
-        }
+        $this->touchLastActivity((int)$row['id']);
+        return ['success' => true, 'user_id' => (int)$row['id']];
     }
 
-    // Methods for user management will be added here
+    public function getUserById(int $userId): ?array
+    {
+        $stmt = $this->conn->prepare("SELECT id, username, email, is_admin, is_banned, ally_id, points FROM users WHERE id = ? LIMIT 1");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: null;
+    }
 
+    public function touchLastActivity(int $userId): void
+    {
+        if (!dbColumnExists($this->conn, 'users', 'last_activity_at')) {
+            return;
+        }
+        $stmt = $this->conn->prepare("UPDATE users SET last_activity_at = NOW() WHERE id = ?");
+        if ($stmt) {
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
 }
-
-?> 

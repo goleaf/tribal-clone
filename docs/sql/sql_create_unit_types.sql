@@ -9,12 +9,14 @@ CREATE TABLE IF NOT EXISTS `unit_types` (
   `building_type` VARCHAR(50) NULL, -- internal name of the required recruitment building (e.g. 'barracks', 'stable')
   `attack` INT(11) DEFAULT 0,
   `defense` INT(11) DEFAULT 0,
+  `defense_cavalry` INT(11) DEFAULT 0,
+  `defense_archer` INT(11) DEFAULT 0,
   `speed` INT(11) DEFAULT 0 COMMENT 'Speed in fields per hour',
   `carry_capacity` INT(11) DEFAULT 0 COMMENT 'Resource carry capacity',
   `population` INT(11) DEFAULT 1 COMMENT 'Population cost per unit',
-  `wood_cost` INT(11) DEFAULT 0,
-  `clay_cost` INT(11) DEFAULT 0,
-  `iron_cost` INT(11) DEFAULT 0,
+  `cost_wood` INT(11) DEFAULT 0,
+  `cost_clay` INT(11) DEFAULT 0,
+  `cost_iron` INT(11) DEFAULT 0,
   `required_tech` VARCHAR(50) NULL, -- internal name of required tech
   `required_tech_level` INT(11) DEFAULT 0, -- required tech level
   `required_building_level` INT(11) DEFAULT 0, -- required building level
