@@ -20,7 +20,7 @@ async function fetchAndRenderInfoPanel(villageId, buildingInternalName) {
 
     try {
         // Use the existing get_building_action.php endpoint
-        const response = await fetch(`get_building_action.php?village_id=${villageId}&building_type=${buildingInternalName}`);
+        const response = await fetch(`/buildings/get_building_action.php?village_id=${villageId}&building_type=${buildingInternalName}`);
         const data = await response.json();
 
         // This panel handles 'info' and 'info_production' action types

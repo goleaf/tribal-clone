@@ -351,6 +351,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // Tables to drop (reverse dependency order)
         $tables_to_drop = [
             'ai_logs',
+            'notifications',
+            'trade_offers',
+            'trade_routes',
             'battle_report_units',
             'battle_reports',
             'attack_units',
@@ -363,10 +366,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'unit_types',
             'building_queue',
             'village_buildings',
+            'building_requirements',
             'building_types',
             'messages',
             'reports',
+            'tribe_invitations',
+            'tribe_members',
             'villages',
+            'tribes',
+            'user_achievements',
+            'achievements',
             'users',
             'worlds'
         ];
@@ -397,6 +406,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     echo "<ul>";
     $sql_files = [
         'docs/sql/sql_create_users_table.sql',
+        'docs/sql/sql_create_tribes_tables.sql',
         'docs/sql/sql_create_worlds_table.sql',
         'docs/sql/sql_create_villages_table.sql',
         'docs/sql/sql_create_buildings_tables.sql',
@@ -407,6 +417,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         'docs/sql/sql_create_battle_tables.sql',
         'docs/sql/sql_create_research_tables.sql',
         'docs/sql/sql_create_messages_table.sql',
+        'docs/sql/sql_create_trade_offers_table.sql',
         'docs/sql/sql_create_trade_routes_table.sql',
         'docs/sql/sql_create_notifications_table.sql'
     ];

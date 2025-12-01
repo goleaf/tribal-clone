@@ -13,7 +13,7 @@ class ResourceUpdater {
             apiUrl: defaultApiUrl,
             updateInterval: 30000, // 30s
             tickInterval: 1000, // 1s
-            resourcesSelector: '#resources-bar',
+            resourcesSelector: '#resource-bar, [data-resource-bar]',
             villageId: null,
             ...options
         };
@@ -131,13 +131,23 @@ class ResourceUpdater {
     }
 
     updateUI() {
-        const container = document.querySelector(this.options.resourcesSelector);
-        if (!container) return;
+        const containers = Array.from(document.querySelectorAll(this.options.resourcesSelector));
+        if (!containers.length) return;
 
-        this.updateResourceDisplay(container, 'wood', this.resources.wood);
-        this.updateResourceDisplay(container, 'clay', this.resources.clay);
-        this.updateResourceDisplay(container, 'iron', this.resources.iron);
-        this.updateResourceDisplay(container, 'population', this.resources.population);
+        containers.forEach((container) => {
+            this.updateResourceDisplay(container, 'wood', this.resources.wood);
+            this.updateResourceDisplay(container, 'clay', this.resources.clay);
+            this.updateResourceDisplay(container, 'iron', this.resources.iron);
+            this.updateResourceDisplay(container, 'population', this.resources.population);
+        });
+
+        // Broadcast the latest resource snapshot for secondary HUDs
+        document.dispatchEvent(new CustomEvent('resource:update', {
+            detail: {
+                resources: this.resources,
+                villageId: this.options.villageId
+            }
+        }));
     }
 
     updateResourceDisplay(container, resourceType, resourceData) {

@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 require_once '../../init.php';
 require_once '../../lib/managers/BuildingManager.php';
 require_once '../../lib/managers/BuildingConfigManager.php'; // Needed for BuildingManager
@@ -40,8 +41,10 @@ if ($queue_item) {
                 'id' => $queue_item['id'],
                 'building_name' => $queue_item['name'],
                 'internal_name' => $queue_item['internal_name'],
+                'building_internal_name' => $queue_item['building_internal_name'] ?? $queue_item['internal_name'],
                 'level' => $queue_item['level'],
-                'finish_time' => strtotime($queue_item['finish_time']) // Return timestamp
+                'finish_time' => strtotime($queue_item['finish_time']), // Return timestamp
+                'start_time' => isset($queue_item['starts_at']) ? strtotime($queue_item['starts_at']) : null
             ]
         ]
     ]);

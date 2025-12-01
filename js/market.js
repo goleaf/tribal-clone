@@ -53,71 +53,147 @@ function startTradeTimerInterval() {
     }
 }
 
-// Function to handle Send Resources form submission via AJAX
-function setupMarketListeners(villageId, buildingInternalName) {
-    const sendResourcesForm = document.getElementById('send-resources-form');
-    if (sendResourcesForm) {
-        sendResourcesForm.addEventListener('submit', async function(event) {
-            event.preventDefault();
-            const form = event.target;
-            const formData = new FormData(form);
+// Attach market listeners (send resources, create/cancel/accept offers)
+function setupMarketListeners() {
+    const container = document.getElementById('popup-action-content');
+    if (!container || container.dataset.tradeBound === 'true') return;
 
-            const sendButton = form.querySelector('.send-button');
-            if (sendButton) {
-                sendButton.disabled = true;
-                sendButton.textContent = 'Sending...'; // Show loading state
+    const getVillageId = () => container.dataset.villageId || window.currentVillageId;
+    const csrfToken = () => {
+        const tokenEl = document.querySelector('meta[name="csrf-token"]');
+        return tokenEl ? tokenEl.content : '';
+    };
+
+    const submitHandler = async (event) => {
+        const form = event.target;
+        const formId = form.id;
+        if (formId !== 'send-resources-form' && formId !== 'create-offer-form') return;
+        event.preventDefault();
+
+        const villageId = getVillageId();
+        const formData = new FormData(form);
+        formData.append('csrf_token', csrfToken());
+        if (!formData.has('village_id') && villageId) {
+            formData.append('village_id', villageId);
+        }
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn ? submitBtn.textContent : null;
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Working...';
+        }
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: new URLSearchParams(formData).toString()
+            });
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                if (window.toastManager) window.toastManager.showToast(data.message || 'Success', 'success');
+                fetchAndRenderMarketPanel(villageId, 'market');
+
+                if (formId === 'send-resources-form' && window.resourceUpdater && data.data && data.data.village_info) {
+                    window.resourceUpdater.resources.wood.amount = data.data.village_info.wood;
+                    window.resourceUpdater.resources.clay.amount = data.data.village_info.clay;
+                    window.resourceUpdater.resources.iron.amount = data.data.village_info.iron;
+                    window.resourceUpdater.updateUI();
+                }
+            } else {
+                if (window.toastManager) window.toastManager.showToast(data.message || 'Action failed.', 'error');
             }
+        } catch (error) {
+            console.error('Market action AJAX error:', error);
+            if (window.toastManager) window.toastManager.showToast('Server communication error.', 'error');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText || submitBtn.textContent;
+            }
+        }
+    };
+
+    const clickHandler = async (event) => {
+        const villageId = getVillageId();
+        const acceptBtn = event.target.closest('.accept-offer-btn');
+        const cancelBtn = event.target.closest('.cancel-offer-btn');
+        const csrf = csrfToken();
+
+        if (acceptBtn) {
+            event.preventDefault();
+            const offerId = acceptBtn.dataset.offerId;
+            if (!offerId) return;
+
+            acceptBtn.disabled = true;
+            acceptBtn.textContent = 'Accepting...';
 
             try {
-                 // Add csrf_token to form data
-                 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-                 formData.append('csrf_token', csrfToken);
-
-                const response = await fetch(form.action, {
+                const response = await fetch('/ajax/trade/accept_offer.php', {
                     method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest' // Identify as AJAX request
-                    },
-                    body: new URLSearchParams(formData).toString()
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: new URLSearchParams({ offer_id: offerId, village_id: villageId, csrf_token: csrf }).toString()
                 });
                 const data = await response.json();
-
                 if (data.status === 'success') {
-                    window.toastManager.showToast(data.message, 'success');
-                    // Refresh the market panel and trader count
-                     fetchAndRenderMarketPanel(villageId, buildingInternalName); // Assuming this function exists and fetches market data
-
-                    // Update resources display
-                    if (window.resourceUpdater && data.data && data.data.village_info) {
-                         window.resourceUpdater.resources.wood.amount = data.data.village_info.wood;
-                         window.resourceUpdater.resources.clay.amount = data.data.village_info.clay;
-                         window.resourceUpdater.resources.iron.amount = data.data.village_info.iron;
-                          window.resourceUpdater.updateUI();
-                     }
-
+                    if (window.toastManager) window.toastManager.showToast(data.message || 'Offer accepted.', 'success');
+                    fetchAndRenderMarketPanel(villageId, 'market');
                 } else {
-                    window.toastManager.showToast(data.message || 'Error sending resources.', 'error');
+                    if (window.toastManager) window.toastManager.showToast(data.message || 'Could not accept offer.', 'error');
                 }
-
             } catch (error) {
-                console.error('Resource send AJAX error:', error);
-                window.toastManager.showToast('Server communication error while sending resources.', 'error');
+                console.error('Accept offer error:', error);
+                if (window.toastManager) window.toastManager.showToast('Server communication error.', 'error');
             } finally {
-                // Re-enable button regardless of success or failure
-                if (sendButton) {
-                    sendButton.disabled = false;
-                    sendButton.textContent = 'Send resources'; // Restore original text
-                }
+                acceptBtn.disabled = false;
+                acceptBtn.textContent = 'Accept';
             }
-        });
-    }
+            return;
+        }
+
+        if (cancelBtn) {
+            event.preventDefault();
+            const offerId = cancelBtn.dataset.offerId;
+            if (!offerId) return;
+
+            cancelBtn.disabled = true;
+            cancelBtn.textContent = 'Canceling...';
+
+            try {
+                const response = await fetch('/ajax/trade/cancel_offer.php', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: new URLSearchParams({ offer_id: offerId, village_id: villageId, csrf_token: csrf }).toString()
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    if (window.toastManager) window.toastManager.showToast(data.message || 'Offer canceled.', 'success');
+                    fetchAndRenderMarketPanel(villageId, 'market');
+                } else {
+                    if (window.toastManager) window.toastManager.showToast(data.message || 'Could not cancel offer.', 'error');
+                }
+            } catch (error) {
+                console.error('Cancel offer error:', error);
+                if (window.toastManager) window.toastManager.showToast('Server communication error.', 'error');
+            } finally {
+                cancelBtn.disabled = false;
+                cancelBtn.textContent = 'Cancel';
+            }
+        }
+    };
+
+    container.addEventListener('submit', submitHandler);
+    container.addEventListener('click', clickHandler);
+    container.dataset.tradeBound = 'true';
 }
 
 // Add a function to fetch and render the Market panel (to be called from buildings.js)
-async function fetchAndRenderMarketPanel(villageId, buildingInternalName) {
+async function fetchAndRenderMarketPanel(villageId, buildingInternalName = 'market') {
      const actionContent = document.getElementById('popup-action-content');
      const detailsContent = document.getElementById('building-details-content');
-     if (!actionContent || !detailsContent || !villageId || !buildingInternalName) {
+     if (!actionContent || !detailsContent || !villageId) {
          console.error('Missing elements or parameters for market panel.');
          return;
      }
@@ -129,22 +205,25 @@ async function fetchAndRenderMarketPanel(villageId, buildingInternalName) {
 
      // Add data attributes to actionContent for easy access in timer updates
      actionContent.dataset.villageId = villageId;
-     actionContent.dataset.buildingInternalName = buildingInternalName;
+     actionContent.dataset.buildingInternalName = buildingInternalName || 'market';
 
      try {
-         // Use the existing get_building_action.php endpoint
-         const response = await fetch(`get_building_action.php?village_id=${villageId}&building_type=${buildingInternalName}`);
+         const response = await fetch(`/ajax/trade/get_market_data.php?village_id=${villageId}`);
          const data = await response.json();
 
-         if (data.status === 'success' && data.action_type === 'trade') {
-             // Server already returns HTML in additional_info_html
-             actionContent.innerHTML = data.data.additional_info_html;
-             setupMarketListeners(villageId, buildingInternalName); // Setup listeners after rendering
+         if (data.status === 'success' && data.data && data.data.html) {
+             actionContent.innerHTML = data.data.html;
+             setupMarketListeners(); // Setup listeners after rendering
               updateTradeTimersPopup(); // Start timers for the popup queue
 
-         } else if (data.error) {
-             actionContent.innerHTML = '<p>Error loading market panel: ' + data.error + '</p>';
-             window.toastManager.showToast(data.error, 'error');
+             if (Array.isArray(data.data.messages)) {
+                 data.data.messages.forEach((msg) => {
+                     if (window.toastManager) window.toastManager.showToast(msg, 'success');
+                 });
+             }
+         } else if (data.error || data.message) {
+             actionContent.innerHTML = '<p>Error loading market panel: ' + (data.error || data.message) + '</p>';
+             if (window.toastManager) window.toastManager.showToast(data.error || data.message, 'error');
          } else {
               actionContent.innerHTML = '<p>Invalid server response or the action is not related to the market.</p>';
          }
@@ -152,7 +231,7 @@ async function fetchAndRenderMarketPanel(villageId, buildingInternalName) {
      } catch (error) {
          console.error('Market panel AJAX error:', error);
          actionContent.innerHTML = '<p>Server communication error.</p>';
-         window.toastManager.showToast('Server communication error while fetching the market panel.', 'error');
+         if (window.toastManager) window.toastManager.showToast('Server communication error while fetching the market panel.', 'error');
      }
 }
 

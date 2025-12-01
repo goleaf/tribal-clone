@@ -285,6 +285,15 @@ class SQLiteResult {
         return $this->rows[$this->index++];
     }
 
+    public function fetch_row(): ?array {
+        if ($this->index >= $this->num_rows) {
+            return null;
+        }
+        $row = array_values($this->rows[$this->index]);
+        $this->index++;
+        return $row;
+    }
+
     public function fetch_all(int $mode = MYSQLI_ASSOC): array {
         return $this->rows;
     }

@@ -7,7 +7,10 @@ DROP TABLE IF EXISTS attack_units;
 DROP TABLE IF EXISTS attacks;
 DROP TABLE IF EXISTS ai_logs;
 DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS user_achievements;
+DROP TABLE IF EXISTS achievements;
 DROP TABLE IF EXISTS trade_routes;
+DROP TABLE IF EXISTS trade_offers;
 DROP TABLE IF EXISTS messages;
 DROP TABLE IF EXISTS reports;
 DROP TABLE IF EXISTS research_queue;
@@ -20,6 +23,9 @@ DROP TABLE IF EXISTS building_queue;
 DROP TABLE IF EXISTS village_buildings;
 DROP TABLE IF EXISTS building_requirements;
 DROP TABLE IF EXISTS building_types;
+DROP TABLE IF EXISTS tribe_invitations;
+DROP TABLE IF EXISTS tribe_members;
+DROP TABLE IF EXISTS tribes;
 DROP TABLE IF EXISTS villages;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS worlds;
@@ -40,6 +46,47 @@ CREATE TABLE IF NOT EXISTS users (
     points INTEGER NOT NULL DEFAULT 0,
     ally_id INTEGER DEFAULT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS tribes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    tag TEXT NOT NULL UNIQUE,
+    description TEXT DEFAULT '',
+    internal_text TEXT DEFAULT '',
+    founder_id INTEGER NOT NULL,
+    points INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (founder_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS achievements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    internal_name TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'general',
+    condition_type TEXT NOT NULL,
+    condition_target TEXT DEFAULT NULL,
+    condition_value INTEGER NOT NULL,
+    reward_wood INTEGER NOT NULL DEFAULT 0,
+    reward_clay INTEGER NOT NULL DEFAULT 0,
+    reward_iron INTEGER NOT NULL DEFAULT 0,
+    reward_points INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS user_achievements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    achievement_id INTEGER NOT NULL,
+    progress INTEGER NOT NULL DEFAULT 0,
+    unlocked INTEGER NOT NULL DEFAULT 0,
+    unlocked_at TEXT DEFAULT NULL,
+    reward_claimed INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (achievement_id) REFERENCES achievements(id) ON DELETE CASCADE,
+    UNIQUE (user_id, achievement_id)
 );
 
 CREATE TABLE IF NOT EXISTS villages (
@@ -96,8 +143,6 @@ CREATE TABLE IF NOT EXISTS village_buildings (
     village_id INTEGER NOT NULL,
     building_type_id INTEGER NOT NULL,
     level INTEGER DEFAULT 0,
-    upgrade_level_to INTEGER DEFAULT NULL,
-    upgrade_ends_at TEXT DEFAULT NULL,
     FOREIGN KEY (village_id) REFERENCES villages(id) ON DELETE CASCADE,
     FOREIGN KEY (building_type_id) REFERENCES building_types(id) ON DELETE CASCADE,
     UNIQUE (village_id, building_type_id)
@@ -303,6 +348,25 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS trade_offers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_village_id INTEGER NOT NULL,
+    offered_wood INTEGER NOT NULL DEFAULT 0,
+    offered_clay INTEGER NOT NULL DEFAULT 0,
+    offered_iron INTEGER NOT NULL DEFAULT 0,
+    requested_wood INTEGER NOT NULL DEFAULT 0,
+    requested_clay INTEGER NOT NULL DEFAULT 0,
+    requested_iron INTEGER NOT NULL DEFAULT 0,
+    merchants_required INTEGER NOT NULL DEFAULT 1,
+    status TEXT NOT NULL DEFAULT 'open',
+    accepted_village_id INTEGER NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    accepted_at TEXT NULL,
+    completed_at TEXT NULL,
+    FOREIGN KEY (source_village_id) REFERENCES villages(id) ON DELETE CASCADE,
+    FOREIGN KEY (accepted_village_id) REFERENCES villages(id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS trade_routes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source_village_id INTEGER NOT NULL,
@@ -315,8 +379,34 @@ CREATE TABLE IF NOT EXISTS trade_routes (
     traders_count INTEGER NOT NULL DEFAULT 1,
     departure_time TEXT NOT NULL,
     arrival_time TEXT NOT NULL,
+    offer_id INTEGER NULL,
     FOREIGN KEY (source_village_id) REFERENCES villages(id) ON DELETE CASCADE,
-    FOREIGN KEY (target_village_id) REFERENCES villages(id) ON DELETE CASCADE
+    FOREIGN KEY (target_village_id) REFERENCES villages(id) ON DELETE CASCADE,
+    FOREIGN KEY (offer_id) REFERENCES trade_offers(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS tribe_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tribe_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL UNIQUE,
+    role TEXT NOT NULL DEFAULT 'member',
+    joined_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tribe_id) REFERENCES tribes(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS tribe_invitations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tribe_id INTEGER NOT NULL,
+    invited_user_id INTEGER NOT NULL,
+    inviter_id INTEGER DEFAULT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    responded_at TEXT DEFAULT NULL,
+    UNIQUE(tribe_id, invited_user_id),
+    FOREIGN KEY (tribe_id) REFERENCES tribes(id) ON DELETE CASCADE,
+    FOREIGN KEY (invited_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (inviter_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Seed data
@@ -372,3 +462,11 @@ INSERT INTO research_types (internal_name, name, description, building_type, req
 ('spying', 'Espionage', 'Enables more detailed scouting reports.', 'academy', 1, 400, 600, 500, 7200, 1.2, 3, 1, NULL, NULL),
 ('improved_maps', 'Improved Maps', 'Expands visible map range.', 'academy', 2, 500, 700, 600, 8400, 1.2, 3, 1, NULL, NULL),
 ('military_tactics', 'Military Tactics', 'Raises troop morale by 5% per level.', 'academy', 3, 600, 800, 700, 9600, 1.2, 3, 1, NULL, NULL);
+
+INSERT OR IGNORE INTO achievements (internal_name, name, description, category, condition_type, condition_target, condition_value, reward_wood, reward_clay, reward_iron, reward_points) VALUES
+('first_steps', 'A New Beginning', 'Establish your first village and start constructing the Town Hall.', 'progression', 'building_level', 'main_building', 1, 150, 150, 150, 2),
+('town_hall_lvl5', 'Organized Village', 'Upgrade the Town Hall to level 5.', 'progression', 'building_level', 'main_building', 5, 350, 350, 350, 4),
+('fortified', 'Fortified', 'Build the Wall to level 3.', 'defense', 'building_level', 'wall', 3, 250, 350, 200, 3),
+('resource_keeper', 'Well Stocked', 'Hold at least 5,000 of each resource in one village.', 'economy', 'resource_stock', 'balanced', 5000, 500, 500, 500, 2),
+('recruiter_50', 'Drill Sergeant', 'Train a total of 50 units.', 'military', 'units_trained', 'any', 50, 300, 300, 200, 3),
+('recruiter_200', 'Army Quartermaster', 'Train a total of 200 units.', 'military', 'units_trained', 'any', 200, 600, 600, 400, 5);

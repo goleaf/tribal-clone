@@ -78,6 +78,31 @@ function dbTableExists($conn, string $tableName): bool {
 }
 
 /**
+ * Checks if a column exists on a table (works for SQLite and MySQL).
+ */
+function dbColumnExists($conn, string $tableName, string $columnName): bool {
+    if (is_object($conn) && method_exists($conn, 'getPdo')) {
+        $pdo = $conn->getPdo();
+        $safeTable = str_replace('"', '""', $tableName);
+        $stmt = $pdo->query('PRAGMA table_info("' . $safeTable . '")');
+        if ($stmt) {
+            $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($columns as $col) {
+                if (isset($col['name']) && $col['name'] === $columnName) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    $safeTable = addslashes($tableName);
+    $safeColumn = addslashes($columnName);
+    $result = $conn->query("SHOW COLUMNS FROM `$safeTable` LIKE '$safeColumn'");
+    return $result && $result->num_rows > 0;
+}
+
+/**
  * Generates a unique token for the session.
  */
 function generateToken(int $length = 32): string {

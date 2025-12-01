@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 /**
  * Village manager inspired by the legacy VeryOldTemplate classes.
@@ -136,9 +137,16 @@ class VillageManager
     public function processCompletedTasksForVillage(int $village_id): array
     {
         $messages = [];
+        $village = $this->getVillageInfo($village_id);
+        if (!$village) {
+            return $messages;
+        }
+        $userId = (int)$village['user_id'];
         
         // 1. Update resources (covers offline production)
         $this->updateResources($village_id);
+        // Refresh village after resource update
+        $village = $this->getVillageInfo($village_id);
 
         // Required managers
         require_once __DIR__ . '/BuildingManager.php';
@@ -146,18 +154,32 @@ class VillageManager
         require_once __DIR__ . '/ResearchManager.php';
         require_once __DIR__ . '/BuildingConfigManager.php';
         require_once __DIR__ . '/ResourceManager.php';
+        require_once __DIR__ . '/AchievementManager.php';
+        require_once __DIR__ . '/TradeManager.php';
+        require_once __DIR__ . '/NotificationManager.php';
 
         // Instantiate managers (DI would be better)
         $buildingConfigManager = new BuildingConfigManager($this->conn);
         $buildingManager = new BuildingManager($this->conn, $buildingConfigManager);
         $unitManager = new UnitManager($this->conn);
         $researchManager = new ResearchManager($this->conn);
+        $achievementManager = new AchievementManager($this->conn);
+        $tradeManager = new TradeManager($this->conn);
         // BattleManager could be added here when needed.
+
+        // Evaluate snapshot-based achievements and resource milestones
+        if ($userId) {
+            $achievementManager->evaluateAutoUnlocks($userId);
+            $achievementManager->checkResourceStock($userId, $village, $village_id);
+        }
 
         // 2. Complete finished building tasks
         $completed_buildings = $this->processBuildingQueue($village_id);
         foreach ($completed_buildings as $item) {
             $messages[] = "<p class='success-message'>Upgrade completed: <b>" . htmlspecialchars($item['name']) . "</b> to level " . $item['level'] . ".</p>";
+            if ($userId) {
+                $achievementManager->checkBuildingLevel($userId, $item['internal_name'], (int)$item['level'], $village_id);
+            }
         }
 
         // 3. Complete unit recruitment tasks
@@ -165,11 +187,17 @@ class VillageManager
          if (!empty($recruitmentUpdate['completed_queues'])) {
             foreach ($recruitmentUpdate['completed_queues'] as $queue) {
                 $messages[] = "<p class='success-message'>Recruitment completed: " . $queue['count'] . " units of '" . htmlspecialchars($queue['unit_name']) . "'.</p>";
+                if ($userId) {
+                    $achievementManager->addUnitsTrainedProgress($userId, (int)($queue['produced_now'] ?? $queue['count'] ?? 0));
+                }
             }
         }
          if (!empty($recruitmentUpdate['updated_queues']) && empty($recruitmentUpdate['completed_queues'])) {
             foreach ($recruitmentUpdate['updated_queues'] as $update) {
                  $messages[] = "<p class='success-message'>Produced " . $update['units_finished'] . " units of '" . htmlspecialchars($update['unit_name']) . "'. Recruitment continues...</p>";
+                 if ($userId) {
+                     $achievementManager->addUnitsTrainedProgress($userId, (int)($update['produced_now'] ?? $update['units_finished'] ?? 0));
+                 }
             }
         }
 
@@ -181,7 +209,13 @@ class VillageManager
             }
         }
 
-        // 5. Attack processing is handled in BattleManager (see game.php usage).
+        // 5. Complete finished trade routes involving this village
+        $tradeMessages = $tradeManager->processArrivedTradesForVillage($village_id);
+        foreach ($tradeMessages as $tradeMessage) {
+            $messages[] = "<p class='success-message'>" . htmlspecialchars($tradeMessage) . "</p>";
+        }
+
+        // 6. Attack processing is handled in BattleManager (see game.php usage).
 
         return $messages;
     }
@@ -195,7 +229,7 @@ class VillageManager
         $completed_queue_items = [];
         
         // Fetch completed builds from the queue
-        $stmt_check_finished = $this->conn->prepare("SELECT bq.id, bq.village_building_id, bq.level, bt.name FROM building_queue bq JOIN building_types bt ON bq.building_type_id = bt.id WHERE bq.village_id = ? AND bq.finish_time <= NOW()");
+        $stmt_check_finished = $this->conn->prepare("SELECT bq.id, bq.village_building_id, bq.level, bt.name, bt.internal_name FROM building_queue bq JOIN building_types bt ON bq.building_type_id = bt.id WHERE bq.village_id = ? AND bq.finish_time <= NOW()");
         $stmt_check_finished->bind_param("i", $village_id);
         $stmt_check_finished->execute();
         $result_finished = $stmt_check_finished->get_result();
@@ -348,6 +382,12 @@ class VillageManager
         if (method_exists($this, 'recalculatePlayerPoints')) {
             $this->recalculatePlayerPoints($user_id);
         }
+
+        // Evaluate starting achievements (e.g., first village, initial buildings)
+        require_once __DIR__ . '/AchievementManager.php';
+        $achievementManager = new AchievementManager($this->conn);
+        $achievementManager->evaluateAutoUnlocks((int)$user_id);
+
         return [
             'success' => true, 
             'message' => 'Village created successfully!', 
@@ -568,12 +608,12 @@ class VillageManager
     public function getBuildingQueueItem(int $village_id): ?array
     {
         $stmt = $this->conn->prepare("
-            SELECT bq.id, bq.village_building_id, bq.building_type_id, bq.level, bq.start_time, bq.finish_time, 
+            SELECT bq.id, bq.village_building_id, bq.building_type_id, bq.level, bq.starts_at, bq.finish_time, 
                    bt.internal_name, bt.name
             FROM building_queue bq
             JOIN building_types bt ON bq.building_type_id = bt.id
             WHERE bq.village_id = ?
-            ORDER BY bq.start_time ASC
+            ORDER BY bq.starts_at ASC
             LIMIT 1
         ");
         $stmt->bind_param("i", $village_id);

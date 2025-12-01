@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS `attacks` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `source_village_id` int(11) NOT NULL,
   `target_village_id` int(11) NOT NULL,
-  `attack_type` enum('attack','raid','support') NOT NULL DEFAULT 'attack',
+  `attack_type` enum('attack','raid','support','spy') NOT NULL DEFAULT 'attack',
   `start_time` datetime NOT NULL,
   `arrival_time` datetime NOT NULL,
   `is_completed` tinyint(1) NOT NULL DEFAULT 0,

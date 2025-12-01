@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 require '../init.php';
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'managers' . DIRECTORY_SEPARATOR . 'VillageManager.php';
 require_once '../config/config.php';
@@ -16,11 +17,14 @@ $username = $_SESSION['username'];
 // Fetch the user's first village
 $villageManager = new VillageManager($conn);
 $village_id = $villageManager->getFirstVillage($user_id);
+$village = $village_id ? $villageManager->getVillageInfo($village_id) : null;
 
 // Establish the starting position (map center or the player's village)
 $x = isset($_GET['x']) ? (int)$_GET['x'] : 50;
 $y = isset($_GET['y']) ? (int)$_GET['y'] : 50;
 $size = isset($_GET['size']) ? max(7, min(31, (int)$_GET['size'])) : 15;
+// Map radius should align with the rendered grid: 2 * radius + 1 = size
+$radius = max(3, min(20, (int)floor(($size - 1) / 2)));
 
 // Map view parameters (from GET or defaults)
 $center_x = isset($_GET['x']) ? (int)$_GET['x'] : 0;
@@ -31,16 +35,14 @@ if ($village_id) {
     $village = $villageManager->getVillageInfo($village_id);
     if ($village) {
         // If GET coordinates were not provided, use the village coordinates
-        if (!isset($_GET['x'])) $center_x = $village['x_coord'];
-        if (!isset($_GET['y'])) $center_y = $village['y_coord'];
+        if (!isset($_GET['x'])) {
+            $center_x = $village['x_coord'];
+        }
+        if (!isset($_GET['y'])) {
+            $center_y = $village['y_coord'];
+        }
     }
 }
-
-$radius = isset($_GET['radius']) ? (int)$_GET['radius'] : 5;
-
-// Limit the maximum radius
-if ($radius > 20) $radius = 20;
-if ($radius < 3) $radius = 3;
 
 // Fetch villages within range
 $stmt = $conn->prepare("
@@ -76,107 +78,195 @@ while ($row = $result->fetch_assoc()) {
     ];
 }
 
+// AJAX payload for client-side re-centering without full page reload
+if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'center' => ['x' => $center_x, 'y' => $center_y],
+        'size' => $size,
+        'villages' => $villages_map,
+        'player_village' => $village ? [
+            'id' => $village['id'],
+            'x' => $village['x_coord'],
+            'y' => $village['y_coord'],
+            'name' => $village['name']
+        ] : null
+    ]);
+    exit;
+}
+
 $pageTitle = 'World Map';
 require '../header.php';
 ?>
 
-<div id="game-container">
-    <header id="main-header">
+<div id="game-container" class="map-page">
+    <header id="main-header" class="map-header">
         <div class="header-title">
-            <span class="game-logo">Map</span> <!-- Map label -->
-            <span>World Map</span>
+            <span class="game-logo"><img src="../img/ds_graphic/world.png" alt="World" /></span>
+            <div>
+                <div class="eyebrow">World Map</div>
+                <div class="title">Frontier</div>
+            </div>
         </div>
         <div class="header-user">
-            Player: <?= htmlspecialchars($username) ?><br>
+            <div class="player-name"><?= htmlspecialchars($username) ?></div>
             <?php if ($village): ?>
-                <span class="village-name-display" data-village-id="<?= $village['id'] ?>"><?= htmlspecialchars($village['name']) ?> (<?= $village['x_coord'] ?>|<?= $village['y_coord'] ?>)</span>
+                <div class="village-name-display" data-village-id="<?= $village['id'] ?>">
+                    <?= htmlspecialchars($village['name']) ?> (<?= $village['x_coord'] ?>|<?= $village['y_coord'] ?>)
+                </div>
             <?php endif; ?>
         </div>
     </header>
 
-    <main id="main-content">
-        <h2>World map</h2>
-
-        <div class="map-container">
-            <div class="map-controls">
-                <button onclick="moveMap(0,-1)">Up</button>
-                <button onclick="moveMap(-1,0)">Left</button>
-                <button onclick="centerMap()">Center</button>
-                <button onclick="moveMap(1,0)">Right</button>
-                <button onclick="moveMap(0,1)">Down</button>
-                <label>Size: <input type="number" id="map-size" min="7" max="31" value="<?php echo $size; ?>" style="width:50px;"> </label>
-                <button onclick="resizeMap()">Update</button>
+    <main id="main-content" class="map-main">
+        <section class="map-toolbar">
+            <div class="coords-block">
+                <div class="label">Center</div>
+                <div class="value"><?= $center_x ?>|<?= $center_y ?></div>
             </div>
-            <div id="map-grid" class="map-grid"></div>
+            <div class="toolbar-controls">
+                <div class="dpad">
+                    <button class="nav-btn" data-dx="0" data-dy="-1" title="North"><img src="../img/map/map_n.png" alt="N"></button>
+                    <button class="nav-btn" data-dx="-1" data-dy="0" title="West"><img src="../img/map/map_w.png" alt="W"></button>
+                    <button class="nav-btn home-btn" data-home="1" title="Center on own village"><img src="../img/map/pointer_home.png" alt="Home"></button>
+                    <button class="nav-btn" data-dx="1" data-dy="0" title="East"><img src="../img/map/map_e.png" alt="E"></button>
+                    <button class="nav-btn" data-dx="0" data-dy="1" title="South"><img src="../img/map/map_s.png" alt="S"></button>
+                </div>
+                <div class="size-control">
+                    <label for="map-size">Size</label>
+                    <input type="range" id="map-size" min="7" max="31" step="2" value="<?php echo $size; ?>">
+                    <span id="map-size-label"><?php echo $size; ?>x<?php echo $size; ?></span>
+                </div>
+                <form class="jump-form" onsubmit="return jumpToCoords(event);">
+                    <label for="jump-x">Go to</label>
+                    <input type="number" id="jump-x" name="x" placeholder="x" required>
+                    <input type="number" id="jump-y" name="y" placeholder="y" required>
+                    <button type="submit" class="btn-pill">Jump</button>
+                </form>
+            </div>
+        </section>
+
+        <div class="map-wrapper">
+            <div class="map-grid-shell">
+                <div id="map-grid" class="map-grid"></div>
+            </div>
+            <aside class="map-legend">
+                <h4>Legend</h4>
+                <div class="legend-row"><img src="../img/map/map_v6.png" alt="Own"> <span>Your village</span></div>
+                <div class="legend-row"><img src="../img/map/map_v4.png" alt="Player"> <span>Player village</span></div>
+                <div class="legend-row"><img src="../img/map/map_v2.png" alt="Barbarian"> <span>Barbarian village</span></div>
+                <div class="legend-row"><span class="legend-chip">Empty</span> <span>Unsettled lands</span></div>
+            </aside>
         </div>
 
         <!-- Popup for map tile details -->
         <div id="map-popup" class="map-popup" style="display: none;">
             <button class="popup-close-btn">&times;</button>
-            <h4 id="popup-village-name"></h4>
-            <div><b>Owner:</b> <span id="popup-village-owner"></span></div>
-            <div><b>Coordinates:</b> <span id="popup-village-coords"></span></div>
-            <button id="popup-send-units" class="btn">Send units</button>
-            <!-- <button id="popup-send-resources" class="btn">Send resources</button> -->
+            <div class="popup-body">
+                <div class="pill-row">
+                    <span class="pill coords-pill" id="popup-village-coords"></span>
+                    <span class="pill owner-pill" id="popup-village-owner"></span>
+                </div>
+                <h4 id="popup-village-name"></h4>
+                <div class="popup-actions">
+                    <button id="popup-send-units" class="btn-primary">Send units</button>
+                    <a id="popup-open-village" class="btn-ghost" href="#">Open</a>
+                </div>
+            </div>
         </div>
     </main>
 </div>
 
 <script>
 // Pass village data to JavaScript
-const villagesData = <?php echo json_encode($villages_map); ?>;
+let villagesData = <?php echo json_encode($villages_map); ?>;
 const currentVillageId = <?php echo $village_id ?? 'null'; ?>;
-const centerCoords = { x: <?php echo $center_x; ?>, y: <?php echo $center_y; ?> };
-const mapRadius = <?php echo $radius; ?>;
-const mapSize = <?php echo $size; ?>;
+let centerCoords = { x: <?php echo $center_x; ?>, y: <?php echo $center_y; ?> };
+let mapSize = <?php echo $size; ?>;
+const grassTiles = ['../img/map/gras1.png', '../img/map/gras2.png', '../img/map/gras3.png', '../img/map/gras4.png'];
+const iconOwn = '../img/map/map_v6.png';
+const iconPlayer = '../img/map/map_v4.png';
+const iconBarb = '../img/map/map_v2.png';
+const iconEmpty = '../img/map/empty.png';
+const ajaxEndpoint = 'map.php';
+const grassTileCount = grassTiles.length;
+
+function getGrassTile(x, y) {
+    // Deterministic hash to keep tile textures stable across re-renders
+    const hash = Math.abs((x * 73856093) ^ (y * 19349663));
+    return grassTiles[hash % grassTileCount];
+}
 
 document.addEventListener('DOMContentLoaded', () => {
-    renderMap(villagesData, centerCoords, mapRadius, mapSize, currentVillageId);
+    renderMap(villagesData, centerCoords, mapSize, currentVillageId);
+    updateCenterDisplay();
 
     // Add event listeners for map controls
-    document.querySelector('.map-controls button:nth-child(1)').addEventListener('click', () => moveMap(0, -1));
-    document.querySelector('.map-controls button:nth-child(2)').addEventListener('click', () => moveMap(-1, 0));
-    document.querySelector('.map-controls button:nth-child(3)').addEventListener('click', () => centerMap());
-    document.querySelector('.map-controls button:nth-child(4)').addEventListener('click', () => moveMap(1, 0));
-    document.querySelector('.map-controls button:nth-child(5)').addEventListener('click', () => moveMap(0, 1));
-    document.getElementById('map-size').addEventListener('change', () => resizeMap()); // Listen for change on input
-    document.querySelector('.map-controls button:nth-child(7)').addEventListener('click', () => resizeMap()); // Listen for button click
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        const dx = parseInt(btn.dataset.dx || 0, 10);
+        const dy = parseInt(btn.dataset.dy || 0, 10);
+        if (!isNaN(dx) || !isNaN(dy)) {
+            btn.addEventListener('click', () => moveMap(dx, dy));
+        }
+        if (btn.dataset.home) {
+            btn.addEventListener('click', () => jumpToCenter());
+        }
+    });
+    const sizeInput = document.getElementById('map-size');
+    const sizeLabel = document.getElementById('map-size-label');
+    sizeInput.addEventListener('input', () => {
+        sizeLabel.textContent = `${sizeInput.value}x${sizeInput.value}`;
+    });
+    sizeInput.addEventListener('change', () => resizeMap());
 
     // Event delegation for map tiles
     document.getElementById('map-grid').addEventListener('click', function(event) {
         const tile = event.target.closest('.map-tile');
-        if (tile && !tile.dataset.x === undefined && !tile.dataset.y === undefined) { // Ensure it's a valid tile
-            const x = parseInt(tile.dataset.x);
-            const y = parseInt(tile.dataset.y);
+        // Only proceed when the dataset attributes exist (avoid false negatives from incorrect boolean logic)
+        if (tile && tile.dataset.x !== undefined && tile.dataset.y !== undefined) {
+            const x = parseInt(tile.dataset.x, 10);
+            const y = parseInt(tile.dataset.y, 10);
             showVillagePopup(x, y);
         }
     });
 
     // Close popup button
-    document.querySelector('#map-popup .popup-close-btn').addEventListener('click', hideVillagePopup);
+    const popupCloseBtn = document.querySelector('#map-popup .popup-close-btn');
+    if (popupCloseBtn) {
+        popupCloseBtn.addEventListener('click', hideVillagePopup);
+    }
 
     // Send units button
-    document.getElementById('popup-send-units').addEventListener('click', function() {
-        const targetVillageId = this.dataset.villageId;
-        if (targetVillageId && currentVillageId) {
-            fetch(`../combat/attack.php?target_village_id=${targetVillageId}&source_village_id=${currentVillageId}&ajax=1`)
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById('generic-modal-content').innerHTML = html;
-                    document.getElementById('generic-modal').style.display = 'block';
-                    hideVillagePopup();
-                })
-                .catch(error => console.error('Error loading attack form:', error));
-        }
-    });
+    const popupSendUnits = document.getElementById('popup-send-units');
+    if (popupSendUnits) {
+        popupSendUnits.addEventListener('click', function() {
+            const targetVillageId = this.dataset.villageId;
+            if (targetVillageId && currentVillageId) {
+                fetch(`../combat/attack.php?target_village_id=${targetVillageId}&source_village_id=${currentVillageId}&ajax=1`)
+                    .then(response => response.text())
+                    .then(html => {
+                        const modalContent = document.getElementById('generic-modal-content');
+                        const modal = document.getElementById('generic-modal');
+                        if (modalContent && modal) {
+                            modalContent.innerHTML = html;
+                            modal.style.display = 'block';
+                        }
+                        hideVillagePopup();
+                    })
+                    .catch(error => console.error('Error loading attack form:', error));
+            }
+        });
+    }
 
     // Generic modal close logic
     const genericModal = document.getElementById('generic-modal');
     if (genericModal) {
         const closeModalButton = genericModal.querySelector('.close-button');
-        closeModalButton.addEventListener('click', () => {
-            genericModal.style.display = 'none';
-        });
+        if (closeModalButton) {
+            closeModalButton.addEventListener('click', () => {
+                genericModal.style.display = 'none';
+            });
+        }
 
         window.addEventListener('click', (event) => {
             if (event.target === genericModal) {
@@ -203,76 +293,144 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-function renderMap(villages, center, radius, size, currentVillageId) {
+function renderMap(villages, center, size, currentVillageId) {
     const mapGrid = document.getElementById('map-grid');
     mapGrid.innerHTML = ''; // Clear existing map
+    const radius = Math.floor((size - 1) / 2);
     const startX = center.x - radius;
     const startY = center.y - radius;
+    const tileSize = 52;
+    const fragment = document.createDocumentFragment();
 
-    for (let y = startY; y <= center.y + radius; y++) {
-        for (let x = startX; x <= center.x + radius; x++) {
-            const village = villages[y] ? villages[y][x] : null;
+    for (let y = 0; y < size; y++) {
+        const coordY = startY + y;
+        for (let x = 0; x < size; x++) {
+            const coordX = startX + x;
+            const village = villages[coordY] ? villages[coordY][coordX] : null;
             const tile = document.createElement('div');
             tile.classList.add('map-tile');
-            tile.dataset.x = x;
-            tile.dataset.y = y;
+            tile.dataset.x = coordX;
+            tile.dataset.y = coordY;
 
-            let tileContent = '';
-            let villageClass = '';
+            const ground = getGrassTile(coordX, coordY);
+            tile.style.backgroundImage = `url(${ground})`;
+
+            let iconSrc = iconEmpty;
+            let badge = '';
 
             if (village) {
                 if (village.is_own) {
-                    villageClass = 'own-village';
-                    tileContent = '<img src="../img/ds_graphic/buildings/main_building.png" alt="Player village">'; // Placeholder image
+                    iconSrc = iconOwn;
+                    tile.classList.add('own-village');
+                    badge = '<span class="badge badge-own">Own</span>';
                 } else if (village.user_id === null) {
-                    villageClass = 'barbarian';
-                    tileContent = '<img src="../img/ds_graphic/buildings/main_building.png" alt="Barbarian village">'; // Placeholder image
+                    iconSrc = iconBarb;
+                    tile.classList.add('barbarian');
+                    badge = '<span class="badge badge-barb">Barb</span>';
                 } else {
-                    villageClass = 'player';
-                    tileContent = '<img src="../img/ds_graphic/buildings/main_building.png" alt="Player village">'; // Placeholder image
+                    iconSrc = iconPlayer;
+                    tile.classList.add('player');
+                    badge = `<span class="badge badge-player">${village.owner ?? 'Player'}</span>`;
                 }
             } else {
-                // Example background image for empty tiles
-                 tileContent = '<img src="../img/map/map_bg/grass.jpg" alt="Terrain">'; // You might have different terrains
-                 // tileContent = ''; // Leave empty for now if no terrain images
+                tile.classList.add('empty');
             }
-            
-            tile.classList.add(villageClass);
-            tile.innerHTML = tileContent + '<span class="coords">' + x + '|' + y + '</span>'; // Display coords on tile
-            mapGrid.appendChild(tile);
+
+            tile.innerHTML = `
+                ${badge}
+                <img class="tile-icon" src="${iconSrc}" alt="tile icon">
+                <div class="coords">${coordX}|${coordY}</div>
+            `;
+            fragment.appendChild(tile);
         }
     }
      // Adjust grid columns based on size
-     mapGrid.style.gridTemplateColumns = `repeat(${size}, 32px)`;
-     mapGrid.style.gridTemplateRows = `repeat(${size}, 32px)`;
+     mapGrid.style.gridTemplateColumns = `repeat(${size}, ${tileSize}px)`;
+     mapGrid.style.gridTemplateRows = `repeat(${size}, ${tileSize}px)`;
+     mapGrid.appendChild(fragment);
+}
+
+function updateCenterDisplay() {
+    const centerDisplay = document.querySelector('.coords-block .value');
+    if (centerDisplay) {
+        centerDisplay.textContent = `${centerCoords.x}|${centerCoords.y}`;
+    }
+}
+
+function updateUrl(x, y, size) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('x', x);
+    params.set('y', y);
+    params.set('size', size);
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+}
+
+async function fetchMapData(targetX, targetY, targetSize) {
+    const url = `${ajaxEndpoint}?x=${encodeURIComponent(targetX)}&y=${encodeURIComponent(targetY)}&size=${encodeURIComponent(targetSize)}&ajax=1`;
+    const response = await fetch(url, { credentials: 'same-origin' });
+    if (!response.ok) {
+        throw new Error(`Map fetch failed with status ${response.status}`);
+    }
+    return response.json();
+}
+
+async function applyMapUpdate(targetX, targetY, targetSize) {
+    try {
+        const data = await fetchMapData(targetX, targetY, targetSize);
+        centerCoords = { x: data.center.x, y: data.center.y };
+        mapSize = data.size;
+        villagesData = data.villages;
+        renderMap(villagesData, centerCoords, mapSize, currentVillageId);
+        updateCenterDisplay();
+
+        const sizeInput = document.getElementById('map-size');
+        const sizeLabel = document.getElementById('map-size-label');
+        if (sizeInput) sizeInput.value = mapSize;
+        if (sizeLabel) sizeLabel.textContent = `${mapSize}x${mapSize}`;
+
+        updateUrl(centerCoords.x, centerCoords.y, mapSize);
+    } catch (error) {
+        console.error('Falling back to full reload after map fetch failure:', error);
+        window.location.href = `map.php?x=${targetX}&y=${targetY}&size=${targetSize}`;
+    }
 }
 
 function moveMap(dx, dy) {
     const currentX = centerCoords.x;
     const currentY = centerCoords.y;
-    window.location.href = `map.php?x=${currentX + dx * mapSize}&y=${currentY + dy * mapSize}&radius=${mapRadius}&size=${mapSize}`;
+    applyMapUpdate(currentX + dx * mapSize, currentY + dy * mapSize, mapSize);
 }
 
-function centerMap() {
-     // Assuming the user's village coordinates are available globally or fetched
-     // For now, let's assume currentVillageCoords is available from PHP if $village is set
-     <?php if ($village): ?>
-     const currentVillageCoords = { x: <?php echo $village['x_coord']; ?>, y: <?php echo $village['y_coord']; ?> };
-     window.location.href = `map.php?x=${currentVillageCoords.x}&y=${currentVillageCoords.y}&radius=${mapRadius}&size=${mapSize}`;
-     <?php else: ?>
-     // Fallback or error if user has no village
-     console.error("Cannot center map: User has no village.");
-     <?php endif; ?>
+function jumpToCenter() {
+    <?php if ($village): ?>
+    const homeX = <?php echo $village['x_coord']; ?>;
+    const homeY = <?php echo $village['y_coord']; ?>;
+    applyMapUpdate(homeX, homeY, mapSize);
+    <?php else: ?>
+    console.error('No village to center on.');
+    <?php endif; ?>
 }
 
 function resizeMap() {
      const newSize = parseInt(document.getElementById('map-size').value);
      if (!isNaN(newSize) && newSize >= 7 && newSize <= 31) {
-          const newRadius = Math.floor((newSize - 1) / 2); // Calculate new radius based on size
-          window.location.href = `map.php?x=${centerCoords.x}&y=${centerCoords.y}&radius=${newRadius}&size=${newSize}`;
+          applyMapUpdate(centerCoords.x, centerCoords.y, newSize);
      } else {
           alert('Map size must be a number between 7 and 31.');
      }
+}
+
+function jumpToCoords(event) {
+    event.preventDefault();
+    const xInput = document.getElementById('jump-x');
+    const yInput = document.getElementById('jump-y');
+    const targetX = parseInt(xInput.value, 10);
+    const targetY = parseInt(yInput.value, 10);
+    if (Number.isFinite(targetX) && Number.isFinite(targetY)) {
+        applyMapUpdate(targetX, targetY, mapSize);
+    }
+    return false;
 }
 
 function showVillagePopup(x, y) {
@@ -282,6 +440,7 @@ function showVillagePopup(x, y) {
     const popupVillageOwner = document.getElementById('popup-village-owner');
     const popupVillageCoords = document.getElementById('popup-village-coords');
     const popupSendUnitsButton = document.getElementById('popup-send-units');
+    const popupOpenVillage = document.getElementById('popup-open-village');
     
     if (village) {
         popupVillageName.textContent = village.name;
@@ -290,6 +449,12 @@ function showVillagePopup(x, y) {
         
         // Set village ID for buttons
         popupSendUnitsButton.dataset.villageId = village.id;
+        if (village.user_id) {
+            popupOpenVillage.style.display = 'inline-block';
+            popupOpenVillage.href = `../player/player.php?id=${village.user_id}`;
+        } else {
+            popupOpenVillage.style.display = 'none';
+        }
 
         // Show/hide/enable/disable buttons based on village type/ownership
         if (village.is_own) {
@@ -335,9 +500,361 @@ function hideVillagePopup() {
     document.getElementById('map-popup').style.display = 'none';
 }
 
-// Helper function to format duration (from buildings.js or similar)
-// Make sure this function is available globally or included here
-// function formatDuration(seconds) { ... }
+function jumpToCoords(event) {
+    event.preventDefault();
+    const xInput = document.getElementById('jump-x');
+    const yInput = document.getElementById('jump-y');
+    const currentSize = parseInt(document.getElementById('map-size').value, 10) || mapSize;
+    const xVal = parseInt(xInput.value, 10);
+    const yVal = parseInt(yInput.value, 10);
+    if (isNaN(xVal) || isNaN(yVal)) {
+        alert('Enter valid coordinates.');
+        return false;
+    }
+    window.location.href = `map.php?x=${xVal}&y=${yVal}&size=${currentSize}`;
+    return false;
+}
 </script>
+
+<style>
+:root {
+    --map-bg: radial-gradient(circle at 20% 20%, #f3e3c2, #e4cfa0 60%, #d6bb83);
+    --tile-size: 52px;
+    --tile-radius: 10px;
+    --panel-bg: rgba(255, 255, 255, 0.85);
+    --panel-border: #d2b17a;
+    --accent: #a26a31;
+    --accent-strong: #8d4c1f;
+}
+
+.map-page {
+    background: var(--map-bg);
+}
+
+.map-header .game-logo img {
+    width: 28px;
+    height: 28px;
+}
+
+.map-header .eyebrow {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8d5c2c;
+}
+
+.map-header .title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #4a2c0f;
+}
+
+.map-main {
+    padding: 12px 16px 24px;
+}
+
+.map-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+    margin-bottom: 14px;
+}
+
+.coords-block .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #8d5c2c;
+    letter-spacing: 0.08em;
+}
+
+.coords-block .value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2d1a07;
+}
+
+.toolbar-controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 40px);
+    grid-template-rows: repeat(2, 40px);
+    gap: 6px;
+    align-items: center;
+    justify-items: center;
+}
+
+.nav-btn {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    background: linear-gradient(135deg, #fff8ec, #f0d8ad);
+    cursor: pointer;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+    transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.nav-btn img {
+    width: 22px;
+    height: 22px;
+}
+
+.nav-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 14px rgba(0,0,0,0.1);
+}
+
+.home-btn {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    background: linear-gradient(135deg, #ffe8c7, #f2c581);
+}
+
+.size-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #3b2410;
+}
+
+.size-control input[type="range"] {
+    accent-color: var(--accent);
+}
+
+.jump-form {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.jump-form input {
+    width: 70px;
+    padding: 6px 8px;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    background: #fffdfa;
+}
+
+.btn-pill {
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--accent);
+    background: linear-gradient(135deg, #f7d8aa, #e7b36f);
+    color: #3b2410;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.btn-pill:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 14px rgba(0,0,0,0.1);
+}
+
+.map-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 240px;
+    gap: 12px;
+    align-items: start;
+}
+
+.map-grid-shell {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 18px 32px rgba(0,0,0,0.08);
+    overflow: auto;
+}
+
+.map-grid {
+    display: grid;
+    gap: 2px;
+}
+
+.map-tile {
+    position: relative;
+    width: var(--tile-size);
+    height: var(--tile-size);
+    border-radius: var(--tile-radius);
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
+    background-size: cover;
+    background-position: center;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: transform 80ms ease, box-shadow 80ms ease;
+}
+
+.map-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 14px rgba(0,0,0,0.12);
+}
+
+.map-tile .tile-icon {
+    width: 32px;
+    height: 32px;
+    filter: drop-shadow(0 4px 4px rgba(0,0,0,0.28));
+}
+
+.map-tile .coords {
+    position: absolute;
+    bottom: 4px;
+    right: 6px;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 6px;
+}
+
+.badge {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    font-size: 10px;
+    color: #fff;
+    font-weight: 700;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.25);
+}
+
+.badge-own { background: #2f9d64; }
+.badge-player { background: #2d6cdf; }
+.badge-barb { background: #6d5438; }
+
+.map-tile.own-village { box-shadow: inset 0 0 0 2px rgba(47,157,100,0.6); }
+.map-tile.player { box-shadow: inset 0 0 0 2px rgba(45,108,223,0.5); }
+.map-tile.barbarian { box-shadow: inset 0 0 0 2px rgba(109,84,56,0.6); }
+.map-tile.empty { opacity: 0.9; }
+
+.map-legend {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 14px 22px rgba(0,0,0,0.08);
+}
+
+.map-legend h4 {
+    margin: 0 0 8px 0;
+    font-size: 15px;
+    color: #3b2410;
+}
+
+.legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+
+.legend-row img {
+    width: 24px;
+    height: 24px;
+}
+
+.legend-chip {
+    display: inline-block;
+    min-width: 24px;
+    min-height: 24px;
+    border-radius: 8px;
+    background: #d6c6a4;
+    border: 1px solid #b9a06c;
+}
+
+.map-popup {
+    position: absolute;
+    background: #fffdf8;
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    box-shadow: 0 18px 26px rgba(0,0,0,0.16);
+    z-index: 20;
+    min-width: 220px;
+}
+
+.popup-close-btn {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    border: none;
+    background: transparent;
+    font-size: 18px;
+    cursor: pointer;
+    color: #8d5c2c;
+}
+
+.pill-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.pill {
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #f2dec0;
+    color: #3b2410;
+    font-size: 12px;
+    border: 1px solid #d6b07a;
+}
+
+.owner-pill { background: #e6f2ff; border-color: #aac6f1; }
+.coords-pill { background: #e7f6e8; border-color: #b6dfc1; }
+
+.popup-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.btn-primary, .btn-ghost {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--accent);
+    cursor: pointer;
+    font-weight: 700;
+    text-decoration: none;
+    text-align: center;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #f7d8aa, #e7b36f);
+    color: #3b2410;
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--accent-strong);
+}
+
+@media (max-width: 1000px) {
+    .map-wrapper {
+        grid-template-columns: 1fr;
+    }
+    .map-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}
+</style>
 
 <?php require '../footer.php'; ?> 

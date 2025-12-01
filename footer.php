@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 // require_once 'init.php'; // init.php is already included in header.php
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
 ?>
     <footer class="site-footer">
     <div class="footer-content">
@@ -11,10 +14,15 @@ declare(strict_types=1);
         <div class="footer-links">
             <h4>Quick links</h4>
             <ul>
-                <li><a href="auth/register.php">Register</a></li>
-                <li><a href="auth/login.php">Log in</a></li>
-                <li><a href="help.php">Help</a></li>
-                <li><a href="terms.php">Terms</a></li>
+                <?php if (!isset($_SESSION['user_id'])): ?>
+                    <li><a href="/auth/register.php">Register</a></li>
+                    <li><a href="/auth/login.php">Log in</a></li>
+                <?php else: ?>
+                    <li><a href="/player/settings.php">Settings</a></li>
+                    <li><a href="/auth/logout.php">Log out</a></li>
+                <?php endif; ?>
+                <li><a href="/help.php">Help</a></li>
+                <li><a href="/terms.php">Terms</a></li>
             </ul>
         </div>
         <div class="footer-info">

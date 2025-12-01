@@ -112,7 +112,7 @@ header('Content-Security-Policy: ' . implode('; ', $csp));
         window.gameMessages = <?= json_encode($gameMessages) ?>;
     </script>
     <?php if (isset($_SESSION['user_id'])): ?>
-<?php $assetVersion = 'v1'; ?>
+<?php $assetVersion = 'v2'; ?>
 <script src="/js/resources.js?<?= $assetVersion ?>" defer></script>
 <script src="/js/notifications.js?<?= $assetVersion ?>" defer></script>
     <?php endif; ?>
@@ -131,7 +131,9 @@ header('Content-Security-Policy: ' . implode('; ', $csp));
                 <a href="/map/map.php" class="<?= $current_page === 'map.php' ? 'active' : '' ?>"><i class="fas fa-map"></i> Map</a>
                 <a href="/messages/reports.php" class="<?= $current_page === 'reports.php' ? 'active' : '' ?>"><i class="fas fa-scroll"></i> Reports</a>
                 <a href="/messages/messages.php" class="<?= $current_page === 'messages.php' ? 'active' : '' ?>"><i class="fas fa-envelope"></i> Messages</a>
+                <a href="/player/tribe.php" class="<?= $current_page === 'tribe.php' ? 'active' : '' ?>"><i class="fas fa-users"></i> Tribe</a>
                 <a href="/player/ranking.php" class="<?= $current_page === 'ranking.php' ? 'active' : '' ?>"><i class="fas fa-trophy"></i> Rankings</a>
+                <a href="/player/achievements.php" class="<?= $current_page === 'achievements.php' ? 'active' : '' ?>"><i class="fas fa-medal"></i> Achievements</a>
                 <a href="/player/settings.php" class="<?= $current_page === 'settings.php' ? 'active' : '' ?>"><i class="fas fa-cog"></i> Settings</a>
                 <a href="/auth/logout.php"><i class="fas fa-sign-out-alt"></i> Log out</a>
                 

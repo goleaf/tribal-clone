@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attack'])) {
     $target_building = !empty($_POST['target_building']) ? $_POST['target_building'] : null;
     
     // Validate attack type
-    if (!in_array($attack_type, ['attack', 'raid', 'support'])) {
+    if (!in_array($attack_type, ['attack', 'raid', 'support', 'spy'])) {
         $message = "Select a valid attack type.";
         $message_type = "error";
     } else {
@@ -430,6 +430,9 @@ if (!$is_ajax) {
                                         </label><br>
                                         <label>
                                             <input type="radio" name="attack_type" value="support"> Support (for ally)
+                                        </label><br>
+                                        <label>
+                                            <input type="radio" name="attack_type" value="spy"> Spy (scouting)
                                         </label>
                                     </div>
                                     
@@ -484,6 +487,7 @@ if (!$is_ajax) {
                                             case 'attack': echo 'Attack'; break;
                                             case 'raid': echo 'Raid'; break;
                                             case 'support': echo 'Support'; break;
+                                            case 'spy': echo 'Spy'; break;
                                         }
                                         ?>
                                     </h4>
@@ -534,6 +538,7 @@ if (!$is_ajax) {
                                             case 'attack': echo 'Attack'; break;
                                             case 'raid': echo 'Raid'; break;
                                             case 'support': echo 'Support'; break;
+                                            case 'spy': echo 'Spy'; break;
                                         }
                                         ?>
                                     </h4>

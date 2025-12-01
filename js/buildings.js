@@ -1,3 +1,4 @@
+'use strict';
 /**
  * Building interactions (popups, AJAX upgrades)
  */
@@ -19,13 +20,30 @@ function formatDuration(seconds) {
     return parts.join(' ');
 }
 
+const buildingEndpoints = window.buildingEndpoints || {
+    details: '/buildings/get_building_details.php',
+    action: '/buildings/get_building_action.php',
+    upgrade: '/buildings/upgrade_building.php',
+    cancel: '/buildings/cancel_upgrade.php',
+    queue: '/ajax/buildings/get_queue.php'
+};
+window.buildingEndpoints = buildingEndpoints;
+
+function getCsrfToken() {
+    const tokenEl = document.querySelector('meta[name="csrf-token"]');
+    return tokenEl ? tokenEl.content : '';
+}
+
 // Update all timers on the page
 function updateTimers() {
+    if (document.hidden) return;
+
     const timers = document.querySelectorAll('[data-ends-at]');
     const currentTime = Math.floor(Date.now() / 1000); // Current Unix time
 
     timers.forEach(timerElement => {
         const finishTime = parseInt(timerElement.dataset.endsAt, 10);
+        if (!Number.isFinite(finishTime)) return;
         const remainingTime = finishTime - currentTime;
 
         // Locate progress bar
@@ -67,7 +85,8 @@ function updateTimers() {
                 const currentSrc = buildingImage.src;
                 if (currentSrc.endsWith('.png')) {
                     const gifSrc = currentSrc.replace('.png', '.gif');
-                     // TODO: Optionally verify GIF exists; assume if PNG exists, GIF exists.
+                    // Remember the original so we can restore it safely later
+                    buildingImage.dataset.originalSrc = currentSrc;
                     buildingImage.src = gifSrc;
                 }
             }
@@ -79,10 +98,10 @@ function updateTimers() {
 
              // Revert graphic to PNG if it was GIF
             if (buildingImage) {
-                const currentSrc = buildingImage.src;
-                if (currentSrc.endsWith('.gif')) {
-                    const pngSrc = currentSrc.replace('.gif', '.png');
-                    buildingImage.src = pngSrc;
+                const originalSrc = buildingImage.dataset.originalSrc;
+                if (originalSrc) {
+                    buildingImage.src = originalSrc;
+                    delete buildingImage.dataset.originalSrc;
                 }
             }
 
@@ -191,12 +210,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (buildingDetailsPopup) {
              buildingDetailsPopup.classList.remove('main-building-popup'); // Reset class for the main building
-             buildingDetailsPopup.style.display = 'block';
+             buildingDetailsPopup.style.display = 'flex';
         }
         if (popupOverlay) popupOverlay.style.display = 'block';
 
         try {
-            const response = await fetch(`get_building_details.php?village_id=${villageId}&building_internal_name=${internalName}`);
+            const response = await fetch(`${buildingEndpoints.details}?village_id=${villageId}&building_internal_name=${internalName}`);
             const data = await response.json();
 
             if (data.error) {
@@ -378,8 +397,67 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
+    async function requestUpgrade(villageId, buildingInternalName, currentLevel, button, onSuccess) {
+        if (!villageId || !buildingInternalName || currentLevel === undefined) {
+            console.error('Missing data for upgrade.', { villageId, buildingInternalName, currentLevel });
+            if (window.toastManager) window.toastManager.showToast('Missing data for upgrade.', 'error');
+            return;
+        }
+
+        const csrfToken = getCsrfToken();
+        const originalText = button ? button.textContent : '';
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'Upgrading...';
+        }
+
+        try {
+            const response = await fetch(buildingEndpoints.upgrade, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `village_id=${encodeURIComponent(villageId)}&building_type_internal_name=${encodeURIComponent(buildingInternalName)}&current_level=${encodeURIComponent(currentLevel)}&csrf_token=${encodeURIComponent(csrfToken)}`
+            });
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                if (window.toastManager) window.toastManager.showToast(data.message, 'success');
+                if (typeof onSuccess === 'function') onSuccess(data);
+                if (window.resourceUpdater) window.resourceUpdater.fetchUpdate();
+                updateBuildingQueue();
+            } else {
+                if (window.toastManager) window.toastManager.showToast(data.message || 'Upgrade error.', 'error');
+            }
+        } catch (error) {
+            console.error('Upgrade AJAX error:', error);
+            if (window.toastManager) window.toastManager.showToast('A communication error occurred during upgrade.', 'error');
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.textContent = originalText || button.textContent;
+            }
+        }
+    }
+
     // Handle building action button clicks (using event delegation) - buttons might be inside the popup
     document.addEventListener('click', async function(event) {
+        const upgradeListButton = event.target.closest('.upgrade-building-button');
+        if (upgradeListButton) {
+            const villageId = upgradeListButton.dataset.villageId || window.currentVillageId;
+            const buildingInternalName = upgradeListButton.dataset.buildingInternalName;
+            const currentLevel = parseInt(upgradeListButton.dataset.currentLevel, 10);
+            await requestUpgrade(villageId, buildingInternalName, currentLevel, upgradeListButton, (data) => {
+                // Keep the button disabled after queuing to reflect the in-progress state
+                upgradeListButton.disabled = true;
+                upgradeListButton.classList.remove('btn-primary');
+                upgradeListButton.classList.add('btn-secondary');
+                upgradeListButton.textContent = `Upgrading to level ${currentLevel + 1}`;
+            });
+            return;
+        }
+
         const button = event.target.closest('.building-action-button');
 
         if (button) {
@@ -397,6 +475,34 @@ document.addEventListener('DOMContentLoaded', () => {
                  return;
              }
 
+             // Let recruitment buildings use the dedicated units.js handler
+             const recruitmentBuildings = ['barracks', 'stable', 'workshop'];
+             if (recruitmentBuildings.includes(buildingInternalName)) {
+                 return;
+             }
+
+             // Route to specialised action panels when available
+             const specialPanelHandlers = {
+                 main_building: typeof fetchAndRenderMainBuildingPanel === 'function' ? fetchAndRenderMainBuildingPanel : null,
+                 smithy: typeof fetchAndRenderResearchPanel === 'function' ? fetchAndRenderResearchPanel : null,
+                 academy: typeof fetchAndRenderResearchPanel === 'function' ? fetchAndRenderResearchPanel : null,
+                 market: typeof fetchAndRenderMarketPanel === 'function' ? fetchAndRenderMarketPanel : null,
+                 statue: typeof fetchAndRenderNoblePanel === 'function' ? fetchAndRenderNoblePanel : null,
+                 mint: typeof fetchAndRenderMintPanel === 'function' ? fetchAndRenderMintPanel : null,
+                 warehouse: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null,
+                 sawmill: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null,
+                 wood_production: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null,
+                 clay_pit: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null,
+                 iron_mine: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null,
+                 wall: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null
+             };
+
+             const handler = specialPanelHandlers[buildingInternalName];
+             if (handler) {
+                 handler(villageId, buildingInternalName);
+                 return;
+             }
+
              // Show loading state and disable button
              button.disabled = true;
              button.textContent = 'Loading...'; // Or add a spinner
@@ -408,7 +514,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  // Fetch and render content based on building internal name
                  // This uses the get_building_action.php endpoint
                  // Pass village_id and internal_name
-                 const response = await fetch(`get_building_action.php?village_id=${villageId}&building_internal_name=${buildingInternalName}`); // Zmieniono parametr building_type na building_internal_name
+                 const response = await fetch(`${buildingEndpoints.action}?village_id=${villageId}&building_type=${buildingInternalName}`); // Zmieniono parametr building_type na building_internal_name
                  const data = await response.json();
 
                  if (data.status === 'success' && actionContent) {
@@ -505,49 +611,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (popupUpgradeButton) {
         popupUpgradeButton.addEventListener('click', async function() {
             const button = this;
-            const villageId = button.dataset.villageId;
+            const villageId = button.dataset.villageId || window.currentVillageId;
             const buildingInternalName = button.dataset.buildingInternalName;
-            const currentLevel = button.dataset.currentLevel;
-
-            // Disable button and show loading
-             button.disabled = true;
-            button.textContent = 'Upgrading...';
-
-            // Send AJAX request to upgrade_building.php
-            try {
-                const response = await fetch('upgrade_building.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: `village_id=${villageId}&building_type_internal_name=${buildingInternalName}&current_level=${currentLevel}&csrf_token=${document.querySelector('meta[name="csrf-token"]').content}`
-                });
-                const data = await response.json();
-
-                if (data.status === 'success') {
-                    if (window.toastManager) window.toastManager.showToast(data.message, 'success');
-                    // Close popup after successful upgrade initiation (optional, but common)
-                    closeBuildingDetailsPopup(); // Close popup
-                    // Zaktualizuj zasoby
-                    if (window.resourceUpdater) {
-                        window.resourceUpdater.fetchUpdate();
-                    }
-                    // Update the build queue (should happen automatically or via polling)
-                    updateBuildingQueue(); // Force queue refresh
-
-                } else {
-                     if (window.toastManager) window.toastManager.showToast(data.message || 'Upgrade error.', 'error');
-                }
-            } catch (error) {
-                console.error('Upgrade AJAX error:', error);
-                if (window.toastManager) window.toastManager.showToast('A communication error occurred during upgrade.', 'error');
-            } finally {
-             // Re-enable button regardless of success or failure
-             button.disabled = false;
-             button.textContent = `Upgrade to level ${parseInt(currentLevel, 10) + 1}`
-             button.textContent = `Upgrade to level ${parseInt(currentLevel, 10) + 1}`; // Aktualizuj tekst przycisku
-            }
+            const currentLevel = parseInt(button.dataset.currentLevel, 10);
+            await requestUpgrade(villageId, buildingInternalName, currentLevel, button, () => {
+                closeBuildingDetailsPopup();
+            });
         });
     }
 
@@ -564,7 +633,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Use the global variable villageId
-            const response = await fetch(`ajax/buildings/get_queue.php?village_id=${window.currentVillageId}`);
+            const response = await fetch(`${buildingEndpoints.queue}?village_id=${window.currentVillageId}`);
             const data = await response.json();
 
             if (data.status === 'success') {
@@ -633,13 +702,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Send AJAX request to cancel_upgrade.php
-            const response = await fetch('cancel_upgrade.php', {
+            const response = await fetch(buildingEndpoints.cancel, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: `queue_item_id=${queueItemId}&csrf_token=${document.querySelector('meta[name="csrf-token"]').content}&ajax=1` // Add ajax flag
+                body: `queue_item_id=${queueItemId}&csrf_token=${encodeURIComponent(getCsrfToken())}&ajax=1` // Add ajax flag
             });
             const data = await response.json();
 

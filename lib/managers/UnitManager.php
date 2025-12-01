@@ -521,7 +521,8 @@ class UnitManager
                         'queue_id' => $queue_id,
                         'unit_type_id' => $unit_type_id,
                         'unit_name' => $unit_name,
-                        'count' => $total_units
+                        'count' => $total_units,
+                        'produced_now' => $new_units,
                     ];
                 } else {
                     $result['updated_queues'][] = [
@@ -529,6 +530,7 @@ class UnitManager
                         'unit_type_id' => $unit_type_id,
                         'unit_name' => $unit_name,
                         'units_finished' => $new_units,
+                        'produced_now' => $new_units,
                         'total_units' => $total_units,
                         'remaining_units' => $total_units - $units_should_be_finished
                     ];

@@ -1,6 +1,8 @@
 <?php
+declare(strict_types=1);
 require_once '../config/config.php';
 require_once '../lib/Database.php';
+require_once '../lib/managers/BuildingConfigManager.php';
 require_once '../lib/managers/BuildingManager.php';
 
 // Display errors for debugging
@@ -33,7 +35,8 @@ echo "<!DOCTYPE html>
 
 $database = new Database(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 $conn = $database->getConnection();
-$buildingManager = new BuildingManager($conn);
+$buildingConfigManager = new BuildingConfigManager($conn);
+$buildingManager = new BuildingManager($conn, $buildingConfigManager);
 
 echo "<section>
     <h2>1. Struktura tabeli village_buildings</h2>";
@@ -76,7 +79,8 @@ if ($result) {
     
     echo "<p>Required columns:</p>
     <ul>";
-    $required_columns = ['id', 'village_id', 'building_type_id', 'level', 'upgrade_level_to', 'upgrade_ends_at'];
+    // Required columns in the current schema
+    $required_columns = ['id', 'village_id', 'building_type_id', 'level'];
     foreach ($required_columns as $column) {
         if (isset($fields[$column])) {
             echo "<li class='success'>$column - OK</li>";

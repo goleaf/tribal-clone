@@ -1,8 +1,10 @@
 <?php
+declare(strict_types=1);
 
 class BuildingConfigManager {
     private $conn;
     private $buildingConfigs = []; // Cache for building configurations
+    private $buildingRequirements = []; // Cache for requirements lookups
 
     public function __construct($conn) {
         $this->conn = $conn;
@@ -105,7 +107,7 @@ class BuildingConfigManager {
         $reducedTime = $baseTime * ($timeReductionFactor ** $mainBuildingLevel);
 
         // Minimal build time (e.g., 1 second)
-        return max(1, round($reducedTime));
+        return (int)max(1, round($reducedTime));
     }
 
      // Calculate resource production for a given building and level
@@ -170,6 +172,10 @@ class BuildingConfigManager {
 
      // Fetch requirements for a given building type
     public function getBuildingRequirements(string $internalName): array {
+        if (isset($this->buildingRequirements[$internalName])) {
+            return $this->buildingRequirements[$internalName];
+        }
+
         $config = $this->getBuildingConfig($internalName);
         
         if (!$config) {
@@ -193,8 +199,9 @@ class BuildingConfigManager {
         }
         
         $stmt->close();
-        
-        return $requirements;
+        $this->buildingRequirements[$internalName] = $requirements;
+
+        return $this->buildingRequirements[$internalName];
     }
 
     /**

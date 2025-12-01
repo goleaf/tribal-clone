@@ -21,7 +21,7 @@ async function fetchAndRenderResearchPanel(villageId, buildingInternalName) {
 
     try {
         // Use the existing get_building_action.php endpoint
-        const response = await fetch(`get_building_action.php?village_id=${villageId}&building_type=${buildingInternalName}`);
+        const response = await fetch(`/buildings/get_building_action.php?village_id=${villageId}&building_type=${buildingInternalName}`);
         const data = await response.json();
 
         if (data.status === 'success' && (data.action_type === 'research' || data.action_type === 'research_advanced')) {
@@ -101,12 +101,12 @@ async function fetchAndRenderResearchPanel(villageId, buildingInternalName) {
                                            villageResources.clay >= cost.clay &&
                                            villageResources.iron >= cost.iron;
 
-	                         html += `<td><img src="img/wood.png" title="Wood" alt="Wood"> ${formatNumber(cost.wood)}</td>`;
-	                         html += `<td><img src="img/stone.png" title="Clay" alt="Clay"> ${formatNumber(cost.clay)}</td>`;
-	                         html += `<td><img src="img/iron.png" title="Iron" alt="Iron"> ${formatNumber(cost.iron)}</td>`;
+	                         html += `<td><img src="/img/wood.png" title="Wood" alt="Wood"> ${formatNumber(cost.wood)}</td>`;
+	                         html += `<td><img src="/img/clay.png" title="Clay" alt="Clay"> ${formatNumber(cost.clay)}</td>`;
+	                         html += `<td><img src="/img/iron.png" title="Iron" alt="Iron"> ${formatNumber(cost.iron)}</td>`;
 	                         html += `<td>${formatDuration(time)}</td>`;
 	                         html += `<td>
-	                            <form action="start_research.php" method="post" class="research-form">
+	                            <form action="/research/start_research.php" method="post" class="research-form">
 	                                <input type="hidden" name="village_id" value="${villageId}">
 	                                <input type="hidden" name="research_type_id" value="${research.id}">
 	                                <input type="hidden" name="target_level" value="${nextLevel}">
@@ -211,7 +211,7 @@ function setupResearchListeners(villageId, buildingInternalName) {
              }
 
             try {
-                const response = await fetch('start_research.php', {
+                const response = await fetch('/research/start_research.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -276,7 +276,7 @@ function setupResearchListeners(villageId, buildingInternalName) {
             cancelButton.textContent = '...';
 
             try {
-                const response = await fetch('cancel_research.php', {
+                const response = await fetch('/research/cancel_research.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',

@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 require '../init.php';
 require_once __DIR__ . '/../lib/managers/VillageManager.php'; // Updated path
 require_once __DIR__ . '/../lib/managers/UserManager.php'; // Updated path
@@ -67,6 +68,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
 
         <main>
             <h2>Account settings</h2>
+            <div class="settings-stats" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+                <div class="stat-card" style="background:#fff;border:1px solid #e0c9a6;border-radius:8px;padding:12px 16px;min-width:160px;">
+                    <div style="font-size:12px;text-transform:uppercase;color:#8d5c2c;letter-spacing:0.03em;">Username</div>
+                    <div style="font-size:18px;font-weight:700;"><?= htmlspecialchars($username) ?></div>
+                </div>
+                <?php if ($village): ?>
+                <div class="stat-card" style="background:#fff;border:1px solid #e0c9a6;border-radius:8px;padding:12px 16px;min-width:160px;">
+                    <div style="font-size:12px;text-transform:uppercase;color:#8d5c2c;letter-spacing:0.03em;">Home village</div>
+                    <div style="font-size:18px;font-weight:700;"><?= htmlspecialchars($village['name']) ?></div>
+                    <div style="font-size:12px;color:#555;">(<?= $village['x_coord'] ?>|<?= $village['y_coord'] ?>)</div>
+                </div>
+                <?php endif; ?>
+            </div>
             <?php echo $message; ?>
             <section class="form-container">
                 <h3>Change email address</h3>

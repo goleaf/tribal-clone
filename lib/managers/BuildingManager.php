@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 class BuildingManager {
     private $conn;
@@ -298,7 +299,7 @@ class BuildingManager {
         }
 
         // Add to building_queue table
-        $stmt = $this->conn->prepare("INSERT INTO building_queue (village_id, village_building_id, building_type_id, level, start_time, finish_time) VALUES (?, ?, ?, ?, NOW(), ?)");
+        $stmt = $this->conn->prepare("INSERT INTO building_queue (village_id, village_building_id, building_type_id, level, starts_at, finish_time) VALUES (?, ?, ?, ?, NOW(), ?)");
         if ($stmt === false) {
             error_log("Prepare failed for addBuildingToQueue INSERT: " . $this->conn->error);
             return ['success' => false, 'message' => 'Server error while adding to the queue.'];
@@ -323,7 +324,7 @@ class BuildingManager {
     public function getVillageBuilding(int $villageId, string $internalName): ?array
     {
         $stmt = $this->conn->prepare("
-            SELECT vb.village_id, vb.building_type_id, vb.level, bt.internal_name, bt.name, bt.production_type
+            SELECT vb.id AS village_building_id, vb.village_id, vb.building_type_id, vb.level, bt.internal_name, bt.name, bt.production_type
             FROM village_buildings vb
             JOIN building_types bt ON vb.building_type_id = bt.id
             WHERE vb.village_id = ? AND bt.internal_name = ? LIMIT 1
@@ -406,7 +407,7 @@ class BuildingManager {
     public function getBuildingQueueItem(int $villageId): ?array
     {
         $stmt = $this->conn->prepare("
-            SELECT bq.id, bq.village_building_id, bq.level, bq.finish_time, bt.name, bt.internal_name
+            SELECT bq.id, bq.village_id, bq.village_building_id, bq.level, bq.starts_at, bq.finish_time, bt.name, bt.internal_name, bt.internal_name AS building_internal_name
             FROM building_queue bq
             JOIN building_types bt ON bq.building_type_id = bt.id
             WHERE bq.village_id = ?
@@ -437,15 +438,23 @@ class BuildingManager {
         $buildingsViewData = [];
 
         // 1. Fetch levels of all buildings for this village
-        $villageBuildingsLevels = $this->getVillageBuildingsLevels($villageId); // Implemented below
+        $villageBuildingsLevels = $this->getVillageBuildingsLevels($villageId);
 
         // 2. Fetch the current build queue item for this village
         $queueItem = $this->getBuildingQueueItem($villageId);
+        $hasQueuedBuild = $queueItem !== null;
 
-        // 3. Fetch configs for all buildings
+        // 3. Fetch village resources once (used for every upgrade check)
+        $villageResources = $this->getVillageResources($villageId);
+
+        // 4. Fetch configs for all buildings and prepare a quick name lookup
         $allBuildingConfigs = $this->buildingConfigManager->getAllBuildingConfigs();
+        $buildingNames = [];
+        foreach ($allBuildingConfigs as $config) {
+            $buildingNames[$config['internal_name']] = $config['name'] ?? $config['internal_name'];
+        }
 
-        // 4. Merge data to prepare view structure
+        // 5. Merge data to prepare view structure
         foreach ($allBuildingConfigs as $config) {
             $internal_name = $config['internal_name'];
             $current_level = $villageBuildingsLevels[$internal_name] ?? 0;
@@ -454,13 +463,18 @@ class BuildingManager {
             // Check whether the building is currently in the upgrade queue
             $is_upgrading = false;
             $queue_finish_time = null;
+            $queue_start_time = null;
             $queue_level_after = null;
+            $current_upgrade_duration = null;
 
             if ($queueItem && $queueItem['village_id'] == $villageId && $queueItem['building_internal_name'] == $internal_name) {
                 $is_upgrading = true;
-                $queue_finish_time = $queueItem['finish_time'];
-                // Queue level is always current level + 1
-                $queue_level_after = $current_level + 1;
+                $queue_finish_time = $queueItem['finish_time'] ? strtotime($queueItem['finish_time']) : null;
+                $queue_start_time = isset($queueItem['starts_at']) ? strtotime($queueItem['starts_at']) : null;
+                $queue_level_after = $queueItem['level'] ?? ($current_level + 1);
+                if ($queue_start_time && $queue_finish_time) {
+                    $current_upgrade_duration = max(1, $queue_finish_time - $queue_start_time);
+                }
             }
 
             // Prepare next-upgrade data if available
@@ -468,20 +482,36 @@ class BuildingManager {
             $upgrade_costs = null;
             $upgrade_time_seconds = null;
             $can_upgrade = false;
-            $upgrade_not_available_reason = '';
+            $upgrade_not_available_reason = 'Upgrade possible.';
 
-            if (!$is_upgrading && $current_level < $max_level) {
-                // Check only building requirements and global queue
-                // canUpgradeBuilding already checks requirements and queue state
-                $can_upgrade_check = $this->canUpgradeBuilding($villageId, $internal_name);
-                $can_upgrade = $can_upgrade_check['success'];
-                $upgrade_not_available_reason = $can_upgrade_check['message'];
-                
-                // Resource validation happens on the front end or AJAX handler.
-                // Here we compute cost and time only when the upgrade is technically possible.
+            if ($current_level >= $max_level) {
+                $upgrade_not_available_reason = 'Maximum level reached for this building.';
+            } elseif ($is_upgrading) {
+                $upgrade_not_available_reason = 'Upgrade already in progress in this village.';
+            } elseif ($current_level < $max_level) {
+                $assessment = $this->assessUpgradeReadiness(
+                    $internal_name,
+                    $config,
+                    $current_level,
+                    $villageResources,
+                    $hasQueuedBuild,
+                    $villageBuildingsLevels,
+                    $buildingNames
+                );
+                $can_upgrade = $assessment['success'];
+                $upgrade_not_available_reason = $assessment['message'];
+
                 if ($can_upgrade) {
-                     $upgrade_costs = $this->buildingConfigManager->calculateUpgradeCost($internal_name, $current_level);
-                     $upgrade_time_seconds = $this->buildingConfigManager->calculateUpgradeTime($internal_name, $current_level, $mainBuildingLevel);
+                    $upgrade_costs = $assessment['upgrade_costs'];
+                    $upgrade_time_seconds = $this->buildingConfigManager->calculateUpgradeTime($internal_name, $current_level, $mainBuildingLevel);
+                }
+            }
+
+            // Estimate duration for active upgrades when start_time is missing
+            if ($is_upgrading && !$current_upgrade_duration && $queue_finish_time) {
+                $current_upgrade_duration = $this->buildingConfigManager->calculateUpgradeTime($internal_name, $current_level, $mainBuildingLevel);
+                if (!$queue_start_time && $current_upgrade_duration) {
+                    $queue_start_time = $queue_finish_time - $current_upgrade_duration;
                 }
             }
 
@@ -493,10 +523,11 @@ class BuildingManager {
                 'max_level' => (int)$max_level,
                 'is_upgrading' => $is_upgrading,
                 'queue_finish_time' => $queue_finish_time,
+                'queue_start_time' => $queue_start_time,
                 'queue_level_after' => $queue_level_after,
                 'next_level' => $next_level,
                 'upgrade_costs' => $upgrade_costs, // null if not upgradable or upgrading
-                'upgrade_time_seconds' => $upgrade_time_seconds, // null if not upgradable or upgrading
+                'upgrade_time_seconds' => $upgrade_time_seconds ?? $current_upgrade_duration, // null if not upgradable or upgrading
                 'can_upgrade' => $can_upgrade, // Based on requirements and global queue
                 'upgrade_not_available_reason' => $upgrade_not_available_reason,
                  // Additional config data
@@ -544,6 +575,99 @@ class BuildingManager {
         $stmt->close();
 
         return $levels;
+    }
+
+    private function getVillageResources(int $villageId): ?array
+    {
+        $stmt = $this->conn->prepare("SELECT wood, clay, iron FROM villages WHERE id = ?");
+        if ($stmt === false) {
+            error_log("Prepare failed for getVillageResources: " . $this->conn->error);
+            return null;
+        }
+
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $resources = $result->fetch_assoc();
+        $stmt->close();
+
+        return $resources ?: null;
+    }
+
+    private function checkRequirementsFromLevels(string $internalName, array $villageLevels, array $buildingNames): array
+    {
+        $requirements = $this->buildingConfigManager->getBuildingRequirements($internalName);
+
+        if (empty($requirements)) {
+            return ['success' => true, 'message' => 'No additional building requirements.'];
+        }
+
+        foreach ($requirements as $req) {
+            $requiredBuildingName = $req['required_building'];
+            $requiredLevel = (int)$req['required_level'];
+
+            $currentLevel = $villageLevels[$requiredBuildingName] ?? 0;
+
+            if ($currentLevel < $requiredLevel) {
+                $requiredBuildingDisplayName = $buildingNames[$requiredBuildingName] ?? $requiredBuildingName;
+                return [
+                    'success' => false,
+                    'message' => "Requires " . htmlspecialchars($requiredBuildingDisplayName) . " at level " . $requiredLevel . ". Your current level: " . $currentLevel
+                ];
+            }
+        }
+
+        return ['success' => true, 'message' => 'Requirements met.'];
+    }
+
+    private function assessUpgradeReadiness(
+        string $internalName,
+        array $config,
+        int $currentLevel,
+        ?array $villageResources,
+        bool $hasQueuedBuild,
+        array $villageBuildingLevels,
+        array $buildingNames
+    ): array {
+        $maxLevel = (int)($config['max_level'] ?? 0);
+
+        if ($currentLevel >= $maxLevel) {
+            return ['success' => false, 'message' => 'Maximum level reached for this building.', 'upgrade_costs' => null];
+        }
+
+        if ($hasQueuedBuild) {
+            return ['success' => false, 'message' => 'Another upgrade is already in progress in this village.', 'upgrade_costs' => null];
+        }
+
+        $upgradeCosts = $this->buildingConfigManager->calculateUpgradeCost($internalName, $currentLevel);
+
+        if (!$upgradeCosts) {
+            return ['success' => false, 'message' => 'Cannot calculate upgrade costs.', 'upgrade_costs' => null];
+        }
+
+        if ($villageResources === null) {
+            return ['success' => false, 'message' => 'Cannot fetch village resources.', 'upgrade_costs' => null];
+        }
+
+        if ($this->hasInsufficientResources($villageResources, $upgradeCosts)) {
+            return ['success' => false, 'message' => 'Not enough resources.', 'upgrade_costs' => null];
+        }
+
+        $requirementsCheck = $this->checkRequirementsFromLevels($internalName, $villageBuildingLevels, $buildingNames);
+        if (!$requirementsCheck['success']) {
+            return ['success' => false, 'message' => $requirementsCheck['message'], 'upgrade_costs' => null];
+        }
+
+        return ['success' => true, 'message' => 'Upgrade possible.', 'upgrade_costs' => $upgradeCosts];
+    }
+
+    private function hasInsufficientResources(array $resources, array $upgradeCosts): bool
+    {
+        $wood = $resources['wood'] ?? 0;
+        $clay = $resources['clay'] ?? 0;
+        $iron = $resources['iron'] ?? 0;
+
+        return $wood < $upgradeCosts['wood'] || $clay < $upgradeCosts['clay'] || $iron < $upgradeCosts['iron'];
     }
 
     /**

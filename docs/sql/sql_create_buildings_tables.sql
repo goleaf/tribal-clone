@@ -35,8 +35,6 @@ CREATE TABLE IF NOT EXISTS village_buildings (
     village_id INT NOT NULL,
     building_type_id INT NOT NULL,
     level INT DEFAULT 0, -- Current completed level
-    upgrade_level_to INT DEFAULT NULL, -- Target level for an ongoing upgrade (NULL when idle)
-    upgrade_ends_at DATETIME DEFAULT NULL, -- Upgrade completion time (NULL when idle)
     FOREIGN KEY (village_id) REFERENCES villages(id) ON DELETE CASCADE,
     FOREIGN KEY (building_type_id) REFERENCES building_types(id) ON DELETE CASCADE,
     UNIQUE (village_id, building_type_id) -- Each building type can appear only once per village

@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS trade_routes (
     traders_count INT NOT NULL DEFAULT 1,
     departure_time DATETIME NOT NULL,
     arrival_time DATETIME NOT NULL,
+    offer_id INT NULL,
     FOREIGN KEY (source_village_id) REFERENCES villages(id) ON DELETE CASCADE,
-    FOREIGN KEY (target_village_id) REFERENCES villages(id) ON DELETE CASCADE
-); 
+    FOREIGN KEY (target_village_id) REFERENCES villages(id) ON DELETE CASCADE,
+    FOREIGN KEY (offer_id) REFERENCES trade_offers(id) ON DELETE SET NULL
+);

@@ -165,7 +165,7 @@ require '../header.php';
 
     <div id="main-content">
         <main>
-            <div class="message-view-container" data-message-id="<?= $msg['id'] ?>">
+            <div class="message-view-container" data-message-id="<?= $msg['id'] ?>" data-active-tab="<?= htmlspecialchars($activeTab) ?>">
                 <div class="message-header">
                     <div class="message-nav">
                         <a href="messages.php?tab=<?= htmlspecialchars($activeTab) ?>" class="btn btn-secondary">
@@ -231,60 +231,3 @@ require '../header.php';
 <?php require '../footer.php'; ?>
 
 <script src="../js/messages.js"></script>
-<script>
-    // Script for handling single-message action buttons (could be moved to js/messages.js)
-    document.addEventListener('DOMContentLoaded', function() {
-        const messageViewContainer = document.querySelector('.message-view-container');
-        if (messageViewContainer) {
-            messageViewContainer.addEventListener('click', function(event) {
-                const target = event.target.closest('.action-button');
-                if (target) {
-                    const action = target.dataset.action;
-                    const messageId = target.dataset.messageId;
-                    const confirmMessage = target.dataset.confirm;
-
-                    if (confirmMessage && !confirm(confirmMessage)) {
-                        return; // Cancel if the user does not confirm
-                    }
-
-                    // Send an AJAX request to this file (view_message.php)
-                    fetch('view_message.php?id=' + messageId + '&tab=<?= urlencode($activeTab) ?>', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'X-Requested-With': 'XMLHttpRequest' // Indicate it's an AJAX request
-                        },
-                        body: new URLSearchParams({
-                            action: action,
-                            message_id: messageId,
-                            // Add CSRF token if implemented
-                            // csrf_token: 'your_token_here'
-                        })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Handle success
-                            alert(data.message);
-                            if (data.redirect) {
-                                // Redirect if the response includes a redirect URL
-                                window.location.href = data.redirect;
-                            } else {
-                                // If there is no redirect (e.g., mark as unread), refresh the page for now
-                                // Ideally, update the UI or return to the message list without reload
-                                window.location.reload(); // TODO: Improve UI handling
-                            }
-                        } else {
-                            // Handle error
-                            alert('Error: ' + data.message);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('A communication error occurred with the server.');
-                    });
-                }
-            });
-        }
-    });
-</script> 

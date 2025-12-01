@@ -1,102 +1,62 @@
 <?php
+/**
+ * Legacy endpoint kept for backwards compatibility.
+ * Delegates to the new TradeManager-powered flow.
+ */
 require '../init.php';
-if ($_SERVER['REQUEST_METHOD'] === 'POST') validateCSRF();
-header('Content-Type: application/json');
+require_once __DIR__ . '/../lib/utils/AjaxResponse.php';
+require_once __DIR__ . '/../lib/managers/VillageManager.php';
+require_once __DIR__ . '/../lib/managers/TradeManager.php';
 
-// Verify the user is logged in
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    validateCSRF();
+}
+
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'error' => 'You are not logged in.']);
-    exit();
-}
-$user_id = $_SESSION['user_id'];
-
-// Validate request parameters
-$village_id = isset($_POST['village_id']) ? (int)$_POST['village_id'] : 0;
-$targetCoords = trim($_POST['target_coords'] ?? '');
-$wood = isset($_POST['wood']) ? max(0, (int)$_POST['wood']) : 0;
-$clay = isset($_POST['clay']) ? max(0, (int)$_POST['clay']) : 0;
-$iron = isset($_POST['iron']) ? max(0, (int)$_POST['iron']) : 0;
-
-if ($village_id <= 0 || !preg_match('/^(\d+)\|(\d+)$/', $targetCoords, $matches)) {
-    echo json_encode(['success' => false, 'error' => 'Invalid request data.']);
-    exit();
-}
-$target_x = (int)$matches[1];
-$target_y = (int)$matches[2];
-
-// Database connection: $conn provided by init.php
-
-// Verify the village belongs to the user
-$stmt = $conn->prepare("SELECT id, x_coord, y_coord FROM villages WHERE id = ? AND user_id = ?");
-$stmt->bind_param("ii", $village_id, $user_id);
-$stmt->execute();
-$village = $stmt->get_result()->fetch_assoc();
-$stmt->close();
-if (!$village) {
-    echo json_encode(['success' => false, 'error' => 'You do not have access to this village.']);
-    exit();
+    AjaxResponse::error('You are not logged in.', null, 401);
 }
 
-// Find the target village if it exists
-$stmt = $conn->prepare("SELECT id FROM villages WHERE x_coord = ? AND y_coord = ? LIMIT 1");
-$stmt->bind_param("ii", $target_x, $target_y);
-$stmt->execute();
-$row = $stmt->get_result()->fetch_assoc();
-$stmt->close();
-$target_village_id = $row ? (int)$row['id'] : null;
+try {
+    $userId = (int)$_SESSION['user_id'];
+    $villageId = isset($_POST['village_id']) ? (int)$_POST['village_id'] : 0;
+    $targetCoords = trim($_POST['target_coords'] ?? '');
+    $resources = [
+        'wood' => isset($_POST['wood']) ? (int)$_POST['wood'] : 0,
+        'clay' => isset($_POST['clay']) ? (int)$_POST['clay'] : 0,
+        'iron' => isset($_POST['iron']) ? (int)$_POST['iron'] : 0,
+    ];
 
-// Fetch market level and calculate trader capacity
-$tmp = $conn->prepare("SELECT vb.level FROM village_buildings vb JOIN building_types bt ON vb.building_type_id=bt.id WHERE vb.village_id=? AND bt.internal_name='market'");
-$tmp->bind_param("i", $village_id);
-$tmp->execute();
-$market_lvl = (int)$tmp->get_result()->fetch_assoc()['level'];
-$tmp->close();
-$traders_capacity = max(3, 3 + floor($market_lvl * 0.7));
+    if ($villageId <= 0) {
+        AjaxResponse::error('Invalid village selected.');
+    }
 
-// Check active outgoing transports
-$stmt = $conn->prepare("SELECT SUM(traders_count) AS used FROM trade_routes WHERE source_village_id=? AND arrival_time > NOW()");
-$stmt->bind_param("i", $village_id);
-$stmt->execute();
-$used = (int)$stmt->get_result()->fetch_assoc()['used'];
-$stmt->close();
-$available = max(0, $traders_capacity - $used);
-if ($available < 1) {
-    echo json_encode(['success' => false, 'error' => 'No traders available.']);
-    exit();
+    $villageManager = new VillageManager($conn);
+    $tradeManager = new TradeManager($conn);
+
+    // Refresh resources before validation
+    $villageManager->updateResources($villageId);
+
+    $result = $tradeManager->sendResources($userId, $villageId, $targetCoords, $resources);
+    if (!$result['success']) {
+        AjaxResponse::error($result['message'] ?? 'Could not send resources.');
+    }
+
+    $updatedVillage = $villageManager->getVillageInfo($villageId);
+
+    AjaxResponse::success(
+        [
+            'success' => true,
+            'route_id' => $result['route_id'],
+            'arrival_time' => $result['arrival_time'],
+            'traders_used' => $result['traders_used'],
+            'village_info' => [
+                'wood' => $updatedVillage['wood'],
+                'clay' => $updatedVillage['clay'],
+                'iron' => $updatedVillage['iron']
+            ]
+        ],
+        'Resources are on their way.'
+    );
+} catch (Throwable $e) {
+    AjaxResponse::handleException($e);
 }
-
-// Pull current resources
-$stmt = $conn->prepare("SELECT wood, clay, iron FROM villages WHERE id = ?");
-$stmt->bind_param("i", $village_id);
-$stmt->execute();
-$res = $stmt->get_result()->fetch_assoc();
-$stmt->close();
-if ($res['wood'] < $wood || $res['clay'] < $clay || $res['iron'] < $iron) {
-    echo json_encode(['success' => false, 'error' => 'Insufficient resources.']);
-    exit();
-}
-
-// Calculate travel time
-$distance = calculateDistance($village['x_coord'], $village['y_coord'], $target_x, $target_y);
-$speed = defined('TRADER_SPEED') ? TRADER_SPEED : 100; // fields per hour
-$timeSec = calculateTravelTime($distance, $speed);
-$departure = date('Y-m-d H:i:s');
-$arrival = date('Y-m-d H:i:s', time() + $timeSec);
-
-// Insert the trade route
-$count_traders = 1;
-$stmt = $conn->prepare("INSERT INTO trade_routes (source_village_id, target_village_id, target_x, target_y, wood, clay, iron, traders_count, departure_time, arrival_time) VALUES (?,?,?,?,?,?,?,?,?,?)");
-$stmt->bind_param("iiiiiiiiss", $village_id, $target_village_id, $target_x, $target_y, $wood, $clay, $iron, $count_traders, $departure, $arrival);
-$stmt->execute();
-$route_id = $stmt->insert_id;
-$stmt->close();
-
-// Deduct the sent resources
-$stmt = $conn->prepare("UPDATE villages SET wood=wood-?, clay=clay-?, iron=iron-? WHERE id=?");
-$stmt->bind_param("iiii", $wood, $clay, $iron, $village_id);
-$stmt->execute();
-$stmt->close();
-
-echo json_encode(['success' => true, 'route_id' => $route_id, 'departure_time' => $departure, 'arrival_time' => $arrival]);
-exit();
-?>

@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 require '../init.php';
 require_once __DIR__ . '/../lib/managers/RankingManager.php'; // Updated path
 require_once __DIR__ . '/../lib/managers/VillageManager.php'; // Updated path
@@ -35,6 +36,7 @@ $rankingManager = new RankingManager($conn);
 $total_records = 0;
 $ranking_data = [];
 $totalPages = 1;
+$unreadCount = 0; // Placeholder for future tribe ranking states
 
 // Fetch ranking data and total record count depending on the type
 if ($ranking_type === 'players') {
@@ -83,8 +85,13 @@ if ($ranking_type === 'players') {
         $player['rank'] = $current_rank++;
     }
     unset($player); // Unset the reference
+} elseif ($ranking_type === 'tribes') {
+    $current_rank = $start_rank;
+    foreach ($ranking_data as &$tribeRow) {
+        $tribeRow['rank'] = $current_rank++;
+    }
+    unset($tribeRow);
 }
-// Note: For tribes, rank would be handled similarly if/when implemented
 
 
 require '../header.php';
@@ -114,11 +121,30 @@ require '../header.php';
                 <a href="?type=tribes" class="ranking-tab <?= $ranking_type == 'tribes' ? 'active' : '' ?>">Tribes</a>
             </div>
 
+            <div class="ranking-stats" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+                <div class="stat-card" style="background:#fff;border:1px solid #e0c9a6;border-radius:8px;padding:12px 16px;min-width:160px;">
+                    <div style="font-size:12px;text-transform:uppercase;color:#8d5c2c;letter-spacing:0.03em;">Total</div>
+                    <div style="font-size:22px;font-weight:700;"><?= (int)$total_records ?></div>
+                </div>
+                <div class="stat-card" style="background:#fff;border:1px solid #e0c9a6;border-radius:8px;padding:12px 16px;min-width:160px;">
+                    <div style="font-size:12px;text-transform:uppercase;color:#8d5c2c;letter-spacing:0.03em;">Page</div>
+                    <div style="font-size:22px;font-weight:700;"><?= $page ?> / <?= max(1, $totalPages) ?></div>
+                </div>
+                <div class="stat-card" style="background:#fff;border:1px solid #e0c9a6;border-radius:8px;padding:12px 16px;min-width:160px;">
+                    <div style="font-size:12px;text-transform:uppercase;color:#8d5c2c;letter-spacing:0.03em;">Per page</div>
+                    <div style="font-size:22px;font-weight:700;"><?= $per_page ?></div>
+                </div>
+            </div>
+
             <div class="ranking-container">
                 <?php if ($ranking_type === 'players'): ?>
                     <h3>Player Rankings</h3>
 
                     <?php if (count($ranking_data) > 0): ?>
+                        <div class="ranking-filters" style="margin-bottom:12px;">
+                            <a href="?type=players&sort=points" class="btn btn-secondary">Sort by points</a>
+                            <a href="?type=players&sort=villages" class="btn btn-secondary">Sort by villages</a>
+                        </div>
                         <table class="ranking-table">
                             <thead>
                                 <tr>
@@ -153,15 +179,19 @@ require '../header.php';
                                 // Pages to display
                                 $start_page = max(1, $page - 2);
                                 $end_page = min($start_page + 4, $totalPages);
-
-                                // Adjust range if near the start or end
                                 if ($end_page - $start_page < 4) {
                                     $start_page = max(1, $end_page - 4);
                                 }
-
+                                if ($start_page > 1) {
+                                    echo '<span class="page-ellipsis">...</span>';
+                                }
                                 for ($i = $start_page; $i <= $end_page; $i++): ?>
                                     <a href="?type=<?= $ranking_type ?>&page=<?= $i ?>" class="page-link <?= $i == $page ? 'active' : '' ?>"><?= $i ?></a>
-                                <?php endfor; ?>
+                                <?php endfor;
+                                if ($end_page < $totalPages) {
+                                    echo '<span class="page-ellipsis">...</span>';
+                                }
+                                ?>
 
                                 <?php if ($page < $totalPages): ?>
                                     <a href="?type=<?= $ranking_type ?>&page=<?= $page + 1 ?>" class="page-link">&rsaquo;</a>
@@ -182,7 +212,7 @@ require '../header.php';
                              <thead>
                                  <tr>
                                      <th class="rank-column">Rank</th>
-                                     <th>Tribe name</th>
+                                     <th>Tribe</th>
                                      <th>Members</th>
                                      <th>Villages</th>
                                      <th>Points</th>
@@ -193,7 +223,10 @@ require '../header.php';
                                   <?php foreach ($ranking_data as $tribe): ?>
                                       <tr>
                                            <td class="rank-column"><?= $tribe['rank'] ?? '-' ?></td>
-                                           <td><?= htmlspecialchars($tribe['name']) ?></td>
+                                           <td>
+                                               <span class="tribe-tag">[<?= htmlspecialchars($tribe['tag'] ?? '') ?>]</span>
+                                               <?= htmlspecialchars($tribe['name']) ?>
+                                           </td>
                                            <td><?= $tribe['member_count'] ?? 0 ?></td>
                                            <td><?= $tribe['village_count'] ?? 0 ?></td>
                                            <td><?= formatNumber($tribe['points'] ?? 0) ?></td>

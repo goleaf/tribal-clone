@@ -1,36 +1,28 @@
 # Building System - Fixed Issues and Notes
 
 ## 1. Root cause
-A missing `upgrade_level_to` and `upgrade_ends_at` column in the `village_buildings` table caused critical errors when processing building upgrades.
+Early builds relied on `upgrade_level_to` / `upgrade_ends_at` columns on `village_buildings` for upgrade tracking. The current architecture uses the `building_queue` table instead, so keeping those columns leads to drift and confusion.
 
 ## 2. Fixes applied
-- Added the missing `upgrade_level_to` and `upgrade_ends_at` columns to `village_buildings`.
-- Updated `sql_create_buildings_tables.sql` so fresh installs include the new columns.
-- Removed a stray space after the closing PHP tag in `lib/BuildingManager.php` that triggered header warnings.
-
-### Updated table snippet
-```
-level INT DEFAULT 0,
-upgrade_level_to INT DEFAULT NULL,
-upgrade_ends_at DATETIME DEFAULT NULL,
-UNIQUE (village_id, building_type_id)
-```
+- Standardized on `building_queue` for upgrade tracking; `village_buildings` keeps only current `level`.
+- Updated `sql_create_buildings_tables.sql` to drop legacy `upgrade_level_to` / `upgrade_ends_at`.
+- Admin helpers now report the schema as up-to-date rather than adding legacy columns.
 
 ## 3. Diagnostic tools
-- **show_table_structure.php** - shows `village_buildings` structure and allows adding missing columns.
+- **show_table_structure.php** - shows `village_buildings` structure.
 - **test_building_system.php** - end-to-end diagnostics (building types, upgrade cost/time calculations, resource production checks).
 
 ## 4. Upgrade flow
 1. Player triggers an upgrade (form in `game.php`).
 2. Data is processed by `upgrade_building.php` which validates resources and building requirements.
-3. On success it deducts resources and sets `upgrade_level_to`/`upgrade_ends_at` on `village_buildings`.
-4. `game.php` checks on each refresh whether upgrades finished and displays success messages.
+3. On success it deducts resources and enqueues the task in `building_queue`.
+4. `game.php` and managers poll `building_queue` to complete upgrades and display progress.
 
 ## 5. Possible improvements
-- Full build queue support (currently single task).
+- Full multi-task queue support (currently single task).
 - Premium speed-ups.
 - Additional building dependency logic.
 - Visual progress indicators for upgrades.
 - Canceling builds with partial resource refunds.
 
-These changes resolve the critical upgrade issue and ensure the installer creates the correct schema for new setups.
+These changes keep installs aligned to the queue-based schema and avoid legacy column drift.

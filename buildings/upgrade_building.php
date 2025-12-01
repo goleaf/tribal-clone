@@ -124,7 +124,7 @@ try {
 
     $finish_time = date('Y-m-d H:i:s', time() + $upgrade_time_seconds);
     $stmt_queue_add = $conn->prepare("
-        INSERT INTO building_queue (village_id, village_building_id, building_type_id, level, start_time, finish_time)
+        INSERT INTO building_queue (village_id, village_building_id, building_type_id, level, starts_at, finish_time)
         VALUES (?, ?, (SELECT id FROM building_types WHERE internal_name = ?), ?, NOW(), ?)
     ");
     if ($stmt_queue_add === false) {

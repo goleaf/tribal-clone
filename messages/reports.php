@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 require '../init.php';
 require_once __DIR__ . '/../lib/managers/VillageManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php';
@@ -59,7 +60,7 @@ if ($totalReports > 0) {
     }
 }
 
-// Handle direct report detail requests
+// Direct report details (optional initial render)
 $report_details = null;
 if (isset($_GET['report_id'])) {
     $report_id = (int)$_GET['report_id'];
@@ -67,33 +68,12 @@ if (isset($_GET['report_id'])) {
     
     if ($result['success']) {
         $report_details = $result['report'];
-        
-        // Mark the report as read
-        // This read-marking logic could be moved into getBattleReport or handled via AJAX
-        $stmt_read = $conn->prepare("
-            UPDATE battle_reports 
-            SET is_read_by_attacker = 1 
-            WHERE id = ? AND source_village_id IN (SELECT id FROM villages WHERE user_id = ?)
-        ");
-        $stmt_read->bind_param("ii", $report_id, $user_id);
-        $stmt_read->execute();
-        $stmt_read->close();
-        
-        $stmt_read = $conn->prepare("
-            UPDATE battle_reports 
-            SET is_read_by_defender = 1 
-            WHERE id = ? AND target_village_id IN (SELECT id FROM villages WHERE user_id = ?)
-        ");
-        $stmt_read->bind_param("ii", $report_id, $user_id);
-        $stmt_read->execute();
-        $stmt_read->close();
-    } else {
-
     }
 }
 
-// Fetch battle reports the user participated in (with pagination) via BattleManager
+// Fetch battle reports the user participated in (with pagination)
 $reports = $battleManager->getBattleReportsForUser($user_id, $reportsPerPage, $offset);
+$unreadCount = 0;
 
 $pageTitle = 'Battle reports'; // Will become generic "Reports" once other types are added
 require '../header.php';
@@ -122,6 +102,20 @@ require '../header.php';
             
             <main>
                 <h2>Battle reports</h2>
+                <div class="reports-stats" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+                    <div class="stat-card" style="background:#fff;border:1px solid #e0c9a6;border-radius:8px;padding:12px 16px;min-width:160px;">
+                        <div style="font-size:12px;text-transform:uppercase;color:#8d5c2c;letter-spacing:0.03em;">Total</div>
+                        <div style="font-size:22px;font-weight:700;"><?= (int)$totalReports ?></div>
+                    </div>
+                    <div class="stat-card" style="background:#fff;border:1px solid #e0c9a6;border-radius:8px;padding:12px 16px;min-width:160px;">
+                        <div style="font-size:12px;text-transform:uppercase;color:#8d5c2c;letter-spacing:0.03em;">Unread</div>
+                        <div style="font-size:22px;font-weight:700;"><?= (int)$unreadCount ?></div>
+                    </div>
+                    <div class="stat-card" style="background:#fff;border:1px solid #e0c9a6;border-radius:8px;padding:12px 16px;min-width:160px;">
+                        <div style="font-size:12px;text-transform:uppercase;color:#8d5c2c;letter-spacing:0.03em;">Page</div>
+                        <div style="font-size:22px;font-weight:700;"><?= $currentPage ?> / <?= $totalPages ?></div>
+                    </div>
+                </div>
                 
             <?php if (isset($_GET['action_success'])): ?>
                 <div class="success-message">Action completed successfully.</div>
@@ -139,100 +133,26 @@ require '../header.php';
                 <div class="reports-container">
                     <!-- Reports list -->
                     <div class="reports-list">
-                            <?php foreach ($reports as $report): ?>
-                            <div class="report-item <?= !$report['is_read'] ? 'unread' : '' ?>" data-report-id="<?= $report['report_id'] ?>">
-                                    <div class="report-title">
+                        <?php foreach ($reports as $report): ?>
+                            <div class="report-item" data-report-id="<?= $report['report_id'] ?>">
+                                <div class="report-title">
                                     <span class="report-icon"><?= $report['attacker_won'] ? '&#9876;' : '&#128737;' ?></span>
-                                    <?= $report['attacker_won'] ? 'Victory' : 'Defeat' ?> - <?= htmlspecialchars($report['source_village_name']) ?> (<?= $report['source_x'] ?>|<?= $report['source_y'] ?>) attacks <?= htmlspecialchars($report['target_village_name']) ?> (<?= $report['target_x'] ?>|<?= $report['y_coord'] ?>)
-                                    </div>
-                                    <div class="report-villages">
-                                     From: <?= htmlspecialchars($report['attacker_name']) ?> (<?= htmlspecialchars($report['source_village_name']) ?>) To: <?= htmlspecialchars($report['defender_name']) ?> (<?= htmlspecialchars($report['target_village_name']) ?>)
-                                    </div>
+                                    <?= ucfirst($report['type']) ?> - <?= htmlspecialchars($report['source_village_name']) ?> (<?= $report['source_x'] ?>|<?= $report['source_y'] ?>) → <?= htmlspecialchars($report['target_village_name']) ?> (<?= $report['target_x'] ?>|<?= $report['target_y'] ?>)
+                                </div>
+                                <div class="report-villages">
+                                    From: <?= htmlspecialchars($report['attacker_name']) ?> (<?= htmlspecialchars($report['source_village_name']) ?>) To: <?= htmlspecialchars($report['defender_name']) ?> (<?= htmlspecialchars($report['target_village_name']) ?>)
+                                </div>
                                 <div class="report-date">
-                                    <?= date('d.m.Y H:i:s', strtotime($report['created_at'])) ?>
+                                    <?= htmlspecialchars($report['formatted_date']) ?>
                                 </div>
-                                </div>
-                            <?php endforeach; ?>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                     
                     <!-- Report details (loaded dynamically or shown after selection) -->
                     <div class="report-details" id="report-details">
                         <?php if ($report_details): ?>
-                             <!-- Render battle report details -->
-                             <h3>Battle report #<?= $report_details['report_id'] ?></h3>
-                            
-                            <div class="battle-summary">
-                                 <div class="battle-side <?= $report_details['attacker_won'] ? 'winner' : 'loser' ?>">
-                                    <h4>Attacker</h4>
-                                     <p class="battle-village"><?= htmlspecialchars($report_details['attacker_name']) ?> from <?= htmlspecialchars($report_details['source_village_name']) ?> (<?= $report_details['source_x'] ?>|<?= $report_details['source_y'] ?>)</p>
-                                     <!-- Add attack/defense strength if calculated and stored -->
-                                      <p class="battle-strength">Attack strength: ???</p>
-                                     
-                                      <h4>Units sent</h4>
-                                    <table class="units-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Unit</th>
-                                                  <th>Count</th>
-                                                <th>Losses</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                              <?php foreach ($report_details['attacker_units'] as $unit_type => $count): ?>
-                                                  <tr>
-                                                      <td class="unit-name"><img src="../img/ds_graphic/unit/<?= $unit_type ?>.png" alt="<?= $unit_type ?>"> <?= $unit_type ?></td>
-                                                      <td><?= $count ?></td>
-                                                      <td class="unit-lost"><?= $report_details['attacker_losses'][$unit_type] ?? 0 ?></td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                 </div>
-                                 
-                                 <div class="battle-side <?= $report_details['attacker_won'] ? 'loser' : 'winner' ?>">
-                                     <h4>Defender</h4>
-                                     <p class="battle-village"><?= htmlspecialchars($report_details['defender_name']) ?> from <?= htmlspecialchars($report_details['target_village_name']) ?> (<?= $report_details['target_x'] ?>|<?= $report_details['target_y'] ?>)</p>
-                                     <!-- Add attack/defense strength if calculated and stored -->
-                                      <p class="battle-strength">Defense strength: ???</p>
-                                      
-                                      <h4>Units present (post-battle)</h4>
-                                    <table class="units-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Unit</th>
-                                                  <th>Count</th>
-                                                <th>Losses</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                             <?php foreach ($report_details['defender_units'] as $unit_type => $count): ?>
-                                                  <tr>
-                                                      <td class="unit-name"><img src="../img/ds_graphic/unit/<?= $unit_type ?>.png" alt="<?= $unit_type ?>"> <?= $unit_type ?></td>
-                                                      <td><?= $count ?></td>
-                                                      <td class="unit-lost"><?= $report_details['defender_losses'][$unit_type] ?? 0 ?></td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                 </div>
-                                 
-                                 <div class="battle-loot">
-                                     <h4>Loot:</h4>
-                                     <p>Wood: <?= $report_details['loot_wood'] ?? 0 ?>, Clay: <?= $report_details['loot_clay'] ?? 0 ?>, Iron: <?= $report_details['loot_iron'] ?? 0 ?></p>
-                                 </div>
-                                 
-                                 <?php if ($report_details['ram_level_change'] > 0): ?>
-                 <div class="village-changes">
-                      <h4>Defender village changes</h4>
-                      <p>Wall reduced by <?= $report_details['ram_level_change'] ?> level<?= $report_details['ram_level_change'] > 1 ? 's' : '' ?>.</p>
-                 </div>
-                 <?php endif; ?>
-            </div>
-             
-             <div class="report-footer">
-                 Battle time: <?= $report_details['formatted_date'] ?>
-             </div>
-
+                            <p>Loading report...</p>
                         <?php else: ?>
                             <p>Select a report from the list to view details.</p>
                         <?php endif; ?>
@@ -254,7 +174,10 @@ require '../header.php';
                 </div>
 
             <?php else: ?>
-                <p>No battle reports.</p>
+                <div class="reports-empty" style="background:#fff;border:1px dashed #d9c4a7;padding:20px;border-radius:10px;">
+                    <h3>No battle reports yet</h3>
+                    <p>You have no battle reports on this page. Launch an attack or check another page to see new reports.</p>
+                </div>
             <?php endif; ?>
             </main>
         </div>
@@ -263,34 +186,155 @@ require '../header.php';
 <?php require '../footer.php'; ?>
 
 <script>
-// js/reports.js - embedded
 document.addEventListener('DOMContentLoaded', () => {
     const reportsList = document.querySelector('.reports-list');
     const reportDetailsArea = document.getElementById('report-details');
 
-    if (reportsList && reportDetailsArea) {
-        // Click handler for report items
-        reportsList.addEventListener('click', (event) => {
-            const reportItem = event.target.closest('.report-item');
-            if (reportItem) {
-                const reportId = reportItem.dataset.reportId;
-                if (reportId) {
-                    loadReportDetails(reportId);
-                }
+    function formatDateTime(datetimeString) {
+        const date = new Date(datetimeString);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${day}.${month}.${year} ${hours}:${minutes}`;
+    }
+
+    function escapeHTML(str) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+    }
+
+    function renderUnitsTable(units) {
+        let tableHtml = `
+            <table class="units-table">
+                <thead>
+                    <tr>
+                        <th>Unit</th>
+                        <th>Sent</th>
+                        <th>Lost</th>
+                        <th>Remaining</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        if (units && units.length > 0) {
+            units.forEach(unit => {
+                tableHtml += `
+                    <tr>
+                        <td class="unit-name">${escapeHTML(unit.name || 'Unit')}</td>
+                        <td>${unit.initial_count ?? 0}</td>
+                        <td class="unit-lost">${unit.lost_count ?? 0}</td>
+                        <td>${unit.remaining_count ?? 0}</td>
+                    </tr>
+                `;
+            });
+        } else {
+            tableHtml += `<tr><td colspan="4">No units</td></tr>`;
+        }
+        tableHtml += `
+                </tbody>
+            </table>
+        `;
+        return tableHtml;
+    }
+
+    function renderSpyIntel(details) {
+        const intel = details.intel || {};
+        let html = `
+            <div class="battle-summary">
+                <p>${details.success ? 'Mission succeeded' : 'Mission failed'}.</p>
+                <p>Scouts sent: ${details.attacker_spies_sent ?? 0}, lost: ${details.attacker_spies_lost ?? 0}.</p>
+                <p>Defender scouts: ${details.defender_spies ?? 0}, lost: ${details.defender_spies_lost ?? 0}.</p>
+        `;
+
+        if (intel.resources) {
+            html += `
+                <div class="battle-loot">
+                    <h4>Resources seen</h4>
+                    <p>Wood: ${intel.resources.wood ?? 0}, Clay: ${intel.resources.clay ?? 0}, Iron: ${intel.resources.iron ?? 0}</p>
+                </div>
+            `;
+        }
+
+        if (intel.buildings) {
+            html += `<div class="village-changes"><h4>Building levels</h4><ul>`;
+            Object.entries(intel.buildings).forEach(([key, value]) => {
+                html += `<li>${escapeHTML(value.name || key)}: level ${value.level ?? 0}</li>`;
+            });
+            html += `</ul></div>`;
+        }
+
+        if (intel.units && Array.isArray(intel.units)) {
+            html += `<div class="battle-loot"><h4>Garrison overview</h4><ul>`;
+            intel.units.forEach(unit => {
+                html += `<li>${escapeHTML(unit.name || unit.internal_name || 'Unit')}: ${unit.count ?? 0}</li>`;
+            });
+            html += `</ul></div>`;
+        }
+
+        html += `</div>`;
+        return html;
+    }
+
+    function renderReportDetails(reportData) {
+        const report = reportData.report;
+        const details = report.details || {};
+        const type = report.type || report.attack_type || details.type || 'battle';
+        let detailsHtml = `
+            <div class="report-details-content">
+                <h3>${type === 'spy' ? 'Spy report' : 'Battle report'} #${report.id}</h3>
+                <p class="battle-village">${escapeHTML(report.attacker_name)} (${escapeHTML(report.source_village_name)} ${report.source_x}|${report.source_y}) → ${escapeHTML(report.defender_name)} (${escapeHTML(report.target_village_name)} ${report.target_x}|${report.target_y})</p>
+        `;
+
+        if (type === 'spy') {
+            detailsHtml += renderSpyIntel(details);
+        } else {
+            detailsHtml += `
+                <div class="battle-summary">
+                    <div class="battle-side ${report.attacker_won ? 'winner' : 'loser'}">
+                        <h4>Attacker</h4>
+                        ${renderUnitsTable(report.attacker_units)}
+                    </div>
+                    <div class="battle-side ${report.attacker_won ? 'loser' : 'winner'}">
+                        <h4>Defender</h4>
+                        ${renderUnitsTable(report.defender_units)}
+                    </div>
+            `;
+
+            if (details.loot) {
+                detailsHtml += `
+                    <div class="battle-loot">
+                        <h4>Loot</h4>
+                        <p>Wood: ${details.loot.wood ?? 0}, Clay: ${details.loot.clay ?? 0}, Iron: ${details.loot.iron ?? 0}</p>
+                    </div>
+                `;
             }
-        });
 
-        // Load report details via AJAX
-        function loadReportDetails(reportId) {
-            reportDetailsArea.innerHTML = '<p>Loading report...</p>';
-            reportDetailsArea.classList.add('loading');
+            detailsHtml += `</div>`;
+        }
 
-            fetch(`reports.php?report_id=${reportId}`, {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
+        detailsHtml += `
+                <div class="report-footer">
+                    Battle time: ${formatDateTime(report.battle_time)}
+                </div>
+            </div>
+        `;
+
+        reportDetailsArea.innerHTML = detailsHtml;
+    }
+
+    function loadReportDetails(reportId) {
+        reportDetailsArea.innerHTML = '<p>Loading report...</p>';
+        reportDetailsArea.classList.add('loading');
+
+        fetch(`reports.php?report_id=${reportId}`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -301,11 +345,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 reportDetailsArea.classList.remove('loading');
 
                 if (data.success) {
-                    renderReportDetails(data.report);
-                    // Optionally mark as read in UI here
+                    renderReportDetails(data);
                 } else {
-                    reportDetailsArea.innerHTML = `<p class="error-message">${data.message || 'Failed to load the report.'}</p>`;
-                    console.error('Error loading report details:', data.message);
+                    reportDetailsArea.innerHTML = `<p class="error-message">${escapeHTML(data.message || data.error || 'Failed to load the report.')}</p>`;
                 }
             })
             .catch(error => {
@@ -313,125 +355,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 reportDetailsArea.innerHTML = '<p class="error-message">A communication error occurred while loading the report.</p>';
                 console.error('Fetch error:', error);
             });
-        }
+    }
 
-        // Render report details HTML from JSON data
-        function renderReportDetails(reportData) {
-            const attackerSideClass = reportData.winner === 'attacker' ? 'winner' : 'loser';
-            const defenderSideClass = reportData.winner === 'defender' ? 'winner' : 'loser';
-
-            function renderUnitsTable(units) {
-                let tableHtml = `
-                    <table class="units-table">
-                        <thead>
-                            <tr>
-                                <th>Unit</th>
-                                <th>Count</th>
-                                <th>Losses</th>
-                                <th>Remaining</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
-                if (units && units.length > 0) {
-                    units.forEach(unit => {
-                        tableHtml += `
-                            <tr>
-                                <td class="unit-name"><img src="../img/ds_graphic/unit/${unit.internal_name}.png" alt="${unit.name}"> ${unit.name}</td>
-                                <td>${unit.initial_count}</td>
-                                <td class="unit-lost">${unit.lost_count}</td>
-                                <td>${unit.remaining_count}</td>
-                            </tr>
-                        `;
-                    });
-                } else {
-                    tableHtml += `<tr><td colspan="4">No units</td></tr>`;
+    if (reportsList && reportDetailsArea) {
+        reportsList.addEventListener('click', (event) => {
+            const reportItem = event.target.closest('.report-item');
+            if (reportItem) {
+                const reportId = reportItem.dataset.reportId;
+                if (reportId) {
+                    loadReportDetails(reportId);
                 }
-                tableHtml += `
-                        </tbody>
-                    </table>
-                `;
-                return tableHtml;
             }
+        });
 
-            let details = {};
-            try {
-                details = JSON.parse(reportData.details_json);
-            } catch (e) {
-                console.error('Error parsing report details JSON:', e);
-                details = { attacker_losses: {}, defender_losses: {}, loot: { wood: 0, clay: 0, iron: 0 }, ram_level_change: 0 };
-            }
-
-            const detailsHtml = `
-                <div class="report-details-content">
-                    <h3>Battle report #${reportData.id}</h3>
-
-                    <div class="battle-summary">
-                        <div class="battle-side ${attackerSideClass}">
-                            <h4>Attacker</h4>
-                            <p class="battle-village">${escapeHTML(reportData.attacker_name)} from village ${escapeHTML(reportData.source_village_name)} (${reportData.source_x}|${reportData.source_y})</p>
-                            <p class="battle-strength">Attack strength: ${reportData.total_attack_strength}</p>
-
-                            <h4>Attacking units</h4>
-                            ${renderUnitsTable(reportData.attacker_units)}
-                        </div>
-
-                        <div class="battle-side ${defenderSideClass}">
-                            <h4>Defender</h4>
-                            <p class="battle-village">${escapeHTML(reportData.defender_name)} from village ${escapeHTML(reportData.target_village_name)} (${reportData.target_x}|${reportData.target_y})</p>
-                            <p class="battle-strength">Defense strength: ${reportData.total_defense_strength}</p>
-
-                            <h4>Defending units</h4>
-                            ${renderUnitsTable(reportData.defender_units)}
-                        </div>
-
-                        ${reportData.winner === 'attacker' && (details.loot.wood > 0 || details.loot.clay > 0 || details.loot.iron > 0) ? `
-                            <div class="battle-loot">
-                                <h4>Loot:</h4>
-                                <p>Wood: ${details.loot.wood}, Clay: ${details.loot.clay}, Iron: ${details.loot.iron}</p>
-                            </div>
-                        ` : ''}
-
-                        ${details.ram_level_change > 0 ? `
-                            <div class="village-changes">
-                                <h4>Defender village changes</h4>
-                                <p>Wall reduced by ${details.ram_level_change} level${details.ram_level_change > 1 ? 's' : ''}.</p>
-                            </div>
-                        ` : ''}
-                    </div>
-
-                    <div class="report-footer">
-                        Battle time: ${formatDateTime(reportData.created_at)}
-                    </div>
-                </div>
-            `;
-
-            reportDetailsArea.innerHTML = detailsHtml;
-        }
-
-        function formatDateTime(datetimeString) {
-            const date = new Date(datetimeString);
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear();
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            return `${day}.${month}.${year} ${hours}:${minutes}`;
-        }
-
-        function escapeHTML(str) {
-            const div = document.createElement('div');
-            div.appendChild(document.createTextNode(str));
-            return div.innerHTML;
-        }
-
-        // Initial state: load a report from URL if present
         const urlParams = new URLSearchParams(window.location.search);
         const initialReportId = urlParams.get('report_id');
         if (initialReportId) {
             loadReportDetails(initialReportId);
-        } else if (reportDetailsArea.innerHTML.trim() === '') {
-            reportDetailsArea.innerHTML = '<p>Select a report from the list to view details.</p>';
+        } else {
+            const firstReport = reportsList.querySelector('.report-item');
+            if (firstReport) {
+                loadReportDetails(firstReport.dataset.reportId);
+            } else {
+                reportDetailsArea.innerHTML = '<p>Select a report from the list to view details.</p>';
+            }
         }
     }
 });

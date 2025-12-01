@@ -23,7 +23,7 @@ async function fetchAndRenderMainBuildingPanel(villageId, buildingInternalName) 
 
     try {
         // Use the existing get_building_action.php endpoint
-        const response = await fetch(`get_building_action.php?village_id=${villageId}&building_type=${buildingInternalName}`);
+        const response = await fetch(`/buildings/get_building_action.php?village_id=${villageId}&building_type=${buildingInternalName}`);
         const data = await response.json();
 
         if (data.status === 'success' && data.action_type === 'manage_village') {
@@ -138,7 +138,7 @@ async function renameVillage(villageId, newName) {
 
      try {
          const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-         const response = await fetch('rename_village.php', {
+         const response = await fetch('/player/rename_village.php', {
              method: 'POST',
              headers: {
                  'Content-Type': 'application/x-www-form-urlencoded',

@@ -21,9 +21,9 @@ Modern PHP remake of the Tribal Wars browser engine with real-time building, rec
 | Combat & reports | Attack sending with slowest-unit travel time, battle resolution (wall/rams/catapults), loot calculation, battle reports, notifications to attacker/defender. | Requires tuning/edge-case coverage |
 | Map | Draggable grid map (`map/map.php`) showing nearby villages, modal popup with owner/details and attack shortcut. | Stable |
 | Messaging | Private messages with inbox/sent/archive tabs, bulk actions, unread counters; DB-backed via `MessageManager`. | UI integration & validation passes |
-| Rankings | Player leaderboard (villages/population based); tribe ranking placeholder in `RankingManager`. | Expand data model |
+| Rankings | Player and tribe leaderboards (villages/population based) with pagination and point aggregation. | Stable |
 | Notifications | Session toasts plus persistent notifications table with expiry, fetch/read helpers in `NotificationManager`. | Hook into all events |
-| Trade & tribes | `TradeManager` placeholder and tribe systems planned; routes and DB schema to be added. | Planned |
+| Trade & tribes | Trade routes still planned; tribe system live with schema, invites, membership, and ranking hooks. | Trade planned / Tribes beta |
 
 ## Core Services & Functions
 - `lib/Database.php` - dual SQLite/MySQL adapter exposing a `mysqli`-like API, charset setup, and a PDO-backed SQLite adapter.
@@ -37,7 +37,7 @@ Modern PHP remake of the Tribal Wars browser engine with real-time building, rec
 - `lib/managers/BattleManager.php` - attack creation, travel-time calculation, combat resolution (strength comparison, wall/catapults/rams effects, loot), battle report persistence, completion notifications.
 - `lib/managers/MessageManager.php` - message retrieval by tab, bulk actions (mark read/unread, archive, delete), unread/archived counters, safety checks per user.
 - `lib/managers/NotificationManager.php` - CRUD for persistent notifications with expiry and unread counts.
-- `lib/managers/RankingManager.php` - player ranking queries with pagination; tribe ranking placeholder.
+- `lib/managers/RankingManager.php` - player and tribe ranking queries with pagination and point aggregation.
 - `lib/managers/TradeManager.php` - future trade routes/market logic placeholder.
 - Frontend JS in `js/` - resource/queue polling, building and recruitment panels, research UI, notifications, utility helpers (`utils.js`, `resources.js`, `buildings.js`, `units.js`, etc.).
 - AJAX endpoints in `ajax/` - building upgrades (`ajax/buildings`), unit recruitment (`ajax/units`), and other in-page actions powering the dynamic UI.
@@ -59,7 +59,7 @@ Modern PHP remake of the Tribal Wars browser engine with real-time building, rec
 
 ## Roadmap
 - [ ] Finish trade routes and market actions (`TradeManager`, AJAX + UI).
-- [ ] Implement tribe/alliance data model, tribe rankings, and invite/role flows.
+- [x] Implement tribe/alliance data model, tribe rankings, and invite/role flows.
 - [ ] Harden combat formulas (wall/ram/catapult balance, spy/scout actions) and add automated report links in UI.
 - [ ] Complete messaging UI integration and validation (attachments, blocking, spam controls).
 - [ ] Wire notifications into all major events (build/recruit/research complete, attacks, messages).

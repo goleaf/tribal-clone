@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
  * AJAX - Fetch current building status.
  * Returns the current build queue state and related building details as JSON.
@@ -47,7 +48,7 @@ try {
     $stmt_completed = $conn->prepare("
         SELECT COUNT(*) as count 
         FROM building_queue 
-        WHERE village_id = ? AND ends_at <= ?
+        WHERE village_id = ? AND finish_time <= ?
     ");
     $stmt_completed->bind_param("is", $village_id, $current_time);
     $stmt_completed->execute();
@@ -58,12 +59,12 @@ try {
     
     // Fetch active queue items
     $stmt_queue = $conn->prepare("
-        SELECT bq.id, bq.building_type_id, bq.level_after, bq.starts_at, bq.ends_at, 
+        SELECT bq.id, bq.building_type_id, bq.level, bq.starts_at, bq.finish_time, 
                bt.name as building_name, bt.internal_name
         FROM building_queue bq
         JOIN building_types bt ON bq.building_type_id = bt.id
-        WHERE bq.village_id = ? AND bq.ends_at > ?
-        ORDER BY bq.ends_at ASC
+        WHERE bq.village_id = ? AND bq.finish_time > ?
+        ORDER BY bq.finish_time ASC
     ");
     $stmt_queue->bind_param("is", $village_id, $current_time);
     $stmt_queue->execute();
@@ -71,7 +72,7 @@ try {
     
     while ($row = $result_queue->fetch_assoc()) {
         // Calculate remaining time and progress percentage
-        $end_time = strtotime($row['ends_at']);
+        $end_time = strtotime($row['finish_time']);
         $start_time = strtotime($row['starts_at']);
         $current_time_stamp = time();
         
@@ -86,8 +87,11 @@ try {
             'building_type_id' => $row['building_type_id'],
             'building_name' => $row['building_name'],
             'internal_name' => $row['internal_name'],
-            'level_after' => $row['level_after'],
-            'ends_at' => $row['ends_at'],
+            'level_after' => $row['level'],
+            'level' => $row['level'],
+            'finish_time' => $row['finish_time'],
+            'ends_at' => $row['finish_time'], // alias for legacy consumers
+            'starts_at' => $row['starts_at'],
             'remaining_time' => $remaining_time,
             'remaining_time_formatted' => formatTime($remaining_time),
             'progress_percent' => $progress_percent

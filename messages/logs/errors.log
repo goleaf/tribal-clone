@@ -6,3 +6,15 @@ Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/m
 Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/messages/reports.php(30): BattleManager->__construct(Object(SQLiteAdapter), Object(VillageManager))
 #1 {main}
 --------------------------------------------------------------------------------
+[2025-12-01 02:47:49] EXCEPTION: htmlspecialchars(): Argument #1 ($string) must be of type string, int given in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/messages/messages.php line 109
+Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/messages/messages.php(109): htmlspecialchars(1)
+#1 {main}
+--------------------------------------------------------------------------------
+[2025-12-01 02:47:53] EXCEPTION: htmlspecialchars(): Argument #1 ($string) must be of type string, int given in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/messages/messages.php line 109
+Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/messages/messages.php(109): htmlspecialchars(1)
+#1 {main}
+--------------------------------------------------------------------------------
+[2025-12-01 02:47:55] EXCEPTION: htmlspecialchars(): Argument #1 ($string) must be of type string, int given in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/messages/messages.php line 109
+Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/messages/messages.php(109): htmlspecialchars(1)
+#1 {main}
+--------------------------------------------------------------------------------

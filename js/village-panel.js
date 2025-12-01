@@ -18,7 +18,8 @@ function showNotification(message, type = 'info') {
 }
 function fetchVillageResources() {
     showLoader('village-resources-panel');
-    fetch('get_resources.php')
+    const villageParam = window.currentVillageId ? `?village_id=${window.currentVillageId}` : '';
+    fetch(`/ajax/get_resources.php${villageParam}`)
         .then(r => r.json())
         .then(data => {
             document.getElementById('wood-count').textContent = data.wood;
@@ -46,7 +47,8 @@ function fetchVillageBuildings() {
 }
 function fetchVillageQueue() {
     showLoader('village-queue-panel');
-    fetch('get_building_action.php?action=queue')
+    const villageParam = window.currentVillageId ? `&village_id=${window.currentVillageId}` : '';
+    fetch(`/buildings/get_building_action.php?action=queue${villageParam}`)
         .then(r => r.text())
         .then(html => {
             document.getElementById('village-queue-panel').innerHTML = html;
@@ -55,7 +57,8 @@ function fetchVillageQueue() {
 }
 function fetchCurrentUnits() {
     showLoader('current-units-panel');
-    fetch('get_units.php')
+    const villageParam = window.currentVillageId ? `?village_id=${window.currentVillageId}` : '';
+    fetch(`/units/get_units.php${villageParam}`)
         .then(r => r.text())
         .then(html => {
             document.getElementById('current-units-panel').innerHTML = html;
@@ -64,7 +67,8 @@ function fetchCurrentUnits() {
 }
 function fetchRecruitmentPanel() {
     showLoader('recruitment-panel');
-    fetch('get_recruitment_panel.php')
+    const villageParam = window.currentVillageId ? `?village_id=${window.currentVillageId}` : '';
+    fetch(`/units/get_recruitment_panel.php${villageParam}`)
         .then(r => r.text())
         .then(html => {
             document.getElementById('recruitment-panel').innerHTML = html;
@@ -73,7 +77,8 @@ function fetchRecruitmentPanel() {
 }
 function fetchRecruitmentQueue() {
     showLoader('recruitment-queue-panel');
-    fetch('get_recruitment_queue.php')
+    const villageParam = window.currentVillageId ? `?village_id=${window.currentVillageId}` : '';
+    fetch(`/units/get_recruitment_queue.php${villageParam}`)
         .then(r => r.text())
         .then(html => {
             document.getElementById('recruitment-queue-panel').innerHTML = html;
@@ -82,7 +87,8 @@ function fetchRecruitmentQueue() {
 }
 function fetchCurrentResearch() {
     showLoader('current-research-panel');
-    fetch('get_current_research.php')
+    const villageParam = window.currentVillageId ? `?village_id=${window.currentVillageId}` : '';
+    fetch(`/research/get_current_research.php${villageParam}`)
         .then(r => r.text())
         .then(html => {
             document.getElementById('current-research-panel').innerHTML = html;
@@ -91,7 +97,8 @@ function fetchCurrentResearch() {
 }
 function fetchResearchQueue() {
     showLoader('research-queue-panel');
-    fetch('get_research_queue.php')
+    const villageParam = window.currentVillageId ? `?village_id=${window.currentVillageId}` : '';
+    fetch(`/research/get_research_queue.php${villageParam}`)
         .then(r => r.text())
         .then(html => {
             document.getElementById('research-queue-panel').innerHTML = html;

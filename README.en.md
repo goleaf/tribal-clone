@@ -51,11 +51,22 @@ The main functionalities implemented in the project are:
         -   Ability for rams to destroy walls.
         -   Ability for catapults to target and destroy buildings.
     -   Ability to send attacks and support to other villages.
+    -   Scout missions that gather intel on enemy villages, improved by the Espionage research.
 
 8.  **Messaging and Reporting System**
     -   Sending messages between players (in progress).
     -   Detailed battle reports, including information on losses, loot, and destruction.
-    -   Alliance and tribe system (planned).
+    -   Alliance and tribe system (create/invite/join/leave tribes with basic ranking).
+
+9.  **Trade System**
+    -   Send resources between villages with travel time and trader limits.
+    -   Create, accept, and cancel market offers with reserved merchants.
+    -   Active trade tracking with timers inside the market panel.
+
+10.  **Rewards and Achievements**
+    -   Automatic tracking of building, economy, and recruitment milestones.
+    -   Instant rewards (resources and points) delivered to your village upon unlock.
+    -   Dedicated Achievements page with progress bars and status badges.
 
 ## Inspirations from VeryOldTemplate
 
@@ -141,11 +152,11 @@ Detailed documentation of the code and database can be found in the `docs/` dire
 ## Further Development
 
 The project can be further developed by implementing and expanding planned functionalities, such as:
-1.  Alliance/tribe system.
-2.  Player-to-player trading system.
+1.  Deeper tribe features (roles beyond leader/member, diplomacy, shared forums).
+2.  Advanced trading improvements (filters, ratios, alliance restrictions).
 3.  Rewards and achievements system.
 4.  Further balancing of units and the combat system.
-5.  Implementation of a spying system.
+5.  Refining the spying system (balance tweaks, clearer reports).
 6.  Completing action panels for the remaining buildings (Smithy, Market, etc.).
 7.  Further improvements to UI/UX and responsiveness.
 

@@ -59,7 +59,7 @@ if ($isSqlite) {
 
     echo "<h2>SQL script to add missing columns</h2>";
     echo "<pre>";
-    echo "ALTER TABLE village_buildings ADD COLUMN upgrade_level_to INT DEFAULT NULL;\nALTER TABLE village_buildings ADD COLUMN upgrade_ends_at DATETIME DEFAULT NULL;";
+    echo "village_buildings schema is up-to-date; no upgrade_level_to / upgrade_ends_at columns required.";
     echo "</pre>";
 
     echo "<h2>Execute SQL script</h2>";

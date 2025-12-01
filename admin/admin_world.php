@@ -5,7 +5,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     validateCSRF();
     $map_size = isset($_POST['map_size']) ? (int)$_POST['map_size'] : 100;
     // Clear existing world data
-    $tables = ['building_queue','unit_queue','research_queue','trade_routes','villages','village_buildings'];
+    $tables = ['building_queue','unit_queue','research_queue','trade_routes','trade_offers','villages','village_buildings'];
     foreach ($tables as $table) {
         $conn->query("DELETE FROM $table");
     }

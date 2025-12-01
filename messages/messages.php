@@ -76,6 +76,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['mes
 $messageData = $messageManager->getUserMessages($user_id, $activeTab, $offset, $messagesPerPage);
 $messages = $messageData['messages'];
 $totalMessages = $messageData['total'];
+$unreadMessages = array_reduce($messages, function($carry, $msg) use ($activeTab) {
+    if ($activeTab !== 'sent' && empty($msg['is_read'])) {
+        return $carry + 1;
+    }
+    return $carry;
+}, 0);
 
 $totalPages = ceil($totalMessages / $messagesPerPage); // Calculate total pages based on total messages
 
@@ -99,7 +105,7 @@ $pageTitle = 'Messages';
 require '../header.php';
 ?>
 
-<div id="game-container">
+<div id="game-container" data-user-id="<?= htmlspecialchars((string)$user_id, ENT_QUOTES, 'UTF-8') ?>">
     <!-- Game header with resources -->
     <header id="main-header">
         <div class="header-title">
@@ -117,6 +123,20 @@ require '../header.php';
         
         <main>
             <h2>Messages</h2>
+            <div class="messages-stats" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+                <div class="stat-card" style="background:#fff;border:1px solid #e0c9a6;border-radius:8px;padding:12px 16px;min-width:160px;">
+                    <div style="font-size:12px;text-transform:uppercase;color:#8d5c2c;letter-spacing:0.03em;">Total</div>
+                    <div style="font-size:22px;font-weight:700;"><?= (int)$totalMessages ?></div>
+                </div>
+                <div class="stat-card" style="background:#fff;border:1px solid #e0c9a6;border-radius:8px;padding:12px 16px;min-width:160px;">
+                    <div style="font-size:12px;text-transform:uppercase;color:#8d5c2c;letter-spacing:0.03em;">Unread</div>
+                    <div style="font-size:22px;font-weight:700;"><?= (int)$unreadMessages ?></div>
+                </div>
+                <div class="stat-card" style="background:#fff;border:1px solid #e0c9a6;border-radius:8px;padding:12px 16px;min-width:160px;">
+                    <div style="font-size:12px;text-transform:uppercase;color:#8d5c2c;letter-spacing:0.03em;">Page</div>
+                    <div style="font-size:22px;font-weight:700;"><?= $currentPage ?> / <?= max(1, $totalPages) ?></div>
+                </div>
+            </div>
             
             <?php if (isset($_GET['action_success'])): ?>
                 <div class="success-message">Action completed successfully.</div>
@@ -232,9 +252,19 @@ require '../header.php';
                             <a href="messages.php?tab=<?= $activeTab ?>&page=<?= $currentPage - 1 ?>" class="page-link">Previous</a>
                         <?php endif; ?>
                         
-                        <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                    <?php
+                        $startPage = max(1, $currentPage - 2);
+                        $endPage = min($totalPages, $currentPage + 2);
+                        if ($startPage > 1) {
+                            echo '<span class="page-ellipsis">...</span>';
+                        }
+                        for ($i = $startPage; $i <= $endPage; $i++): ?>
                             <a href="messages.php?tab=<?= $activeTab ?>&page=<?= $i ?>" class="page-link <?= $i === $currentPage ? 'active' : '' ?>"><?= $i ?></a>
-                        <?php endfor; ?>
+                        <?php endfor;
+                        if ($endPage < $totalPages) {
+                            echo '<span class="page-ellipsis">...</span>';
+                        }
+                    ?>
                         
                         <?php if ($currentPage < $totalPages): ?>
                             <a href="messages.php?tab=<?= $activeTab ?>&page=<?= $currentPage + 1 ?>" class="page-link">Next</a>
@@ -253,436 +283,7 @@ require '../header.php';
 
 <?php require '../footer.php'; ?>
 
-<script src="../js/messages.js"></script>
-
 <script>
-    // js/messages.js
-
-    document.addEventListener('DOMContentLoaded', function() {
-        const messagesList = document.querySelector('.messages-list');
-        const messageDetailsArea = document.getElementById('message-details'); // Assuming this div exists in messages.php
-
-        // Embed user_id from PHP
-        const currentUserId = <?= json_encode($user_id) ?>;
-
-        if (messagesList && messageDetailsArea) {
-            // Event listener for clicking on message items in the list
-            messagesList.addEventListener('click', function(event) {
-                const messageItem = event.target.closest('.message-item');
-                const viewButton = event.target.closest('.view-message-btn');
-
-                // Check if a message item was clicked or the view button within it
-                // Ensure the click is not inside the checkbox or action buttons that have their own handlers
-                const isCheckboxClick = event.target.classList.contains('message-checkbox-input');
-                const isActionButton = event.target.closest('.action-btn'); // Check if any action button was clicked
-
-                if (messageItem && !isCheckboxClick && !isActionButton) {
-                     const messageId = messageItem.dataset.messageId;
-
-                    if (messageId) {
-                        // Prevent default link behavior if clicked element is a link
-                        if (event.target.tagName === 'A') {
-                            event.preventDefault();
-                        }
-
-                        // Load message details
-                        loadMessageDetails(messageId);
-                    }
-                } else if (viewButton) { // Handle clicks specifically on the view button
-                     const messageId = viewButton.dataset.messageId;
-                     if (messageId) {
-                          event.preventDefault(); // Prevent default button behavior
-                          loadMessageDetails(messageId);
-                     }
-                }
-            });
-
-            // Function to load message details via AJAX
-            function loadMessageDetails(messageId) {
-                // Show a loading indicator (optional)
-                messageDetailsArea.innerHTML = '<p>Loading message...</p>';
-                messageDetailsArea.classList.add('loading');
-
-                // Fetch message details from view_message.php
-                // Pass the current tab to view_message.php for the correct "Back" link and actions
-                const urlParams = new URLSearchParams(window.location.search);
-                const currentTab = urlParams.get('tab') || 'inbox';
-                fetch(`view_message.php?id=${messageId}&tab=${encodeURIComponent(currentTab)}`, {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest' // Indicate AJAX request
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                         throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    messageDetailsArea.classList.remove('loading');
-
-                    if (data.success) {
-                        // Render message details HTML
-                        renderMessageDetails(data.messageData);
-                        // Mark message as read in the list UI
-                        const messageItem = messagesList.querySelector(`.message-item[data-message-id='${messageId}']`);
-                        if (messageItem && data.messageData && data.messageData.is_read) {
-                             messageItem.classList.remove('unread');
-                             const statusIcon = messageItem.querySelector('.status-icon');
-                             if(statusIcon) {
-                                 statusIcon.classList.remove('fa-envelope', 'unread-icon');
-                                 statusIcon.classList.add('fa-envelope-open', 'read-icon');
-                                 statusIcon.title = 'Read';
-                             }
-                        }
-                        // TODO: Update unread counts in tabs
-
-                    } else {
-                        // Handle error loading details
-                        messageDetailsArea.innerHTML = `<p class="error-message">${data.message || 'Failed to load the message.'}</p>`;
-                        console.error('Error loading message details:', data.message);
-                    }
-                })
-                .catch(error => {
-                    messageDetailsArea.classList.remove('loading');
-                    messageDetailsArea.innerHTML = '<p class="error-message">A communication error occurred while loading the message.</p>';
-                    console.error('Fetch error:', error);
-                });
-            }
-
-            // Function to render message details HTML (create the HTML structure from JSON data)
-            function renderMessageDetails(messageData) {
-                // Determine tab name for return link
-                 const urlParams = new URLSearchParams(window.location.search);
-                 const currentTab = urlParams.get('tab') || 'inbox';
-                 let returnTabName = '';
-                 switch(currentTab) {
-                      case 'inbox': returnTabName = 'Inbox'; break;
-                      case 'sent': returnTabName = 'Sent'; break;
-                      case 'archive': returnTabName = 'Archive'; break;
-                      default: returnTabName = 'Messages';
-                 }
-
-                // Basic HTML structure - adapt this to match desired look
-                let detailsHtml = `
-                    <div class="message-view-container" data-message-id="${messageData.id}">
-                        <div class="message-header">
-                            <div class="message-nav">
-                                <a href="messages.php?tab=${encodeURIComponent(currentTab)}" class="btn btn-secondary">
-                                    <i class="fas fa-arrow-left"></i> Back to ${returnTabName}
-                                </a>
-
-                                <div class="message-actions">
-                                    ${messageData.receiver_id == currentUserId ? `
-                                        <a href="send_message.php?reply_to=${messageData.id}" class="btn btn-primary">
-                                            <i class="fas fa-reply"></i> Reply
-                                        </a>
-                                    ` : ''}
-
-                                    <button class="btn btn-danger action-button" data-action="delete" data-message-id="${messageData.id}" data-confirm="Are you sure you want to delete this message?">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-
-                                    ${messageData.receiver_id == currentUserId ? `
-                                        ${currentTab !== 'archive' ? `
-                                            <button class="btn btn-secondary action-button" data-action="archive" data-message-id="${messageData.id}">
-                                                <i class="fas fa-archive"></i> Archive
-                                            </button>
-                                        ` : `
-                                            <button class="btn btn-secondary action-button" data-action="unarchive" data-message-id="${messageData.id}">
-                                                <i class="fas fa-inbox"></i> Restore
-                                            </button>
-                                        `}
-                                    ` : ''}
-                                </div>
-                            </div>
-
-                            <h2>${escapeHTML(messageData.subject)}</h2>
-                        </div>
-
-                        <div class="message-meta">
-                            <div class="message-participants">
-                                <div class="sender">
-                                    <strong>From:</strong>
-                                    <a href="player.php?id=${messageData.sender_id}" class="player-link">
-                                        ${escapeHTML(messageData.sender_username)}
-                                    </a>
-                                </div>
-                                <div class="receiver">
-                                    <strong>To:</strong>
-                                    <a href="player.php?id=${messageData.receiver_id}" class="player-link">
-                                        ${escapeHTML(messageData.receiver_username)}
-                                    </a>
-                                </div>
-                            </div>
-                            <div class="message-date">
-                                <strong>Date:</strong> ${formatDateTime(messageData.sent_at)}
-                            </div>
-                        </div>
-
-                        <div class="message-content">
-                            ${formatMessageBody(messageData.body)}
-                        </div>
-                    </div>
-                `;
-
-                messageDetailsArea.innerHTML = detailsHtml;
-            }
-
-            // Helper function to format date and time
-            function formatDateTime(datetimeString) {
-                const date = new Date(datetimeString);
-                const day = String(date.getDate()).padStart(2, '0');
-                const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
-                const year = date.getFullYear();
-                const hours = String(date.getHours()).padStart(2, '0');
-                const minutes = String(date.getMinutes()).padStart(2, '0');
-                return `${day}.${month}.${year} ${hours}:${minutes}`;
-            }
-
-            // Helper function to format message body (e.g., replace newlines)
-            function formatMessageBody(body) {
-                return escapeHTML(body).replace(/\n/g, '<br>');
-            }
-
-            // Helper function to escape HTML characters to prevent XSS
-            function escapeHTML(str) {
-                const div = document.createElement('div');
-                div.appendChild(document.createTextNode(str));
-                return div.innerHTML;
-            }
-
-            // --- Event listener for actions within the loaded message details ---
-            // Using event delegation on the details area
-            messageDetailsArea.addEventListener('click', function(event) {
-                const actionButton = event.target.closest('.action-button');
-                if (actionButton) {
-                    const action = actionButton.dataset.action;
-                    const messageId = actionButton.dataset.messageId;
-                    const confirmMessage = actionButton.dataset.confirm;
-
-                    if (confirmMessage && !confirm(confirmMessage)) {
-                        return; // Cancel the action if the user did not confirm
-                    }
-
-                    // Perform the action via AJAX POST
-                    performMessageAction(messageId, action);
-                }
-            });
-
-            // Function to perform message actions via AJAX POST
-            function performMessageAction(messageId, action) {
-                // Show loading/disabling feedback (optional)
-
-                const urlParams = new URLSearchParams(window.location.search);
-                const currentTab = urlParams.get('tab') || 'inbox';
-
-                fetch('view_message.php?id=' + messageId + '&tab=' + encodeURIComponent(currentTab), {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-Requested-With': 'XMLHttpRequest' // Indicate AJAX request
-                    },
-                    body: new URLSearchParams({
-                        action: action,
-                        message_id: messageId,
-                        // Add CSRF token if implemented
-                        // csrf_token: 'your_token_here'
-                    })
-                })
-                .then(response => {
-                     if (!response.ok) {
-                         throw new Error(`HTTP error! status: ${response.status}`);
-                     }
-                     return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        alert(data.message); // Show success message
-                        if (data.redirect) {
-                            // Redirect if the action requires changing the view (e.g., delete, archive, unarchive)
-                            window.location.href = data.redirect; // This will reload messages.php with correct tab
-                        } else {
-                            // If no redirect (e.g., mark as read/unread), update UI locally
-                            // For mark_read/mark_unread, we need to update the message item class and status icon
-                            if (action === 'mark_read' || action === 'mark_unread') {
-                                const messageItem = messagesList.querySelector(`.message-item[data-message-id='${messageId}']`);
-                                if (messageItem) {
-                                     if (action === 'mark_read') {
-                                         messageItem.classList.remove('unread');
-                                     } else { // mark_unread
-                                         messageItem.classList.add('unread');
-                                     }
-                                     const statusIcon = messageItem.querySelector('.status-icon');
-                                     if(statusIcon) { // Update icon based on new read status
-                                          if (messageItem.classList.contains('unread')) {
-                                             statusIcon.classList.remove('fa-envelope-open', 'read-icon');
-                                             statusIcon.classList.add('fa-envelope', 'unread-icon');
-                                             statusIcon.title = 'Unread';
-                                          } else {
-                                             statusIcon.classList.remove('fa-envelope', 'unread-icon');
-                                             statusIcon.classList.add('fa-envelope-open', 'read-icon');
-                                             statusIcon.title = 'Read';
-                                          }
-                                     }
-                                }
-                            }
-                            // Clear the details area or update it if needed
-                            messageDetailsArea.innerHTML = '<p>Select a message from the list to view details.</p>'; // Clear details
-                            // TODO: Update message counts in tabs after any action
-                        }
-
-                    } else {
-                        alert('Error: ' + (data.message || 'Could not complete the action.'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Action fetch error:', error);
-                    alert('A communication error occurred while performing the action.');
-                });
-            }
-
-            // --- Bulk Actions --- (Adapt the existing form submission)
-            const messagesForm = document.getElementById('messages-form');
-            const bulkActionSelect = document.getElementById('bulk-action');
-            const bulkApplyButton = document.getElementById('bulk-apply');
-            const messageCheckboxes = messagesList ? messagesList.querySelectorAll('.message-checkbox-input') : [];
-
-            if (messagesForm && bulkActionSelect && bulkApplyButton && messageCheckboxes.length > 0) {
-
-                 // Enable/disable apply button based on selection
-                messagesList.addEventListener('change', function(event) {
-                    if (event.target.classList.contains('message-checkbox-input')) {
-                        const anyChecked = Array.from(messageCheckboxes).some(checkbox => checkbox.checked);
-                        bulkApplyButton.disabled = !anyChecked;
-                    }
-                });
-
-                messagesForm.addEventListener('submit', function(event) {
-                    event.preventDefault(); // Prevent default form submission
-
-                    const selectedAction = bulkActionSelect.value;
-                    const selectedMessageIds = Array.from(messageCheckboxes)
-                        .filter(checkbox => checkbox.checked)
-                        .map(checkbox => checkbox.value);
-
-                    if (!selectedAction) {
-                        alert('Please select an action.');
-                        return;
-                    }
-
-                    if (selectedMessageIds.length === 0) {
-                        alert('Please select messages.');
-                        return;
-                    }
-
-                    // Optional: Add confirmation for delete action
-                    if (selectedAction === 'delete' && !confirm('Are you sure you want to delete the selected messages?')) {
-                        return;
-                    }
-
-                    // Perform bulk action via AJAX POST to messages.php
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const currentTab = urlParams.get('tab') || 'inbox';
-
-                    // Add loading state or disable buttons
-                    bulkApplyButton.disabled = true;
-
-                    fetch(`messages.php?tab=${encodeURIComponent(currentTab)}`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'X-Requested-With': 'XMLHttpRequest' // Indicate AJAX request
-                        },
-                        body: new URLSearchParams({
-                            action: selectedAction,
-                            message_ids: selectedMessageIds,
-                            // Add CSRF token if implemented
-                            // csrf_token: 'your_token_here'
-                        })
-                    })
-                    .then(response => {
-                         if (!response.ok) {
-                              throw new Error(`HTTP error! status: ${response.status}`);
-                         }
-                         // Assuming messages.php POST will return JSON for AJAX requests
-                         // Need to verify this in messages.php
-                         return response.json();
-                    })
-                    .then(data => {
-                         // Remove loading state or re-enable buttons
-                         bulkApplyButton.disabled = false;
-
-                        if (data.success) {
-                            alert(data.message || 'Action completed successfully.');
-                            // TODO: Update the UI based on the bulk action without full reload
-                            // For now, reload the page to see changes
-                             window.location.reload(); // Reloads with current tab and page
-                        } else {
-                            alert('Error: ' + (data.message || 'An error occurred while performing the bulk action.'));
-                        }
-                    })
-                    .catch(error => {
-                        bulkApplyButton.disabled = false;
-                        console.error('Bulk action fetch error:', error);
-                        alert('A communication error occurred while performing the bulk action.');
-                    });
-                });
-
-            } else if (messagesForm && bulkActionSelect && bulkApplyButton) {
-                 // Handle case where there are no messages to select
-                 bulkApplyButton.disabled = true;
-            }
-
-
-            // Initial state: Check URL for a specific message ID and load it if present
-            const urlParams = new URLSearchParams(window.location.search);
-            const initialMessageId = urlParams.get('id');
-            if (initialMessageId) {
-                loadMessageDetails(initialMessageId);
-            } else {
-                 // If no message ID in URL, show placeholder text in details area
-                 // Only set if the area is empty (i.e., not already populated by a non-AJAX call, which won't happen now)
-                 if(messageDetailsArea.innerHTML.trim() === '<p>Select a message from the list to view details.</p>' || messageDetailsArea.innerHTML.trim() === '') {
-                     messageDetailsArea.innerHTML = '<p>Select a message from the list to view details.</p>';
-                 }
-            }
-
-        }
-    });
+    window.currentUserId = <?= json_encode($user_id) ?>;
 </script>
-
-<style>
-/* Pagination styles (copied from messages.php if consistent) */
-/*
-.pagination {
-    display: flex;
-    justify-content: center;
-    margin-top: var(--spacing-md);
-    gap: var(--spacing-sm);
-}
-
-.pagination .page-link {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border: 1px solid var(--beige-darker);
-    border-radius: var(--border-radius-small);
-    text-decoration: none;
-    color: var(--brown-primary);
-    background-color: var(--beige-light);
-    transition: background-color var(--transition-fast), border-color var(--transition-fast);
-}
-
-.pagination .page-link:hover {
-    background-color: var(--beige-dark);
-    border-color: var(--brown-primary);
-}
-
-.pagination .page-link.active {
-    background-color: var(--brown-primary);
-    color: white;
-    border-color: var(--brown-primary);
-    cursor: default;
-}
-*/
-</style> 
+<script src="../js/messages.js"></script>

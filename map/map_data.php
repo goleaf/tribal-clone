@@ -1,81 +1,101 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-// Endpoint: map_data.php
-// Returns JSON with villages, players, and alliances for a map slice
-require_once '../config/config.php';
-require_once '../lib/Database.php';
+declare(strict_types=1);
+
+require_once '../init.php';
 require_once '../lib/functions.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-$x = isset($_GET['x']) ? (int)$_GET['x'] : 0;
-$y = isset($_GET['y']) ? (int)$_GET['y'] : 0;
-$size = isset($_GET['size']) ? max(5, min(50, (int)$_GET['size'])) : 20;
+if (!isset($_SESSION['user_id'])) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Login required']);
+    exit;
+}
 
-$min_x = $x - floor($size/2);
-$max_x = $x + floor($size/2);
-$min_y = $y - floor($size/2);
-$max_y = $y + floor($size/2);
+$centerX = isset($_GET['x']) ? (int)$_GET['x'] : 0;
+$centerY = isset($_GET['y']) ? (int)$_GET['y'] : 0;
+$size = isset($_GET['size']) ? max(7, min(31, (int)$_GET['size'])) : 15;
 
-$db = new Database(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-$conn = $db->getConnection();
+$radius = (int)floor(($size - 1) / 2);
+$minX = $centerX - $radius;
+$maxX = $centerX + $radius;
+$minY = $centerY - $radius;
+$maxY = $centerY + $radius;
+$worldId = CURRENT_WORLD_ID;
 
-// Fetch villages for the requested area
-$stmt = $conn->prepare("SELECT id, x_coord, y_coord, name, user_id, points FROM villages WHERE x_coord >= ? AND x_coord <= ? AND y_coord >= ? AND y_coord <= ?");
-$stmt->bind_param('iiii', $min_x, $max_x, $min_y, $max_y);
+// Fetch villages with owner info inside the viewport
+$stmt = $conn->prepare("
+    SELECT v.id, v.x_coord, v.y_coord, v.name, v.user_id, v.points, u.username
+    FROM villages v
+    LEFT JOIN users u ON v.user_id = u.id
+    WHERE v.world_id = ? 
+      AND v.x_coord BETWEEN ? AND ?
+      AND v.y_coord BETWEEN ? AND ?
+");
+
+if (!$stmt) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Failed to prepare query for villages.']);
+    exit;
+}
+
+$stmt->bind_param('iiiii', $worldId, $minX, $maxX, $minY, $maxY);
 $stmt->execute();
-$res = $stmt->get_result();
+$result = $stmt->get_result();
+
 $villages = [];
-while ($v = $res->fetch_assoc()) {
-    $type = ($v['user_id'] == -1) ? 'barbarian' : 'player';
-    $img = ($type == 'barbarian') ? '../img/ds_graphic/map/village_barb.png' : '../img/ds_graphic/map/village_player.png';
+$players = [];
+while ($row = $result->fetch_assoc()) {
+    $villageOwnerId = isset($row['user_id']) ? (int)$row['user_id'] : null;
+    $ownerType = ($villageOwnerId === null || $villageOwnerId === -1) ? 'barbarian' : 'player';
+
     $villages[] = [
-        'id' => $v['id'],
-        'x' => $v['x_coord'],
-        'y' => $v['y_coord'],
-        'name' => $v['name'],
-        'user_id' => $v['user_id'],
-        'points' => $v['points'],
-        'type' => $type,
-        'img' => $img
+        'id' => (int)$row['id'],
+        'x' => (int)$row['x_coord'],
+        'y' => (int)$row['y_coord'],
+        'name' => $row['name'],
+        'user_id' => $villageOwnerId,
+        'owner' => $row['username'] ?? null,
+        'points' => (int)$row['points'],
+        'type' => $ownerType
     ];
+
+    if ($villageOwnerId && !isset($players[$villageOwnerId])) {
+        $players[$villageOwnerId] = [
+            'id' => $villageOwnerId,
+            'username' => $row['username'],
+            'points' => (int)$row['points']
+        ];
+    }
 }
 $stmt->close();
 
-// Fetch players
-$res = $conn->query('SELECT id, username, points, ally_id FROM users');
-$players = [];
-while ($p = $res->fetch_assoc()) {
-    $players[] = [
-        'id' => $p['id'],
-        'username' => $p['username'],
-        'points' => $p['points'],
-        'ally_id' => $p['ally_id'] ?? null
-    ];
-}
-$res->close();
-
-// Fetch alliances if the table exists (optional feature)
+// Fetch tribes/alliances if the table exists (optional)
 $allies = [];
-if (dbTableExists($conn, 'allies')) {
-    $res = $conn->query('SELECT id, name, points, short FROM allies');
-    while ($a = $res->fetch_assoc()) {
-        $allies[] = [
-            'id' => $a['id'],
-            'name' => $a['name'],
-            'points' => $a['points'],
-            'short' => $a['short']
-        ];
+if (dbTableExists($conn, 'tribes')) {
+    $allyQuery = 'SELECT id, name, points, tag FROM tribes';
+    if (dbColumnExists($conn, 'tribes', 'world_id')) {
+        $allyQuery .= ' WHERE world_id = ' . (int)$worldId;
     }
-    $res->close();
-}
 
-$db->closeConnection();
+    $allyResult = $conn->query($allyQuery);
+    if ($allyResult) {
+        while ($allyRow = $allyResult->fetch_assoc()) {
+            $allies[] = [
+                'id' => (int)$allyRow['id'],
+                'name' => $allyRow['name'],
+                'points' => (int)($allyRow['points'] ?? 0),
+                'short' => $allyRow['tag'] ?? ''
+            ];
+        }
+        $allyResult->close();
+    }
+}
 
 echo json_encode([
+    'center' => ['x' => $centerX, 'y' => $centerY],
+    'size' => $size,
     'villages' => $villages,
-    'players' => $players,
+    'players' => array_values($players),
     'allies' => $allies
-]); 
+]);
