@@ -116,6 +116,13 @@ Players manage villages to grow resources, build and upgrade structures, train a
 - [ ] Backward-compatible APIs/versioning so older clients degrade gracefully (e.g., nudges disabled) while new fields roll out.
 - [ ] Release comms/help updates explaining nudges, task rerolls, quiet hours, and catch-up buffs with opt-in/opt-out steps.
 
+## Monitoring Plan
+- Track notification dispatch latency, drop rates, and queue depth; alert on spikes post-release.
+- Monitor nudge trigger volume, snooze/dismiss rates, and error codes; alert on abnormal spike or spam patterns.
+- Dashboard task/challenge starts/completions/rerolls and error rates; alert on reset failures or claim anomalies.
+- Catch-up buffs: log grants/expiries and block hits; alert on double-grant attempts or expiry misses.
+- Quiet hours: monitor opt-ins, suppressed notifications, and override usage; alert on suppression failures.
+
 ## Open Questions
 - What snooze durations feel right for nudges (e.g., 30m/2h/1 day) to avoid annoyance but keep effectiveness?
 - Should notifications for attack alerts respect night bonus/quiet hours universally or be per-player configurable with hard caps?

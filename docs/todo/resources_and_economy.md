@@ -112,6 +112,7 @@
 - Resource production multiplier now sourced via WorldManager in ResourceManager to align production rates with per-world config.
 - Resource tick now loads per-world economy config up front so decay/threshold toggles apply consistently and no undefined config paths fire during updates.
 - Trade/aid errors use standardized economy codes; send flow enforces storage headroom and resource availability with `ERR_RES` instead of `ERR_CAP`.
+- Anti-push/alt guard: TradeManager now blocks trades to linked/flagged accounts and extreme power gaps for protected/low-point players, returning `ERR_ALT_BLOCK` (`alt_link`/`alt_flag`/`power_delta`).
 
 ## Acceptance Criteria
 - World configs apply correct production/storage/vault/decay values and caps for the selected archetype; overrides logged.

@@ -100,7 +100,7 @@
 - [x] Implement allegiance calculation service: per-wave allegiance drop resolution, regen tick, anti-snipe floor, and post-capture reset. _(spec below)_
 - [x] Persistence: schema for allegiance value per village, last_allegiance_update, and capture_cooldown_until. _(columns added via add_allegiance_columns migration + sqlite schema updated)_
  - [x] Combat hook: apply allegiance drop only if attackers win and at least one Standard Bearer survives; respect wall-based reduction. _(hooked into allegiance service prerequisites)_
-- [ ] Standard Bearer config: costs, speed, pop, min building level, max per command, and daily mint limits.
+ - [x] Standard Bearer config: costs, speed, pop, min building level, max per command, and daily mint limits. _(config spec below)_
 - [ ] Regen rules: configurable per-world base regen/hour; tribe tech/items modifiers; pause during anti-snipe; cap at 100.
 - [ ] Capture aftermath: set starting allegiance to configurable low value; optional random building loss; grace period before further drops.
  - [x] Anti-abuse: block conquest on protected/newbie targets; detect repeated captures between same accounts; tribe handover opt-in flow. _(low-point/protected targets blocked in combat hook)_
@@ -133,6 +133,14 @@
 - **Decay:** Optional `ALLEG_DECAY_PER_HOUR` for abandoned villages; only when no owner/low activity. Disabled by default.
 - **Persistence:** Track `last_allegiance_update` timestamp per village; service updates this each tick after applying regen/decay.
 - **UI/Reports:** Reports show regen applied between waves; UI tooltip shows current regen rate and modifiers.
+
+### Standard Bearer Config Spec
+- **Costs:** Configurable per world (wood/clay/iron + crest/standard token). High pop cost (e.g., 80–120). Costs stored in config/units JSON and mirrored in DB seeds.
+- **Speed:** Moves at siege pace (`SIEGE_UNIT_SPEED`), not affected by cav speed boosts. World override allowed.
+- **Unlocks:** Requires Hall of Banners level N (world-configurable) and research node `conquest_training`. Block training if missing; return `ERR_PREREQ`.
+- **Caps:** `MAX_LOYALTY_UNITS_PER_COMMAND` enforced (default 1). Daily mint cap per account and per-village training cap; exceed returns `ERR_CAP`.
+- **Training Queue:** Uses Hall of Banners queue; consumes standards/tokens at start. Cancel returns partial resources but not standards.
+- **Validation:** Training/recruit endpoints enforce pop/resources, prerequisites, caps, and feature flags (`FEATURE_CONQUEST_UNIT_ENABLED`). Reason codes: `ERR_PREREQ`, `ERR_RES`, `ERR_POP`, `ERR_CAP`, `CONQUEST_DISABLED`.
 
 ### Cooldowns & Limits Spec
 - **Anti-Rebound:** After capture, set `capture_cooldown_until` (e.g., 15–30 minutes). During this window, control/allegiance cannot drop below a floor (e.g., 10) and new captures are blocked with `ERR_COOLDOWN`.

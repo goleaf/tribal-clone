@@ -1628,6 +1628,7 @@ class BattleManager
         $noblePresent = $this->hasNobleUnit($attacking_units);
         $defenderVillageCount = $defender_user_id ? $this->getVillageCountForUser((int)$defender_user_id) : null;
 
+        $conquestReason = $noblePresent ? 'attempt' : 'no_noble_present';
         if ($noblePresent) {
             $dropMin = defined('NOBLE_MIN_DROP') ? (int)NOBLE_MIN_DROP : self::LOYALTY_DROP_MIN;
             $dropMax = defined('NOBLE_MAX_DROP') ? (int)NOBLE_MAX_DROP : self::LOYALTY_DROP_MAX;
@@ -1648,15 +1649,20 @@ class BattleManager
                     $ratio = $defender_points / $attacker_points;
                     if ($ratio < 0.5 || $ratio > 1.5) {
                         $villageConquered = false; // Loyalty can drop, but cannot capture out-of-range targets
+                        $conquestReason = 'point_range_block';
                     }
                 }
                 // Last-village protection: cannot conquer defender's final village.
                 if ($defenderVillageCount !== null && $defenderVillageCount <= 1) {
                     $villageConquered = false;
+                    $conquestReason = 'last_village_protected';
                 }
 
                 if ($villageConquered) {
                     $loyalty_after = $this->getConqueredLoyaltyReset((float)$loyalty_cap);
+                    $conquestReason = 'captured';
+                } elseif ($dropApplied > 0 && $conquestReason === 'attempt') {
+                    $conquestReason = 'drop_applied';
                 }
             } else {
                 // Failed attempt still chips loyalty
@@ -1664,21 +1670,23 @@ class BattleManager
                 $dropApplied = max(0, (int)round($dropBase * $dropMultiplier));
                 if ($dropApplied > 0) {
                     $loyalty_after = max($loyalty_floor, $loyalty_before - $dropApplied);
+                    $conquestReason = 'drop_on_failed_wave';
+                } else {
+                    $conquestReason = $attacker_win ? 'defender_survived' : 'attacker_lost';
                 }
             }
 
-            if ($dropApplied > 0 || $villageConquered) {
-                $loyalty_report = [
-                    'before' => $loyalty_before,
-                    'after' => $loyalty_after,
-                    'drop' => $dropApplied,
-                    'drop_base' => $dropBase,
-                    'conquered' => $villageConquered,
-                    'floor' => $loyalty_floor,
-                    'cap' => $loyalty_cap,
-                    'drop_multiplier' => $dropMultiplier
-                ];
-            }
+            $loyalty_report = [
+                'before' => $loyalty_before,
+                'after' => $loyalty_after,
+                'drop' => $dropApplied,
+                'drop_base' => $dropBase,
+                'conquered' => $villageConquered,
+                'floor' => $loyalty_floor,
+                'cap' => $loyalty_cap,
+                'drop_multiplier' => $dropMultiplier,
+                'reason' => $conquestReason
+            ];
         }
 
         // --- TRANSACTION ---
