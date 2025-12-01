@@ -125,6 +125,18 @@ class SQLiteAdapter {
         return true;
     }
 
+    public function begin_transaction() {
+        return $this->pdo->beginTransaction();
+    }
+
+    public function commit() {
+        return $this->pdo->commit();
+    }
+
+    public function rollback() {
+        return $this->pdo->rollBack();
+    }
+
     public function close() {
         $this->pdo = null;
     }
@@ -191,7 +203,7 @@ class SQLiteStatement {
             $this->pdoStmt = $this->conn->getPdo()->prepare($this->sql);
             foreach ($this->boundParams as $index => $meta) {
                 $value = $meta['value'];
-                $pdoType = $this->mapType($meta['type']);
+                $pdoType = $value === null ? PDO::PARAM_NULL : $this->mapType($meta['type']);
                 $this->pdoStmt->bindValue($index + 1, $value, $pdoType);
             }
 

@@ -135,7 +135,7 @@ try {
         $stmt_add_units = $conn->prepare("
             INSERT INTO village_units (village_id, unit_type_id, count) 
             VALUES (?, ?, ?) 
-            ON DUPLICATE KEY UPDATE count = count + VALUES(count)
+            ON CONFLICT(village_id, unit_type_id) DO UPDATE SET count = count + excluded.count
         ");
         $stmt_add_units->bind_param("iii", $village_id, $unit_type_id, $finished_count);
         if (!$stmt_add_units->execute()) {

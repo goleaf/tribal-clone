@@ -2010,3 +2010,9 @@ Trace: #0 C:\xampp\htdocs\ajax_proxy.php(7): require_once()
 Trace: #0 C:\xampp\htdocs\ajax_proxy.php(7): require_once()
 #1 {main}
 --------------------------------------------------------------------------------
+[2025-12-01 01:24:51] ERROR: Undefined array key "REQUEST_URI" w /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/init.php linia 93
+--------------------------------------------------------------------------------
+[2025-12-01 01:24:51] ERROR: parse_url(): Passing null to parameter #1 ($url) of type string is deprecated w /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/init.php linia 93
+--------------------------------------------------------------------------------
+[2025-12-01 01:24:51] ERROR: Cannot modify header information - headers already sent by (output started at /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/lib/utils/ErrorHandler.php:44) w /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/init.php linia 113
+--------------------------------------------------------------------------------

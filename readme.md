@@ -1,158 +1,77 @@
-# Silnik Gry Plemiona
+# Tribal Wars Game Engine ⚔️🏰
 
-Ten projekt to nowoczesna implementacja silnika gry przeglądarkowej typu Tribal Wars (Plemiona), oparta na czystym PHP, HTML, CSS i JavaScript. Projekt został zainspirowany starą wersją silnika wykonaną przez Bartekst221, ale został całkowicie przepisany z wykorzystaniem nowoczesnych praktyk.
+Modern PHP remake of the Tribal Wars browser engine with real-time building, recruiting, and combat loops backed by a configurable data model.
 
-## Zaimplementowane funkcjonalności
+## At a Glance
+- 🏗️ Backend: PHP 8.x with SQLite (default) or MySQL, zero framework.
+- 🖥️ Frontend: vanilla JS + AJAX endpoints, CSS in `css/`, HTML/PHP templates.
+- 🕒 Real-time timers for builds, recruitment, resources, and attack travel; queues are processed whenever players load the game.
+- 🗺️ Interactive world map with tile popups and an attack launcher.
+- 🔒 Sessions, prepared statements, CSRF tokens, and debug/error handling.
 
-Główne funkcjonalności zaimplementowane w projekcie to:
+## Feature Map
+| Icon | Area | What works now | Status |
+| --- | --- | --- | --- |
+| 🔑 | Accounts & worlds | Registration/login flows, session handling, world selection with `CURRENT_WORLD_ID` stored in session. | ✅ Stable |
+| 🏘️ | Villages | Auto-generated start village with resources/buildings, village rename, population/farm cap tracking, offline resource catch-up. | ✅ Stable |
+| 🪓 | Resources | Wood/clay/iron production driven by building levels, warehouse caps, hourly rate calc in `ResourceManager`, UI counters updated via JS/AJAX. | ✅ Stable |
+| 🏛️ | Buildings | Config-driven costs/time/requirements, upgrade queue stored in `building_queue`, main-building speed bonus, requirement checks, per-building max level enforcement. | ✅ Stable |
+| ⚔️ | Units & recruitment | Unit catalogue with stats/requirements, recruitment queue by building type (barracks/stable/workshop), cost/time scaling, queue processing. | ✅ Stable |
+| 🧪 | Research | Research tree with per-building unlocks, prerequisite checks, queue processing via `ResearchManager`. | 🚧 Needs UI polish/balancing |
+| 🛡️ | Combat & reports | Attack sending with slowest-unit travel time, battle resolution (wall/rams/catapults), loot calculation, battle reports, notifications to attacker/defender. | 🚧 Requires tuning/edge-case coverage |
+| 🗺️ | Map | Draggable grid map (`map/map.php`) showing nearby villages, modal popup with owner/details and attack shortcut. | ✅ Stable |
+| ✉️ | Messaging | Private messages with inbox/sent/archive tabs, bulk actions, unread counters; DB-backed via `MessageManager`. | 🚧 UI integration & validation passes |
+| 🏅 | Rankings | Player leaderboard (villages/population based); tribe ranking placeholder in `RankingManager`. | 🚧 Expand data model |
+| 🔔 | Notifications | Session toasts plus persistent notifications table with expiry, fetch/read helpers in `NotificationManager`. | 🚧 Hook into all events |
+| 🛒 | Trade & tribes | `TradeManager` placeholder and tribe systems planned; routes and DB schema to be added. | 🧭 Planned |
 
-1.  **System rejestracji i logowania**
-    -   Bezpieczne przechowywanie haseł z wykorzystaniem nowoczesnych algorytmów
-    -   Walidacja danych wejściowych
-    -   System sesji
+## Core Services & Functions
+- `lib/Database.php` — dual SQLite/MySQL adapter exposing a `mysqli`-like API, charset setup, and a PDO-backed SQLite adapter.
+- `lib/functions.php` — shared helpers (formatting, CSRF tokens, resource widgets, validation, distance/travel time, notifications, links, etc.).
+- `lib/managers/BuildingConfigManager.php` — caches building definitions from `building_types`, computes costs/time/production, requirements, warehouse/farm capacity, population cost.
+- `lib/managers/BuildingManager.php` — upgrade costs/time, requirement checks, per-village building data, production rates, display names, and max levels.
+- `lib/managers/ResourceManager.php` — hourly production calculation by building levels, warehouse caps, offline resource catch-up, and DB persistence.
+- `lib/managers/VillageManager.php` — village CRUD (create, rename, list), building queue processing, recruitment/research completion dispatch, population recalculation, default village selection.
+- `lib/managers/UnitManager.php` — unit catalogue cache, recruitment requirements (building level/research), resource affordability, recruitment time scaling, queue processing and synchronization with `village_units`.
+- `lib/managers/ResearchManager.php` — research type cache, building/prerequisite checks, level caps, queue processing into `village_research`.
+- `lib/managers/BattleManager.php` — attack creation, travel-time calculation, combat resolution (strength comparison, wall/catapults/rams effects, loot), battle report persistence, completion notifications.
+- `lib/managers/MessageManager.php` — message retrieval by tab, bulk actions (mark read/unread, archive, delete), unread/archived counters, safety checks per user.
+- `lib/managers/NotificationManager.php` — CRUD for persistent notifications with expiry and unread counts.
+- `lib/managers/RankingManager.php` — player ranking queries with pagination; tribe ranking placeholder.
+- `lib/managers/TradeManager.php` — future trade routes/market logic placeholder.
+- Frontend JS in `js/` — resource/queue polling, building and recruitment panels, research UI, notifications, utility helpers (`utils.js`, `resources.js`, `buildings.js`, `units.js`, etc.).
+- AJAX endpoints in `ajax/` — building upgrades (`ajax/buildings`), unit recruitment (`ajax/units`), and other in-page actions powering the dynamic UI.
 
-2.  **System zarządzania wioskami**
-    -   Tworzenie nowych wiosek
-    -   Zmiana nazwy wioski
-    -   Zarządzanie populacją
-    -   Produkcja surowców w czasie rzeczywistym
+## Data & Configuration
+- Default database driver is SQLite with the file path set in `config/config.php` (`DB_PATH`). Switch to MySQL by changing `DB_DRIVER` and credentials.
+- SQL schemas for MySQL live in `docs/sql/*.sql` (buildings, units, research, battles, messages, notifications, worlds, villages, users).
+- `install.php` provides a guided installer for creating tables and an admin account through the browser.
+- Global constants in `config/config.php` cover starting resources/population, warehouse/farm math, main-building speed factor, base URL, trader speed, and default world.
 
-3.  **System budynków**
-    -   Budowa i rozbudowa budynków
-    -   System zależności między budynkami
-    -   Koszty i czas budowy zależne od poziomu
-    -   Specjalne bonusy z budynków
-    -   Kolejka budowy z dynamicznym czasem
-    -   Anulowanie budowy
+## Running Locally
+1. Install PHP 8.x with the SQLite (or MySQL) extension enabled.
+2. Clone/copy the repo and ensure `config/config.php` points to your chosen driver; SQLite will create `data/tribal_wars.sqlite` on first run.
+3. Create the schema:
+   - Quick start: open `install.php` in the browser and follow the steps, or
+   - Manual: import the `docs/sql/sql_create_*.sql` files into your MySQL database (or adapt them for SQLite).
+4. Serve the project (example): `php -S localhost:8000 -t /path/to/tribal-clone`.
+5. Visit `http://localhost:8000/`, register a user, and create your first village. Use `map/map.php` for the world view and `game/game.php` for the village overview.
 
-4.  **System surowców**
-    -   Produkcja drewna, gliny i żelaza
-    -   Magazynowanie surowców
-    -   Automatyczna aktualizacja zasobów w czasie rzeczywistym
-    -   Rozbudowa budynków produkcyjnych
+## Roadmap
+- [ ] Finish trade routes and market actions (`TradeManager`, AJAX + UI).
+- [ ] Implement tribe/alliance data model, tribe rankings, and invite/role flows.
+- [ ] Harden combat formulas (wall/ram/catapult balance, spy/scout actions) and add automated report links in UI.
+- [ ] Complete messaging UI integration and validation (attachments, blocking, spam controls).
+- [ ] Wire notifications into all major events (build/recruit/research complete, attacks, messages).
+- [ ] Add automated jobs/cron to process queues and attacks without page loads.
+- [ ] Improve responsive layout and accessibility across `game/` and `map/`.
+- [ ] Add tests/fixtures for managers and AJAX endpoints plus seed/demo data.
 
-5.  **System czasu rzeczywistego**
-    -   Budynki budują się w czasie rzeczywistym
-    -   Jednostki rekrutują się w czasie rzeczywistym
-    -   Surowce produkowane są w czasie rzeczywistym
-
-6.  **System mapy**
-    -   Wizualizacja mapy świata z płynnym interfejsem
-    -   Koordynaty X/Y dla wiosek
-    -   Interfejs ataku otwierany w oknie modalnym bezpośrednio z mapy
-
-7.  **System wojskowy**
-    -   Różne typy jednostek z unikalnymi statystykami.
-    -   W pełni zaimplementowany system rekrutacji jednostek w koszarach, stajni i warsztacie.
-    -   Dynamiczna kolejka rekrutacji z możliwością anulowania.
-    -   Zaawansowany system walki uwzględniający:
-        -   Proporcjonalne obliczanie strat w oparciu o siłę obu armii.
-        -   Bonus do obrony wynikający z poziomu muru obronnego.
-        -   Możliwość niszczenia murów przez tarany.
-        -   Możliwość celowania i niszczenia budynków przez katapulty.
-    -   Możliwość wysyłania ataków i wsparcia do innych wiosek.
-
-8.  **System wiadomości i raportów**
-    -   Wysyłanie wiadomości między graczami (w trakcie implementacji).
-    -   Szczegółowe raporty z bitew, zawierające informacje o stratach, łupach oraz zniszczeniach.
-    -   System sojuszy i plemion (planowane).
-
-## Inspiracje z VeryOldTemplate
-
-Stara wersja silnika (VeryOldTemplate) została wykorzystana jako inspiracja dla następujących rozwiązań:
-
-1.  **System budynków**
-    -   Struktura tabeli building_requirements podobna do needbuilds z VeryOldTemplate
-
-2.  **System wiosek**
-    -   System aktualizacji surowców działa na podobnej zasadzie
-    -   Automatyczne sprawdzanie zakończenia budowy budynków
-
-3.  **System funkcji pomocniczych**
-    -   Wiele funkcji pomocniczych w lib/functions.php (jeśli istnieją) zostało zainspirowanych przez stare funkcje
-    -   System formatowania czasu, dat
-    -   Funkcje obliczania odległości i innych parametrów
-
-## Ulepszenia względem starej wersji
-
-1.  **Bezpieczeństwo**
-    -   Przejście z przestarzałego `mysql_*` na `mysqli` z prepared statements
-    -   Lepsze hashowanie haseł
-    -   Walidacja wszystkich danych wejściowych
-    -   Oddzielenie API i frontendu - wykorzystanie AJAX do komunikacji z backendem
-
-2.  **Struktura kodu**
-    -   Większa modułowość i reużywalność kodu
-    -   Wykorzystanie klas i obiektów (Managery, Modele)
-    -   Separacja logiki biznesowej od prezentacji
-
-3.  **Funkcjonalność**
-    -   Bardziej elastyczny system budynków
-    -   Rozbudowany system zależności między budynkami
-    -   Szczegółowe opisy i bonusy budynków (w oparciu o konfigurację)
-    -   Dynamiczna aktualizacja zasobów, kolejek budowy i rekrutacji na frontendzie (AJAX, JavaScript)
-
-4.  **Baza danych**
-    -   Lepiej zaprojektowana struktura tabel
-    -   Relacje między tabelami z wykorzystaniem kluczy obcych
-    -   Indeksy dla szybszego wyszukiwania
-
-### Ulepszenia UI/UX
-- **Ulepszone style** - nowoczesny, spójny wygląd z zachowaniem stylistyki Plemion.
-- **Płynniejszy interfejs** - Wprowadzenie okien modalnych dla kluczowych akcji (np. wysyłanie ataku z mapy), co eliminuje potrzebę przeładowywania strony.
-- **Tooltips** - dodanie podpowiedzi przy elementach interfejsu (w trakcie).
-- **Paski postępu** - animowane paski postępu dla budowy i rekrutacji.
-- **Responsywność** - lepsze dostosowanie do różnych urządzeń (w trakcie).
-- **System powiadomień Toast** - dla lepszej informacji zwrotnej dla użytkownika.
-
-## Struktura projektu
-
-```
-├── ajax/
-│   ├── buildings/      # Endpointy AJAX związane z budynkami
-│   └── units/          # Endpointy AJAX związane z jednostkami
-├── config/             # Pliki konfiguracyjne (np. config.php)
-├── css/                # Style CSS (main.css)
-├── docs/               # Dokumentacja projektu
-├── game/               # Główne pliki gry (game.php, map.php)
-├── img/                # Obrazy i grafiki
-├── js/                 # Skrypty JavaScript
-├── lib/                # Klasy PHP
-│   └── managers/       # Klasy zarządzające logiką
-├── logs/               # Logi aplikacji
-├── *.php               # Główne pliki aplikacji (index.php, install.php)
-└── readme.md           # Ten plik
-```
-
-## Instalacja
-
-1.  Sklonuj lub pobierz pliki projektu do katalogu `htdocs` w XAMPP.
-2.  Upewnij się, że masz działający serwer MySQL (część XAMPP).
-3.  Utwórz bazę danych MySQL o nazwie `tribal_wars_new`.
-4.  Zaimportuj strukturę bazy danych, uruchamiając skrypty `sql_create_*.sql` znajdujące się w katalogu `docs/sql` (np. za pomocą phpMyAdmin lub klienta MySQL). Możesz również skorzystać ze skryptu instalacyjnego `install.php`.
-5.  Skonfiguruj plik `config/config.php` podając dane do połączenia z bazą danych (login, hasło - domyślnie root i brak hasła dla XAMPP).
-6.  Otwórz stronę w przeglądarce: `http://localhost/`
-7.  Postępuj zgodnie z instrukcjami na ekranie (rejestracja, tworzenie wioski).
-
-## Dokumentacja
-
-Szczegółowa dokumentacja kodu i bazy danych znajduje się w katalogu `docs/` (jeśli istnieje). Może zawierać pliki takie jak `database.md`, `api.md`, itp.
-
-## Dalszy rozwój
-
-Projekt może być dalej rozwijany poprzez implementację i rozbudowę planowanych funkcjonalności, takich jak:
-1.  System sojuszy/plemion.
-2.  System handlu między graczami.
-3.  System nagród i osiągnięć.
-4.  Dalsze balansowanie jednostek i systemu walki.
-5.  Implementacja systemu szpiegowania.
-6.  Ukończenie paneli akcji dla pozostałych budynków (Kuźnia, Targ, itp.).
-7.  Dalsze ulepszenia UI/UX i responsywności.
-
-## Autorzy
-
-Projekt oparty na grze plemiona.pl, przepisany i rozwijany przez PSteczka.
-
-## Licencja
-
-Projekt dostępny jest na licencji MIT.
+## Directory Guide
+- `game/` — main authenticated gameplay pages (`game.php`, `world_select.php`).
+- `map/` — interactive world map (`map.php`, `map_data.php`).
+- `ajax/` — in-page actions for buildings, units, and more.
+- `auth/` — registration/login/reset flows.
+- `css/`, `js/`, `img/` — frontend styling, scripts, and assets.
+- `docs/` — notes and SQL schema files.
+- `admin/` — installer verification and admin utilities.

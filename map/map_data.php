@@ -6,6 +6,7 @@ error_reporting(E_ALL);
 // Zwraca JSON z danymi o wioskach, graczach i sojuszach w wycinku mapy
 require_once '../config/config.php';
 require_once '../lib/Database.php';
+require_once '../lib/functions.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -56,10 +57,10 @@ while ($p = $res->fetch_assoc()) {
 }
 $res->close();
 
-// Pobierz sojusze
-if ($conn->query("SHOW TABLES LIKE 'allies'")->num_rows) {
+// Pobierz sojusze, jeśli tabela istnieje (opcjonalna funkcja)
+$allies = [];
+if (dbTableExists($conn, 'allies')) {
     $res = $conn->query('SELECT id, name, points, short FROM allies');
-    $allies = [];
     while ($a = $res->fetch_assoc()) {
         $allies[] = [
             'id' => $a['id'],
@@ -69,8 +70,6 @@ if ($conn->query("SHOW TABLES LIKE 'allies'")->num_rows) {
         ];
     }
     $res->close();
-} else {
-    $allies = [];
 }
 
 $db->closeConnection();

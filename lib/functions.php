@@ -59,6 +59,29 @@ function sanitizeSql($conn, $input) {
 }
 
 /**
+ * Sprawdza, czy tabela istnieje w bazie (działa zarówno dla SQLite jak i MySQL).
+ */
+function dbTableExists($conn, string $tableName): bool {
+    // SQLiteAdapter udostępnia getPdo(), mysqli nie
+    if (is_object($conn) && method_exists($conn, 'getPdo')) {
+        $stmt = $conn->prepare("SELECT name FROM sqlite_master WHERE type='table' AND name = ?");
+        if ($stmt) {
+            $stmt->bind_param("s", $tableName);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $exists = $result && $result->num_rows > 0;
+            $stmt->close();
+            return $exists;
+        }
+        return false;
+    }
+
+    $safe = addslashes($tableName);
+    $result = $conn->query("SHOW TABLES LIKE '$safe'");
+    return $result && $result->num_rows > 0;
+}
+
+/**
  * Generuje unikalny token dla sesji
  */
 function generateToken($length = 32) {
@@ -108,7 +131,7 @@ function calculatePlayerPoints($conn, $user_id) {
     
     // Pobierz punkty z jednostek
     $stmt = $conn->prepare("
-        SELECT SUM(ut.points * vu.amount) AS unit_points
+        SELECT SUM(ut.points * vu.count) AS unit_points
         FROM village_units vu
         JOIN unit_types ut ON vu.unit_type_id = ut.id
         JOIN villages v ON vu.village_id = v.id
@@ -456,28 +479,21 @@ function addNotification($conn, $user_id, $type, $message, $link = '', $expires_
     }
     
     // Sprawdź, czy tabela notifications istnieje
-    $table_exists = false;
-    $result = $conn->query("SHOW TABLES LIKE 'notifications'");
-    if ($result && $result->num_rows > 0) {
-        $table_exists = true;
-    }
-    
-    // Jeśli tabela nie istnieje, utwórz ją
+    $table_exists = dbTableExists($conn, 'notifications');
+
+    // Jeśli tabela nie istnieje, utwórz ją (SQLite kompatybilne)
     if (!$table_exists) {
         $create_table = "CREATE TABLE IF NOT EXISTS notifications (
-            id INT(11) NOT NULL AUTO_INCREMENT,
-            user_id INT(11) NOT NULL,
-            type VARCHAR(20) NOT NULL DEFAULT 'info',
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            type TEXT NOT NULL DEFAULT 'info',
             message TEXT NOT NULL,
-            link VARCHAR(255) DEFAULT '',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            is_read TINYINT(1) DEFAULT 0,
-            expires_at INT(11) NOT NULL,
-            PRIMARY KEY (id),
-            KEY (user_id),
-            KEY (expires_at)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-        
+            link TEXT DEFAULT '',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            is_read INTEGER DEFAULT 0,
+            expires_at INTEGER NOT NULL
+        );";
+
         if (!$conn->query($create_table)) {
             error_log("Nie można utworzyć tabeli powiadomień: " . $conn->error);
             return false;
@@ -503,11 +519,7 @@ function addNotification($conn, $user_id, $type, $message, $link = '', $expires_
  */
 function getNotifications($conn, $user_id, $only_unread = false, $limit = 10) {
     // Sprawdź, czy tabela notifications istnieje
-    $table_exists = false;
-    $result = $conn->query("SHOW TABLES LIKE 'notifications'");
-    if ($result && $result->num_rows > 0) {
-        $table_exists = true;
-    }
+    $table_exists = dbTableExists($conn, 'notifications');
     
     if (!$table_exists) {
         return [];
