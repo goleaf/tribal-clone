@@ -15,6 +15,7 @@ class TradeManager {
     private const MIN_FAIR_RATE = 0.25; // offered/requested lower bound (25%)
     private const MAX_FAIR_RATE = 4.0;  // offered/requested upper bound (400%)
     private const PUSH_POINTS_RATIO = 5; // block aid when sender points exceed target by 5x and target is protected/low points
+    private const ACTIVE_ROUTE_SOFT_LIMIT = 5000; // soft global cap for in-flight trade routes
 
     public function __construct($db_connection) {
         $this->conn = $db_connection;

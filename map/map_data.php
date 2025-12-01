@@ -544,6 +544,7 @@ if ($ifNoneMatch && trim($ifNoneMatch) === $etag) {
     $cacheStatus = 'etag';
     http_response_code(304);
     logMapMetric(304, 0, $etag, $user_id, $centerX, $centerY, $size, $durationMs, $cacheStatus, $mapMetricLog);
+    maybeAlertMapMetric(304, 0, $durationMs, $cacheStatus, $user_id, $centerX, $centerY, $size, $mapMetricAlertLog);
     exit;
 }
 
@@ -551,8 +552,10 @@ if ($ifModifiedSinceTs && $ifModifiedSinceTs >= $lastModifiedTs) {
     $cacheStatus = 'last-modified';
     http_response_code(304);
     logMapMetric(304, 0, $etag, $user_id, $centerX, $centerY, $size, $durationMs, $cacheStatus, $mapMetricLog);
+    maybeAlertMapMetric(304, 0, $durationMs, $cacheStatus, $user_id, $centerX, $centerY, $size, $mapMetricAlertLog);
     exit;
 }
 
 echo $json;
 logMapMetric(200, strlen($json), $etag, $user_id, $centerX, $centerY, $size, $durationMs, $cacheStatus, $mapMetricLog);
+maybeAlertMapMetric(200, strlen($json), $durationMs, $cacheStatus, $user_id, $centerX, $centerY, $size, $mapMetricAlertLog);

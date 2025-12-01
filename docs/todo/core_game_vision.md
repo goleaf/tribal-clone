@@ -105,7 +105,7 @@
 - [x] Vision KPIs: track fairness (protection/rate-limit hits), social engagement (ops, chat), progression pacing (time to 2nd village), and spend-parity metrics. _(KPI spec below)_
 - [x] Player-facing manifesto: in-game/help page with vision/pillars and anti-P2W stance; keep in sync with marketing copy. (`docs/manifesto.md`)
 - [x] Differentiation proof: document unique mechanics (influence-based conquest, weather fronts, beacon networks, intel decay/misdirection) with comparisons to legacy games to support IP defensibility. _(see differentiation notes below)_
-- [ ] UX tone guide: codify voice/tone for tooltips/warnings/reports aligned with pillars (clear, fair, tribe-first) and ban legacy jargon; share with localization.
+- [x] UX tone guide: codify voice/tone for tooltips/warnings/reports aligned with pillars (clear, fair, tribe-first) and ban legacy jargon; share with localization. _(see docs/ux-tone-guide.md for principles, terminology, and review checklist)_
 - [x] Lexicon pass: replace legacy tribal-war terms with unique naming across UI/tutorials/marketing; maintain a glossary. _(ip-glossary.md drafted; glossary pass applied to conquest/units/docs; remaining UI strings flagged for sweep)_
 - [ ] Lexicon enforcement: add string linting to CI against ip-glossary banned list; generate weekly report of violations; assign owners per module to fix.
 

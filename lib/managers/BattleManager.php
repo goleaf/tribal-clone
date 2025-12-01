@@ -434,6 +434,10 @@ class BattleManager
                 ? (int)CONQUEST_MIN_DEFENDER_POINTS
                 : self::CONQUEST_MIN_DEFENDER_POINTS;
             if ($defender_points !== null && $defender_points < $minConquestPoints) {
+                $this->logConquestAttempt('block_low_points', $attacker_user_id, $defender_user_id, (int)$villages['target_id'], false, [
+                    'defender_points' => $defender_points,
+                    'min_points' => $minConquestPoints
+                ]);
                 $this->logAbuseFlag($attacker_user_id, 'CONQUEST_BLOCK_LOW_POINTS', [
                     'target_user_id' => $defender_user_id,
                     'target_points' => $defender_points,
@@ -453,6 +457,9 @@ class BattleManager
             $raidAllowed = $attack_type === 'raid' && $hoursOld !== null && $hoursOld >= 24;
             if ($hasSiege || $hasLoyaltyUnit) {
                 if ($hasLoyaltyUnit) {
+                    $this->logConquestAttempt('block_protected', $attacker_user_id, $defender_user_id, (int)$villages['target_id'], false, [
+                        'reason' => 'beginner_protection'
+                    ]);
                     $this->logAbuseFlag($attacker_user_id, 'CONQUEST_BLOCK_PROTECTED', [
                         'target_user_id' => $defender_user_id
                     ]);
@@ -1517,6 +1524,7 @@ class BattleManager
                 $availableAfterProtection = $available;
 
                 $max_available = $available['wood'] + $available['clay'] + $available['iron'];
+                $raidFactorApplied = $isRaid ? self::RAID_LOOT_FACTOR : 1.0;
                 if ($isRaid) {
                     $max_available = floor($max_available * self::RAID_LOOT_FACTOR);
                 }

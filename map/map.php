@@ -319,6 +319,9 @@ const MAP_LOAD_TIMEOUT_MS = 6000;
 let mapLoadTimer = null;
 let lastQueuedRequest = null;
 let mapAbortController = null;
+let frameSamples = [];
+let lastDroppedFrames = null;
+let frameMonitorStarted = false;
 let lastSkeletonSize = null;
 const HIGH_CONTRAST_KEY = 'map_high_contrast';
 const REDUCED_MOTION_KEY = 'map_reduced_motion';
@@ -1354,6 +1357,26 @@ function renderMap() {
     mapGrid.appendChild(fragment);
     const renderDuration = performance.now() - renderStart;
     maybeSendMapTelemetry(renderDuration);
+}
+
+function startFrameMonitor() {
+    if (frameMonitorStarted) return;
+    frameMonitorStarted = true;
+    let lastTime = performance.now();
+    let frames = 0;
+    const tick = (now) => {
+        frames += 1;
+        const delta = now - lastTime;
+        if (delta >= 1000) {
+            const fps = (frames / delta) * 1000;
+            const dropped = Math.max(0, Math.round((60 - fps)));
+            lastDroppedFrames = dropped;
+            frames = 0;
+            lastTime = now;
+        }
+        window.requestAnimationFrame(tick);
+    };
+    window.requestAnimationFrame(tick);
 }
 
 let lastTelemetrySend = 0;

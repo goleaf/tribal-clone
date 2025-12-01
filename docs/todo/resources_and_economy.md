@@ -168,6 +168,7 @@
 - How aggressive should diminishing plunder be on repeated barb farming vs players to avoid punishing legit skirmishes?
 - Do aid taxes scale by distance only, power delta only, or both? Need formula defaults for UI explanation.
 - Are event tokens transferable between worlds or strictly per-world? Clarify to prevent hoarding/exploit.
+- What thresholds trigger economy alerts (decay/DR hits, trade/aid rate-limit spikes), and who owns remediation per world?
 
 ## Profiling & Load Plan
 - Economy tick soak tests with decay/DR/empire surcharges enabled at scale; measure p50/p95 latency and DB load.

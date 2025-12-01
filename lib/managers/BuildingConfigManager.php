@@ -73,6 +73,14 @@ class BuildingConfigManager {
         if (isset($config['max_level']) && $config['max_level'] !== null) {
             return (int)$config['max_level'];
         }
+        // Fallback caps via global constants when not defined in config rows.
+        $internal = strtolower($internalName);
+        if ($internal === 'wall' && defined('WALL_MAX_LEVEL')) {
+            return (int)WALL_MAX_LEVEL;
+        }
+        if (in_array($internal, ['watchtower', 'watch_tower'], true) && defined('WATCHTOWER_MAX_LEVEL')) {
+            return (int)WATCHTOWER_MAX_LEVEL;
+        }
         return null;
     }
 

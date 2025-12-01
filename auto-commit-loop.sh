@@ -50,6 +50,42 @@ sanitize_message() {
   printf '%s' "$cleaned"
 }
 
+reflow_single_line() {
+  local msg="$1" subj rest bullets
+
+  # If already multi-line, keep as-is.
+  if [[ "$msg" == *$'\n'* ]]; then
+    printf '%s' "$msg"
+    return
+  fi
+
+  # Try to split a run-on line into subject + bullets.
+  if [[ "$msg" == *" - "* ]]; then
+    subj="${msg%% - *}"
+    rest="${msg#"$subj - "}"
+  elif [[ "$msg" == *"; "* ]]; then
+    subj="${msg%%; *}"
+    rest="${msg#"$subj; "}"
+  elif [[ "$msg" == *". "* ]]; then
+    subj="${msg%%. *}"
+    rest="${msg#"$subj. "}"
+  else
+    printf '%s' "$msg"
+    return
+  fi
+
+  bullets="$(printf '%s' "$rest" |
+    perl -pe 's/ ?[-•]\s+/\n- /g; s/; /\n- /g; s/\. /\n- /g' |
+    sed 's/^/- /' |
+    sed 's/^- - /- /')"
+
+  if [[ -n "$bullets" ]]; then
+    printf '%s\n\n%s' "$subj" "$bullets"
+  else
+    printf '%s' "$msg"
+  fi
+}
+
 fallback_message() {
   local files msg
   files="$(git -C "$REPO_DIR" diff --cached --name-only | head -n5 | tr '\n' ' ')"
@@ -93,6 +129,7 @@ EOF
 
   raw="$(run_codex "$prompt" || true)"
   clean="$(sanitize_message "$raw")"
+  clean="$(reflow_single_line "$clean")"
 
   if [[ -z "$clean" ]]; then
     echo "Codex failed to return a clean message; falling back." >&2

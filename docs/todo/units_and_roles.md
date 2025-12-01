@@ -205,3 +205,9 @@ Status markers:
 - [ ] Schema/data migrations (units.json/DB seeds) tested with rollback; ensure indexes for caps/limits if stored in DB.
 - [ ] Backward-compatible recruit APIs and battle reports while new fields roll out; version reports to avoid client breakage.
 - [ ] Release comms/help updates covering unit caps, event unit availability, aura/healer rules, and mantlet effects; include examples.
+
+## Monitoring Plan
+- Track recruit API latency/error rates and cap hits by unit type; alert on spikes indicating misconfig or abuse.
+- Monitor seasonal/event unit training attempts after expiry; alert on any accepted attempts.
+- Combat reports: sample for presence of RPS/aura/healer/mantlet flags; alert if flags drop unexpectedly after deployments.
+- Telemetry volume: watch recruit/telemetry log ingest for backpressure; alert if logging slows gameplay paths.
