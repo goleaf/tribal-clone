@@ -180,7 +180,7 @@
 ## Rollout Checklist
 - [ ] Feature flags for new combat rules (overstack penalties, night/weather, min-pop enforcement) to enable gradual rollout per world.
 - [ ] Migration scripts for any schema changes (allegiance fields, report tables) with rollback steps tested.
-- [ ] Backward-compatible report rendering while new fields propagate; add versioning to reports to avoid client breaks.
+- [x] Backward-compatible report rendering while new fields propagate; add versioning to reports to avoid client breaks. _(report_version included in battle details)_
 - [ ] Release comms: patch notes covering combat changes, min-pop rules, and reporting improvements; include example reports.
 - [x] Safeguards: block attacks vs protected/newbie targets (return `ERR_PROTECTED`); validate payloads (non-zero troops, no negative counts); clamp luck/morale to configured ranges. _(protected-target block added; payload validation partially in place)_
 - [ ] Audit/telemetry: log battle resolution traces with correlation ids; emit metrics (tick duration, battles resolved, casualty calc errors, report generation failures); alert on spikes.

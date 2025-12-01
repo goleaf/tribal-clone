@@ -141,6 +141,7 @@
 - Manifesto page live in help/marketing; updated when vision changes; clearly states anti-P2W stance.
 - Differentiation proof doc published comparing unique mechanics vs legacy games; legal/IP review signed off.
 - UX tone guide adopted in string linting/localization; audits show removal of legacy jargon in tooltips/reports/tutorials.
+- KPI thresholds and owners documented; alert runbooks exist for fairness/social/pacing regressions with review cadence.
 
 ## Rollout Checklist
 - [ ] Feature flags for preset application and KPI dashboards per world type; gradual enablement.

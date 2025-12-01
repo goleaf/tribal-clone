@@ -51,6 +51,7 @@ class BattleManager
     private const LOYALTY_FAIL_DROP_MAX = 10;
     private const RECENT_CAPTURE_FLOOR = 10; // anti-rebound buffer
     private const RECENT_CAPTURE_WINDOW_SECONDS = 900; // 15 minutes after capture
+    private const REPORT_VERSION = 1;
     private const OFFENSIVE_ATTACK_TYPES = ['attack', 'raid', 'spy', 'fake'];
     private const MAX_COMMANDS_PER_MINUTE = 20;
     private const MAX_COMMANDS_PER_HOUR = 200;
@@ -1792,6 +1793,7 @@ class BattleManager
                 'vault_protection_percent' => $vaultPct,
                 'vault_protected' => $vaultProtected,
                 'available_after_protection' => $availableAfterProtection,
+                'report_version' => self::REPORT_VERSION,
                 'attack_power' => $attackPowerFinal,
                 'defense_power' => $defensePowerFinal,
                 'phase_reports' => $phaseReports,

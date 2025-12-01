@@ -6,10 +6,14 @@ class ResourceManager {
     private $conn;
     private $buildingManager;
     private array $worldEconomyCache = [];
+    private ?CatchupManager $catchupManager = null;
 
     public function __construct($conn, $buildingManager) {
         $this->conn = $conn;
         $this->buildingManager = $buildingManager;
+        if (class_exists('CatchupManager')) {
+            $this->catchupManager = new CatchupManager($conn);
+        }
     }
 
     /**
@@ -19,6 +23,11 @@ class ResourceManager {
         $worldId = $this->getWorldIdForVillage($village_id);
         $worldConfig = $this->getWorldEconomyConfig($worldId);
         $resourceMultiplier = $worldConfig['resource_multiplier'] ?? 1.0;
+        $catchupMultiplier = 1.0;
+        $ownerId = $this->getUserIdByVillage($village_id);
+        if ($ownerId !== null && $this->catchupManager) {
+            $catchupMultiplier = $this->catchupManager->getMultiplier($ownerId);
+        }
 
         $stmt = $this->conn->prepare(
             "SELECT bt.internal_name, vb.level
@@ -35,10 +44,14 @@ class ResourceManager {
         }
         $stmt->close();
 
+        $multiplier = $this->catchupManager ? $this->catchupManager->getMultiplier($this->getUserIdByVillage($village_id)) : 1.0;
+
+        $mult = $resourceMultiplier * $catchupMultiplier;
+
         return [
-            'wood' => $this->buildingManager->getHourlyProduction('sawmill', $levels['sawmill'] ?? 0) * $resourceMultiplier,
-            'clay' => $this->buildingManager->getHourlyProduction('clay_pit', $levels['clay_pit'] ?? 0) * $resourceMultiplier,
-            'iron' => $this->buildingManager->getHourlyProduction('iron_mine', $levels['iron_mine'] ?? 0) * $resourceMultiplier,
+            'wood' => $this->buildingManager->getHourlyProduction('sawmill', $levels['sawmill'] ?? 0) * $mult,
+            'clay' => $this->buildingManager->getHourlyProduction('clay_pit', $levels['clay_pit'] ?? 0) * $mult,
+            'iron' => $this->buildingManager->getHourlyProduction('iron_mine', $levels['iron_mine'] ?? 0) * $mult,
         ];
     }
 

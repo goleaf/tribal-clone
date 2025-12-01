@@ -477,6 +477,19 @@ class BuildingQueueManager
         return null;
     }
 
+    /**
+     * Calculate allowed concurrent queue slots based on HQ level milestones.
+     */
+    private function getQueueSlotLimit(int $hqLevel): int
+    {
+        $hqLevel = max(0, $hqLevel);
+        $slots = $this->baseSlots;
+        if ($this->hqMilestoneStep > 0 && $hqLevel > 0) {
+            $slots += (int)floor(($hqLevel - 1) / $this->hqMilestoneStep);
+        }
+        return max(1, min($this->maxSlots, $slots));
+    }
+
     private function getVillageBuildingId(int $villageId, string $internalName): ?int
     {
         $stmt = $this->conn->prepare("

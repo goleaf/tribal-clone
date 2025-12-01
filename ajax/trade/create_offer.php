@@ -4,6 +4,8 @@
  */
 require_once $_SERVER['DOCUMENT_ROOT'] . '/init.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/lib/utils/AjaxResponse.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/lib/utils/EconomyError.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/lib/RateLimiter.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/lib/managers/VillageManager.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/lib/managers/TradeManager.php';
 
@@ -17,6 +19,14 @@ if (!isset($_SESSION['user_id'])) {
 
 try {
     $userId = (int)$_SESSION['user_id'];
+    $limiter = new RateLimiter($conn);
+    $windowSeconds = 10;
+    $maxRequests = 6;
+    $rateKey = "trade_offer_user_{$userId}";
+    if (!$limiter->allow($rateKey, $maxRequests, $windowSeconds)) {
+        AjaxResponse::error('Too many trade actions. Please wait a moment.', ['retry_after_sec' => $windowSeconds], 429, EconomyError::ERR_RATE_LIMIT);
+    }
+
     $villageId = isset($_POST['village_id']) ? (int)$_POST['village_id'] : 0;
 
     $offerResources = [

@@ -1126,43 +1126,61 @@ class TradeManager {
             return true;
         }
 
-        $stmt = $this->conn->prepare("SELECT id, points, is_protected FROM users WHERE id IN (?, ?)");
-        if (!$stmt) {
-            return true;
-        }
-        $stmt->bind_param("ii", $senderUserId, $targetUserId);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $users = [];
-        while ($row = $res->fetch_assoc()) {
-            $users[(int)$row['id']] = $row;
-        }
-        $stmt->close();
-
-        $sender = $users[$senderUserId] ?? null;
-        $target = $users[$targetUserId] ?? null;
-        if (!$sender || !$target) {
-            return true;
+        $senderProfile = $this->getUserProfile($senderUserId);
+        $targetProfile = $this->getUserProfile($targetUserId);
+        if (!$senderProfile || !$targetProfile) {
+            return true; // fail open if we cannot load profiles
         }
 
-        $cap = defined('NEWBIE_PROTECTION_POINTS_CAP') ? (int)NEWBIE_PROTECTION_POINTS_CAP : 200;
-        $senderPts = (int)$sender['points'];
-        $targetPts = (int)$target['points'];
-        $targetProtected = ((int)($target['is_protected'] ?? 0) === 1) || $targetPts < $cap;
-        if ($targetProtected && $senderUserId !== $targetUserId) {
+        // Hard block if accounts are flagged or share the same fingerprint/IP hash
+        $flaggedUserId = $this->getAltFlaggedUserId($senderProfile, $targetProfile);
+        if ($flaggedUserId !== null) {
             return [
                 'success' => false,
-                'message' => 'Target player is under beginner protection and cannot receive aid from others yet.',
-                'code' => AjaxResponse::ERR_PROTECTED
+                'message' => 'Trade blocked by account protection.',
+                'code' => EconomyError::ERR_ALT_BLOCK,
+                'details' => ['reason' => 'alt_flag', 'user_id' => $flaggedUserId]
             ];
         }
-        $ratio = $targetPts > 0 ? $senderPts / max(1, $targetPts) : ($senderPts > 0 ? INF : 1);
 
-        if ($targetProtected && $senderPts > $cap && $ratio >= self::PUSH_POINTS_RATIO) {
+        if ($this->isAltLinkSuspicious($senderProfile, $targetProfile)) {
             return [
                 'success' => false,
-                'message' => 'Sending resources to protected/low-point players is blocked to prevent pushing.',
-                'code' => EconomyError::ERR_ALT_BLOCK
+                'message' => 'Trade blocked: accounts appear linked (same fingerprint/IP).',
+                'code' => EconomyError::ERR_ALT_BLOCK,
+                'details' => ['reason' => 'alt_link']
+            ];
+        }
+
+        $senderPts = (int)($senderProfile['points'] ?? 0);
+        $targetPts = (int)($targetProfile['points'] ?? 0);
+
+        $protectedThreshold = defined('TRADE_POWER_DELTA_PROTECTED_POINTS')
+            ? (int)TRADE_POWER_DELTA_PROTECTED_POINTS
+            : (defined('NEWBIE_PROTECTION_POINTS_CAP') ? (int)NEWBIE_PROTECTION_POINTS_CAP : 200);
+        $ratioThreshold = defined('TRADE_POWER_DELTA_BLOCK_RATIO')
+            ? (float)TRADE_POWER_DELTA_BLOCK_RATIO
+            : self::PUSH_POINTS_RATIO;
+
+        $minPoints = min($senderPts, $targetPts);
+        $maxPoints = max($senderPts, $targetPts);
+        $ratio = $minPoints > 0 ? ($maxPoints / $minPoints) : ($maxPoints > 0 ? INF : 1);
+
+        $senderProtected = $this->isUserProtectedForTrades($senderProfile, $protectedThreshold);
+        $targetProtected = $this->isUserProtectedForTrades($targetProfile, $protectedThreshold);
+
+        if (($targetProtected || $senderProtected || $minPoints < $protectedThreshold) && $ratio >= $ratioThreshold) {
+            return [
+                'success' => false,
+                'message' => 'Trade blocked: power gap too high for protected account.',
+                'code' => EconomyError::ERR_ALT_BLOCK,
+                'details' => [
+                    'reason' => 'power_delta',
+                    'source_points' => $senderPts,
+                    'target_points' => $targetPts,
+                    'ratio' => is_infinite($ratio) ? 'inf' : round($ratio, 2),
+                    'threshold' => $ratioThreshold
+                ]
             ];
         }
 
