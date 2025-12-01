@@ -450,10 +450,18 @@ class DeltaCalculator
                       FROM map_markers
                       WHERE world_id = ? AND created_at > ?";
             
-            $results = $this->db->fetchAll($query, [$worldId, $lastTimestamp]);
+            $stmt = $this->db->prepare($query);
+            if (!$stmt) {
+                return [];
+            }
             
-            return array_map(function($row) {
-                return [
+            $stmt->bind_param("ii", $worldId, $lastTimestamp);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            $results = [];
+            while ($row = $result->fetch_assoc()) {
+                $results[] = [
                     'id' => (int)$row['id'],
                     'type' => $row['type'],
                     'coords' => ['x' => (int)$row['x'], 'y' => (int)$row['y']],
@@ -462,7 +470,10 @@ class DeltaCalculator
                     'playerId' => (int)$row['user_id'],
                     'createdAt' => (int)$row['created_at']
                 ];
-            }, $results);
+            }
+            
+            $stmt->close();
+            return $results;
         } catch (Exception $e) {
             return [];
         }
@@ -478,10 +489,18 @@ class DeltaCalculator
                       FROM map_markers
                       WHERE world_id = ? AND updated_at > ? AND created_at <= ?";
             
-            $results = $this->db->fetchAll($query, [$worldId, $lastTimestamp, $lastTimestamp]);
+            $stmt = $this->db->prepare($query);
+            if (!$stmt) {
+                return [];
+            }
             
-            return array_map(function($row) {
-                return [
+            $stmt->bind_param("iii", $worldId, $lastTimestamp, $lastTimestamp);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            $results = [];
+            while ($row = $result->fetch_assoc()) {
+                $results[] = [
                     'id' => (int)$row['id'],
                     'type' => $row['type'],
                     'coords' => ['x' => (int)$row['x'], 'y' => (int)$row['y']],
@@ -491,7 +510,10 @@ class DeltaCalculator
                     'createdAt' => (int)$row['created_at'],
                     'updatedAt' => (int)$row['updated_at']
                 ];
-            }, $results);
+            }
+            
+            $stmt->close();
+            return $results;
         } catch (Exception $e) {
             return [];
         }
@@ -506,8 +528,22 @@ class DeltaCalculator
             $query = "SELECT id FROM map_markers 
                       WHERE world_id = ? AND deleted_at > ? AND deleted_at IS NOT NULL";
             
-            $results = $this->db->fetchAll($query, [$worldId, $lastTimestamp]);
-            return array_map(fn($row) => ['id' => (int)$row['id']], $results);
+            $stmt = $this->db->prepare($query);
+            if (!$stmt) {
+                return [];
+            }
+            
+            $stmt->bind_param("ii", $worldId, $lastTimestamp);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            $results = [];
+            while ($row = $result->fetch_assoc()) {
+                $results[] = ['id' => (int)$row['id']];
+            }
+            
+            $stmt->close();
+            return $results;
         } catch (Exception $e) {
             return [];
         }
@@ -519,12 +555,18 @@ class DeltaCalculator
     private function getDataVersion(int $worldId): string
     {
         try {
-            $result = $this->db->fetchOne(
-                "SELECT data_version FROM cache_versions WHERE world_id = ?",
-                [$worldId]
-            );
+            $stmt = $this->db->prepare("SELECT data_version FROM cache_versions WHERE world_id = ?");
+            if (!$stmt) {
+                return (string)time();
+            }
             
-            return $result ? (string)$result['data_version'] : (string)time();
+            $stmt->bind_param("i", $worldId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $row = $result->fetch_assoc();
+            $stmt->close();
+            
+            return $row ? (string)$row['data_version'] : (string)time();
         } catch (Exception $e) {
             return (string)time();
         }
@@ -537,15 +579,32 @@ class DeltaCalculator
     {
         // Simple checksum based on counts and latest timestamps
         try {
-            $villageCount = $this->db->fetchOne(
-                "SELECT COUNT(*) as count FROM villages WHERE world_id = ?",
-                [$worldId]
-            )['count'] ?? 0;
+            $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM villages WHERE world_id = ?");
+            if (!$stmt) {
+                return md5((string)time());
+            }
             
-            $commandCount = $this->db->fetchOne(
-                "SELECT COUNT(*) as count FROM commands WHERE world_id = ? AND status = 'active'",
-                [$worldId]
-            )['count'] ?? 0;
+            $stmt->bind_param("i", $worldId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $row = $result->fetch_assoc();
+            $villageCount = $row['count'] ?? 0;
+            $stmt->close();
+            
+            $commandCount = 0;
+            try {
+                $stmt2 = $this->db->prepare("SELECT COUNT(*) as count FROM commands WHERE world_id = ? AND status = 'active'");
+                if ($stmt2) {
+                    $stmt2->bind_param("i", $worldId);
+                    $stmt2->execute();
+                    $result2 = $stmt2->get_result();
+                    $row2 = $result2->fetch_assoc();
+                    $commandCount = $row2['count'] ?? 0;
+                    $stmt2->close();
+                }
+            } catch (Exception $e) {
+                // Commands table might not exist
+            }
             
             $checksumData = [
                 'villages' => $villageCount,

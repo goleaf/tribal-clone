@@ -45,17 +45,21 @@ class DeltaCalculatorTest
     {
         // Create test world if needed
         try {
-            $this->db->execute(
-                "INSERT OR IGNORE INTO worlds (id, name, speed) VALUES (?, ?, ?)",
-                [$this->testWorldId, 'Test World', 1]
-            );
+            $stmt = $this->db->prepare("INSERT OR IGNORE INTO worlds (id, name, speed) VALUES (?, ?, ?)");
+            if ($stmt) {
+                $stmt->bind_param("isi", $this->testWorldId, $name, $speed);
+                $name = 'Test World';
+                $speed = 1;
+                $stmt->execute();
+                $stmt->close();
+            }
         } catch (Exception $e) {
             // World might already exist
         }
         
         // Ensure cache_versions table exists
         try {
-            $this->db->execute(
+            $this->db->query(
                 "CREATE TABLE IF NOT EXISTS cache_versions (
                     world_id INTEGER PRIMARY KEY,
                     data_version INTEGER NOT NULL,
