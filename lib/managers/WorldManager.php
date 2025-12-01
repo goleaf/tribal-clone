@@ -63,7 +63,9 @@ class WorldManager
         'victory_value' => "INTEGER DEFAULT NULL",
         'winner_tribe_id' => "INTEGER DEFAULT NULL",
         'victory_at' => "TEXT DEFAULT NULL",
-        'archetype' => "TEXT DEFAULT NULL"
+        'archetype' => "TEXT DEFAULT NULL",
+        'preset_enforcement_enabled' => "INTEGER NOT NULL DEFAULT 0",
+        'kpi_dashboards_enabled' => "INTEGER NOT NULL DEFAULT 0"
     ];
 
     public function __construct($conn)
@@ -138,7 +140,9 @@ class WorldManager
             'tribe_member_limit' => null,
             'victory_type' => null,
             'victory_value' => null,
-            'archetype' => null
+            'archetype' => null,
+            'preset_enforcement_enabled' => false,
+            'kpi_dashboards_enabled' => false
         ];
 
         $columns = $this->getWorldColumns();

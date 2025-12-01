@@ -211,16 +211,18 @@ function seedVillageWithWorld(
     array $resources,
     array $buildingLevels,
     int $worldId = 1,
-    string $lastUpdateOffset = '-1 hour'
+    string $lastUpdateOffset = '-1 hour',
+    ?string $conqueredAt = null
 ): void {
     $wood = (int)($resources['wood'] ?? 0);
     $clay = (int)($resources['clay'] ?? 0);
     $iron = (int)($resources['iron'] ?? 0);
     $lastUpdate = date('Y-m-d H:i:s', strtotime($lastUpdateOffset));
+    $conquered = $conqueredAt ? date('Y-m-d H:i:s', strtotime($conqueredAt)) : null;
 
     $conn->query(
-        "INSERT INTO villages (id, name, user_id, world_id, x_coord, y_coord, wood, clay, iron, warehouse_capacity, population, farm_capacity, last_resource_update) VALUES " .
-        "({$villageId}, 'Village {$villageId}', {$userId}, {$worldId}, 500, 500, {$wood}, {$clay}, {$iron}, 1000, 100, 100, '{$lastUpdate}')"
+        "INSERT INTO villages (id, name, user_id, world_id, x_coord, y_coord, wood, clay, iron, warehouse_capacity, population, farm_capacity, last_resource_update, conquered_at) VALUES " .
+        "({$villageId}, 'Village {$villageId}', {$userId}, {$worldId}, 500, 500, {$wood}, {$clay}, {$iron}, 1000, 100, 100, '{$lastUpdate}', " . ($conquered ? "'{$conquered}'" : "NULL") . ")"
     );
 
     foreach ($buildingLevels as $internalName => $level) {

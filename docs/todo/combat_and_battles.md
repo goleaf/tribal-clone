@@ -165,6 +165,7 @@
 
 ## QA & Acceptance
 - [ ] Unit tests for combat resolver: modifiers (morale/luck/night/terrain), siege damage scaling, overstack penalty, and proportional casualties.
+- [ ] Siege attrition variant tests: when `SIEGE_ATTRITION_MULT` enabled, siege units take expected extra losses; reports show flag/value; disabled worlds remain unchanged.
 - [ ] Conquest hook tests: capture only on attacker win + surviving conquest units; blocked by protection/cooldowns; reason codes returned.
 - [ ] Timing tests: simultaneous arrivals ordering, support inclusion, and anti-sniping spacing enforcement.
 - [ ] Rate-limit tests: command creation caps and fake/min-pop enforcement return correct errors; no tick degradation under spam.
