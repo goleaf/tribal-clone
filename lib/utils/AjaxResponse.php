@@ -14,6 +14,7 @@ class AjaxResponse
     public const ERR_VALIDATION = 'ERR_VALIDATION';
     public const ERR_PROTECTED = 'ERR_PROTECTED';
     public const ERR_INPUT = 'ERR_INPUT';
+    public const ERR_DUP_COMMAND = 'ERR_DUP_COMMAND';
 
     /**
      * Send a success JSON response

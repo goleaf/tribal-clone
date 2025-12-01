@@ -204,6 +204,7 @@
 - [ ] Determinism tests: ensure identical inputs produce identical casualty/wall/allegiance outputs across servers and replays.
 - [ ] Property fuzzing: fuzz negative/overflow troop counts, extreme modifiers, and malformed commands; expect graceful errors not crashes.
 - [ ] Integration sims: end-to-end scenarios covering fakes + clears + conquest waves + overstack penalties + night/weather; compare against golden reports.
+- [ ] Monitoring dashboards live per world (battle volume, resolver latency, error rates, plunder DR/overstack/occupation rates) with alert thresholds and owners documented.
 
 ### Casualty Proportionality Options (Decision Aid)
 - **Linear (current default):** Casualties distributed proportionally by each unit type’s share of total attack/defense. Simple and predictable; easier to reason about in reports.

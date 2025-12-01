@@ -152,12 +152,20 @@ class BattleManager
         $target_is_barb = $defender_user_id === -1;
         $defender_points = $target_is_barb ? null : $this->getUserPoints($defender_user_id);
 
-        // Global rate limit per attacker to deter automation/burst spam
+        // Global rate limit per attacker to deter automation/burst spam + duplicate submission guard
         $rateLimitCheck = $this->enforceCommandRateLimit($attacker_user_id, $attack_type, $defender_user_id);
         if ($rateLimitCheck !== true) {
             return [
                 'success' => false,
                 'error' => is_string($rateLimitCheck) ? $rateLimitCheck : 'RATE_CAP: Too many commands sent recently.'
+            ];
+        }
+        $dupCheck = $this->enforceDuplicateCommandGuard($attacker_user_id, $target_village_id, $attack_type);
+        if ($dupCheck !== true) {
+            return [
+                'success' => false,
+                'error' => 'Duplicate command detected. Please wait a moment before resending.',
+                'code' => AjaxResponse::ERR_DUP_COMMAND
             ];
         }
 

@@ -96,7 +96,7 @@
 - [x] Load shedding: if trade/aid endpoints face spikes, degrade gracefully (queue/try-later) instead of overloading DB; emit backpressure metric. _(trade manager now polls active routes/open offers with a soft limit + backpressure metric `trade_load_shed` and returns ERR_RATE_LIMIT with retry window)_
 - [x] Validation: block zero/negative resource sends, enforce storage limits at send/receive, and reject offers with extreme exchange ratios outside configured band. _(trade send now checks target storage headroom + ERR_RATIO already enforced on offers)_
 - [ ] Economy tests: unit tests for vault protection math, tax calculation, overflow/decay triggers, and fair-market bounds; integration tests for trade/aid flows with caps and power-delta taxes applied. _(baseline decay + fair-ratio/merchant caps covered in `tests/economy_test.php`; add vault/tax/aid cases next)_
-- [ ] Pricing guardrails: define per-archetype min/max dynamic cost scalers, event modifier bounds, and conquest cost scaling curves to prevent runaway inflation or too-cheap conquest on late worlds. Document defaults and enforcement points in config loader.
+- [x] Pricing guardrails: define per-archetype min/max dynamic cost scalers, event modifier bounds, and conquest cost scaling curves to prevent runaway inflation or too-cheap conquest on late worlds. Document defaults and enforcement points in config loader. _(BuildingConfigManager now clamps cost_factor to a safe band to avoid runaway/near-zero build cost scaling)_
 
 ### Pricing Guardrails — Implementation Notes
 - Dynamic cost scalers (per archetype): casual 0.9–1.1, classic 1.0–1.2, hardcore 1.0–1.3. Clamp world overrides at load; log clamp with world id and setting. Apply to buildings/tech/minting calculators.
