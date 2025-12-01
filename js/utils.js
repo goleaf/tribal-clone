@@ -6,7 +6,12 @@
  * @returns {string} Formatted number
  */
 function formatNumber(number) {
-    return new Intl.NumberFormat('en-US').format(number);
+    try {
+        return new Intl.NumberFormat('en-US').format(number);
+    } catch (e) {
+        // Fallback for unexpected input
+        return `${number}`;
+    }
 }
 
 /**
@@ -47,4 +52,34 @@ function getRemainingTimeText(finishTime) {
     return timeString.trim();
 }
 
-// Add more shared JS functions here
+/**
+ * Clamp a number between min and max.
+ * @param {number} value
+ * @param {number} min
+ * @param {number} max
+ * @returns {number}
+ */
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+}
+
+/**
+ * Debounce a function call.
+ * @param {Function} fn
+ * @param {number} delay
+ * @returns {Function}
+ */
+function debounce(fn, delay = 250) {
+    let timeoutId;
+    return (...args) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => fn(...args), delay);
+    };
+}
+
+// Expose helpers globally for legacy scripts
+window.formatNumber = window.formatNumber || formatNumber;
+window.formatTime = window.formatTime || formatTime;
+window.getRemainingTimeText = window.getRemainingTimeText || getRemainingTimeText;
+window.clamp = window.clamp || clamp;
+window.debounce = window.debounce || debounce;
