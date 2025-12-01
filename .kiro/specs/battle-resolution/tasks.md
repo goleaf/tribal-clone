@@ -28,7 +28,7 @@ This task list bridges the gap between the current BattleEngine/BattleManager im
   - Add comprehensive input validation
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 3.1, 3.2, 3.3, 7.1, 7.2, 7.3, 8.1, 8.2, 8.3_
 
-- [-] 1.1 Create ModifierApplier component
+- [x] 1.1 Create ModifierApplier component
   - Implement calculateMorale() with proper clamping
   - Implement generateLuck() with configurable bounds
   - Implement calculateWallMultiplier() with two-tier formula
@@ -46,7 +46,7 @@ This task list bridges the gap between the current BattleEngine/BattleManager im
   - **Property 18: Overstack Modifier Ordering**
   - **Validates: Requirements 3.1, 3.2, 3.3, 7.1, 8.1, 8.2, 8.3**
 
-- [x] 1.3 Enhance CombatCalculator component
+- [-] 1.3 Enhance CombatCalculator component
   - Refactor calculateOffensivePower() to use class multipliers
   - Refactor calculateDefensivePower() with weighted defense
   - Implement calculateCasualties() with ratio^1.5 formula
