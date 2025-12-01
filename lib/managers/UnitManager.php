@@ -935,6 +935,286 @@ class UnitManager
 
         return null;
     }
+
+    /**
+     * Get unit category/archetype for RPS calculations.
+     * 
+     * @param int $unitTypeId Unit type ID
+     * @return string Category: 'infantry', 'cavalry', 'ranged', 'siege', 'scout', 'support', 'conquest'
+     * 
+     * Requirements: 1.4, 3.3, 8.4
+     */
+    public function getUnitCategory(int $unitTypeId): string
+    {
+        if (!isset($this->unit_types_cache[$unitTypeId])) {
+            return 'infantry'; // Default fallback
+        }
+
+        $unit = $this->unit_types_cache[$unitTypeId];
+        
+        // Check if category is explicitly defined in unit data
+        if (!empty($unit['category'])) {
+            return strtolower($unit['category']);
+        }
+
+        // Fallback: infer from building type and internal name
+        $buildingType = strtolower($unit['building_type'] ?? '');
+        $internal = strtolower($unit['internal_name'] ?? '');
+
+        // Conquest units
+        if (in_array($internal, ['noble', 'nobleman', 'standard_bearer', 'envoy'], true)) {
+            return 'conquest';
+        }
+
+        // Support units
+        if (in_array($internal, ['banner_guard', 'war_healer', 'healer'], true)) {
+            return 'support';
+        }
+
+        // Scout units
+        if (in_array($internal, ['pathfinder', 'shadow_rider', 'scout'], true)) {
+            return 'scout';
+        }
+
+        // Siege units
+        if ($buildingType === 'workshop' || $buildingType === 'garage' ||
+            in_array($internal, ['ram', 'battering_ram', 'catapult', 'stone_hurler', 'mantlet', 'mantlet_crew'], true)) {
+            return 'siege';
+        }
+
+        // Cavalry units
+        if ($buildingType === 'stable' ||
+            in_array($internal, ['skirmisher_cavalry', 'lancer', 'light', 'heavy', 'cavalry', 'knight'], true)) {
+            return 'cavalry';
+        }
+
+        // Ranged units
+        if (str_contains($internal, 'archer') || str_contains($internal, 'bow') || 
+            str_contains($internal, 'ranger') || in_array($internal, ['militia_bowman', 'longbow_scout'], true)) {
+            return 'ranged';
+        }
+
+        // Default to infantry
+        return 'infantry';
+    }
+
+    /**
+     * Check if unit is available based on world features.
+     * 
+     * @param string $unitInternal Internal unit name
+     * @param int $worldId World ID
+     * @return bool True if unit is enabled
+     * 
+     * Requirements: 10.1, 10.2, 15.5
+     */
+    public function isUnitAvailable(string $unitInternal, int $worldId): bool
+    {
+        $internal = strtolower(trim($unitInternal));
+
+        // Check conquest units
+        if (in_array($internal, ['noble', 'nobleman', 'standard_bearer', 'envoy'], true)) {
+            return $this->worldManager->isConquestUnitEnabled($worldId);
+        }
+
+        // Check seasonal units
+        $seasonalUnits = ['tempest_knight', 'event_knight'];
+        if (in_array($internal, $seasonalUnits, true)) {
+            if (!$this->worldManager->isSeasonalUnitsEnabled($worldId)) {
+                return false;
+            }
+            // Also check seasonal window
+            $window = $this->checkSeasonalWindow($internal, time());
+            return $window['available'];
+        }
+
+        // Check healer units
+        if (in_array($internal, ['war_healer', 'healer'], true)) {
+            return $this->worldManager->isHealerEnabled($worldId);
+        }
+
+        // All other units are available by default
+        return true;
+    }
+
+    /**
+     * Get effective unit stats after world multipliers.
+     * 
+     * @param int $unitTypeId Unit type ID
+     * @param int $worldId World ID
+     * @return array Effective stats with multipliers applied
+     * 
+     * Requirements: 11.1, 11.2, 11.3, 11.4
+     */
+    public function getEffectiveUnitStats(int $unitTypeId, int $worldId): array
+    {
+        if (!isset($this->unit_types_cache[$unitTypeId])) {
+            return [];
+        }
+
+        $unit = $this->unit_types_cache[$unitTypeId];
+        $archetype = $this->resolveUnitArchetype($unit);
+
+        // Get world multipliers
+        $worldSpeed = $this->worldManager->getWorldSpeed($worldId);
+        $trainMultiplier = $this->worldManager->getTrainSpeedForArchetype($archetype, $worldId);
+
+        // Apply training time multiplier
+        $baseTime = (int)($unit['training_time_base'] ?? 0);
+        $effectiveTime = $baseTime / ($worldSpeed * $trainMultiplier);
+
+        // Apply cost multipliers (if world has cost multipliers configured)
+        // For now, costs remain the same unless world-specific cost multipliers are added
+        $effectiveCosts = [
+            'wood' => (int)($unit['cost_wood'] ?? 0),
+            'clay' => (int)($unit['cost_clay'] ?? 0),
+            'iron' => (int)($unit['cost_iron'] ?? 0)
+        ];
+
+        return [
+            'unit_type_id' => $unitTypeId,
+            'name' => $unit['name'] ?? '',
+            'internal_name' => $unit['internal_name'] ?? '',
+            'category' => $this->getUnitCategory($unitTypeId),
+            'attack' => (int)($unit['attack'] ?? 0),
+            'defense_infantry' => (int)($unit['defense_infantry'] ?? 0),
+            'defense_cavalry' => (int)($unit['defense_cavalry'] ?? 0),
+            'defense_ranged' => (int)($unit['defense_ranged'] ?? 0),
+            'speed_min_per_field' => (int)($unit['speed'] ?? $unit['speed_min_per_field'] ?? 0),
+            'carry_capacity' => (int)($unit['carry'] ?? $unit['carry_capacity'] ?? 0),
+            'population' => (int)($unit['population'] ?? 0),
+            'training_time_base' => $baseTime,
+            'training_time_effective' => (int)floor($effectiveTime),
+            'cost_wood' => $effectiveCosts['wood'],
+            'cost_clay' => $effectiveCosts['clay'],
+            'cost_iron' => $effectiveCosts['iron'],
+            'world_speed_multiplier' => $worldSpeed,
+            'archetype_train_multiplier' => $trainMultiplier
+        ];
+    }
+
+    /**
+     * Check seasonal unit availability window.
+     * 
+     * @param string $unitInternal Internal unit name
+     * @param int $timestamp Current timestamp
+     * @return array ['available' => bool, 'start' => int|null, 'end' => int|null]
+     * 
+     * Requirements: 10.1, 10.2, 10.4
+     */
+    public function checkSeasonalWindow(string $unitInternal, int $timestamp): array
+    {
+        $stmt = $this->conn->prepare("
+            SELECT start_timestamp, end_timestamp, is_active
+            FROM seasonal_units
+            WHERE unit_internal_name = ?
+            LIMIT 1
+        ");
+
+        if (!$stmt) {
+            return ['available' => false, 'start' => null, 'end' => null];
+        }
+
+        $stmt->bind_param("s", $unitInternal);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows === 0) {
+            $stmt->close();
+            // Not a seasonal unit, so it's available
+            return ['available' => true, 'start' => null, 'end' => null];
+        }
+
+        $row = $result->fetch_assoc();
+        $stmt->close();
+
+        $start = (int)($row['start_timestamp'] ?? 0);
+        $end = (int)($row['end_timestamp'] ?? 0);
+        $isActive = (bool)($row['is_active'] ?? false);
+
+        $available = $isActive && $timestamp >= $start && $timestamp <= $end;
+
+        return [
+            'available' => $available,
+            'start' => $start,
+            'end' => $end,
+            'is_active' => $isActive
+        ];
+    }
+
+    /**
+     * Enforce per-account elite unit caps.
+     * 
+     * @param int $userId User ID
+     * @param string $unitInternal Internal unit name
+     * @param int $count Requested count
+     * @return array ['can_train' => bool, 'current' => int, 'max' => int]
+     * 
+     * Requirements: 9.2
+     */
+    public function checkEliteUnitCap(int $userId, string $unitInternal, int $count): array
+    {
+        // Define elite units and their caps
+        $eliteUnits = [
+            'warden' => 100,
+            'ranger' => 100,
+            'tempest_knight' => 50,
+            'event_knight' => 50
+        ];
+
+        $internal = strtolower(trim($unitInternal));
+
+        // If not an elite unit, no cap applies
+        if (!isset($eliteUnits[$internal])) {
+            return ['can_train' => true, 'current' => 0, 'max' => -1];
+        }
+
+        $maxCap = $eliteUnits[$internal];
+
+        // Count existing units across all villages for this user
+        $stmt = $this->conn->prepare("
+            SELECT COALESCE(SUM(vu.count), 0) AS total
+            FROM village_units vu
+            JOIN villages v ON vu.village_id = v.id
+            JOIN unit_types ut ON vu.unit_type_id = ut.id
+            WHERE v.user_id = ? AND ut.internal_name = ?
+        ");
+
+        if (!$stmt) {
+            return ['can_train' => false, 'current' => 0, 'max' => $maxCap, 'error' => 'database_error'];
+        }
+
+        $stmt->bind_param("is", $userId, $internal);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        $currentCount = (int)($row['total'] ?? 0);
+
+        // Count queued units
+        $stmtQueue = $this->conn->prepare("
+            SELECT COALESCE(SUM(uq.count - uq.count_finished), 0) AS queued
+            FROM unit_queue uq
+            JOIN villages v ON uq.village_id = v.id
+            JOIN unit_types ut ON uq.unit_type_id = ut.id
+            WHERE v.user_id = ? AND ut.internal_name = ?
+        ");
+
+        if ($stmtQueue) {
+            $stmtQueue->bind_param("is", $userId, $internal);
+            $stmtQueue->execute();
+            $rowQ = $stmtQueue->get_result()->fetch_assoc();
+            $stmtQueue->close();
+            $currentCount += (int)($rowQ['queued'] ?? 0);
+        }
+
+        $canTrain = ($currentCount + $count) <= $maxCap;
+
+        return [
+            'can_train' => $canTrain,
+            'current' => $currentCount,
+            'max' => $maxCap
+        ];
+    }
 }
 
 ?> 
