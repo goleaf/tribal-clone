@@ -78,7 +78,7 @@
   - Return cap status
   - _Requirements: 9.2_
 
-- [x] 2.9 Extend checkRecruitRequirements() to include seasonal and elite checks
+- [-] 2.9 Extend checkRecruitRequirements() to include seasonal and elite checks
   - Add seasonal window validation
   - Add elite unit cap validation
   - Return detailed error codes (ERR_SEASONAL_EXPIRED, ERR_CAP)
