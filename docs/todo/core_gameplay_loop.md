@@ -115,6 +115,7 @@ Players manage villages to grow resources, build and upgrade structures, train a
 - [ ] Schema migrations (if needed) for task/progress tables tested with rollback; indexes in place for high-volume events.
 - [ ] Backward-compatible APIs/versioning so older clients degrade gracefully (e.g., nudges disabled) while new fields roll out.
 - [ ] Release comms/help updates explaining nudges, task rerolls, quiet hours, and catch-up buffs with opt-in/opt-out steps.
+- [ ] Monitoring dashboards live (nudge/notification/task/buff metrics) with alert thresholds tuned; owners assigned for responding to alerts.
 
 ## Monitoring Plan
 - Track notification dispatch latency, drop rates, and queue depth; alert on spikes post-release.

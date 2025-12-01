@@ -1754,6 +1754,13 @@ class BattleManager
                     $conquestReason = 'last_village_protected';
                 }
 
+                if ($villageConquered && $captureImmune) {
+                    $villageConquered = false;
+                    $conquestReason = 'capture_cooldown';
+                    // Keep loyalty above zero while immunity is active to avoid weird 0-loyalty states.
+                    $loyalty_after = max($loyalty_after, max($loyalty_floor, 1));
+                }
+
                 if ($villageConquered) {
                     $loyalty_after = $this->getConqueredLoyaltyReset((float)$loyalty_cap);
                     $conquestReason = 'captured';
@@ -1782,7 +1789,9 @@ class BattleManager
                 'cap' => $loyalty_cap,
                 'drop_multiplier' => $dropMultiplier,
                 'reason' => $conquestReason,
-                'surviving_nobles' => $survivingNobles
+                'surviving_nobles' => $survivingNobles,
+                'capture_cooldown_until' => $captureCooldownUntil,
+                'capture_cooldown_active' => $captureImmune
             ];
 
             $logPath = __DIR__ . '/../../logs/conquest_attempts.log';
@@ -1801,7 +1810,8 @@ class BattleManager
                 'conquered' => $villageConquered,
                 'reason' => $conquestReason,
                 'defender_village_count' => $defenderVillageCount,
-                'surviving_nobles' => $survivingNobles
+                'surviving_nobles' => $survivingNobles,
+                'capture_cooldown_until' => $captureCooldownUntil
             ];
             @file_put_contents($logPath, json_encode($logPayload) . PHP_EOL, FILE_APPEND);
         }

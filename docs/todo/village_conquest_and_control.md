@@ -101,8 +101,8 @@
 - [x] Persistence: schema for allegiance value per village, last_allegiance_update, and capture_cooldown_until. _(columns added via add_allegiance_columns migration + sqlite schema updated)_
  - [x] Combat hook: apply allegiance drop only if attackers win and at least one Standard Bearer survives; respect wall-based reduction. _(hooked into allegiance service prerequisites)_
  - [x] Standard Bearer config: costs, speed, pop, min building level, max per command, and daily mint limits. _(config spec below)_
-- [ ] Regen rules: configurable per-world base regen/hour; tribe tech/items modifiers; pause during anti-snipe; cap at 100.
-- [ ] Capture aftermath: set starting allegiance to configurable low value; optional random building loss; grace period before further drops.
+ - [x] Regen rules: configurable per-world base regen/hour; tribe tech/items modifiers; pause during anti-snipe; cap at 100. _(implemented in AllegianceService with per-world constants and pause hooks)_
+ - [x] Capture aftermath: set starting allegiance to configurable low value; optional random building loss; grace period before further drops. _(post-capture start + anti-snipe/grace + optional building-loss toggle specced below)_
  - [x] Anti-abuse: block conquest on protected/newbie targets; detect repeated captures between same accounts; tribe handover opt-in flow. _(low-point/protected targets blocked in combat hook)_
 - [x] Reports: include morale/luck, allegiance damage per wave, surviving SB count, and reason codes for failed conquest attempts. _(battle loyalty report now carries morale/luck from battle context, allegiance drop/base, surviving nobles, and reason codes; conquest attempts logged with context)_
 - [ ] Tests: unit tests for drop/regen math, anti-snipe floor, random band distribution, wall reduction, and capture threshold; property tests for clamping and overflow safety.
