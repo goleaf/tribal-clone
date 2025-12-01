@@ -83,6 +83,7 @@ try {
     $worldSpeed = $worldManager->getWorldSpeed();
     $troopSpeed = $worldManager->getTroopSpeed();
     $unitSpeedMultiplier = defined('UNIT_SPEED_MULTIPLIER') ? max(0.1, (float)UNIT_SPEED_MULTIPLIER) : 1.0;
+    $trainSpeed = $worldManager->getTrainSpeedForUnit($unitSpeed > 0 ? '' : '', CURRENT_WORLD_ID); // not used directly for travel
     $effectiveSpeed = $baseUnitSpeed * $worldSpeed * $troopSpeed * $unitSpeedMultiplier; // fields per hour
 
     $travelSeconds = (int)ceil(($distance * $terrainMultiplier * $unitSpeed / max(0.1, $effectiveSpeed)) * 3600);

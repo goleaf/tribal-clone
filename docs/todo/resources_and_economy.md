@@ -168,6 +168,12 @@
 - Minting/tribe project/megastructure load: concurrent contributions to cap enforcement; verify no lock contention and correct surcharge application.
 - Event economy soak: token grants, expiries, and shop purchases at volume; validate caps and expiry behavior and payload sizes.
 
+## Rollout Checklist
+- [ ] Feature flags for decay/DR/empire surcharges, trade/aid taxes, and event token expiry per world; default off on legacy worlds.
+- [ ] Schema migrations for economy caps/logs tested with rollback; ensure indexes for high-churn tables (trade/aid logs).
+- [ ] Backward-compatible API responses for trade/aid/minting while new caps/fields propagate; include versioning.
+- [ ] Release comms: explain decay/DR/taxes and fair-play safeguards; UI tooltips updated with formulas/examples.
+
 ### Resource Sink Plan
 - **Minting:** Coins/Seals/Standards crafted in Hall/Academy with rising costs; daily mint cap per account; consumes wood/clay/iron and optional token sink. Required for Standard Bearers.
 - **Tribe Projects:** Tribe tech nodes and shared storage consume member-delivered resources/tribe tokens; capped contributions per day to prevent push abuse; progress stored per world.

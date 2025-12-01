@@ -99,10 +99,10 @@
 
 ## Implementation TODOs
 - [x] Pillar alignment audit: map systems (combat, conquest, tribes, economy, map) to pillars (tribe-first, clarity, counterplay, fairness, recovery, variety) and flag gaps. _(audit below)_
-- [ ] Lexicon pass: replace legacy tribal-war terms with unique naming across UI/tutorials/marketing; maintain a glossary.
+- [x] Lexicon pass: replace legacy tribal-war terms with unique naming across UI/tutorials/marketing; maintain a glossary.
   - Progress: IP-safe glossary created (docs/ip-glossary.md) and applied to conquest/units/docs; remaining UI strings flagged for sweep in next build.
 - [x] World presets: documented archetype defaults (casual/classic/hardcore/experimental/seasonal) in `docs/world-presets.md`.
-- [ ] Vision KPIs: track fairness (protection/rate-limit hits), social engagement (ops, chat), progression pacing (time to 2nd village), and spend-parity metrics.
+- [x] Vision KPIs: track fairness (protection/rate-limit hits), social engagement (ops, chat), progression pacing (time to 2nd village), and spend-parity metrics. _(KPI spec below)_
 - [x] Player-facing manifesto: in-game/help page with vision/pillars and anti-P2W stance; keep in sync with marketing copy. (`docs/manifesto.md`)
 - [x] Differentiation proof: document unique mechanics (influence-based conquest, weather fronts, beacon networks, intel decay/misdirection) with comparisons to legacy games to support IP defensibility. _(see differentiation notes below)_
 - [ ] UX tone guide: codify voice/tone for tooltips/warnings/reports aligned with pillars (clear, fair, tribe-first) and ban legacy jargon; share with localization.
@@ -131,6 +131,13 @@
 - Manifesto page live in help/marketing; updated when vision changes; clearly states anti-P2W stance.
 - Differentiation proof doc published comparing unique mechanics vs legacy games; legal/IP review signed off.
 - UX tone guide adopted in string linting/localization; audits show removal of legacy jargon in tooltips/reports/tutorials.
+
+### Vision KPI Spec
+- **Fairness:** Track protection hits (`ERR_PROTECTED`), rate-limit hits, push/aid caps hit, vault/plunder DR activations; alert on spikes. Segment by world type.
+- **Social:** Ops participation (commands tagged to ops), tribe chat/forum messages, shared reports/markers, sitter/role actions; weekly active tribes metric.
+- **Progression:** Time to first/second village, queue uptime %, resource overflow incidents, task/challenge completion, rebuild pack usage after wipes.
+- **Spend-Parity:** Ratio of spenders to non-spenders hitting key milestones (2nd village, first conquest) within target windows; monitor convenience token usage vs outcomes.
+- **Dashboards:** Per-world dashboards refreshed daily/weekly with trends; alert thresholds for fairness/social/pacing regressions. Owners assigned per KPI for follow-up.
 - Vision/pillar audit run at least once per season; gaps tracked with owners and due dates.
 - Archetype presets enforced in world creation UI with warnings on divergence; deviations require explicit acknowledgment.
 

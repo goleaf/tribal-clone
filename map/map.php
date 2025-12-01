@@ -341,6 +341,7 @@ const reducedMotionToggle = document.getElementById('reduced-motion-toggle');
 let mapSkeletonTimer = null;
 const movementsWarningEl = document.getElementById('movements-warning');
 const mapRateWarningEl = document.getElementById('map-rate-warning');
+const interactiveSelectors = ['input', 'textarea', 'select', 'button', '[contenteditable="true"]'];
 
 function setMapLoading(isLoading) {
     if (mapLoadingEl) {
@@ -466,6 +467,7 @@ async function jumpToBookmark(match) {
 document.addEventListener('DOMContentLoaded', () => {
     initHighContrast();
     initReducedMotion();
+    document.addEventListener('keydown', handleMapKeydown);
     const sizeInput = document.getElementById('map-size');
     const sizeLabel = document.getElementById('map-size-label');
     sizeInput.addEventListener('input', () => {
@@ -1058,6 +1060,34 @@ function initReducedMotion() {
             applyReducedMotion(e.target.checked);
         });
     }
+}
+
+function isTypingContext(target) {
+    if (!target) return false;
+    const tag = target.tagName ? target.tagName.toLowerCase() : '';
+    if (interactiveSelectors.some(sel => target.matches?.(sel))) {
+        return true;
+    }
+    // Also ignore keypresses when focus is on map popup inputs if added later
+    return tag === 'input' || tag === 'textarea' || tag === 'select';
+}
+
+function handleMapKeydown(event) {
+    const key = event.key;
+    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
+        return;
+    }
+    if (isTypingContext(event.target)) {
+        return;
+    }
+    let dx = 0;
+    let dy = 0;
+    if (key === 'ArrowUp') dy = -1;
+    if (key === 'ArrowDown') dy = 1;
+    if (key === 'ArrowLeft') dx = -1;
+    if (key === 'ArrowRight') dx = 1;
+    moveMap(dx, dy);
+    event.preventDefault();
 }
 
 function renderMap() {

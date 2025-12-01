@@ -8,10 +8,10 @@
 ## Tasks
 - [x] **Data freshness:** Add ETag/Last-Modified to map/command endpoints; clients poll with conditional requests and respect `max-age`. _(map_data.php now emits ETag/Last-Modified + short revalidate cache-control)_
 - [x] **Rate Limits:** Throttle marker drops and command-visualization fetches per user; return `ERR_RATE_LIMITED` with retry-after. _(per-user map fetch limiter added)_
+- [x] **Accessibility:** Provide high-contrast palette for diplomacy/overlays, keyboard navigation for selection/filter toggles, and reduced-motion mode for command lines. _(high-contrast + reduced-motion toggles live on map toolbar; arrow keys now pan the map)_
 - **Batching:** Collapse incoming command updates into 1s batches per village; send deltas instead of full lists. Batch marker updates similarly.
 - **Pagination:** Paginate command lists (incoming/outgoing/support/trade/scout) for selected areas; lazy-load on scroll.
 - **Skeletons:** Implement skeleton states for zoom levels while tiles/commands load; avoid jarring redraws on pan/zoom.
-- **Accessibility:** Provide high-contrast palette for diplomacy/overlays, keyboard navigation for selection/filter toggles, and reduced-motion mode for command lines. _(high-contrast + reduced-motion toggles live on map toolbar)_
 - [x] **Metrics:** Track map request rate, cache hit %, average payload size, and client render time; alert on spikes in payload or render latency. _(map_data.php logs status/cache hit, bytes, and duration to logs/map_metrics.log; client render logging still pending)_
 - **Testing:** Simulate 500+ concurrent commands on a sector; assert p95 render < 200ms on mid-tier mobile and server responses < 200ms with caching enabled.
 
@@ -42,6 +42,7 @@
 
 ## Progress
 - Added an AJAX travel-time endpoint (`ajax/map/travel_time.php`) so map/Rally interactions can fetch distance/ETA server-side using world speed modifiers (reduces client-side recompute and keeps timings consistent).
+- Added low-perf mode on `map_data.php` (`?lowperf=1`) to skip movement payloads and flag response, reducing payload/processing for constrained clients.
 
 ## QA & Tests
 - Simulate heavy load: 500+ command lines + 200 markers in viewport; verify batching/pagination keep p95 render <200ms and payload under max size.

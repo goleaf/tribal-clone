@@ -118,6 +118,14 @@ class BattleEngine
         if ($this->isNightTime($worldConfig)) {
             $effectiveDef *= self::NIGHT_BONUS;
         }
+
+        // Apply optional terrain/weather modifiers from world config
+        $terrainOffMult = (float)($worldConfig['terrain_attack_multiplier'] ?? 1.0);
+        $terrainDefMult = (float)($worldConfig['terrain_defense_multiplier'] ?? 1.0);
+        $weatherOffMult = (float)($worldConfig['weather_attack_multiplier'] ?? 1.0);
+        $weatherDefMult = (float)($worldConfig['weather_defense_multiplier'] ?? 1.0);
+        $totalOff *= $terrainOffMult * $weatherOffMult;
+        $effectiveDef *= $terrainDefMult * $weatherDefMult;
         
         // Calculate battle ratio
         $ratio = $effectiveDef > 0 ? $totalOff / $effectiveDef : PHP_FLOAT_MAX;

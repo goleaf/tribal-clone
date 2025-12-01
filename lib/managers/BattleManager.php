@@ -343,6 +343,7 @@ class BattleManager
         $total_pop = 0;
         $hasSiege = false;
         $hasLoyaltyUnit = false;
+        $loyaltyCount = 0;
         foreach ($units_sent as $count) {
             $total_units += $count;
         }
@@ -378,6 +379,7 @@ class BattleManager
             }
             if ($count > 0 && in_array($internal, self::LOYALTY_UNIT_INTERNALS, true)) {
                 $hasLoyaltyUnit = true;
+                $loyaltyCount += $count;
             }
         }
         if (!$hasUnits) {

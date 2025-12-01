@@ -190,7 +190,14 @@ while ($row = $result->fetch_assoc()) {
         // Reserved and movement flags can be filled once those systems exist.
         'reserved_by' => null,
         'reserved_team' => null,
-        'movements' => []
+        'movements' => [],
+        'movement_summary' => [
+            'incoming' => 0,
+            'outgoing' => 0,
+            'support' => 0,
+            'earliest' => null,
+            'has_noble' => false
+        ]
     ];
 
     if ($villageOwnerId && !isset($players[$villageOwnerId])) {
@@ -423,7 +430,8 @@ $payload = [
     'diplomacy' => fetchTribeDiplomacy($conn, $userTribeId),
     'unit_speeds' => $unitSpeeds,
     'movements_truncated' => $movementsTruncated,
-    'movements_limit' => $movementsLimit
+    'movements_limit' => $movementsLimit,
+    'low_perf' => $lowPerfMode
 ];
 
 $json = json_encode($payload);

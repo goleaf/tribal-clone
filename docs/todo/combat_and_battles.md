@@ -98,10 +98,11 @@
 - [x] Command ordering: deterministic tick ordering for simultaneous arrivals; include support if timestamp <= attack; log ordering for reports/audit. _(ordering spec below)_
 - [x] Fake/min-pop rules: enforce minimum payload for attack commands; tag fakes for reporting/intel filters; throttle sub-50-pop spam server-side. _(rate-limit spec added; fake tags surfaced for intel filters)_
 - [x] Overstack/penalties: optional world rule to apply diminishing defense past population threshold; ensure performance on large stacks. _(see overstack spec below)_
-- [x] Night/terrain/weather flags: world-configurable toggles and modifiers; expose in battle report and UI. _(env modifier spec below)_
+- [x] Night/terrain/weather flags: world-configurable toggles and modifiers; expose in battle report and UI. _(env modifier spec below; engine reads terrain/weather multipliers from world config)_
 - [x] Rate limits/backpressure: cap command creation per player/target/time window; apply friendly error codes; prevent laggy floods from degrading ticks. _(generic + scout-specific burst caps implemented in BattleManager)_
 - [x] Reporting: generate battle reports with full context (modifiers, casualties, siege, plunder, allegiance change); redact intel when scouts die; support tribe sharing. _(report spec below)_
   - Progress: reports now include vault protection percent and protected amounts used in plunder calculation.
+  - Next: include applied environment modifiers, overstack penalty, and reason codes for blocked/partial outcomes.
 
 ### Overstack Penalty Spec
 - **Config:** `OVERSTACK_ENABLED` (bool), `OVERSTACK_POP_THRESHOLD` (e.g., 30k pop), `OVERSTACK_PENALTY_RATE` (e.g., 0.1 per threshold overage), `OVERSTACK_MIN_MULTIPLIER` (e.g., 0.4), optional exemptions for capitals/wonder villages.

@@ -92,7 +92,7 @@
 - [x] State machine: enforce prerequisites (combat win, bearer survival, cooldowns, safe zones, protection status, tribe handover mode); return reason codes for failed conquest attempts. _(prereq checklist below)_
 - [x] Training pipeline: Hall of Banners requirements, minting/consumption of standards/coins, per-village/per-day training limits, queue integration. _(see training pipeline spec)_
  - [x] Regen system: allegiance regeneration ticks with bonuses (buildings/tribe tech) and caps; pause rules during combat/occupation; floor after capture (anti-ping-pong buffer). _(regen spec below)_
-- [ ] Cooldowns & limits: anti-rebound timer after capture, per-attacker wave spacing enforcement, per-account village cap penalties; configurable per world.
+ - [x] Cooldowns & limits: anti-rebound timer after capture, per-attacker wave spacing enforcement, per-account village cap penalties; configurable per world. _(cooldown spec below)_
 - [ ] Anti-abuse checks: block captures vs protected/low-point players; flag repeated swaps between same accounts/tribes; apply tax/lockout on tribe-internal transfers if opt-in missing.
 - [ ] Reporting: battle/conquest reports show allegiance deltas, morale/luck, modifiers applied, and reason codes for blocks; log all conquest attempts for audit.
 
@@ -133,6 +133,13 @@
 - **Decay:** Optional `ALLEG_DECAY_PER_HOUR` for abandoned villages; only when no owner/low activity. Disabled by default.
 - **Persistence:** Track `last_allegiance_update` timestamp per village; service updates this each tick after applying regen/decay.
 - **UI/Reports:** Reports show regen applied between waves; UI tooltip shows current regen rate and modifiers.
+
+### Cooldowns & Limits Spec
+- **Anti-Rebound:** After capture, set `capture_cooldown_until` (e.g., 15–30 minutes). During this window, control/allegiance cannot drop below a floor (e.g., 10) and new captures are blocked with `ERR_COOLDOWN`.
+- **Wave Spacing:** Enforce min spacing per attacker→target (e.g., 300ms desktop, 800ms mobile worlds). If spacing violated, bump arrival or reject with `ERR_SPACING`. Logged for audit.
+- **Per-Account Village Cap Penalties:** If `PLAYER_VILLAGE_LIMIT` > 0, block captures beyond cap with `ERR_VILLAGE_CAP`. If soft cap model: apply empire surcharge to control gain or regen, and surface “diminished control due to empire size” in report.
+- **Config Knobs:** Per-world settings for cooldown duration, spacing, hard/soft village caps, and empire penalty multiplier; changes audited.
+- **UI/Reports:** Reports display when cooldown prevented capture or when empire penalties applied. UI shows remaining cooldown on recently captured villages.
 
 ### Training Pipeline (Hall of Banners / Envoys)
 - **Prereqs:** Hall of Banners level N (configurable); require research node `conquest_training` and minted standards/crests in inventory. World flag `FEATURE_CONQUEST_UNIT_ENABLED` must be on.
@@ -175,3 +182,9 @@
 - Regen/anti-snipe tick: stress regen processing across many villages; ensure floors/cooldowns applied without race conditions.
 - Training/minting load: high-volume Standard Bearer/Envoy minting/training under caps; verify limits and queue stability.
 - Reporting load: generate conquest reports at scale; measure serialization cost; ensure reason codes and allegiance deltas included without regressions.
+
+## Rollout Checklist
+- [ ] Feature flags per world for allegiance vs control/uptime modes, anti-snipe floors, and distance/wall modifiers.
+- [ ] Schema migrations for allegiance fields and capture cooldowns with rollback tested; indexes for frequent queries (village_id, last_update).
+- [ ] Backward-compatible reports/API: include versioning when adding control/uptime fields; ensure old clients degrade gracefully.
+- [ ] Release comms: patch notes explain new conquest rules (modes, floors, wave spacing) with examples; UI help updated.
