@@ -17,6 +17,11 @@
         markAll: '/ajax/mark_all_notifications_read.php'
     };
 
+    const getCsrfToken = () => {
+        const tokenEl = document.querySelector('meta[name="csrf-token"]');
+        return tokenEl ? tokenEl.content : '';
+    };
+
     class ToastManager {
         constructor() {
             this.toastContainer = this.getOrCreateToastContainer();
@@ -81,6 +86,7 @@
         const notificationsList = document.getElementById('notifications-list');
         const markAllReadBtn = document.getElementById('mark-all-read');
         let fetchAbortController = null;
+        let toastsShown = false;
 
         function relativeTime(timestampSeconds) {
             const now = Math.floor(Date.now() / 1000);
@@ -125,8 +131,13 @@
             });
         }
 
+        // Initial fetch on load to show toasts for unread items
+        fetchNotifications(true);
+        // Periodic refresh for unread badge and dropdown data
+        setInterval(() => fetchNotifications(false), 60000);
+
         // Fetch and render notifications
-        async function fetchNotifications() {
+        async function fetchNotifications(showToasts = false) {
             try {
                 if (fetchAbortController) {
                     fetchAbortController.abort();
@@ -148,6 +159,14 @@
 
                 if (data.status === 'success') {
                     renderNotifications(data.data.notifications, data.data.unread_count);
+                    if (showToasts && !toastsShown && Array.isArray(data.data.notifications)) {
+                        data.data.notifications.slice(0, 3).forEach((n) => {
+                            if (window.toastManager && n && n.message) {
+                                window.toastManager.showToast(n.message, n.type || 'info', 4500);
+                            }
+                        });
+                        toastsShown = true;
+                    }
                 } else {
                     console.error('Error fetching notifications:', data.message);
                     window.toastManager.showToast('Error fetching notifications.', 'error');
@@ -167,6 +186,7 @@
             if (!notificationsList) return;
 
             notificationsList.innerHTML = '';
+            updateBadge(unreadCount);
 
             if (notifications.length === 0) {
                 notificationsList.innerHTML = '<div class="no-notifications">No new notifications</div>';
@@ -215,6 +235,16 @@
             }
         }
 
+        function updateBadge(unreadCount) {
+            if (!notificationCountBadge) return;
+            if (unreadCount > 0) {
+                notificationCountBadge.textContent = unreadCount;
+                notificationCountBadge.style.display = 'block';
+            } else {
+                notificationCountBadge.style.display = 'none';
+            }
+        }
+
         // Mark a single notification as read
         if (notificationsList) {
             notificationsList.addEventListener('click', async e => {
@@ -228,7 +258,10 @@
                                 'Content-Type': 'application/x-www-form-urlencoded',
                                 'X-Requested-With': 'XMLHttpRequest'
                             },
-                            body: `id=${notificationId}`
+                            body: new URLSearchParams({
+                                notification_id: notificationId,
+                                csrf_token: getCsrfToken()
+                            }).toString()
                         });
                         const data = await response.json();
                         if (data.status === 'success') {
@@ -256,7 +289,8 @@
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
                             'X-Requested-With': 'XMLHttpRequest'
-                        }
+                        },
+                        body: new URLSearchParams({ csrf_token: getCsrfToken() }).toString()
                     });
                     const data = await response.json();
                     if (data.status === 'success') {
@@ -271,5 +305,7 @@
                 }
             });
         }
+        // Preload notifications for badge + optionally show toasts for unread
+        fetchNotifications(true);
     });
 })();
