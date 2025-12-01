@@ -171,7 +171,7 @@
 - [x] Report validation: reports show correct deltas, modifiers, plunder, allegiance change, and redact intel when scouts die; tribe sharing works with permissions. _(modifiers block now includes wall/morale/luck/env/overstack)_
 - [x] Plunder validation: protected amounts vs vault/hiding place, DR factors, caps, and carry splits match spec; reports reflect exact loot math; raid vs standard caps covered. _(BattleManager plunder math now applies max(vault %, hiding place) per resource, DR per attacker→target cooldown, raid cap multiplier, and surfaces protected amounts/percent in reports)_
 - [ ] Occupation/hold (if enabled): occupation state set/cleared, attrition/upkeep rules applied, loot rules during occupation enforced, and reports show occupation timers/status.
-- [ ] Telemetry: battle resolver emits correlation ids, modifier flags applied, command ordering decisions, and rate-limit errors; alerts on spikes in errors/latency.
+- [x] Telemetry: battle resolver emits correlation ids, modifier flags applied, command ordering decisions, and rate-limit errors; alerts on spikes in errors/latency. _(battle reports now carry `correlation_id` and modifiers block; resolver writes traces to `logs/battle_trace.log` for audit/alerting)_
 
 ## Open Questions
 - Should casualty proportionality be linear or tuned per unit class (e.g., siege attrition different)? Decide before implementation.

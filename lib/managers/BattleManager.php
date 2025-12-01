@@ -3738,6 +3738,10 @@ class BattleManager
             $floor = max($floor, $remaining <= self::RECENT_CAPTURE_WINDOW_SECONDS ? self::RECENT_CAPTURE_FLOOR : 1);
         }
 
+        if ($targetVillageId) {
+            $floor = max($floor, $this->getAllegianceFloor($targetVillageId));
+        }
+
         // Anti-rebound: recently captured villages cannot be dropped below a buffer for a short window
         if ($targetConqueredAt === null && $targetVillageId) {
             $targetConqueredAt = $this->getVillageConqueredAt($targetVillageId);
@@ -3919,8 +3923,10 @@ class BattleManager
      */
     private function getConqueredLoyaltyReset(float $cap): int
     {
-        // Spec: recently conquered villages start at ~50% loyalty
-        $reset = 50;
+        $settings = $this->getWorldSettings();
+        $reset = isset($settings['capture_start_loyalty'])
+            ? (int)$settings['capture_start_loyalty']
+            : (defined('CAPTURE_START_LOYALTY') ? (int)CAPTURE_START_LOYALTY : 50);
         return (int)max(self::LOYALTY_MIN, min($cap, $reset));
     }
 
@@ -4633,4 +4639,18 @@ class BattleManager
         return $countResult['total'] ?? 0;
     }
 
-} 
+    private function logBattleTrace(array $payload): void
+    {
+        $logDir = __DIR__ . '/../../logs';
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0775, true);
+        }
+        $payload['date'] = date('c', $payload['ts'] ?? time());
+        $line = json_encode($payload, JSON_UNESCAPED_SLASHES);
+        if ($line === false) {
+            return;
+        }
+        @file_put_contents($logDir . '/battle_trace.log', $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+    }
+
+}

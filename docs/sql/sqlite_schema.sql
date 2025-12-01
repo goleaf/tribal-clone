@@ -161,6 +161,7 @@ CREATE TABLE IF NOT EXISTS villages (
     coins INTEGER NOT NULL DEFAULT 0,
     points INTEGER DEFAULT 0,
     last_resource_update TEXT DEFAULT CURRENT_TIMESTAMP,
+    last_wall_decay_at TEXT DEFAULT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (world_id) REFERENCES worlds(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
