@@ -1171,17 +1171,23 @@ class UnitManager
         // Get world multipliers
         $worldSpeed = $this->worldManager->getWorldSpeed($worldId);
         $trainMultiplier = $this->worldManager->getTrainSpeedForArchetype($archetype, $worldId);
+        $costMultiplier = $this->worldManager->getCostMultiplierForArchetype($archetype, $worldId);
 
         // Apply training time multiplier
         $baseTime = (int)($unit['training_time_base'] ?? 0);
         $effectiveTime = $baseTime / ($worldSpeed * $trainMultiplier);
 
-        // Apply cost multipliers (if world has cost multipliers configured)
-        // For now, costs remain the same unless world-specific cost multipliers are added
-        $effectiveCosts = [
+        // Apply cost multipliers by archetype
+        $baseCosts = [
             'wood' => (int)($unit['cost_wood'] ?? 0),
             'clay' => (int)($unit['cost_clay'] ?? 0),
             'iron' => (int)($unit['cost_iron'] ?? 0)
+        ];
+        
+        $effectiveCosts = [
+            'wood' => (int)floor($baseCosts['wood'] * $costMultiplier),
+            'clay' => (int)floor($baseCosts['clay'] * $costMultiplier),
+            'iron' => (int)floor($baseCosts['iron'] * $costMultiplier)
         ];
 
         return [
@@ -1198,11 +1204,15 @@ class UnitManager
             'population' => (int)($unit['population'] ?? 0),
             'training_time_base' => $baseTime,
             'training_time_effective' => (int)floor($effectiveTime),
+            'cost_wood_base' => $baseCosts['wood'],
+            'cost_clay_base' => $baseCosts['clay'],
+            'cost_iron_base' => $baseCosts['iron'],
             'cost_wood' => $effectiveCosts['wood'],
             'cost_clay' => $effectiveCosts['clay'],
             'cost_iron' => $effectiveCosts['iron'],
             'world_speed_multiplier' => $worldSpeed,
-            'archetype_train_multiplier' => $trainMultiplier
+            'archetype_train_multiplier' => $trainMultiplier,
+            'archetype_cost_multiplier' => $costMultiplier
         ];
     }
 

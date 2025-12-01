@@ -487,6 +487,29 @@ class WorldManager
         return max(0.1, $base * $mult);
     }
 
+    /**
+     * Get cost multiplier for unit archetype.
+     * 
+     * @param string $archetype Unit archetype ('inf', 'cav', 'rng', 'siege')
+     * @param int $worldId World ID
+     * @return float Cost multiplier
+     * 
+     * Requirements: 11.2, 11.4
+     */
+    public function getCostMultiplierForArchetype(string $archetype, int $worldId = CURRENT_WORLD_ID): float
+    {
+        $settings = $this->getSettings($worldId);
+        $key = match (strtolower($archetype)) {
+            'inf' => 'cost_multiplier_inf',
+            'cav' => 'cost_multiplier_cav',
+            'rng' => 'cost_multiplier_rng',
+            'siege' => 'cost_multiplier_siege',
+            default => null,
+        };
+        $mult = $key && array_key_exists($key, $settings) ? (float)$settings[$key] : 1.0;
+        return max(0.1, $mult);
+    }
+
     public function getResearchSpeed(int $worldId = CURRENT_WORLD_ID): float
     {
         $settings = $this->getSettings($worldId);
