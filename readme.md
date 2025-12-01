@@ -3,7 +3,7 @@
 Modern PHP remake of the Tribal Wars browser engine with real-time building, recruiting, and combat loops backed by a configurable data model.
 
 ## At a Glance
-- Backend: PHP 8.x with SQLite (default) or MySQL, zero framework.
+- Backend: PHP 8.4+ with SQLite (default) or MySQL, zero framework.
 - Frontend: vanilla JS + AJAX endpoints, CSS in `css/`, HTML/PHP templates.
 - Real-time timers for builds, recruitment, resources, and attack travel; queues are processed whenever players load the game.
 - Interactive world map with tile popups and an attack launcher.
@@ -38,7 +38,7 @@ Modern PHP remake of the Tribal Wars browser engine with real-time building, rec
 - `lib/managers/MessageManager.php` - message retrieval by tab, bulk actions (mark read/unread, archive, delete), unread/archived counters, safety checks per user.
 - `lib/managers/NotificationManager.php` - CRUD for persistent notifications with expiry and unread counts.
 - `lib/managers/RankingManager.php` - player and tribe ranking queries with pagination and point aggregation.
-- `lib/managers/TradeManager.php` - future trade routes/market logic placeholder.
+- `lib/managers/TradeManager.php` - trader availability, transport processing, and market offers.
 - Frontend JS in `js/` - resource/queue polling, building and recruitment panels, research UI, notifications, utility helpers (`utils.js`, `resources.js`, `buildings.js`, `units.js`, etc.).
 - AJAX endpoints in `ajax/` - building upgrades (`ajax/buildings`), unit recruitment (`ajax/units`), and other in-page actions powering the dynamic UI.
 
@@ -46,10 +46,10 @@ Modern PHP remake of the Tribal Wars browser engine with real-time building, rec
 - Default database driver is SQLite with the file path set in `config/config.php` (`DB_PATH`). Switch to MySQL by changing `DB_DRIVER` and credentials.
 - SQL schemas for MySQL live in `docs/sql/*.sql` (buildings, units, research, battles, messages, notifications, worlds, villages, users).
 - `install.php` provides a guided installer for creating tables and an admin account through the browser.
-- Global constants in `config/config.php` cover starting resources/population, warehouse/farm math, main-building speed factor, base URL, trader speed, and default world.
+- Global constants in `config/config.php` cover starting resources/population, warehouse/farm math, main-building speed factor, base URL, trader speed/capacity, and default world.
 
 ## Running Locally
-1. Install PHP 8.x with the SQLite (or MySQL) extension enabled.
+1. Install PHP 8.4+ with the SQLite (or MySQL) extension enabled (run `php tests/php_84_compat_check.php` to verify).
 2. Clone/copy the repo and ensure `config/config.php` points to your chosen driver; SQLite will create `data/tribal_wars.sqlite` on first run.
 3. Create the schema:
    - Quick start: open `install.php` in the browser and follow the steps, or
@@ -58,7 +58,7 @@ Modern PHP remake of the Tribal Wars browser engine with real-time building, rec
 5. Visit `http://localhost:8000/`, register a user, and create your first village. Use `map/map.php` for the world view and `game/game.php` for the village overview.
 
 ## Roadmap
-- [ ] Finish trade routes and market actions (`TradeManager`, AJAX + UI).
+- [x] Implement trade routes, trader limits, and market offers (create/accept/cancel).
 - [x] Implement tribe/alliance data model, tribe rankings, and invite/role flows.
 - [ ] Harden combat formulas (wall/ram/catapult balance, spy/scout actions) and add automated report links in UI.
 - [ ] Complete messaging UI integration and validation (attachments, blocking, spam controls).
