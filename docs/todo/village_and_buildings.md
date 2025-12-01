@@ -191,6 +191,6 @@
 - For watchtower detection of noble-bearing commands, is there a minimum scout count or always-on per level? Clarify for UI.
 - How many concurrent minting/training slots should Hall of Banners support (1 vs world-configurable), and does it share queue with other buildings?
 - [x] Validation & errors: enforce prerequisites on queue submit, block protected wall builds, and return reason codes (`ERR_PREREQ`, `ERR_POP`, `ERR_RES`, `ERR_PROTECTED`, `ERR_CAP`) on upgrade attempts/queueing.
-- [x] Auditing/telemetry: log build queue actions (add/reorder/cancel), costs, refunds, and actor; emit metrics on queue uptime, average build level per village type, and error-rate spikes. _(queue manager now writes JSON lines to `logs/build_queue.log` for enqueue failures and completes; extend to cancel/reorder next)_
+- [x] Auditing/telemetry: log build queue actions (add/reorder/cancel), costs, refunds, and actor; emit metrics on queue uptime, average build level per village type, and error-rate spikes. _(queue manager now writes JSON lines to `logs/build_queue.log` for enqueue attempts, completes, and cancels; reorder not supported)_ 
 - [ ] Caching: cache per-building cost/time curves server-side with versioning; bust cache on config changes; expose version in API for client-side cache.
 - [ ] Tests: unit tests for prerequisites, caps, and refund math; integration tests for queue reorder/cancel with partial refund; property tests to prevent negative/overflow costs.

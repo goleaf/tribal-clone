@@ -177,3 +177,4 @@
 - How frequently should the vision/pillar audit be revisited (per season, per major release)?
 - Do archetype presets need hard enforcement or are they templates with warnings on divergence?
 - Which KPIs best indicate fairness/social/pacing regressions, and what thresholds trigger action? Define ownership for responding to alerts.
+- How to align event cadence with pillars (fairness/variety) without overwhelming players; what limits on concurrent events fit each archetype?

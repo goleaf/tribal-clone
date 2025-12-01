@@ -808,3 +808,8 @@ Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/i
 #1 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/ajax/get_notifications.php(2): require_once('/Users/andrejpr...')
 #2 {main}
 --------------------------------------------------------------------------------
+[2025-12-01 09:32:01] EXCEPTION: Class "WorldManager" not found in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/lib/managers/CatchupManager.php line 15
+Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/init.php(110): CatchupManager->__construct(Object(SQLiteAdapter))
+#1 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/ajax/get_notifications.php(2): require_once('/Users/andrejpr...')
+#2 {main}
+--------------------------------------------------------------------------------

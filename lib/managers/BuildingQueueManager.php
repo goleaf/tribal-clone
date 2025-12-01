@@ -326,6 +326,16 @@ class BuildingQueueManager
 
             $this->conn->commit();
 
+            $this->logQueueEvent('cancel', [
+                'queue_item_id' => $queueItemId,
+                'village_id' => $item['village_id'],
+                'building_type_id' => $item['building_type_id'],
+                'level' => $item['level'],
+                'refund' => $refund,
+                'was_active' => $wasActive,
+                'user_id' => $userId
+            ]);
+
             return ['success' => true, 'refund' => $refund];
 
         } catch (Exception $e) {

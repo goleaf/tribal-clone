@@ -185,6 +185,7 @@
 - Event economy: token expiry, shop caps, `ERR_EVENT_EXPIRED`/`ERR_EVENT_CAP`/`ERR_TOKENS`, and modifier application surfaced in UI.
 - Catch-up buffs: eligibility, single-application, non-stacking with beginner protection, expiry/removal, and rebuild pack rate limits.
 - Telemetry: emit metrics for production/sinks/trade/aid/decay/DR; alert thresholds verified; log retention/audit entries confirmed.
+- Pricing guardrails: test min/max dynamic cost scalers per archetype, event modifier bounds, and conquest cost scaling curves; ensure costs clamp to bounds, alerts fire on violations, and reports/logs show applied scalers.
 
 ## Rollout Checklist
 - [ ] Feature flags for decay/DR/empire surcharges, trade/aid taxes, and event token expiry per world; default off on legacy worlds.

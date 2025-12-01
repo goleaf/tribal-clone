@@ -59,6 +59,7 @@ define('TRADE_POWER_DELTA_PROTECTED_POINTS', 500); // Players below this score a
 define('TRADE_ALT_IP_BLOCK_ENABLED', true); // If identity fingerprints match (e.g., IP hash), block trades as potential alts
 define('FEATURE_MIN_PAYLOAD_ENABLED', true); // Enforce minimum pop payload for commands
 define('MIN_ATTACK_POP', 5); // Minimum population required to send a command (unless siege is present)
+define('PLUNDER_DR_ENABLED', true); // Enable diminishing returns on repeated plunder within a window
 define('FEATURE_WEATHER_COMBAT_ENABLED', false); // Enable weather multipliers in combat resolution
 define('INACTIVE_TO_BARBARIAN_DAYS', 30); // Days of inactivity before a player village becomes barbarian (cron-driven)
 define('PALADIN_WEAPON', 'none'); // Options: 'none', 'bonfire', 'vascos_scepter'

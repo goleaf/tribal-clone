@@ -186,6 +186,7 @@
 - Luck/morale variants: profile with modifiers on/off to ensure negligible overhead; decide default seeding strategy based on results.
 - Fake/min-pop enforcement: simulate spam attempts to validate rate limiting and impact on tick processing.
 - Report generation: measure cost of full-fidelity vs redacted reports at volume; optimize serialization if needed.
+- Siege hold/occupy: soak tests for occupation timers, attrition/upkeep application, and conflict resolution when defender breaks occupation.
 
 ## Rollout Checklist
 - [x] Feature flags for new combat rules (overstack penalties, night/weather, min-pop enforcement) to enable gradual rollout per world. _(World settings now include overstack/min-pop toggles + values; weather gated by world/config flags; min payload + overstack respect per-world overrides)_

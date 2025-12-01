@@ -579,6 +579,8 @@ require '../header.php';
                     <h3>Construction queue</h3>
                     <button
                         class="text-button building-action-button"
+                        id="open-town-hall-button"
+                        type="button"
                         data-building-internal-name="main_building"
                         data-village-id="<?= $village_id ?>"
                         data-building-name="<?= htmlspecialchars($buildings_data['main_building']['name'] ?? 'Town hall', ENT_QUOTES) ?>"
@@ -742,6 +744,21 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('resource:update', (event) => {
         updateHud(event.detail.resources);
     });
+
+    const openTownHallBtn = document.getElementById('open-town-hall-button');
+    if (openTownHallBtn) {
+        openTownHallBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            const vid = openTownHallBtn.dataset.villageId || window.currentVillageId;
+            if (typeof fetchAndRenderMainBuildingPanel === 'function') {
+                fetchAndRenderMainBuildingPanel(vid, 'main_building');
+            } else if (window.toastManager) {
+                window.toastManager.showToast('Town hall panel unavailable.', 'error');
+            }
+        });
+    }
 
     if (window.resourceUpdater && window.resourceUpdater.resources) {
         updateHud(window.resourceUpdater.resources);
