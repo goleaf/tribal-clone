@@ -2019,6 +2019,21 @@ class BattleManager
                 );
             }
 
+            $this->logBattleTrace([
+                'correlation_id' => $correlationId,
+                'attack_id' => $attack_id,
+                'attack_type' => $attack['attack_type'],
+                'attacker_user_id' => $attacker_user_id,
+                'defender_user_id' => $defender_user_id,
+                'attacker_village_id' => $attack['source_village_id'],
+                'defender_village_id' => $attack['target_village_id'],
+                'attacker_win' => $attacker_win,
+                'attack_power' => $attackPowerFinal,
+                'defense_power' => $defensePowerFinal,
+                'modifiers' => $details['modifiers'],
+                'ts' => time()
+            ]);
+
             // Notifications for battle outcome
             if ($attacker_user_id) {
                 $this->notificationManager->addNotification(
