@@ -132,6 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attack'])) {
                 $units_sent[$unit_id] = (int)$value;
             }
         }
+        ksort($units_sent);
         
         // Ensure at least one unit is being sent
         if (empty($units_sent)) {
@@ -147,6 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attack'])) {
                 'units' => $units_sent
             ];
             $signature = hash('sha256', json_encode($signaturePayload));
+            $clientCommandId = isset($_POST['command_id']) ? (string)$_POST['command_id'] : (isset($_POST['client_command_id']) ? (string)$_POST['client_command_id'] : $signature);
             $dupWindow = defined('ATTACK_DUPLICATE_WINDOW_SEC') ? (int)ATTACK_DUPLICATE_WINDOW_SEC : 5;
             $lastSig = $_SESSION['last_attack_signature'] ?? null;
             $nowTs = time();
@@ -171,7 +173,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attack'])) {
                 $message_type = "error";
             } else {
                 // Send the attack
-                $result = $battleManager->sendAttack($source_village_id, $target_village_id, $units_sent, $attack_type, $target_building);
+                $result = $battleManager->sendAttack(
+                    $source_village_id,
+                    $target_village_id,
+                    $units_sent,
+                    $attack_type,
+                    $target_building,
+                    [
+                        'client_command_id' => $clientCommandId,
+                        'payload_hash' => $signature,
+                        'client_sent_ms' => $nowMs
+                    ]
+                );
                 
                 if ($result['success']) {
                     $_SESSION['last_attack_send_ms'] = $nowMs;

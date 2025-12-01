@@ -110,6 +110,13 @@
 - [ ] Lexicon enforcement: add string linting to CI against ip-glossary banned list; generate weekly report of violations; assign owners per module to fix.
 - [ ] Preset enforcement: add world-creation guardrails that auto-apply archetype presets and require explicit override acknowledgements; log divergence metrics and alert on repeated overrides.
 
+### Lexicon Enforcement Plan
+- CI lint: add glossary-based string scan over `/lang`, `/ui/strings`, and templates; fail build on new banned terms; warnings for legacy terms with Jira ticket link.
+- Baseline suppression: allow existing violations via waiver list with expiry/owner; weekly job sends summary to owners; no new waivers without approval.
+- Reporting: generate weekly violation report (term, file, module, owner) and post to #localization; archive in `reports/lexicon_violations.csv`.
+- Tooling: provide `npm run lint:lexicon -- --fix-report` to output suggested replacements from glossary; no auto-fix to avoid mistranslations.
+- Monitoring: metric `lexicon_violations_total` by module; alert if violations increase WoW or any blocking terms appear on main branch.
+
 ### Differentiation Notes (IP Support)
 - **Conquest:** Standard Bearer + allegiance system (anti-coin nobles), post-capture floors, and influence aura variant vs legacy noble captures.
 - **Intel:** Fresh/Recent/Old/Stale fidelity tiers, false-report/misdirection flags, watchtower radius + intel freshness overlays; not present in legacy titles.

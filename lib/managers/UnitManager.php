@@ -22,6 +22,7 @@ class UnitManager
         require_once __DIR__ . '/WorldManager.php';
         $this->worldManager = new WorldManager($conn);
         $this->loadUnitTypes();
+        $this->unitConfigVersion = $this->loadUnitConfigVersion();
     }
 
     /**
@@ -39,6 +40,10 @@ class UnitManager
 
         if ($result) {
             while ($row = $result->fetch_assoc()) {
+                if ($this->unitConfigVersion && isset($row['updated_at'])) {
+                    $row['config_version'] = $this->unitConfigVersion['version'];
+                    $row['config_updated_at'] = $this->unitConfigVersion['updated_at'];
+                }
                 $internal = $row['internal_name'] ?? '';
                 if (
                     !$this->worldManager->isArcherEnabled() &&
