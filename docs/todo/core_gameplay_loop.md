@@ -158,6 +158,14 @@ Players manage villages to grow resources, build and upgrade structures, train a
 - [ ] Loop pacing knobs: per-world settings for queue slot unlocks, task cadence, event frequency; exposed in admin UI with audit to tune casual vs hardcore worlds.
 - [ ] QA: simulate core session flows (tutorial → first raid → tribe join → first conquest) across desktop/mobile; measure time-to-critical actions and verify protection/quiet-hour/anti-abuse behaviors.
 
+### Telemetry (Loop Funnel) — Event Schema Notes
+- **Events:** `loop_scout`, `loop_raid`, `loop_queue_update`, `loop_support_send`, `loop_task_claim`, `loop_task_reroll`, `loop_nudge_shown`, `loop_nudge_snooze`, `loop_nudge_dismiss`, `loop_quiet_hours_set`, `loop_catchup_grant`, `loop_catchup_expire`.
+- **Fields (common):** `player_id`, `world_id`, `segment` (casual/mid/hardcore), `timestamp`, `session_id`, `client_version`, `latency_ms`, `reason_code` (for nudges/errors), `quiet_hours_active` (bool), `buffs_active`.
+- **Derived Metrics:** time from session start to first scout/raid/queue action, queue uptime %, nudge show→action conversion, task reroll/claim rates, catch-up adoption/expiry, churn trigger flags (post-wipe).
+- **Alerts:** spikes in `ERR_DUP_COMMAND`/`ERR_PROTECTED`, drops in queue uptime %, surge in nudge show with low action conversion, post-wipe churn (lack of actions 24–48h after wipe).
+- **Storage:** append-only logs with daily rotation; dashboards roll up by world/archetype and segment; retention 90d for loops, 30d raw events.
+- **Privacy:** avoid PII; use hashed identifiers and world-scoped ids; respect opt-outs for telemetry where required.
+
 ### Loop-Specific Tutorials/Tooltips (Implementation Notes)
 - Trigger points: empty build/recruit/research queue, overcap warehouse/granary, stale intel (>12h), unclaimed tasks within 1h of expiry, missing wall repair after hit, quiet-hours not set after X alerts/day.
 - Delivery: lightweight inline toasts/cards with one-click actions (queue preset, open scout dialog, claim tasks, repair wall). Include “snooze 24h” and “don’t show again” per category stored server-side.

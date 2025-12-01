@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once '../init.php';
 require_once '../lib/functions.php';
+require_once __DIR__ . '/../lib/managers/WorldManager.php';
 
 header('Content-Type: application/json; charset=utf-8');
 // Encourage client-side caching; precise values finalized below after we compute freshness.
@@ -94,11 +95,19 @@ if (count($_SESSION['map_rate']) >= $rateMax) {
 $_SESSION['map_rate'][] = $now;
 
 $worldSize = defined('WORLD_SIZE') ? (int)WORLD_SIZE : 1000;
+$wm = new WorldManager($conn);
+$worldSettings = $wm->getSettings(CURRENT_WORLD_ID);
+$mapFeatures = [
+    'batching' => (bool)($worldSettings['map_batching_enabled'] ?? false),
+    'clustering' => (bool)($worldSettings['map_clustering_enabled'] ?? false),
+    'delta' => (bool)($worldSettings['map_delta_enabled'] ?? false),
+    'fallback' => (bool)($worldSettings['map_fallback_enabled'] ?? false),
+];
 
 // Handle conditional requests for data freshness without excessive payloads.
 $ifNoneMatch = $_SERVER['HTTP_IF_NONE_MATCH'] ?? null;
 $ifModifiedSince = $_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? null;
-$etagBaseParts = [$user_id, $worldSize];
+$etagBaseParts = [$user_id, $worldSize, json_encode($mapFeatures)];
 $freshnessHeaders = [];
 
 $centerX = isset($_GET['x']) ? (int)$_GET['x'] : 0;
@@ -495,7 +504,8 @@ $payload = [
     'unit_speeds' => $unitSpeeds,
     'movements_truncated' => $movementsTruncated,
     'movements_limit' => $movementsLimit,
-    'low_perf' => $lowPerfMode
+    'low_perf' => $lowPerfMode,
+    'map_features' => $mapFeatures
 ];
 
 $json = json_encode($payload);

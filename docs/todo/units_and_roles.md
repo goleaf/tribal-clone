@@ -228,7 +228,7 @@ Status markers:
 - Telemetry volume: assess telemetry emission for recruit attempts/cap hits/aura usage under load; ensure logging doesn’t degrade gameplay paths.
 
 ## Rollout Checklist
-- [ ] Feature flags per world for elite/seasonal units, auras/healers, and mantlet effects; defaults aligned to archetypes (hardcore vs casual).
+- [x] Feature flags per world for elite/seasonal units, auras/healers, and mantlet effects; defaults aligned to archetypes (hardcore vs casual). _(UnitManager now respects per-world conquest/seasonal/healer toggles via WorldManager; paladin/archer toggles already applied)_
 - [ ] Schema/data migrations (units.json/DB seeds) tested with rollback; ensure indexes for caps/limits if stored in DB.
 - [ ] Backward-compatible recruit APIs and battle reports while new fields roll out; version reports to avoid client breakage.
 - [ ] Release comms/help updates covering unit caps, event unit availability, aura/healer rules, and mantlet effects; include examples.

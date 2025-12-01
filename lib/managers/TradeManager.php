@@ -16,6 +16,9 @@ class TradeManager {
     private const MAX_FAIR_RATE = 4.0;  // offered/requested upper bound (400%)
     private const PUSH_POINTS_RATIO = 5; // block aid when sender points exceed target by 5x and target is protected/low points
     private const ACTIVE_ROUTE_SOFT_LIMIT = 5000; // soft global cap for in-flight trade routes
+    private const OPEN_OFFERS_SOFT_LIMIT = 5000; // soft global cap for open offers
+    private int $lastLoadCheckTs = 0;
+    private bool $lastLoadCheckBusy = false;
     private const AID_DAILY_SEND_CAP = 500000;    // Total resources a user can send per 24h
     private const AID_DAILY_RECEIVE_CAP = 500000; // Total resources a user can receive per 24h
     private int $lastLoadCheckTs = 0;

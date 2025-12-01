@@ -172,6 +172,7 @@
 - Outposts: creation blocked when hostile commands inbound; expiry cleans temp slots/queues/markers.
 - Wall: siege damage reduces levels; repair queue restores; decay toggle obeys world config.
 - Cache/versioning: client receives cost/time version; cache bust verified on config change.
+- Wall repair QA: verify fractional wall HP persists across attacks, repair queue advances HP/levels correctly, hostile-ETA blocks repairs within window, and decay (if enabled) ticks only on inactivity per config.
 
 ## Profiling & Load Plan
 - Stress-test build queue API under high concurrency (enqueue/reorder/cancel) with caps/prereqs enabled; measure p50/p95/p99 latency and refund accuracy.

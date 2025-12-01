@@ -33,6 +33,11 @@ class WorldManager
         'min_attack_pop' => "INTEGER NOT NULL DEFAULT 5",
         'catchup_multiplier' => "REAL NOT NULL DEFAULT 1.0",
         'catchup_duration_hours' => "INTEGER NOT NULL DEFAULT 0",
+        'plunder_dr_enabled' => "INTEGER NOT NULL DEFAULT 1",
+        'map_batching_enabled' => "INTEGER NOT NULL DEFAULT 0",
+        'map_clustering_enabled' => "INTEGER NOT NULL DEFAULT 0",
+        'map_delta_enabled' => "INTEGER NOT NULL DEFAULT 0",
+        'map_fallback_enabled' => "INTEGER NOT NULL DEFAULT 0",
         'terrain_attack_multiplier' => "REAL NOT NULL DEFAULT 1.0",
         'terrain_defense_multiplier' => "REAL NOT NULL DEFAULT 1.0",
         'weather_attack_multiplier' => "REAL NOT NULL DEFAULT 1.0",
@@ -41,6 +46,10 @@ class WorldManager
         'enable_paladin' => "INTEGER NOT NULL DEFAULT 1",
         'enable_paladin_weapons' => "INTEGER NOT NULL DEFAULT 1",
         'tech_mode' => "TEXT NOT NULL DEFAULT 'normal'",
+        'enable_nudges' => "INTEGER NOT NULL DEFAULT 1",
+        'enable_notifications' => "INTEGER NOT NULL DEFAULT 1",
+        'enable_tasks' => "INTEGER NOT NULL DEFAULT 1",
+        'enable_catchup_buffs' => "INTEGER NOT NULL DEFAULT 1",
         'tribe_member_limit' => "INTEGER DEFAULT NULL",
         'victory_type' => "TEXT DEFAULT NULL",
         'victory_value' => "INTEGER DEFAULT NULL",
@@ -93,6 +102,7 @@ class WorldManager
             'overstack_min_multiplier' => defined('OVERSTACK_MIN_MULTIPLIER') ? (float)OVERSTACK_MIN_MULTIPLIER : 0.4,
             'min_attack_pop_enabled' => defined('FEATURE_MIN_PAYLOAD_ENABLED') ? (bool)FEATURE_MIN_PAYLOAD_ENABLED : true,
             'min_attack_pop' => defined('MIN_ATTACK_POP') ? (int)MIN_ATTACK_POP : 5,
+            'plunder_dr_enabled' => defined('PLUNDER_DR_ENABLED') ? (bool)PLUNDER_DR_ENABLED : true,
             'terrain_attack_multiplier' => 1.0,
             'terrain_defense_multiplier' => 1.0,
             'weather_attack_multiplier' => 1.0,
@@ -100,6 +110,10 @@ class WorldManager
             'enable_archer' => true,
             'enable_paladin' => true,
             'enable_paladin_weapons' => true,
+            'enable_nudges' => defined('FEATURE_NUDGES_ENABLED') ? (bool)FEATURE_NUDGES_ENABLED : true,
+            'enable_notifications' => defined('FEATURE_NOTIFICATIONS_ENABLED') ? (bool)FEATURE_NOTIFICATIONS_ENABLED : true,
+            'enable_tasks' => defined('FEATURE_TASKS_ENABLED') ? (bool)FEATURE_TASKS_ENABLED : true,
+            'enable_catchup_buffs' => defined('FEATURE_CATCHUP_BUFFS_ENABLED') ? (bool)FEATURE_CATCHUP_BUFFS_ENABLED : true,
             'tech_mode' => 'normal',
             'tribe_member_limit' => null,
             'victory_type' => null,
@@ -124,7 +138,7 @@ class WorldManager
                                     $defaults[$key] = (float)$val;
                                 } elseif ($key === 'tribe_member_limit' || $key === 'victory_value' || $key === 'overstack_pop_threshold' || $key === 'min_attack_pop') {
                                     $defaults[$key] = $val === null ? null : (int)$val;
-                                } elseif (in_array($key, ['enable_archer', 'enable_paladin', 'enable_paladin_weapons', 'night_bonus_enabled', 'resource_decay_enabled', 'overstack_enabled', 'min_attack_pop_enabled', 'weather_enabled'], true)) {
+                                } elseif (in_array($key, ['enable_archer', 'enable_paladin', 'enable_paladin_weapons', 'night_bonus_enabled', 'resource_decay_enabled', 'overstack_enabled', 'min_attack_pop_enabled', 'weather_enabled', 'plunder_dr_enabled'], true)) {
                                     $defaults[$key] = (bool)$val;
                                 } elseif (in_array($key, ['night_start_hour', 'night_end_hour'], true)) {
                                     $defaults[$key] = (int)$val;
@@ -141,6 +155,30 @@ class WorldManager
 
         $this->settingsCache[$worldId] = $defaults;
         return $defaults;
+    }
+
+    public function isConquestUnitEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        if (defined('FEATURE_CONQUEST_UNIT_ENABLED')) {
+            return (bool)FEATURE_CONQUEST_UNIT_ENABLED;
+        }
+        return true;
+    }
+
+    public function isSeasonalUnitsEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        if (defined('FEATURE_SEASONAL_UNITS')) {
+            return (bool)FEATURE_SEASONAL_UNITS;
+        }
+        return true;
+    }
+
+    public function isHealerEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        if (defined('FEATURE_HEALER_ENABLED')) {
+            return (bool)FEATURE_HEALER_ENABLED;
+        }
+        return true;
     }
 
     public function areSitterAttacksEnabled(int $worldId = CURRENT_WORLD_ID): bool
@@ -368,6 +406,7 @@ class WorldManager
             'overstack_min_multiplier' => defined('OVERSTACK_MIN_MULTIPLIER') ? (float)OVERSTACK_MIN_MULTIPLIER : 0.4,
             'min_attack_pop_enabled' => defined('FEATURE_MIN_PAYLOAD_ENABLED') && FEATURE_MIN_PAYLOAD_ENABLED ? 1 : 1,
             'min_attack_pop' => defined('MIN_ATTACK_POP') ? (int)MIN_ATTACK_POP : 5,
+            'plunder_dr_enabled' => defined('PLUNDER_DR_ENABLED') && PLUNDER_DR_ENABLED ? 1 : 0,
             'terrain_attack_multiplier' => 1.0,
             'terrain_defense_multiplier' => 1.0,
             'weather_attack_multiplier' => 1.0,
@@ -402,7 +441,7 @@ class WorldManager
             return;
         }
 
-        $stmtInsert = $this->conn->prepare("INSERT INTO worlds (name, world_speed, troop_speed, build_speed, train_speed, research_speed, night_bonus_enabled, night_start_hour, night_end_hour, resource_production_multiplier, vault_protection_percent, resource_decay_enabled, enable_archer, enable_paladin, enable_paladin_weapons, tech_mode, tribe_member_limit, victory_type, victory_value, archetype) VALUES ('World 1', 1.0, 1.0, 1.0, 1.0, 1.0, 0, 22, 6, 1.0, 0.0, 0, 1, 1, 1, 'normal', NULL, NULL, NULL, NULL)");
+        $stmtInsert = $this->conn->prepare("INSERT INTO worlds (name, world_speed, troop_speed, build_speed, train_speed, research_speed, night_bonus_enabled, night_start_hour, night_end_hour, resource_production_multiplier, vault_protection_percent, resource_decay_enabled, enable_archer, enable_paladin, enable_paladin_weapons, tech_mode, tribe_member_limit, victory_type, victory_value, archetype, plunder_dr_enabled) VALUES ('World 1', 1.0, 1.0, 1.0, 1.0, 1.0, 0, 22, 6, 1.0, 0.0, 0, 1, 1, 1, 'normal', NULL, NULL, NULL, NULL, 1)");
         if ($stmtInsert) {
             $stmtInsert->execute();
             $stmtInsert->close();

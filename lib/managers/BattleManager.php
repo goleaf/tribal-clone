@@ -1703,7 +1703,23 @@ class BattleManager
             ? $this->villageManager->getLoyaltyDropMultiplier($attack['target_village_id'])
             : 1.0;
 
-        $loyalty_floor = $this->getEffectiveLoyaltyFloor($attacking_units, (int)$attack['target_village_id']);
+        $nowTs = time();
+        $targetConqueredAt = $this->getVillageConqueredAt((int)$attack['target_village_id']);
+        $captureCooldownUntil = $this->getCaptureCooldownUntil((int)$attack['target_village_id']);
+        if ($captureCooldownUntil === null && $targetConqueredAt !== null) {
+            $fallbackCooldown = $targetConqueredAt + (self::CONQUEST_IMMUNITY_HOURS * 3600);
+            if ($fallbackCooldown > $nowTs) {
+                $captureCooldownUntil = $fallbackCooldown;
+            }
+        }
+        $captureImmune = $captureCooldownUntil !== null && $captureCooldownUntil > $nowTs;
+
+        $loyalty_floor = $this->getEffectiveLoyaltyFloor(
+            $attacking_units,
+            (int)$attack['target_village_id'],
+            $targetConqueredAt,
+            $captureCooldownUntil
+        );
         $noblePresent = $this->hasNobleUnit($attacking_units);
         $survivingNobles = $this->countNobleUnits($attacking_units);
         $defenderVillageCount = $defender_user_id ? $this->getVillageCountForUser((int)$defender_user_id) : null;

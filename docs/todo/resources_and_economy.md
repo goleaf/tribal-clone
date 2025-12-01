@@ -192,6 +192,7 @@
 - [ ] Schema migrations for economy caps/logs tested with rollback; ensure indexes for high-churn tables (trade/aid logs).
 - [ ] Backward-compatible API responses for trade/aid/minting while new caps/fields propagate; include versioning.
 - [ ] Release comms: explain decay/DR/taxes and fair-play safeguards; UI tooltips updated with formulas/examples.
+- [ ] Monitoring: dashboards for economy metrics (production/sinks, trade/aid volume, cap hits, decay/DR events); alerts on anomalies with runbooks/owners.
 
 ## Monitoring Plan
 - Track economy tick latency, decay/DR application counts, and empire surcharge hits; alert on spikes or missed applications.

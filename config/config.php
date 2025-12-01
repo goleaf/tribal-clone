@@ -73,6 +73,9 @@ define('NOBLE_MAX_DROP', 35);
 
 // Feature flags
 define('FEATURE_TASKS_ENABLED', true); // Daily/weekly tasks/challenges
+define('FEATURE_NUDGES_ENABLED', true); // Inline nudge cards on overview
+define('FEATURE_NOTIFICATIONS_ENABLED', true); // Notification bell/feed
+define('FEATURE_CATCHUP_BUFFS_ENABLED', true); // Late-joiner/rebuild catch-up buffs
 
 // Allegiance (conquest) regen/decay tuning
 define('ALLEG_REGEN_PER_HOUR', 2.0); // base allegiance regeneration per hour

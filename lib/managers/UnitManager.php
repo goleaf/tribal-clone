@@ -29,9 +29,10 @@ class UnitManager
     private function loadUnitTypes()
     {
         $result = $this->conn->query("SELECT * FROM unit_types WHERE is_active = 1");
-        $conquestEnabled = defined('FEATURE_CONQUEST_UNIT_ENABLED') ? (bool)FEATURE_CONQUEST_UNIT_ENABLED : true;
-        $seasonalEnabled = defined('FEATURE_SEASONAL_UNITS') ? (bool)FEATURE_SEASONAL_UNITS : true;
-        $healerEnabled = defined('FEATURE_HEALER_ENABLED') ? (bool)FEATURE_HEALER_ENABLED : true;
+        $worldId = defined('CURRENT_WORLD_ID') ? (int)CURRENT_WORLD_ID : 1;
+        $conquestEnabled = $this->worldManager->isConquestUnitEnabled($worldId);
+        $seasonalEnabled = $this->worldManager->isSeasonalUnitsEnabled($worldId);
+        $healerEnabled = $this->worldManager->isHealerEnabled($worldId);
         $seasonalUnits = ['tempest_knight', 'event_knight'];
         $healerUnits = ['war_healer', 'healer'];
 
