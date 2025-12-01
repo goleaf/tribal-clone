@@ -80,6 +80,68 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
+// Index villages by id for movement enrichment
+$villagesById = [];
+foreach ($villages as $idx => $v) {
+    $villagesById[$v['id']] = $idx;
+}
+
+// Fetch active movements (attacks/support/return) intersecting the viewport
+$movementsStmt = $conn->prepare("
+    SELECT 
+        a.id,
+        a.source_village_id,
+        a.target_village_id,
+        a.attack_type,
+        a.arrival_time,
+        a.start_time,
+        sv.x_coord AS source_x,
+        sv.y_coord AS source_y,
+        tv.x_coord AS target_x,
+        tv.y_coord AS target_y
+    FROM attacks a
+    JOIN villages sv ON sv.id = a.source_village_id
+    JOIN villages tv ON tv.id = a.target_village_id
+    WHERE a.is_completed = 0 
+      AND a.is_canceled = 0 
+      AND a.arrival_time > NOW()
+      AND (
+        (sv.x_coord BETWEEN ? AND ? AND sv.y_coord BETWEEN ? AND ?) OR
+        (tv.x_coord BETWEEN ? AND ? AND tv.y_coord BETWEEN ? AND ?)
+      )
+");
+if ($movementsStmt) {
+    $movementsStmt->bind_param(
+        'iiiiiiii',
+        $minX, $maxX, $minY, $maxY,
+        $minX, $maxX, $minY, $maxY
+    );
+    $movementsStmt->execute();
+    $movementsRes = $movementsStmt->get_result();
+    while ($move = $movementsRes->fetch_assoc()) {
+        $sourceId = (int)$move['source_village_id'];
+        $targetId = (int)$move['target_village_id'];
+        $arrivalTs = strtotime($move['arrival_time']);
+
+        if (isset($villagesById[$sourceId])) {
+            $villages[$villagesById[$sourceId]]['movements'][] = [
+                'type' => $move['attack_type'] === 'support' ? 'support' : 'attack',
+                'arrival' => $arrivalTs,
+                'target' => ['x' => (int)$move['target_x'], 'y' => (int)$move['target_y']]
+            ];
+        }
+
+        if (isset($villagesById[$targetId])) {
+            $villages[$villagesById[$targetId]]['movements'][] = [
+                'type' => $move['attack_type'] === 'support' ? 'support_in' : 'incoming',
+                'arrival' => $arrivalTs,
+                'source' => ['x' => (int)$move['source_x'], 'y' => (int)$move['source_y']]
+            ];
+        }
+    }
+    $movementsStmt->close();
+}
+
 // Fetch tribes/alliances if the table exists (optional)
 $allies = [];
 if (dbTableExists($conn, 'tribes')) {
