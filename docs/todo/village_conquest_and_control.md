@@ -1,75 +1,69 @@
 # Village Conquest & Control — Systems Design
 
 ## Conquest Overview
-- Villages can change ownership through **loyalty/influence reduction**: attacks with special conquest units lower a village’s allegiance; when it hits 0 (or an influence bar fills), ownership transfers.
-- Conquest is a multi-step commitment: soften defenses, breach walls, clear garrison/support, then deliver conquest payloads while defending against counter-support/snipes.
-- Conquest is designed to be **costly, telegraphed, and contestable** to reward planning and counterplay.
+- Villages change ownership via a **Control Meter** (0–100): Envoy waves establish a control link; when control reaches 100 and holds through an uptime window, ownership transfers.
+- Conquest is multi-step and telegraphed: break defenses, clear garrison/support, land Envoys to build control, defend uptime against counter-support and snipes.
+- No coin minting or random loyalty drops; control rates are fixed, with resistance/uptime as the contest knobs.
 
-## Special Conquest Unit/Mechanic — "Standard Bearer"
-- **Lore/Role:** Elite heralds carrying a tribe’s war standard. They demoralize defenders and rally locals to switch allegiance.
-- **Function:** On a successful attack, reduces **Allegiance** by a random band (e.g., 18–28) per surviving Standard Bearer. Allegiance at 0 or below transfers village if at least one Standard Bearer survives the wave.
+## Special Conquest Unit/Mechanic — Envoy & Control Link
+- **Lore/Role:** Envoys carry edicts to assert control; they anchor a control link on success.
+- **Function:** On a successful attack (attacker wins, Envoy survives), a control link is established and **Control** increases at a fixed rate until 100. At 100, an uptime timer starts; if maintained, the village flips.
 - **Stats (design levers):**
-  - Costly to train (Coins/Seals + high Wood/Clay/Iron + heavy population).
-  - Slow travel (uses siege speed), vulnerable to all unit types, low combat stats.
-  - Requires **Hall of Banners (Academy analog)** level N and minted standards (resource sink) to recruit.
-- **Risks:** Expensive loss if intercepted; must be escorted by main army; travel time telegraphs intent.
-- **Usage Patterns:** Noble trains (multiple waves seconds apart), split trains (spread over minutes to dodge snipes), or delayed last-wave to follow a fake-heavy opener.
+  - Costly to train (influence crests + high resources + pop). No coins.
+  - Slow travel (siege speed), low combat stats; requires escort.
+  - Requires **Hall of Banners** (Academy analog) level N.
+- **Risks:** Expensive if intercepted; long travel telegraphs intent; control can decay if defender pressure exceeds attacker pressure.
+- **Usage Patterns:** Tight envoy trains, split trains for misdirection, or staggered pressure to manage resistance decay.
 
 ## Capture Conditions
 - **Preconditions:**
-  - Attacking force must win the battle (defenders/support wiped or routed). Partial win does not apply allegiance damage.
-  - At least one Standard Bearer survives the combat round.
-  - Wall can stay up, but higher walls reduce Standard Bearer survival odds; optional rule: allegiance damage reduced if Wall > X.
-  - Allegiance must reach 0 or below after the wave for capture.
-- **Requirements to Field Standard Bearers:** Hall of Banners level, minted standards/coins available, sufficient population, and world may limit max per village.
-- **Timing Constraints:** Command arrival order matters; allegiance damage resolves after casualties and wall damage in that wave.
+  - Attacker wins the battle; at least one Envoy survives.
+  - Control link placed; initial control seed (e.g., 25) applied.
+  - Walls may stay; high walls lower Envoy survival, and defender resistance can stall control gain.
+- **Control/Uptime:**
+  - Control rises at `BASE_CONTROL_RATE_PER_MIN + ENVOY_BONUS` while attacker pressure ≥ defender resistance.
+  - If defender resistance exceeds attacker pressure by threshold, control decays toward 0.
+  - At 100 control, uptime timer starts (e.g., 900s). Capture occurs if control stays ≥100 through uptime.
+- **Requirements to Field Envoys:** Hall of Banners level, influence crests, population, world cap per village/command if enabled.
+- **Timing Constraints:** Arrival order matters; uptime can be reset if control drops below 100.
 
 ## Number & Timing of Attacks
-- **Typical Sequence:** 3–5 conquest waves depending on allegiance damage bands and regen.
-  - Example: Starting Allegiance 100; four waves averaging -24 each capture if undefended.
+- **Typical Sequence:** 3–5 envoy waves to hit 100 control + uptime if undefended; more if resistance/decay is active.
 - **Tactical Patterns:**
-  - **Classic Train:** 4 waves spaced 100–300ms apart (desktop precision) to avoid snipes; risk of latency; countered by stacked defense and perfectly timed support.
-  - **Split Train:** 2 waves close, pause for misdirection, 2 more later; used to bait defenses.
-  - **Extended Pressure:** Continuous clearing attacks + sporadic conquest waves to force defender fatigue; relies on regen management.
-  - **Fake Floods:** Many low-pop attacks to mask real Standard Bearer wave; countered by watchtower/intel filters.
+  - **Classic Train:** Tight envoy waves to minimize snipe windows; riskier on high-latency/mobile worlds.
+  - **Split Train:** Early seed + later push to bait support and restart decay windows.
+  - **Extended Pressure:** Maintain small control gains, then finish with clustered envoys once resistance drops.
+  - **Fake Floods:** Many low-pop fakes masking envoy wave; countered by intel/watchtower filters.
 - **Defense Options:**
-  - **Sniping:** Support lands between conquest waves to raise defense and kill Bearers.
-  - **Stacking:** Large support pre-stationed; high walls and trap layers.
-  - **Dodge/Counter:** Defender pulls troops to avoid losses and counter-attacks attacker’s nobles village.
-  - **Allegiance Regen Boosts:** Tribe tech or items increasing regen to extend number of required waves.
+  - **Sniping:** Land support before uptime; kill Envoys to stop control gain.
+  - **Stacking:** Pre-support, walls, traps; raise resistance to force decay.
+  - **Dodge/Counter:** Pull troops; counter-attack envoy origin.
+  - **Control Decay Boosts:** Tribe tech/items that increase decay when defender presence is higher.
 
 ## Post-Capture Rules
 - **Ownership:** Transfers to attacker; diplomacy state updates; command ownership transfers for stationed troops.
-- **Buildings:**
-  - Default: No building loss except wall damage from battle and targeted siege.
-  - Variant: Random 0–1 building level loss on capture to represent chaos.
-- **Troops:**
-  - Defender troops present are destroyed or retreat if support from allies survives (world rule). Attacker’s surviving troops occupy village.
-  - Stationed allied support either stays under new owner (if ally) or auto-returns (if hostile/neutral).
-- **Resources:**
-  - Remaining resources transfer to new owner; optional plunder step first reduces stock.
-  - Vaulted/protected resources remain.
-- **Allegiance After Capture:**
-  - Sets to a low starting value (e.g., 25–35) to allow quick counter-capture if left undefended.
-  - Regen resumes after short delay; can be modified by tribe tech/world rules.
-- **Village Identity:** Name may persist or be auto-reset; attacker can rename. Tribe flag updates on map.
-- **Cooldown:** Anti-snipe grace (e.g., 10–20 minutes) where allegiance cannot be reduced below a small buffer or incoming conquest waves get a debuff.
+- **Buildings:** Default no extra building loss beyond battle/siege damage; optional 0–1 random loss variant.
+- **Troops:** Defender troops destroyed or retreat per world rule; allied support returns if hostile/neutral, may stay if ally.
+- **Resources:** Remaining resources transfer; vault stays; optional pre-flip plunder.
+- **Control After Capture:** Resets to 0 for new owner; optionally start at low control (e.g., 20–30) to allow counter-capture risk; recapture cooldown can block flips for X minutes.
+- **Village Identity:** Name persists or resets; tribe flag updates on map.
+- **Cooldown:** Anti-snipe grace (e.g., 10–20 minutes) where control cannot exceed 90 for attackers, preventing immediate reflip.
 
 ## Cool-downs & Limits
-- **Anti-Rebound Timer:** Recently captured villages gain temporary allegiance floor (e.g., cannot drop below 10 for 15 minutes) to prevent ping-pong.
-- **Per-Account Limits:** Soft cap on total villages per player; increasing maintenance or loyalty decay penalties when exceeding thresholds; hard cap optional on casual worlds.
-- **Standard Bearer Limits:** Max per command and per village training queue; coin/standard minting limited per day to throttle spam.
-- **Attack Rate Limits:** Minimum gap between successive conquest waves from same attacker on same target (e.g., 300ms server-enforced) to keep fair timing; longer on mobile-friendly worlds.
+- **Anti-Rebound Timer:** Recently captured villages get control ceiling (e.g., attackers cannot push past 90 for 15 minutes) to prevent ping-pong.
+- **Per-Account Limits:** Soft cap on total villages; scaling upkeep/decay when exceeding thresholds; hard cap optional on casual worlds.
+- **Envoy Limits:** Max per command and per village training; influence crest production limited per day to throttle spam.
+- **Attack Rate Limits:** Minimum gap between successive envoy waves from same attacker on same target (e.g., 300ms server-enforced) to keep fair timing; longer on mobile-friendly worlds.
 
 ## Anti-Abuse Measures
-- **Protection for Very Small Players:** Conquest blocked or heavily penalized when attacker power >> defender during beginner protection or below points threshold; morale floors apply to conquest units too.
-- **Tribe-Internal Transfers:** Optional “handover” mode: tribe mates can reduce allegiance only if target opts-in (soft transfer) to prevent forced gifting; otherwise conquest vs tribe members disabled or taxed.
+- **Protection for Very Small Players:** Conquest blocked/penalized when attacker >> defender during beginner protection or below thresholds; morale/luck disabled for control.
+- **Tribe-Internal Transfers:** Optional opt-in handover; otherwise tribe vs tribe capture disabled or taxed to prevent forced gifting.
 - **Multi-Account & Pushing:**
-  - Diminishing returns and suspicion flags on repeated captures between same two accounts/tribes.
-  - Cooldowns on recapturing a village you previously owned within short timeframe.
+  - Diminishing returns and suspicion flags on repeated captures between same pair.
+  - Cooldowns on recapturing a village you previously owned.
   - Resource/aid caps to reduce staged weak defenses.
 - **Spawn/Protection Zones:** Conquest disabled in starter safe zones.
-- **Report Transparency:** Conquest reports show morale, luck, and allegiance hits to spot anomalies.
+- **Report Transparency:** Reports show control gain/decay, uptime progress, and envoy survival; no luck/morale fields.
 
 ## Capture Conditions Checklist (Example Table)
 | Condition | Default Rule | Optional Variant |
@@ -93,3 +87,47 @@
 - **Attackers:** Time waves tightly; clear support first; sync fakes to stretch defenses; protect origin villages from counter-noble snipes; watch allegiance regen tick.
 - **Defenders:** Stack or snipe; boost allegiance regen; pre-queue traps; counter-attack noble villages; use watchtowers to spot fakes; rotate support to avoid overstack penalties (if any).
 
+## Implementation TODOs
+- [ ] Conquest resolver: compute allegiance drop per surviving Standard Bearer with modifiers (wall level, escort size, repeated attacks, distance penalty if used), and capture when threshold <= 0.
+- [ ] State machine: enforce prerequisites (combat win, bearer survival, cooldowns, safe zones, protection status, tribe handover mode); return reason codes for failed conquest attempts.
+- [ ] Training pipeline: Hall of Banners requirements, minting/consumption of standards/coins, per-village/per-day training limits, queue integration.
+- [ ] Regen system: allegiance regeneration ticks with bonuses (buildings/tribe tech) and caps; pause rules during combat/occupation; floor after capture (anti-ping-pong buffer).
+- [ ] Cooldowns & limits: anti-rebound timer after capture, per-attacker wave spacing enforcement, per-account village cap penalties; configurable per world.
+- [ ] Anti-abuse checks: block captures vs protected/low-point players; flag repeated swaps between same accounts/tribes; apply tax/lockout on tribe-internal transfers if opt-in missing.
+- [ ] Reporting: battle/conquest reports show allegiance deltas, morale/luck, modifiers applied, and reason codes for blocks; log all conquest attempts for audit.
+
+## Implementation TODOs
+- [x] Implement allegiance calculation service: per-wave allegiance drop resolution, regen tick, anti-snipe floor, and post-capture reset. _(spec below)_
+- [ ] Persistence: schema for allegiance value per village, last_allegiance_update, and capture_cooldown_until.
+- [ ] Combat hook: apply allegiance drop only if attackers win and at least one Standard Bearer survives; respect wall-based reduction.
+- [ ] Standard Bearer config: costs, speed, pop, min building level, max per command, and daily mint limits.
+- [ ] Regen rules: configurable per-world base regen/hour; tribe tech/items modifiers; pause during anti-snipe; cap at 100.
+- [ ] Capture aftermath: set starting allegiance to configurable low value; optional random building loss; grace period before further drops.
+- [ ] Anti-abuse: block conquest on protected/newbie targets; detect repeated captures between same accounts; tribe handover opt-in flow.
+- [ ] Reports: include morale/luck, allegiance damage per wave, surviving SB count, and reason codes for failed conquest attempts.
+
+## Progress
+- Added `lib/services/AllegianceService.php` to encapsulate allegiance drop/regen math with wall reduction, random drop per bearer, anti-snipe floor, and regen tick helper.
+
+## Safeguards & Edge Cases
+- **Protected Targets:** Conquest blocked vs beginner/protected zones; return `ERR_PROTECTED` and log attempts.
+- **Rebound Abuse:** Cooldown on recapturing a village you owned in the last 72h; loyalty floor higher for rebounds to reduce ping-pong.
+- **Allied Support Behavior:** Decide per world whether allied support stays or auto-returns on capture; log choice in report to avoid confusion.
+- **Command Ordering:** If multiple conquest waves land same tick, resolve in random order per tick to avoid deterministic sniping exploits; log resolution order.
+- **Allegiance Caps:** Clamp allegiance to [0,100]; prevent overfill and negative beyond capture to avoid overflow bugs.
+
+### Allegiance Calculation Service (Spec)
+- **Inputs per wave:** attacker win/lose flag, surviving Standard Bearers, wall level, conquest modifiers (tech/items/world rules), current allegiance, anti-snipe cooldown status, capture grace window end, time delta since last regen tick.
+- **Drop Calculation:** base random band per surviving SB (e.g., 18–28) × SB count × global conquest multiplier. Apply wall reduction factor (e.g., drop × (1 - min(0.5, wall_level * 0.02))). Clamp to minimum 1 when any SB survives.
+- **Apply Drop:** If attacker lost or no SB survive, allegiance unchanged. If drop pushes allegiance <= 0 and not in anti-snipe floor, capture triggers.
+- **Regen Tick:** Before applying drop, increment allegiance by (regen_per_hour / 3600) × elapsed seconds since last tick, clamped to 100. Regen paused during anti-snipe grace; resumes after.
+- **Anti-Snipe Floor:** After capture, set `anti_snipe_until = now + configured_ms` and `allegiance_floor = configured_floor` (e.g., 10). While active, allegiance cannot be reduced below floor.
+- **Post-Capture Reset:** On capture, set allegiance to `post_capture_start` (e.g., 25–35), reset last_update timestamp, start anti-snipe timer, and emit capture event for reports/logs.
+- **Outputs:** new allegiance value, capture flag, applied drop amount, regen applied, timestamps for next tick, and current floor/grace state for UI/reporting.
+
+## QA & Acceptance
+- [ ] Unit tests for allegiance drops across wall levels, SB counts, anti-snipe floor active/inactive, and regen pauses; ensure clamp [0,100].
+- [ ] Integration tests for conquest attempts blocked by protection/safe zones/tribe handover; assert reason codes.
+- [ ] Simulate multi-wave train: verify ordering per tick, capture triggers once, post-capture floor set, and reports show deltas/modifiers.
+- [ ] Load test allegiance resolver under 1k waves/tick; p95 within target; no race conditions on concurrent waves to same village.
+- [ ] Reports display morale/luck, allegiance drop, regen applied, anti-snipe status, surviving SBs, and block reasons when applicable.

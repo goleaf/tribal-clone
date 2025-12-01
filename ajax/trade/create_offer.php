@@ -31,7 +31,7 @@ try {
     ];
 
     if ($villageId <= 0) {
-        AjaxResponse::error('Invalid village selected.');
+        AjaxResponse::error('Invalid village selected.', null, 400, 'ERR_INPUT');
     }
 
     $villageManager = new VillageManager($conn);
@@ -42,7 +42,12 @@ try {
 
     $result = $tradeManager->createOffer($userId, $villageId, $offerResources, $requestResources);
     if (!$result['success']) {
-        AjaxResponse::error($result['message'] ?? 'Could not create offer.');
+        AjaxResponse::error(
+            $result['message'] ?? 'Could not create offer.',
+            null,
+            400,
+            $result['code'] ?? null
+        );
     }
 
     AjaxResponse::success(['offer_id' => $result['offer_id']], 'Offer created.');

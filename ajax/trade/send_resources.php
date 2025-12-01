@@ -37,7 +37,12 @@ try {
 
     $result = $tradeManager->sendResources($userId, $villageId, $targetCoords, $resources);
     if (!$result['success']) {
-        AjaxResponse::error($result['message'] ?? 'Could not send resources.');
+        AjaxResponse::error(
+            $result['message'] ?? 'Could not send resources.',
+            null,
+            400,
+            $result['code'] ?? null
+        );
     }
 
     $updatedVillage = $villageManager->getVillageInfo($villageId);

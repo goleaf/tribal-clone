@@ -94,6 +94,26 @@ $rally_point_level = $buildingManager->getBuildingLevel($source_village_id, 'ral
 
 // Handle attack submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attack'])) {
+    // Simple per-user rate limit to prevent command floods
+    $nowMs = (int)round(microtime(true) * 1000);
+    $cooldownMs = defined('ATTACK_SEND_COOLDOWN_MS') ? (int)ATTACK_SEND_COOLDOWN_MS : 700;
+    if (isset($_SESSION['last_attack_send_ms'])) {
+        $since = $nowMs - (int)$_SESSION['last_attack_send_ms'];
+        if ($since < $cooldownMs) {
+            $message = "You are sending commands too quickly. Please wait " . number_format(($cooldownMs - $since) / 1000, 2) . "s.";
+            $message_type = "error";
+            if (isset($_POST['ajax']) && $_POST['ajax'] == 1) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => $message,
+                    'error_code' => 'ERR_RATE_LIMITED',
+                    'retry_after_ms' => $cooldownMs - $since
+                ]);
+                exit();
+            }
+        }
+    }
+
     $target_village_id = (int)$_POST['target_village'];
     $attack_type = $_POST['attack_type'];
     $target_building = !empty($_POST['target_building']) ? $_POST['target_building'] : null;
@@ -126,6 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attack'])) {
                 $result = $battleManager->sendAttack($source_village_id, $target_village_id, $units_sent, $attack_type, $target_building);
                 
                 if ($result['success']) {
+                    $_SESSION['last_attack_send_ms'] = $nowMs;
                     $message = $result['message'];
                     $message_type = "success";
                     

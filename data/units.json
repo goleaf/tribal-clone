@@ -203,6 +203,23 @@
     "speedMinPerField": 35,
     "buildTimeSec": 3000
   },
+  "mantlet": {
+    "cost": {
+      "wood": 200,
+      "clay": 250,
+      "iron": 120
+    },
+    "pop": 2,
+    "off": 5,
+    "def": {
+      "gen": 80,
+      "cav": 60,
+      "arc": 200
+    },
+    "carry": 0,
+    "speedMinPerField": 28,
+    "buildTimeSec": 1800
+  },
   "berserker": {
     "cost": {
       "wood": 160,

@@ -28,19 +28,25 @@ class AjaxResponse
      * @param string $message Error message
      * @param mixed $data Optional extra data
      * @param int $code Optional HTTP status code
+     * @param string|null $errorCode Optional application error code (e.g., ERR_CAP)
      * @return void
      */
-    public static function error(string $message, mixed $data = null, int $code = 400): void 
+    public static function error(string $message, mixed $data = null, int $code = 400, ?string $errorCode = null): void 
     {
         // Set the HTTP status header
         http_response_code($code);
         
-        self::send([
+        $payload = [
             'status' => 'error',
             'message' => $message,
             'data' => $data,
             'code' => $code
-        ]);
+        ];
+        if ($errorCode !== null) {
+            $payload['error_code'] = $errorCode;
+        }
+
+        self::send($payload);
     }
     
     /**

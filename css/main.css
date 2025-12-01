@@ -2532,6 +2532,8 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
 
 .legend-dot.relation-own { background: #2c7be5; }
 .legend-dot.relation-ally { background: #4caf50; }
+.legend-dot.relation-nap { background: #1abc9c; }
+.legend-dot.relation-truce { background: #6c757d; }
 .legend-dot.relation-neutral { background: #d1a23d; }
 .legend-dot.relation-enemy { background: #c0392b; }
 .legend-dot.relation-barb { background: #7f8c8d; }
@@ -4433,6 +4435,44 @@ p.no-reports {
     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
+.map-grid-shell {
+    position: relative;
+}
+
+.map-loading {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(2px);
+    border-radius: var(--border-radius-medium);
+    color: #4a3c2f;
+    font-weight: 600;
+    pointer-events: none;
+}
+
+.map-loading .spinner {
+    width: 18px;
+    height: 18px;
+    border: 3px solid rgba(74, 60, 47, 0.2);
+    border-top-color: #4a3c2f;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+}
+
+.map-grid.is-loading {
+    filter: blur(1px);
+    opacity: 0.8;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 .map-tile {
     position: relative;
     width: var(--map-tile-size);
@@ -4498,6 +4538,8 @@ p.no-reports {
 
 .relation-own { border-color: #2c7be5; box-shadow: 0 0 0 1px rgba(44,123,229,0.4); }
 .relation-ally { border-color: #4caf50; box-shadow: 0 0 0 1px rgba(76,175,80,0.4); }
+.relation-nap { border-color: #1abc9c; box-shadow: 0 0 0 1px rgba(26,188,156,0.35); }
+.relation-truce { border-color: #6c757d; box-shadow: 0 0 0 1px rgba(108,117,125,0.35); }
 .relation-neutral { border-color: #d1a23d; box-shadow: 0 0 0 1px rgba(209,162,61,0.35); }
 .relation-enemy { border-color: #c0392b; box-shadow: 0 0 0 1px rgba(192,57,43,0.35); }
 .relation-barb { border-color: #7f8c8d; box-shadow: 0 0 0 1px rgba(127,140,141,0.3); }

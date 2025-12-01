@@ -5,6 +5,7 @@ require_once __DIR__ . '/BuildingManager.php'; // Corrected path
 class ResourceManager {
     private $conn;
     private $buildingManager;
+    private array $worldEconomyCache = [];
 
     public function __construct($conn, $buildingManager) {
         $this->conn = $conn;
@@ -15,6 +16,10 @@ class ResourceManager {
      * Gets hourly resource production for a village (all types)
      */
     public function getProductionRates(int $village_id): array {
+        $worldId = $this->getWorldIdForVillage($village_id);
+        $worldConfig = $this->getWorldEconomyConfig($worldId);
+        $resourceMultiplier = $worldConfig['resource_multiplier'] ?? 1.0;
+
         $stmt = $this->conn->prepare(
             "SELECT bt.internal_name, vb.level
              FROM village_buildings vb
@@ -31,9 +36,9 @@ class ResourceManager {
         $stmt->close();
 
         return [
-            'wood' => $this->buildingManager->getHourlyProduction('sawmill', $levels['sawmill'] ?? 0),
-            'clay' => $this->buildingManager->getHourlyProduction('clay_pit', $levels['clay_pit'] ?? 0),
-            'iron' => $this->buildingManager->getHourlyProduction('iron_mine', $levels['iron_mine'] ?? 0),
+            'wood' => $this->buildingManager->getHourlyProduction('sawmill', $levels['sawmill'] ?? 0) * $resourceMultiplier,
+            'clay' => $this->buildingManager->getHourlyProduction('clay_pit', $levels['clay_pit'] ?? 0) * $resourceMultiplier,
+            'iron' => $this->buildingManager->getHourlyProduction('iron_mine', $levels['iron_mine'] ?? 0) * $resourceMultiplier,
         ];
     }
 
@@ -72,7 +77,11 @@ class ResourceManager {
         $stmt->close();
 
         // Use BuildingManager to calculate hourly production
-        return $this->buildingManager->getHourlyProduction($building_internal_name, $level);
+        $worldId = $this->getWorldIdForVillage($village_id);
+        $worldConfig = $this->getWorldEconomyConfig($worldId);
+        $resourceMultiplier = $worldConfig['resource_multiplier'] ?? 1.0;
+
+        return $this->buildingManager->getHourlyProduction($building_internal_name, $level) * $resourceMultiplier;
     }
 
     /**
@@ -232,4 +241,43 @@ class ResourceManager {
             ]
         ];
     }
-} 
+
+    private function getWorldIdForVillage(int $villageId): int
+    {
+        $stmt = $this->conn->prepare("SELECT world_id FROM villages WHERE id = ? LIMIT 1");
+        if ($stmt === false) {
+            return defined('CURRENT_WORLD_ID') ? (int)CURRENT_WORLD_ID : 1;
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $res = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $res ? (int)$res['world_id'] : (defined('CURRENT_WORLD_ID') ? (int)CURRENT_WORLD_ID : 1);
+    }
+
+    private function getWorldEconomyConfig(int $worldId): array
+    {
+        if (isset($this->worldEconomyCache[$worldId])) {
+            return $this->worldEconomyCache[$worldId];
+        }
+
+        $stmt = $this->conn->prepare("SELECT resource_multiplier, vault_protect_pct FROM worlds WHERE id = ? LIMIT 1");
+        if ($stmt === false) {
+            return $this->worldEconomyCache[$worldId] = [
+                'resource_multiplier' => 1.0,
+                'vault_protect_pct' => 10
+            ];
+        }
+        $stmt->bind_param("i", $worldId);
+        $stmt->execute();
+        $res = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        $this->worldEconomyCache[$worldId] = [
+            'resource_multiplier' => isset($res['resource_multiplier']) ? (float)$res['resource_multiplier'] : 1.0,
+            'vault_protect_pct' => isset($res['vault_protect_pct']) ? (int)$res['vault_protect_pct'] : 10
+        ];
+
+        return $this->worldEconomyCache[$worldId];
+    }
+}

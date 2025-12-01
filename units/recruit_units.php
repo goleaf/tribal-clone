@@ -6,6 +6,22 @@ error_reporting(E_ALL);
 require '../init.php';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') validateCSRF();
 
+class RecruitmentException extends Exception
+{
+    private string $reasonCode;
+
+    public function __construct(string $message, string $reasonCode = 'RECRUITMENT_ERROR', int $code = 0, ?Throwable $previous = null)
+    {
+        $this->reasonCode = $reasonCode;
+        parent::__construct($message, $code, $previous);
+    }
+
+    public function getReasonCode(): string
+    {
+        return $this->reasonCode;
+    }
+}
+
 // Ensure the user is logged in
 if (!isset($_SESSION['user_id'])) {
     if (isset($_POST['ajax'])) {
@@ -24,7 +40,7 @@ if (!isset($_POST['village_id']) || !is_numeric($_POST['village_id']) ||
     !isset($_POST['recruit']) || !is_array($_POST['recruit'])) {
     if (isset($_POST['ajax'])) {
         header('Content-Type: application/json');
-        echo json_encode(['error' => 'Required parameters are missing.']);
+        echo json_encode(['error' => 'Required parameters are missing.', 'code' => 'MISSING_PARAMETERS']);
     } else {
         $_SESSION['game_message'] = "<p class='error-message'>Required parameters are missing.</p>";
         header('Location: ../game/game.php');
@@ -49,6 +65,7 @@ if (!$conn) {
 }
 
 $unitManager = new UnitManager($conn);
+$villageManager = new VillageManager($conn);
 
 try {
     $conn->begin_transaction();
@@ -60,9 +77,15 @@ try {
     $result_village = $stmt_check_village->get_result();
     
     if ($result_village->num_rows === 0) {
-        throw new Exception('You do not have access to this village.');
+        throw new RecruitmentException('You do not have access to this village.', 'NO_VILLAGE_ACCESS');
     }
     $stmt_check_village->close();
+
+    // Fetch village data for resource/population validation
+    $village_data = $villageManager->getVillageInfo($village_id);
+    if (!$village_data) {
+        throw new RecruitmentException('Village not found.', 'VILLAGE_NOT_FOUND');
+    }
     
 // Resolve building by id or building_type
 if ($building_id > 0) {
@@ -86,7 +109,7 @@ $stmt_check_building->execute();
 $result_building = $stmt_check_building->get_result();
 
 if ($result_building->num_rows === 0) {
-    throw new Exception('Invalid building.');
+    throw new RecruitmentException('Invalid building.', 'INVALID_BUILDING');
 }
 
 $building = $result_building->fetch_assoc();
@@ -97,7 +120,7 @@ $stmt_check_building->close();
 
 // Optional: ensure the client-specified building_type matches the resolved one
 if ($building_type_from_request && $building_type_from_request !== $building_internal_name) {
-    throw new Exception('Mismatched building type for recruitment.');
+    throw new RecruitmentException('Mismatched building type for recruitment.', 'MISMATCHED_BUILDING');
 }
     
     // Check current recruitment queues for this building
@@ -117,15 +140,17 @@ $stmt_check_queue->execute();
     // Enforce queue limit (static for now, could depend on building level)
     $max_queues = 2;
     if ($queue_count >= $max_queues) {
-        throw new Exception("The maximum recruitment queue count ($max_queues) has been reached for this building.");
+        throw new RecruitmentException("The maximum recruitment queue count ($max_queues) has been reached for this building.", 'QUEUE_FULL');
     }
 
-    // Fetch current village resources
-    $stmt_resources = $conn->prepare('SELECT wood, clay, iron, population FROM villages WHERE id = ?');
-    $stmt_resources->bind_param('i', $village_id);
-    $stmt_resources->execute();
-    $resources = $stmt_resources->get_result()->fetch_assoc();
-    $stmt_resources->close();
+    // Use cached village data for current resources/population
+    $resources = [
+        'wood' => (int)($village_data['wood'] ?? 0),
+        'clay' => (int)($village_data['clay'] ?? 0),
+        'iron' => (int)($village_data['iron'] ?? 0),
+        'population' => (int)($village_data['population'] ?? 0),
+        'farm_capacity' => (int)($village_data['farm_capacity'] ?? 0),
+    ];
     
     // Aggregate requested units and total costs
     $total_units = 0;
@@ -137,7 +162,9 @@ $stmt_check_queue->execute();
     
     foreach ($recruit_data as $unit_type_id => $count) {
         $count = (int)$count;
-        if ($count <= 0) continue;
+        if ($count <= 0) {
+            throw new RecruitmentException('Unit counts must be positive integers.', 'INVALID_UNIT_COUNT');
+        }
         
         $total_units += $count;
         
@@ -152,7 +179,7 @@ $stmt_check_queue->execute();
         $result_unit = $stmt_unit->get_result();
         
         if ($result_unit->num_rows === 0) {
-            throw new Exception('Invalid unit for this building.');
+            throw new RecruitmentException('Invalid unit for this building.', 'INVALID_UNIT_FOR_BUILDING');
         }
         
         $unit = $result_unit->fetch_assoc();
@@ -160,7 +187,7 @@ $stmt_check_queue->execute();
         
         // Ensure the building level is high enough
         if ($building_level < $unit['required_building_level']) {
-            throw new Exception(ucfirst($building_internal_name) . ' level is too low for unit ' . $unit['name'] . '.');
+            throw new RecruitmentException(ucfirst($building_internal_name) . ' level is too low for unit ' . $unit['name'] . '.', 'BUILDING_LEVEL_TOO_LOW');
         }
         
         // Calculate costs and training time
@@ -188,21 +215,21 @@ $stmt_check_queue->execute();
     }
     
     if ($total_units === 0) {
-        throw new Exception('No units selected for recruitment.');
+        throw new RecruitmentException('No units selected for recruitment.', 'NO_UNITS_SELECTED');
     }
     
     // Validate resources and population capacity
     if ($resources['wood'] < $total_wood || 
         $resources['clay'] < $total_clay || 
         $resources['iron'] < $total_iron ||
-        ($resources['population'] + $total_population) > $village['farm_capacity']) {
+        ($resources['population'] + $total_population) > $resources['farm_capacity']) {
         // Fetch full village data for current farm capacity
         $village_data = $villageManager->getVillageInfo($village_id);
         if (!$village_data || ($village_data['population'] + $total_population) > $village_data['farm_capacity']) {
-            throw new Exception('Not enough free population in the village.');
+            throw new RecruitmentException('Not enough free population in the village.', 'POPULATION_LIMIT');
         }
         
-        throw new Exception('Not enough resources or free population to recruit the selected units.');
+        throw new RecruitmentException('Not enough resources to recruit the selected units.', 'RESOURCES_LIMIT');
     }
     
     // Deduct resources and population
@@ -282,10 +309,15 @@ $stmt_check_queue->execute();
 
     if (isset($_POST['ajax'])) {
         header('Content-Type: application/json');
+        $reasonCode = ($e instanceof RecruitmentException) ? $e->getReasonCode() : 'RECRUITMENT_ERROR';
         AjaxResponse::error(
             'An error occurred while recruiting units: ' . $e->getMessage(),
-            ['file' => $e->getFile(), 'line' => $e->getLine(), 'trace' => $e->getTraceAsString()],
-            500
+            [
+                'code' => $reasonCode,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ],
+            400
         );
     } else {
         $_SESSION['game_message'] = "<p class='error-message'>An error occurred while recruiting units: " . htmlspecialchars($e->getMessage()) . "</p>";

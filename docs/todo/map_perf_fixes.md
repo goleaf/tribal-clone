@@ -6,11 +6,36 @@
 - Preserve clarity and accessibility with high-density overlays.
 
 ## Tasks
-- **Data freshness:** Add ETag/Last-Modified to map/command endpoints; clients poll with conditional requests and respect `max-age`.
+- [x] **Data freshness:** Add ETag/Last-Modified to map/command endpoints; clients poll with conditional requests and respect `max-age`. _(map_data.php now emits ETag/Last-Modified + short revalidate cache-control)_
+- [x] **Rate Limits:** Throttle marker drops and command-visualization fetches per user; return `ERR_RATE_LIMITED` with retry-after. _(per-user map fetch limiter added)_
 - **Batching:** Collapse incoming command updates into 1s batches per village; send deltas instead of full lists. Batch marker updates similarly.
 - **Pagination:** Paginate command lists (incoming/outgoing/support/trade/scout) for selected areas; lazy-load on scroll.
-- **Rate Limits:** Throttle marker drops and command-visualization fetches per user; return `ERR_RATE_LIMITED` with retry-after.
 - **Skeletons:** Implement skeleton states for zoom levels while tiles/commands load; avoid jarring redraws on pan/zoom.
 - **Accessibility:** Provide high-contrast palette for diplomacy/overlays, keyboard navigation for selection/filter toggles, and reduced-motion mode for command lines.
 - **Metrics:** Track map request rate, cache hit %, average payload size, and client render time; alert on spikes in payload or render latency.
 - **Testing:** Simulate 500+ concurrent commands on a sector; assert p95 render < 200ms on mid-tier mobile and server responses < 200ms with caching enabled.
+
+## Additional Fixes
+- **Command line thinning:** Simplify geometry for distant zoom (straight segments, no arrowheads) to reduce draw calls; use instanced rendering where possible.
+- **LOD for markers:** Reduce marker detail/icons at far zoom; cluster markers and commands to avoid thousands of DOM/SVG nodes.
+- **Debounce pan/zoom:** Debounce fetches during rapid pan/zoom; fetch only on idle state with a small delay; cancel in-flight requests.
+- **Delta compression:** Compress command deltas (binary/MessagePack) to shrink payloads for high-volume worlds.
+- **Server-side culling:** Curb returned commands/markers outside viewport + padding; enforce max payload size with continuation tokens.
+- **Client perf logging:** Log render duration and dropped frames on map interactions (sampled); ship to telemetry for regression tracking.
+- **Fallback mode:** If device perf is low (dropped frames threshold), auto-switch to simplified visuals: hide minor overlays, reduce command line density/update frequency; allow user opt-back.
+
+## Acceptance Criteria
+- Map endpoints return 304 with ETag/Last-Modified when unchanged; payload size tracked and stable under load.
+- Paginated/clustered commands and markers keep p95 client render under 200ms on target devices in a 500+ command scenario.
+- Rate limits return `ERR_RATE_LIMITED` with retry-after; fetch debouncing prevents duplicate loads on rapid pan/zoom.
+- Accessibility modes (high contrast/reduced motion) apply to diplomacy/overlays and command lines without breaking performance.
+- Telemetry shows cache hit %, request rate, payload size, render time; alerts fire on payload spikes or render regressions.
+
+## Open Questions
+- Should far-zoom clustering be done server-side (pre-aggregated) or client-side? Decide per world size/perf budget.
+- How aggressive can delta compression be without harming low-end devices? Need benchmarks for JSON vs binary.
+- What is the acceptable retry-after window for rate limiting map fetches without hurting UX (e.g., 500ms vs 2s)?
+- **Cold-start cache:** Pre-warm tiles/overlays for current continent/sector after login; store in-memory/LRU to reduce first-pan jank, with capped memory budget.
+
+## Progress
+- Added an AJAX travel-time endpoint (`ajax/map/travel_time.php`) so map/Rally interactions can fetch distance/ETA server-side using world speed modifiers (reduces client-side recompute and keeps timings consistent).

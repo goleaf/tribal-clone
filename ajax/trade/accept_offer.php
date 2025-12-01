@@ -21,7 +21,7 @@ try {
     $offerId = isset($_POST['offer_id']) ? (int)$_POST['offer_id'] : 0;
 
     if ($villageId <= 0 || $offerId <= 0) {
-        AjaxResponse::error('Invalid request data.');
+        AjaxResponse::error('Invalid request data.', null, 400, 'ERR_INPUT');
     }
 
     $villageManager = new VillageManager($conn);
@@ -32,7 +32,7 @@ try {
 
     $result = $tradeManager->acceptOffer($userId, $villageId, $offerId);
     if (!$result['success']) {
-        AjaxResponse::error($result['message'] ?? 'Could not accept this offer.');
+        AjaxResponse::error($result['message'] ?? 'Could not accept this offer.', null, 400, $result['code'] ?? null);
     }
 
     AjaxResponse::success(

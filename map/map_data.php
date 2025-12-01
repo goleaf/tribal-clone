@@ -5,12 +5,35 @@ require_once '../init.php';
 require_once '../lib/functions.php';
 
 header('Content-Type: application/json; charset=utf-8');
+// Encourage client-side caching; precise values finalized below after we compute freshness.
+header('Cache-Control: public, max-age=15, must-revalidate');
 
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
     echo json_encode(['error' => 'Login required']);
     exit;
 }
+$rateWindow = 10; // seconds
+$rateMax = 15; // max requests per window
+$now = microtime(true);
+$_SESSION['map_rate'] = isset($_SESSION['map_rate']) && is_array($_SESSION['map_rate']) ? $_SESSION['map_rate'] : [];
+$_SESSION['map_rate'] = array_values(array_filter($_SESSION['map_rate'], function ($ts) use ($now, $rateWindow) {
+    return ($ts + $rateWindow) > $now;
+}));
+if (count($_SESSION['map_rate']) >= $rateMax) {
+    $retryAfter = max(1, (int)ceil(($_SESSION['map_rate'][0] + $rateWindow) - $now));
+    header('Retry-After: ' . $retryAfter);
+    header('Cache-Control: no-store');
+    http_response_code(429);
+    echo json_encode([
+        'error' => 'Rate limited',
+        'code' => 'ERR_RATE_LIMITED',
+        'retry_after' => $retryAfter
+    ]);
+    exit;
+}
+$_SESSION['map_rate'][] = $now;
+
 $user_id = (int)$_SESSION['user_id'];
 $userTribeId = null;
 $lastModifiedTs = 0;
@@ -27,6 +50,12 @@ if ($user_id) {
 
 $worldSize = defined('WORLD_SIZE') ? (int)WORLD_SIZE : 1000;
 
+// Handle conditional requests for data freshness without excessive payloads.
+$ifNoneMatch = $_SERVER['HTTP_IF_NONE_MATCH'] ?? null;
+$ifModifiedSince = $_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? null;
+$etagBaseParts = [$user_id, $worldSize];
+$freshnessHeaders = [];
+
 $centerX = isset($_GET['x']) ? (int)$_GET['x'] : 0;
 $centerY = isset($_GET['y']) ? (int)$_GET['y'] : 0;
 $size = isset($_GET['size']) ? max(7, min(31, (int)$_GET['size'])) : 15;
@@ -41,6 +70,7 @@ $minY = max(0, $centerY - $radius);
 $maxY = min($worldSize - 1, $centerY + $radius);
 $worldId = CURRENT_WORLD_ID;
 
+$lastModifiedTs = 0;
 function isUnderBeginnerProtection(array $userRow): bool
 {
     $maxDays = defined('NEWBIE_PROTECTION_DAYS_MAX') ? NEWBIE_PROTECTION_DAYS_MAX : 7;
@@ -131,6 +161,27 @@ $stmt->close();
 $villagesById = [];
 foreach ($villages as $idx => $v) {
     $villagesById[$v['id']] = $idx;
+}
+
+// Track the most recent update timestamp for ETag/Last-Modified
+$lastModifiedTs = max($lastModifiedTs, time());
+$etagBaseParts[] = $minX . ':' . $maxX . ':' . $minY . ':' . $maxY;
+$etagBaseParts[] = $lastModifiedTs;
+$etag = '"' . sha1(implode('|', $etagBaseParts)) . '"';
+$lastModifiedHeader = gmdate('D, d M Y H:i:s', $lastModifiedTs) . ' GMT';
+$freshnessHeaders = [
+    'ETag' => $etag,
+    'Last-Modified' => $lastModifiedHeader,
+    'Cache-Control' => 'private, max-age=15'
+];
+
+$ifModifiedSinceTs = $ifModifiedSince ? strtotime($ifModifiedSince) : null;
+if (($ifNoneMatch && trim($ifNoneMatch) === $etag) || ($ifModifiedSinceTs && $ifModifiedSinceTs >= $lastModifiedTs)) {
+    foreach ($freshnessHeaders as $key => $value) {
+        header($key . ': ' . $value);
+    }
+    http_response_code(304);
+    exit;
 }
 
 // Fetch active movements (attacks/support/return) intersecting the viewport
@@ -259,30 +310,6 @@ if ($json === false) {
     exit;
 }
 
-$etag = '"' . sha1($json) . '"';
-$lastModifiedTs = $lastModifiedTs ?: time();
-$lastModifiedHeader = gmdate('D, d M Y H:i:s', $lastModifiedTs) . ' GMT';
-
-header('Cache-Control: public, max-age=15, must-revalidate');
-header('ETag: ' . $etag);
-header('Last-Modified: ' . $lastModifiedHeader);
-
-$ifNoneMatch = $_SERVER['HTTP_IF_NONE_MATCH'] ?? '';
-$ifModifiedSince = $_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? '';
-$ifModifiedSinceTs = $ifModifiedSince ? strtotime($ifModifiedSince) : 0;
-
-if ($ifNoneMatch && trim($ifNoneMatch) === $etag) {
-    http_response_code(304);
-    exit;
-}
-
-if ($ifModifiedSinceTs && $ifModifiedSinceTs >= $lastModifiedTs) {
-    http_response_code(304);
-    exit;
-}
-
-echo $json;
-
 function fetchTribeDiplomacy($conn, ?int $tribeId): array
 {
     if (!$tribeId) return [];
@@ -299,3 +326,18 @@ function fetchTribeDiplomacy($conn, ?int $tribeId): array
     }
     return $relations;
 }
+
+$etag = '"' . sha1($json) . '"';
+$lastModifiedTs = $lastModifiedTs ?: time();
+$lastModifiedHeader = gmdate('D, d M Y H:i:s', $lastModifiedTs) . ' GMT';
+$ttlSeconds = 15; // keep small for active map polling
+
+foreach ([
+    'Cache-Control' => 'public, max-age=' . $ttlSeconds . ', must-revalidate',
+    'ETag' => $etag,
+    'Last-Modified' => $lastModifiedHeader
+] as $k => $v) {
+    header($k . ': ' . $v);
+}
+
+echo $json;

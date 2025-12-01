@@ -138,11 +138,11 @@ class TradeManager {
         ];
 
         if ($resources['wood'] + $resources['clay'] + $resources['iron'] <= 0) {
-            return ['success' => false, 'message' => 'Select at least one resource to send.'];
+            return ['success' => false, 'message' => 'Select at least one resource to send.', 'code' => 'ERR_INPUT'];
         }
 
         if (!preg_match('/^(\d+)\|(\d+)$/', $targetCoords, $matches)) {
-            return ['success' => false, 'message' => 'Invalid coordinates format. Use X|Y.'];
+            return ['success' => false, 'message' => 'Invalid coordinates format. Use X|Y.', 'code' => 'ERR_INPUT'];
         }
 
         [$full, $targetX, $targetY] = $matches;
@@ -157,30 +157,30 @@ class TradeManager {
         $stmt->close();
 
         if (!$village || (int)$village['user_id'] !== $userId) {
-            return ['success' => false, 'message' => 'You do not control this village.'];
+            return ['success' => false, 'message' => 'You do not control this village.', 'code' => 'ERR_ALT_BLOCK'];
         }
 
         if ($village['wood'] < $resources['wood'] || $village['clay'] < $resources['clay'] || $village['iron'] < $resources['iron']) {
-            return ['success' => false, 'message' => 'Not enough resources in this village.'];
+            return ['success' => false, 'message' => 'Not enough resources in this village.', 'code' => 'ERR_CAP'];
         }
 
         $targetVillage = $this->getVillageByCoords($targetX, $targetY);
         if (!$targetVillage) {
-            return ['success' => false, 'message' => 'Target village not found.'];
+            return ['success' => false, 'message' => 'Target village not found.', 'code' => 'ERR_INPUT'];
         }
         if ((int)$targetVillage['id'] === $villageId) {
-            return ['success' => false, 'message' => 'Cannot send resources to the same village.'];
+            return ['success' => false, 'message' => 'Cannot send resources to the same village.', 'code' => 'ERR_INPUT'];
         }
 
         $marketLevel = $this->getMarketLevel($villageId);
         if ($marketLevel <= 0) {
-            return ['success' => false, 'message' => 'Build a market to send resources.'];
+            return ['success' => false, 'message' => 'Build a market to send resources.', 'code' => 'ERR_CAP'];
         }
 
         $tradersNeeded = $this->calculateTradersNeeded($resources);
         $availability = $this->getTraderAvailability($villageId);
         if ($availability['available'] < $tradersNeeded) {
-            return ['success' => false, 'message' => 'No traders available for this shipment.'];
+            return ['success' => false, 'message' => 'No traders available for this shipment.', 'code' => 'ERR_CAP'];
         }
 
         $distance = calculateDistance((float)$village['x_coord'], (float)$village['y_coord'], (float)$targetVillage['x_coord'], (float)$targetVillage['y_coord']);
@@ -456,7 +456,7 @@ class TradeManager {
     public function createOffer(int $userId, int $villageId, array $offerResources, array $requestResources): array
     {
         if (!$this->hasTradeOffersTable()) {
-            return ['success' => false, 'message' => 'Trading offers are not supported by this world yet.'];
+            return ['success' => false, 'message' => 'Trading offers are not supported by this world yet.', 'code' => 'ERR_CAP'];
         }
 
         $offerResources = [
@@ -471,30 +471,30 @@ class TradeManager {
         ];
 
         if ($offerResources['wood'] + $offerResources['clay'] + $offerResources['iron'] <= 0) {
-            return ['success' => false, 'message' => 'Offered resources must be greater than zero.'];
+            return ['success' => false, 'message' => 'Offered resources must be greater than zero.', 'code' => 'ERR_INPUT'];
         }
         if ($requestResources['wood'] + $requestResources['clay'] + $requestResources['iron'] <= 0) {
-            return ['success' => false, 'message' => 'Requested resources must be greater than zero.'];
+            return ['success' => false, 'message' => 'Requested resources must be greater than zero.', 'code' => 'ERR_INPUT'];
         }
 
         $village = $this->getVillageWithOwner($villageId);
         if (!$village || (int)$village['user_id'] !== $userId) {
-            return ['success' => false, 'message' => 'You do not control this village.'];
+            return ['success' => false, 'message' => 'You do not control this village.', 'code' => 'ERR_ALT_BLOCK'];
         }
 
         $marketLevel = $this->getMarketLevel($villageId);
         if ($marketLevel <= 0) {
-            return ['success' => false, 'message' => 'Build a market before creating offers.'];
+            return ['success' => false, 'message' => 'Build a market before creating offers.', 'code' => 'ERR_CAP'];
         }
 
         $tradersNeeded = $this->calculateTradersNeeded($offerResources);
         $availability = $this->getTraderAvailability($villageId);
         if ($availability['available'] < $tradersNeeded) {
-            return ['success' => false, 'message' => 'Not enough free traders to post this offer.'];
+            return ['success' => false, 'message' => 'Not enough free traders to post this offer.', 'code' => 'ERR_CAP'];
         }
 
         if ($village['wood'] < $offerResources['wood'] || $village['clay'] < $offerResources['clay'] || $village['iron'] < $offerResources['iron']) {
-            return ['success' => false, 'message' => 'Not enough resources to place this offer.'];
+            return ['success' => false, 'message' => 'Not enough resources to place this offer.', 'code' => 'ERR_CAP'];
         }
 
         $this->conn->begin_transaction();

@@ -71,4 +71,7 @@ define('INITIAL_WORLD_ID', 1);
 define('NEWBIE_PROTECTION_DAYS_MIN', 3);    // Minimum days of protection from registration
 define('NEWBIE_PROTECTION_DAYS_MAX', 7);    // Maximum days of protection
 define('NEWBIE_PROTECTION_POINTS_CAP', 200); // Protection auto-ends above this point total
+
+// Command rate limiting
+define('ATTACK_SEND_COOLDOWN_MS', 700); // minimum ms between attack/command sends per user
 ?>

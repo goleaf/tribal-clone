@@ -193,6 +193,8 @@ Detailed documentation of the code and database can be found in the `docs/` dire
 - Worlds & Progression Configuration: `docs/worlds-and-progression.md`
 - Tribes & Diplomacy Systems: `docs/tribes-and-diplomacy-systems.md`
 - Security Monitoring & Alerting: `docs/security-monitoring.md`
+- Anti-Cheat Roadmap: `docs/anti-cheat-roadmap.md`
+- Customer Support Playbook: `docs/customer-support-playbook.md`
 
 ## Further Development
 

@@ -69,19 +69,34 @@ class TribeDiplomacyManager
             ");
         }
 
-        // Change log table (SQLite/MySQL compatible DDL)
-        $this->conn->query("
-            CREATE TABLE IF NOT EXISTS tribe_diplomacy_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tribe_a_id INTEGER NOT NULL,
-                tribe_b_id INTEGER NOT NULL,
-                actor_user_id INTEGER NULL,
-                from_state TEXT,
-                to_state TEXT,
-                reason TEXT NULL,
-                created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
-            )
-        ");
+        if ($isSQLite) {
+            $this->conn->query("
+                CREATE TABLE IF NOT EXISTS tribe_diplomacy_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tribe_a_id INTEGER NOT NULL,
+                    tribe_b_id INTEGER NOT NULL,
+                    actor_user_id INTEGER NULL,
+                    from_state TEXT,
+                    to_state TEXT,
+                    reason TEXT NULL,
+                    created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+                )
+            ");
+        } else {
+            $this->conn->query("
+                CREATE TABLE IF NOT EXISTS tribe_diplomacy_logs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    tribe_a_id INT NOT NULL,
+                    tribe_b_id INT NOT NULL,
+                    actor_user_id INT NULL,
+                    from_state VARCHAR(32) NULL,
+                    to_state VARCHAR(32) NULL,
+                    reason VARCHAR(255) NULL,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    KEY idx_pair (tribe_a_id, tribe_b_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        }
         $this->conn->query("CREATE INDEX IF NOT EXISTS idx_tribe_diplomacy_logs_pair ON tribe_diplomacy_logs(tribe_a_id, tribe_b_id)");
     }
 

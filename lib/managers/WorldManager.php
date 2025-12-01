@@ -19,6 +19,9 @@ class WorldManager
         'night_bonus_enabled' => "INTEGER NOT NULL DEFAULT 0",
         'night_start_hour' => "INTEGER NOT NULL DEFAULT 22",
         'night_end_hour' => "INTEGER NOT NULL DEFAULT 6",
+        'resource_production_multiplier' => "REAL NOT NULL DEFAULT 1.0",
+        'vault_protection_percent' => "REAL NOT NULL DEFAULT 0.0",
+        'resource_decay_enabled' => "INTEGER NOT NULL DEFAULT 0",
         'enable_archer' => "INTEGER NOT NULL DEFAULT 1",
         'enable_paladin' => "INTEGER NOT NULL DEFAULT 1",
         'enable_paladin_weapons' => "INTEGER NOT NULL DEFAULT 1",
@@ -57,6 +60,9 @@ class WorldManager
             'night_bonus_enabled' => false,
             'night_start_hour' => 22,
             'night_end_hour' => 6,
+            'resource_production_multiplier' => 1.0,
+            'vault_protection_percent' => 0.0,
+            'resource_decay_enabled' => false,
             'enable_archer' => true,
             'enable_paladin' => true,
             'enable_paladin_weapons' => true,
@@ -80,11 +86,11 @@ class WorldManager
                         foreach ($selectable as $key) {
                             if (array_key_exists($key, $row) && $row[$key] !== null) {
                                 $val = $row[$key];
-                                if (in_array($key, ['world_speed', 'troop_speed', 'build_speed', 'train_speed', 'research_speed'], true)) {
+                                if (in_array($key, ['world_speed', 'troop_speed', 'build_speed', 'train_speed', 'research_speed', 'resource_production_multiplier', 'vault_protection_percent'], true)) {
                                     $defaults[$key] = (float)$val;
                                 } elseif ($key === 'tribe_member_limit' || $key === 'victory_value') {
                                     $defaults[$key] = $val === null ? null : (int)$val;
-                                } elseif (in_array($key, ['enable_archer', 'enable_paladin', 'enable_paladin_weapons', 'night_bonus_enabled'], true)) {
+                                } elseif (in_array($key, ['enable_archer', 'enable_paladin', 'enable_paladin_weapons', 'night_bonus_enabled', 'resource_decay_enabled'], true)) {
                                     $defaults[$key] = (bool)$val;
                                 } elseif (in_array($key, ['night_start_hour', 'night_end_hour'], true)) {
                                     $defaults[$key] = (int)$val;
@@ -150,6 +156,22 @@ class WorldManager
     public function isArcherEnabled(int $worldId = CURRENT_WORLD_ID): bool
     {
         return (bool)($this->getSettings($worldId)['enable_archer'] ?? true);
+    }
+
+    public function getResourceProductionMultiplier(int $worldId = CURRENT_WORLD_ID): float
+    {
+        return max(0.1, (float)($this->getSettings($worldId)['resource_production_multiplier'] ?? 1.0));
+    }
+
+    public function getVaultProtectionPercent(int $worldId = CURRENT_WORLD_ID): float
+    {
+        $pct = (float)($this->getSettings($worldId)['vault_protection_percent'] ?? 0.0);
+        return max(0.0, min(100.0, $pct));
+    }
+
+    public function isResourceDecayEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        return (bool)($this->getSettings($worldId)['resource_decay_enabled'] ?? false);
     }
 
     public function isPaladinEnabled(int $worldId = CURRENT_WORLD_ID): bool
@@ -231,6 +253,9 @@ class WorldManager
             'night_bonus_enabled' => 0,
             'night_start_hour' => 22,
             'night_end_hour' => 6,
+            'resource_production_multiplier' => 1.0,
+            'vault_protection_percent' => 0.0,
+            'resource_decay_enabled' => 0,
             'enable_archer' => 1,
             'enable_paladin' => 1,
             'enable_paladin_weapons' => 1,
@@ -260,7 +285,7 @@ class WorldManager
             return;
         }
 
-        $stmtInsert = $this->conn->prepare("INSERT INTO worlds (name, world_speed, troop_speed, build_speed, train_speed, research_speed, night_bonus_enabled, night_start_hour, night_end_hour, enable_archer, enable_paladin, enable_paladin_weapons, tech_mode, tribe_member_limit, victory_type, victory_value, archetype) VALUES ('World 1', 1.0, 1.0, 1.0, 1.0, 1.0, 0, 22, 6, 1, 1, 1, 'normal', NULL, NULL, NULL, NULL)");
+        $stmtInsert = $this->conn->prepare("INSERT INTO worlds (name, world_speed, troop_speed, build_speed, train_speed, research_speed, night_bonus_enabled, night_start_hour, night_end_hour, resource_production_multiplier, vault_protection_percent, resource_decay_enabled, enable_archer, enable_paladin, enable_paladin_weapons, tech_mode, tribe_member_limit, victory_type, victory_value, archetype) VALUES ('World 1', 1.0, 1.0, 1.0, 1.0, 1.0, 0, 22, 6, 1.0, 0.0, 0, 1, 1, 1, 'normal', NULL, NULL, NULL, NULL)");
         if ($stmtInsert) {
             $stmtInsert->execute();
             $stmtInsert->close();

@@ -30,6 +30,10 @@ class BattleManager
     private const FAKE_THROTTLE_THRESHOLD = 20; // zero-siege sub-50-pop commands in window before delaying
     private const FAKE_THROTTLE_WINDOW_SEC = 3600; // 60 minutes
     private const FAKE_THROTTLE_DELAY_SEC = 300; // 5 minutes per excess send
+    private const SOFT_FLAG_WINDOW_SEC = 86400; // 24 hours
+    private const SOFT_FLAG_THRESHOLD = 3; // flags in window to trigger penalty
+    private const SOFT_FLAG_PENALTY_MULTIPLIER = 0.5; // halve caps when flagged
+    private const SITTER_MAX_OUTGOING_PER_HOUR = 10; // sitter cannot exceed this command count per hour
     private const PHASE_ORDER = ['infantry', 'cavalry', 'archer'];
     private const RESEARCH_BONUS_PER_LEVEL = 0.10; // +10% per smithy level
     private const LOYALTY_MIN = 0;
@@ -38,6 +42,8 @@ class BattleManager
     private const LOYALTY_DROP_MAX = 35;
     private const LOYALTY_FAIL_DROP_MIN = 5;
     private const LOYALTY_FAIL_DROP_MAX = 10;
+    private const RECENT_CAPTURE_FLOOR = 10; // anti-rebound buffer
+    private const RECENT_CAPTURE_WINDOW_SECONDS = 900; // 15 minutes after capture
     private const OFFENSIVE_ATTACK_TYPES = ['attack', 'raid', 'spy', 'fake'];
     private const MAX_COMMANDS_PER_MINUTE = 20;
     private const MAX_COMMANDS_PER_HOUR = 200;
@@ -134,6 +140,7 @@ class BattleManager
         }
         $attackerTribeId = $this->getUserTribeId($attacker_user_id);
         $defenderTribeId = $this->getUserTribeId($defender_user_id);
+        $sitterContext = $this->getSitterContext();
         $attacker_points = $this->getUserPoints($attacker_user_id);
         $defender_points = $this->getUserPoints($defender_user_id);
         $attacker_protected = $this->isBeginnerProtected($attacker_points);
@@ -152,6 +159,7 @@ class BattleManager
         }
         $capCheck = $this->enforceAttackCap($attacker_user_id, $defender_user_id, $defender_points, $attackerTribeId);
         if ($capCheck !== true) {
+            $this->logAbuseFlag($attacker_user_id, 'TARGET_CAP', ['target_user_id' => $defender_user_id]);
             return [
                 'success' => false,
                 'error' => is_string($capCheck) ? $capCheck : 'Attack limit reached for this target.',
@@ -346,6 +354,25 @@ class BattleManager
             }
         }
 
+        // Sitter restrictions: no loyalty attacks and stricter command cap.
+        if ($sitterContext['is_sitter']) {
+            if ($hasLoyaltyUnit) {
+                return [
+                    'success' => false,
+                    'error' => 'Sitters cannot launch loyalty/reduction attacks.',
+                    'code' => 'SITTER_NO_LOYALTY'
+                ];
+            }
+            $sitterLimitCheck = $this->enforceSitterHourlyLimit($sitterContext['owner_id']);
+            if ($sitterLimitCheck !== true) {
+                return [
+                    'success' => false,
+                    'error' => $sitterLimitCheck,
+                    'code' => 'SITTER_RATE_CAP'
+                ];
+            }
+        }
+
         // Calculate distance and travel time
         $distance = $this->calculateDistance(
             $villages['source_x'], $villages['source_y'],
@@ -433,6 +460,10 @@ class BattleManager
             if ($recentCount >= self::FAKE_THROTTLE_THRESHOLD) {
                 $excess = $recentCount - self::FAKE_THROTTLE_THRESHOLD + 1;
                 $throttleDelay = max($throttleDelay, $excess * self::FAKE_THROTTLE_DELAY_SEC);
+                $this->logAbuseFlag($attacker_user_id, 'FAKE_THROTTLE', [
+                    'target_village_id' => $target_village_id,
+                    'recent_count' => $recentCount
+                ]);
             }
         }
         if ($throttleDelay > 0) {
@@ -1452,7 +1483,7 @@ class BattleManager
             ? $this->villageManager->getLoyaltyDropMultiplier($attack['target_village_id'])
             : 1.0;
 
-        $loyalty_floor = $this->getEffectiveLoyaltyFloor($attacking_units);
+        $loyalty_floor = $this->getEffectiveLoyaltyFloor($attacking_units, (int)$attack['target_village_id']);
         $noblePresent = $this->hasNobleUnit($attacking_units);
 
         if ($noblePresent) {
@@ -2170,40 +2201,6 @@ class BattleManager
     }
 
     /**
-     * Simple burst rate limit across commands sent by a user within a short window.
-     */
-    private function enforceCommandRateLimit(int $userId)
-    {
-        if (self::MAX_COMMANDS_PER_WINDOW <= 0 || $userId <= 0) {
-            return true;
-        }
-
-        $windowStart = time() - self::COMMAND_RATE_WINDOW_SECONDS;
-        $sql = "
-            SELECT COUNT(*) AS cnt
-            FROM attacks a
-            JOIN villages v ON a.source_village_id = v.id
-            WHERE v.user_id = ?
-              AND a.is_canceled = 0
-              AND UNIX_TIMESTAMP(a.start_time) >= ?
-        ";
-        $stmt = $this->conn->prepare($sql);
-        if ($stmt === false) {
-            return true; // fail open if DB error
-        }
-        $stmt->bind_param("ii", $userId, $windowStart);
-        $stmt->execute();
-        $row = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-
-        $count = (int)($row['cnt'] ?? 0);
-        if ($count >= self::MAX_COMMANDS_PER_WINDOW) {
-            return sprintf('Rate limit reached: max %d commands per %d seconds.', self::MAX_COMMANDS_PER_WINDOW, self::COMMAND_RATE_WINDOW_SECONDS);
-        }
-        return true;
-    }
-
-    /**
      * Scout-specific burst cap to reduce spammy probing.
      */
     private function enforceScoutRateLimit(int $userId)
@@ -2276,13 +2273,16 @@ class BattleManager
         $lastHour = (int)($row['last_hour'] ?? 0);
 
         $isScout = ($attackType === 'spy');
-        $minuteCap = $isScout ? self::MAX_SCOUTS_PER_MINUTE : self::MAX_COMMANDS_PER_MINUTE;
-        $hourCap = self::MAX_COMMANDS_PER_HOUR;
+        $penaltyMultiplier = $this->getAbusePenaltyMultiplier($attackerUserId);
+        $minuteCap = max(1, (int)ceil(($isScout ? self::MAX_SCOUTS_PER_MINUTE : self::MAX_COMMANDS_PER_MINUTE) * $penaltyMultiplier));
+        $hourCap = max(1, (int)ceil(self::MAX_COMMANDS_PER_HOUR * $penaltyMultiplier));
 
         if ($lastMinute >= $minuteCap) {
+            $this->logAbuseFlag($attackerUserId, 'RATE_CAP_MINUTE', ['count' => $lastMinute, 'cap' => $minuteCap, 'attack_type' => $attackType]);
             return sprintf('RATE_CAP: Too many %s commands in the last minute (%d/%d).', $isScout ? 'scout' : 'commands', $lastMinute, $minuteCap);
         }
         if ($lastHour >= $hourCap) {
+            $this->logAbuseFlag($attackerUserId, 'RATE_CAP_HOUR', ['count' => $lastHour, 'cap' => $hourCap]);
             return sprintf('RATE_CAP: Too many commands in the last hour (%d/%d).', $lastHour, $hourCap);
         }
 
@@ -2309,6 +2309,10 @@ class BattleManager
                 $targetCnt = (int)($tRow['cnt'] ?? 0);
                 if ($targetCnt >= self::MAX_SCOUTS_PER_TARGET_PER_WINDOW) {
                     $retryIn = max(1, self::SCOUT_TARGET_WINDOW_SECONDS - ($now - $targetWindowStart));
+                    $this->logAbuseFlag($attackerUserId, 'SCOUT_TARGET_CAP', [
+                        'target_user_id' => $defenderUserId,
+                        'count' => $targetCnt
+                    ]);
                     return sprintf(
                         'SCOUT_RATE_LIMITED: Too many scouts to this target in the last %d minutes (%d/%d). Retry in ~%d seconds.',
                         (int)(self::SCOUT_TARGET_WINDOW_SECONDS / 60),
@@ -2318,6 +2322,99 @@ class BattleManager
                     );
                 }
             }
+        }
+        return true;
+    }
+
+    /**
+     * Track soft abuse flags (throttles, caps) and derive penalty multipliers.
+     */
+    private function logAbuseFlag(int $userId, string $code, array $meta = []): void
+    {
+        if ($userId <= 0) {
+            return;
+        }
+        $this->ensureAbuseFlagTable();
+        $metaJson = json_encode($meta);
+        $stmt = $this->conn->prepare("
+            INSERT INTO attack_abuse_flags (user_id, code, meta, created_at)
+            VALUES (?, ?, ?, strftime('%s','now'))
+        ");
+        if (!$stmt) {
+            return;
+        }
+        $stmt->bind_param("iss", $userId, $code, $metaJson);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    private function getAbusePenaltyMultiplier(int $userId): float
+    {
+        if ($userId <= 0) {
+            return 1.0;
+        }
+        $thresholdTs = time() - self::SOFT_FLAG_WINDOW_SEC;
+        $this->ensureAbuseFlagTable();
+        $stmt = $this->conn->prepare("
+            SELECT COUNT(*) AS cnt
+            FROM attack_abuse_flags
+            WHERE user_id = ?
+              AND created_at >= ?
+        ");
+        if (!$stmt) {
+            return 1.0;
+        }
+        $stmt->bind_param("ii", $userId, $thresholdTs);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        $cnt = (int)($row['cnt'] ?? 0);
+        if ($cnt >= self::SOFT_FLAG_THRESHOLD) {
+            return self::SOFT_FLAG_PENALTY_MULTIPLIER;
+        }
+        return 1.0;
+    }
+
+    private function ensureAbuseFlagTable(): void
+    {
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS attack_abuse_flags (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                code TEXT NOT NULL,
+                meta TEXT DEFAULT NULL,
+                created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+            )
+        ");
+        $this->conn->query("CREATE INDEX IF NOT EXISTS idx_abuse_flags_user_time ON attack_abuse_flags(user_id, created_at)");
+    }
+
+    private function enforceSitterHourlyLimit(int $ownerId)
+    {
+        if ($ownerId <= 0 || self::SITTER_MAX_OUTGOING_PER_HOUR <= 0) {
+            return true;
+        }
+        $hourAgo = time() - 3600;
+        $sql = "
+            SELECT COUNT(*) AS cnt
+            FROM attacks a
+            JOIN villages v ON a.source_village_id = v.id
+            WHERE v.user_id = ?
+              AND a.is_canceled = 0
+              AND UNIX_TIMESTAMP(a.start_time) >= ?
+              AND a.attack_type IN ('attack','raid','spy','fake','support')
+        ";
+        $stmt = $this->conn->prepare($sql);
+        if ($stmt === false) {
+            return true;
+        }
+        $stmt->bind_param("ii", $ownerId, $hourAgo);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        $count = (int)($row['cnt'] ?? 0);
+        if ($count >= self::SITTER_MAX_OUTGOING_PER_HOUR) {
+            return sprintf('Sitter limit reached: max %d outgoing commands per hour while sitting.', self::SITTER_MAX_OUTGOING_PER_HOUR);
         }
         return true;
     }
@@ -2543,6 +2640,17 @@ class BattleManager
         $seconds = max(0, time() - $created);
         return $seconds / 3600;
     }
+
+    private function getSitterContext(): array
+    {
+        $isSitter = isset($_SESSION['sitter_original_user_id'], $_SESSION['sitter_owner_id']) && (int)($_SESSION['sitter_owner_id']) === (int)($_SESSION['user_id']);
+        return [
+            'is_sitter' => $isSitter,
+            'sitter_id' => $isSitter ? (int)$_SESSION['sitter_original_user_id'] : null,
+            'owner_id' => $isSitter ? (int)$_SESSION['user_id'] : null,
+        ];
+    }
+
 
     /**
      * Count low-payload (pop < 50, no siege) commands to a target in the recent window.
@@ -2933,12 +3041,25 @@ class BattleManager
     /**
      * Determine effective loyalty floor for an attack (e.g., Vasco's Scepter).
      */
-    private function getEffectiveLoyaltyFloor(array $attackingUnits): int
+    private function getEffectiveLoyaltyFloor(array $attackingUnits, ?int $targetVillageId = null): int
     {
+        $floor = self::LOYALTY_MIN;
         if ($this->hasPaladin($attackingUnits) && $this->getPaladinWeapon() === 'vascos_scepter') {
-            return 30;
+            $floor = max($floor, 30);
         }
-        return self::LOYALTY_MIN;
+
+        // Anti-rebound: recently captured villages cannot be dropped below a buffer for a short window
+        if ($targetVillageId) {
+            $conqueredAt = $this->getVillageConqueredAt($targetVillageId);
+            if ($conqueredAt) {
+                $elapsed = time() - $conqueredAt;
+                if ($elapsed >= 0 && $elapsed <= self::RECENT_CAPTURE_WINDOW_SECONDS) {
+                    $floor = max($floor, self::RECENT_CAPTURE_FLOOR);
+                }
+            }
+        }
+
+        return $floor;
     }
 
     /**
@@ -2987,10 +3108,32 @@ class BattleManager
         }
         $stmt->bind_param("i", $villageId);
         $stmt->execute();
-        $result = $stmt->get_result();
-        $row = $result ? $result->fetch_assoc() : null;
+        $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        return isset($row['loyalty']) ? (int)$row['loyalty'] : self::LOYALTY_MAX;
+        if (!$row || !isset($row['loyalty'])) {
+            return self::LOYALTY_MAX;
+        }
+        return (int)$row['loyalty'];
+    }
+
+    /**
+     * Fetch conquered_at as unix timestamp if present.
+     */
+    private function getVillageConqueredAt(int $villageId): ?int
+    {
+        $stmt = $this->conn->prepare("SELECT conquered_at FROM villages WHERE id = ? LIMIT 1");
+        if ($stmt === false) {
+            return null;
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$row || empty($row['conquered_at'])) {
+            return null;
+        }
+        $ts = strtotime($row['conquered_at']);
+        return $ts !== false ? $ts : null;
     }
 
     private function updateVillageLoyalty(int $villageId, int $loyalty): void

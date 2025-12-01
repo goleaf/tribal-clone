@@ -7,6 +7,16 @@ require 'header.php';
     <h1>Help Center</h1>
     <p>Welcome to the help center. Use the topics below to get answers to common questions.</p>
 
+    <h3>Game vision & fair-play manifesto</h3>
+    <ul>
+        <li><strong>Tribe-first:</strong> Built for coordination—shared intel, roles, and ops planning are core.</li>
+        <li><strong>Strategic clarity:</strong> Clear timers, reports, and filters; no hidden pay-to-win boosts.</li>
+        <li><strong>Counterplay everywhere:</strong> Every tactic has an answer (scouts vs fog, walls vs siege, fakes vs filters).</li>
+        <li><strong>Fair monetization:</strong> Cosmetics/QoL only; no stat boosts, no power creep.</li>
+        <li><strong>Recovery paths:</strong> Protection, hospitals, tribe aid, and comeback tools keep players in the fight.</li>
+        <li><strong>Variety:</strong> Rotating world presets (classic, hardcore, fog, seasonal events) keep the meta fresh.</li>
+    </ul>
+
     <h3>Getting started</h3>
     <ul>
         <li>Register an account and create your first village.</li>

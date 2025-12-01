@@ -104,13 +104,31 @@ require '../header.php';
                 </div>
                 <div class="filter-hint">Filters are instant. Use the popup to mark reservations or add notes.</div>
             </div>
+            <div class="filter-card" style="max-width:320px;">
+                <form id="bookmark-search-form" style="display:flex;gap:8px;align-items:center;">
+                    <label for="bookmark-search-input" style="font-weight:600;white-space:nowrap;">Find bookmark</label>
+                    <input type="text" id="bookmark-search-input" placeholder="Note text or village id" style="flex:1; padding:6px 8px;">
+                    <button type="submit" class="btn-ghost" style="white-space:nowrap;">Go</button>
+                </form>
+                <div id="bookmark-search-status" class="filter-hint"></div>
+            </div>
         </section>
 
-        <div class="map-wrapper">
-            <div class="map-grid-shell">
-                <div id="map-grid" class="map-grid" role="grid" aria-label="World map"></div>
-            </div>
-            <aside class="mini-map-card">
+            <div class="map-wrapper">
+                <div class="map-grid-shell">
+                    <div id="map-grid" class="map-grid" role="grid" aria-label="World map"></div>
+                    <div id="map-skeleton" class="map-skeleton" aria-hidden="true">
+                        <div class="skeleton-row"></div>
+                        <div class="skeleton-row"></div>
+                        <div class="skeleton-row"></div>
+                        <div class="skeleton-row"></div>
+                    </div>
+                    <div id="map-loading" class="map-loading" aria-live="polite">
+                        <span class="spinner"></span>
+                        <span>Loading map…</span>
+                    </div>
+                </div>
+                <aside class="mini-map-card">
                 <div class="mini-map-header">
                     <span>Minimap</span>
                     <button id="mini-center-home" class="btn-ghost" title="Center on home">⌂</button>
@@ -253,6 +271,9 @@ let mapFetchInFlight = false;
 let mapPollInterval = null;
 let worldBounds = null;
 const mapPollMs = 15000;
+const MAP_FETCH_DEBOUNCE_MS = 180;
+let mapLoadTimer = null;
+let lastQueuedRequest = null;
 const filters = {
     barbarians: true,
     players: true,
@@ -263,6 +284,17 @@ const filters = {
     enemies: true,
     neutral: true
 };
+const mapLoadingEl = document.getElementById('map-loading');
+
+function setMapLoading(isLoading) {
+    if (mapLoadingEl) {
+        mapLoadingEl.style.display = isLoading ? 'flex' : 'none';
+    }
+    const grid = document.getElementById('map-grid');
+    if (grid) {
+        grid.classList.toggle('is-loading', isLoading);
+    }
+}
 
 function loadAnnotations() {
     try {
@@ -294,9 +326,13 @@ function trimAnnotations(limit = 50) {
     saveAnnotations();
 }
 
-function setAnnotation(villageId, data) {
+function setAnnotation(villageId, data, coords = null) {
     const existing = annotations[villageId] || { note: '', reserved: '' };
     const updated = { ...existing, ...data, saved_at: Date.now() };
+    if (coords && Number.isFinite(coords.x) && Number.isFinite(coords.y)) {
+        updated.x = coords.x;
+        updated.y = coords.y;
+    }
 
     // Normalize reserved flag to '', 'self', or 'tribe'
     if (updated.reserved !== 'self' && updated.reserved !== 'tribe') {
@@ -326,6 +362,40 @@ function updateNoteStatus(message) {
     }
 }
 
+function findAnnotationMatch(query) {
+    if (!query) return null;
+    const q = query.toLowerCase();
+    const entries = Object.entries(annotations || {});
+    for (const [vId, data] of entries) {
+        const idMatch = vId === q || vId === query || vId === String(parseInt(query, 10));
+        const noteMatch = (data.note || '').toLowerCase().includes(q);
+        const reservedMatch = (data.reserved || '').toLowerCase().includes(q);
+        if (idMatch || noteMatch || reservedMatch) {
+            return { villageId: parseInt(vId, 10), data };
+        }
+    }
+    return null;
+}
+
+async function jumpToBookmark(match) {
+    if (!match) return false;
+    const coords = { x: match.data.x, y: match.data.y };
+    const hasCoords = Number.isFinite(coords.x) && Number.isFinite(coords.y);
+    if (hasCoords) {
+        await loadMap(coords.x, coords.y, mapState.size, { skipUrl: false });
+        showVillagePopup(coords.x, coords.y);
+        return true;
+    }
+    // Fallback: try to locate by village id in current map data
+    const village = Object.values(mapState.byCoord || {}).find(v => v.id === match.villageId);
+    if (village) {
+        await loadMap(village.x, village.y, mapState.size, { skipUrl: false });
+        showVillagePopup(village.x, village.y);
+        return true;
+    }
+    return false;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const sizeInput = document.getElementById('map-size');
     const sizeLabel = document.getElementById('map-size-label');
@@ -334,7 +404,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     sizeInput.addEventListener('change', () => {
         const newSize = normalizeSize(parseInt(sizeInput.value, 10));
-        loadMap(mapState.center.x, mapState.center.y, newSize);
+        sizeLabel.textContent = `${newSize}x${newSize}`;
+        requestMapLoad(mapState.center.x, mapState.center.y, newSize);
     });
 
     document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -385,7 +456,11 @@ document.addEventListener('DOMContentLoaded', () => {
     reserveToggle.addEventListener('change', () => {
         const vid = reserveToggle.dataset.villageId ? parseInt(reserveToggle.dataset.villageId, 10) : null;
         if (!vid) return;
-        setAnnotation(vid, { reserved: reserveToggle.checked ? (reserveScope.value || 'self') : '' });
+        const coords = {
+            x: reserveToggle.dataset.x ? parseInt(reserveToggle.dataset.x, 10) : null,
+            y: reserveToggle.dataset.y ? parseInt(reserveToggle.dataset.y, 10) : null
+        };
+        setAnnotation(vid, { reserved: reserveToggle.checked ? (reserveScope.value || 'self') : '' }, coords);
         renderMap();
         updateNoteStatus('Reservation updated');
     });
@@ -393,7 +468,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const vid = reserveScope.dataset.villageId ? parseInt(reserveScope.dataset.villageId, 10) : null;
         if (!vid) return;
         if (reserveToggle.checked) {
-            setAnnotation(vid, { reserved: reserveScope.value || 'self' });
+            const coords = {
+                x: reserveScope.dataset.x ? parseInt(reserveScope.dataset.x, 10) : null,
+                y: reserveScope.dataset.y ? parseInt(reserveScope.dataset.y, 10) : null
+            };
+            setAnnotation(vid, { reserved: reserveScope.value || 'self' }, coords);
             renderMap();
             updateNoteStatus('Reservation scope updated');
         }
@@ -401,7 +480,11 @@ document.addEventListener('DOMContentLoaded', () => {
     saveNoteBtn.addEventListener('click', () => {
         const vid = noteTextarea.dataset.villageId ? parseInt(noteTextarea.dataset.villageId, 10) : null;
         if (!vid) return;
-        setAnnotation(vid, { note: noteTextarea.value.trim() });
+        const coords = {
+            x: noteTextarea.dataset.x ? parseInt(noteTextarea.dataset.x, 10) : null,
+            y: noteTextarea.dataset.y ? parseInt(noteTextarea.dataset.y, 10) : null
+        };
+        setAnnotation(vid, { note: noteTextarea.value.trim() }, coords);
         renderMap();
         updateNoteStatus('Note saved');
     });
@@ -423,6 +506,32 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    const bookmarkForm = document.getElementById('bookmark-search-form');
+    const bookmarkInput = document.getElementById('bookmark-search-input');
+    const bookmarkStatus = document.getElementById('bookmark-search-status');
+    if (bookmarkForm && bookmarkInput) {
+        bookmarkForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const query = bookmarkInput.value.trim();
+            if (!query) {
+                if (bookmarkStatus) bookmarkStatus.textContent = 'Enter note text or village id.';
+                return;
+            }
+            const match = findAnnotationMatch(query);
+            if (!match) {
+                if (bookmarkStatus) bookmarkStatus.textContent = 'No matching bookmark found.';
+                return;
+            }
+            if (bookmarkStatus) bookmarkStatus.textContent = 'Opening bookmark...';
+            const ok = await jumpToBookmark(match);
+            if (!ok && bookmarkStatus) {
+                bookmarkStatus.textContent = 'Bookmark not on map yet. Try loading the area.';
+            } else if (bookmarkStatus) {
+                bookmarkStatus.textContent = '';
+            }
+        });
+    }
+
     document.addEventListener('click', (event) => {
         const popup = document.getElementById('map-popup');
         const isClickInsidePopup = popup.contains(event.target);
@@ -442,7 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden && !mapFetchInFlight) {
-            loadMap(mapState.center.x, mapState.center.y, mapState.size, { skipUrl: true });
+            requestMapLoad(mapState.center.x, mapState.center.y, mapState.size, { skipUrl: true });
         }
     });
 });
@@ -648,9 +757,31 @@ function openAttackModal(targetVillageId, preferredType) {
         .catch(error => console.error('Error loading attack form:', error));
 }
 
+function requestMapLoad(targetX, targetY, targetSize, options = {}) {
+    lastQueuedRequest = { x: targetX, y: targetY, size: targetSize, options };
+    if (mapLoadTimer) {
+        clearTimeout(mapLoadTimer);
+    }
+    mapLoadTimer = setTimeout(() => {
+        // If a fetch is running, requeue with the latest request.
+        if (mapFetchInFlight) {
+            requestMapLoad(lastQueuedRequest.x, lastQueuedRequest.y, lastQueuedRequest.size, lastQueuedRequest.options);
+            return;
+        }
+        const req = lastQueuedRequest;
+        lastQueuedRequest = null;
+        mapLoadTimer = null;
+        loadMap(req.x, req.y, req.size, req.options);
+    }, MAP_FETCH_DEBOUNCE_MS);
+}
+
 async function loadMap(targetX, targetY, targetSize, options = {}) {
     const { skipUrl = false } = options;
     mapFetchInFlight = true;
+    document.body.classList.add('map-loading');
+    if (mapLoadingEl) {
+        mapLoadingEl.style.display = 'inline-flex';
+    }
     try {
         const size = normalizeSize(targetSize);
         const data = await fetchMapData(targetX, targetY, size);
@@ -672,6 +803,15 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
         console.error('Failed to load map data:', error);
     } finally {
         mapFetchInFlight = false;
+        document.body.classList.remove('map-loading');
+        if (mapLoadingEl) {
+            mapLoadingEl.style.display = 'none';
+        }
+        if (!mapLoadTimer && lastQueuedRequest) {
+            const req = lastQueuedRequest;
+            lastQueuedRequest = null;
+            requestMapLoad(req.x, req.y, req.size, req.options);
+        }
     }
 }
 
@@ -680,7 +820,7 @@ function startMapPolling() {
     mapPollInterval = setInterval(() => {
         if (document.hidden) return;
         if (mapFetchInFlight) return;
-        loadMap(mapState.center.x, mapState.center.y, mapState.size, { skipUrl: true });
+        requestMapLoad(mapState.center.x, mapState.center.y, mapState.size, { skipUrl: true });
     }, mapPollMs);
 }
 
@@ -814,12 +954,12 @@ function updateUrl(x, y, size) {
 
 function moveMap(dx, dy) {
     const stride = Math.max(5, Math.floor(mapState.size / 2));
-    loadMap(mapState.center.x + dx * stride, mapState.center.y + dy * stride, mapState.size);
+    requestMapLoad(mapState.center.x + dx * stride, mapState.center.y + dy * stride, mapState.size);
 }
 
 function jumpToHome() {
     if (homeVillage) {
-        loadMap(homeVillage.x, homeVillage.y, mapState.size);
+        requestMapLoad(homeVillage.x, homeVillage.y, mapState.size);
     }
 }
 
@@ -830,7 +970,7 @@ function handleJumpForm(event) {
     const targetX = parseInt(xInput.value, 10);
     const targetY = parseInt(yInput.value, 10);
     if (Number.isFinite(targetX) && Number.isFinite(targetY)) {
-        loadMap(targetX, targetY, mapState.size);
+        requestMapLoad(targetX, targetY, mapState.size);
     }
 }
 
@@ -877,6 +1017,12 @@ function showVillagePopup(x, y) {
     reserveToggle.dataset.villageId = village.id;
     reserveScope.dataset.villageId = village.id;
     noteTextarea.dataset.villageId = village.id;
+    reserveToggle.dataset.x = x;
+    reserveToggle.dataset.y = y;
+    reserveScope.dataset.x = x;
+    reserveScope.dataset.y = y;
+    noteTextarea.dataset.x = x;
+    noteTextarea.dataset.y = y;
     reserveToggle.checked = !!annotation.reserved;
     reserveScope.value = annotation.reserved || 'self';
     noteTextarea.value = annotation.note || '';
@@ -955,13 +1101,15 @@ function renderMiniMap() {
         const relX = (v.x - minX) * scaleX + pad;
         const relY = (v.y - minY) * scaleY + pad;
         const relation = getVillageRelationClass(v);
-        const relationColors = {
-            'relation-own': '#2c7be5',
-            'relation-ally': '#4caf50',
-            'relation-enemy': '#c0392b',
-            'relation-neutral': '#d1a23d',
-            'relation-barb': '#7f8c8d'
-        };
+const relationColors = {
+    'relation-own': '#2c7be5',
+    'relation-ally': '#4caf50',
+    'relation-nap': '#1abc9c',
+    'relation-truce': '#6c757d',
+    'relation-enemy': '#c0392b',
+    'relation-neutral': '#d1a23d',
+    'relation-barb': '#7f8c8d'
+};
         ctx.fillStyle = relationColors[relation] || relationColors['relation-neutral'];
         ctx.fillRect(relX - 2, relY - 2, 4, 4);
     });

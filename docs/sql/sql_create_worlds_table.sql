@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS worlds (
     build_speed FLOAT NOT NULL DEFAULT 1.0,
     train_speed FLOAT NOT NULL DEFAULT 1.0,
     research_speed FLOAT NOT NULL DEFAULT 1.0,
+    resource_multiplier DECIMAL(6,3) NOT NULL DEFAULT 1.0,
+    vault_protect_pct INT NOT NULL DEFAULT 10,
     enable_archer TINYINT(1) NOT NULL DEFAULT 1,
     enable_paladin TINYINT(1) NOT NULL DEFAULT 1,
     enable_paladin_weapons TINYINT(1) NOT NULL DEFAULT 1,
