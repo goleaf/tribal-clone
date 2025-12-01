@@ -1575,17 +1575,9 @@ class BattleManager
                         $vaultPct = (float)$wm->getVaultProtectionPercent();
                     }
                 }
-                $vaultFactor = max(0.0, min(100.0, $vaultPct)) / 100.0;
-                $vaultProtected = [
-                    'wood' => (int)ceil(($res['wood'] ?? 0) * $vaultFactor),
-                    'clay' => (int)ceil(($res['clay'] ?? 0) * $vaultFactor),
-                    'iron' => (int)ceil(($res['iron'] ?? 0) * $vaultFactor),
-                ];
-                $available = [
-                    'wood' => max(0, $res['wood'] - max($hiddenPerResource, $vaultProtected['wood'])),
-                    'clay' => max(0, $res['clay'] - max($hiddenPerResource, $vaultProtected['clay'])),
-                    'iron' => max(0, $res['iron'] - max($hiddenPerResource, $vaultProtected['iron'])),
-                ];
+                $protection = self::computeLootableResources($res, $hiddenPerResource, $vaultPct);
+                $vaultProtected = $protection['protected'];
+                $available = $protection['available'];
                 $availableAfterProtection = $available;
 
                 $max_available = $available['wood'] + $available['clay'] + $available['iron'];

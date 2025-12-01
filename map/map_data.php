@@ -568,6 +568,8 @@ $unitSpeeds = [];
         $speedStmt->close();
     }
 
+$movementBatchCursor = time();
+
 $payload = [
     'map_version' => defined('MAP_API_VERSION') ? (int)MAP_API_VERSION : 1,
     'center' => ['x' => $centerX, 'y' => $centerY],
@@ -582,6 +584,8 @@ $payload = [
     'unit_speeds' => $unitSpeeds,
     'movements_truncated' => $movementsTruncated,
     'movements_limit' => $movementsLimit,
+    'movement_batches' => $movementBatches,
+    'movement_batch_cursor' => $movementBatchCursor,
     'low_perf' => $lowPerfMode,
     'map_features' => $mapFeatures
 ];

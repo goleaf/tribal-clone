@@ -10,7 +10,7 @@
 - [x] **Rate Limits:** Throttle marker drops and command-visualization fetches per user; return `ERR_RATE_LIMITED` with retry-after. _(per-user map fetch limiter added)_
 - [x] **Accessibility:** Provide high-contrast palette for diplomacy/overlays, keyboard navigation for selection/filter toggles, and reduced-motion mode for command lines. _(high-contrast + reduced-motion toggles live on map toolbar; arrow keys now pan the map)_
 - [x] **Metrics:** Track map request rate, cache hit %, average payload size, and client render time; alert on spikes in payload or render latency. _(server logs map_metrics; client render time now posted via ajax/telemetry/map_perf.php sampling)_
-- **Batching:** Collapse incoming command updates into 1s batches per village; send deltas instead of full lists. Batch marker updates similarly.
+- [x] **Batching:** Collapse incoming command updates into 1s batches per village; send deltas instead of full lists. Batch marker updates similarly. _(map_data emits per-village movement_batches buckets with cursor for delta-friendly polling while retaining full movement lists for legacy clients)_
 - **Pagination:** Paginate command lists (incoming/outgoing/support/trade/scout) for selected areas; lazy-load on scroll.
 - [x] **Skeletons:** Implement skeleton states for zoom levels while tiles/commands load; avoid jarring redraws on pan/zoom. _(skeleton grid scales to requested map size and stays visible during fetch/render)_
 - **Testing:** Simulate 500+ concurrent commands on a sector; assert p95 render < 200ms on mid-tier mobile and server responses < 200ms with caching enabled.
@@ -68,7 +68,7 @@
 - Payloads: test JSON vs binary delta payloads for size and CPU cost; choose defaults per world type; document thresholds to auto-switch.
 
 ## Rollout Checklist
-- [x] Feature flags per world for batching/pagination/clustering/fallback mode; enable gradually by archetype. _(world settings now include map_batching/map_clustering/map_delta/map_fallback booleans surfaced via map_data payload)_
+- [x] Feature flags per world for batching/pagination/clustering/fallback mode; enable gradually by archetype. _(world settings now include map_batching/map_clustering/map_delta/map_fallback/map_pagination booleans surfaced via map_data payload)_
 - [x] Schema/config changes (if any) for map settings validated with rollback; ensure new settings are read with sane defaults when absent. _(WorldManager now includes map feature columns + defaults and map_data reads helpers; defaults stay false if columns absent)_
 - [x] Backward compatibility: maintain legacy map endpoints/fields while new deltas/clustering roll out; version responses to avoid client breaks. _(map_data now includes a version field and retains legacy fields; map feature flags remain optional/false when absent)_
 - [x] Release comms/help: explain new map performance modes (conditional requests, clustering, fallback) and how to toggle high-contrast/reduced-motion. _(see docs/map_performance_comms.md for release copy + FAQ)_
