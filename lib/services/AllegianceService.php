@@ -9,15 +9,21 @@ class AllegianceService
     private float $baseRegenPerHour;
     private float $wallReductionPerLevel;
     private int $floorAfterCapture;
+    private int $antiSnipeFloor;
+    private int $antiSnipeSeconds;
 
     public function __construct(
         float $baseRegenPerHour = 2.0,
         float $wallReductionPerLevel = 0.02,
-        int $floorAfterCapture = 25
+        int $floorAfterCapture = 25,
+        int $antiSnipeFloor = 10,
+        int $antiSnipeSeconds = 900
     ) {
         $this->baseRegenPerHour = $baseRegenPerHour;
         $this->wallReductionPerLevel = $wallReductionPerLevel;
         $this->floorAfterCapture = $floorAfterCapture;
+        $this->antiSnipeFloor = $antiSnipeFloor;
+        $this->antiSnipeSeconds = $antiSnipeSeconds;
     }
 
     /**
@@ -52,10 +58,15 @@ class AllegianceService
 
         $newAllegiance = max(0, $current - $effectiveDrop);
         $captured = !$antiSnipeActive && $newAllegiance <= 0;
+        $floorApplied = null;
         if ($captured) {
             $newAllegiance = max(0, $this->floorAfterCapture);
+            $floorApplied = $this->floorAfterCapture;
+        } elseif ($antiSnipeActive && $newAllegiance < $this->antiSnipeFloor) {
+            $floorApplied = $this->antiSnipeFloor;
+            $newAllegiance = $this->antiSnipeFloor;
         }
-        return [$newAllegiance, $captured, $effectiveDrop, null];
+        return [$newAllegiance, $captured, $effectiveDrop, $floorApplied];
     }
 
     /**
@@ -69,6 +80,54 @@ class AllegianceService
         $perSecond = $this->baseRegenPerHour / 3600.0;
         $regen = $perSecond * $elapsedSeconds;
         return $this->clamp((int)round($current + $regen));
+    }
+
+    /**
+     * Get anti-snipe configuration (floor and duration).
+     */
+    public function getAntiSnipeSettings(): array
+    {
+        return [
+            'floor' => $this->antiSnipeFloor,
+            'duration_seconds' => $this->antiSnipeSeconds
+        ];
+    }
+
+    /**
+     * Full resolution helper: regen tick + wave application + anti-snipe metadata.
+     */
+    public function resolveWaveWithRegen(
+        int $current,
+        int $elapsedSeconds,
+        int $survivingBearers,
+        int $wallLevel,
+        bool $attackerWon,
+        bool $antiSnipeActive,
+        ?float $multiplier = null,
+        ?int $antiSnipeUntil = null
+    ): AllegianceResult {
+        $regen = $this->regen($current, $elapsedSeconds, $antiSnipeActive);
+        [$afterDrop, $captured, $dropApplied, $floorApplied] = $this->applyWave(
+            $regen,
+            $survivingBearers,
+            $wallLevel,
+            $attackerWon,
+            $multiplier,
+            $antiSnipeActive
+        );
+
+        $nextTickAt = time();
+        return new AllegianceResult(
+            $afterDrop,
+            $captured,
+            $dropApplied,
+            $regen - $current,
+            $floorApplied,
+            $nextTickAt,
+            $antiSnipeActive,
+            $antiSnipeUntil,
+            null
+        );
     }
 
     private function clamp(int $val): int

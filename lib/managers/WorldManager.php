@@ -57,11 +57,17 @@ class WorldManager
             'build_speed' => 1.0,
             'train_speed' => 1.0,
             'research_speed' => 1.0,
+            'inf_train_multiplier' => 1.0,
+            'cav_train_multiplier' => 1.0,
+            'rng_train_multiplier' => 1.0,
+            'siege_train_multiplier' => 1.0,
             'night_bonus_enabled' => false,
             'night_start_hour' => 22,
             'night_end_hour' => 6,
             'resource_production_multiplier' => 1.0,
+            'resource_multiplier' => 1.0,
             'vault_protection_percent' => 0.0,
+            'vault_protect_pct' => 0.0,
             'resource_decay_enabled' => false,
             'enable_archer' => true,
             'enable_paladin' => true,
@@ -86,7 +92,7 @@ class WorldManager
                         foreach ($selectable as $key) {
                             if (array_key_exists($key, $row) && $row[$key] !== null) {
                                 $val = $row[$key];
-                                if (in_array($key, ['world_speed', 'troop_speed', 'build_speed', 'train_speed', 'research_speed', 'resource_production_multiplier', 'vault_protection_percent'], true)) {
+                                if (in_array($key, ['world_speed', 'troop_speed', 'build_speed', 'train_speed', 'research_speed', 'resource_production_multiplier', 'resource_multiplier', 'vault_protection_percent', 'vault_protect_pct', 'inf_train_multiplier', 'cav_train_multiplier', 'rng_train_multiplier', 'siege_train_multiplier'], true)) {
                                     $defaults[$key] = (float)$val;
                                 } elseif ($key === 'tribe_member_limit' || $key === 'victory_value') {
                                     $defaults[$key] = $val === null ? null : (int)$val;
@@ -131,6 +137,21 @@ class WorldManager
     {
         $settings = $this->getSettings($worldId);
         return max(0.1, (float)($settings['train_speed'] ?? 1.0));
+    }
+
+    public function getTrainSpeedForArchetype(string $archetype, int $worldId = CURRENT_WORLD_ID): float
+    {
+        $settings = $this->getSettings($worldId);
+        $key = match (strtolower($archetype)) {
+            'inf' => 'inf_train_multiplier',
+            'cav' => 'cav_train_multiplier',
+            'rng' => 'rng_train_multiplier',
+            'siege' => 'siege_train_multiplier',
+            default => null,
+        };
+        $base = $this->getTrainSpeed($worldId);
+        $mult = $key && array_key_exists($key, $settings) ? (float)$settings[$key] : 1.0;
+        return max(0.1, $base * $mult);
     }
 
     public function getResearchSpeed(int $worldId = CURRENT_WORLD_ID): float

@@ -27,6 +27,7 @@ class UnitManager
     private function loadUnitTypes()
     {
         $result = $this->conn->query("SELECT * FROM unit_types WHERE is_active = 1");
+        $conquestEnabled = defined('FEATURE_CONQUEST_UNIT_ENABLED') ? (bool)FEATURE_CONQUEST_UNIT_ENABLED : true;
 
         if ($result) {
             while ($row = $result->fetch_assoc()) {
@@ -38,6 +39,12 @@ class UnitManager
                     continue;
                 }
                 if (!$this->worldManager->isPaladinEnabled() && $internal === 'paladin') {
+                    continue;
+                }
+                if (
+                    !$conquestEnabled &&
+                    in_array($internal, ['noble', 'nobleman', 'standard_bearer', 'envoy'], true)
+                ) {
                     continue;
                 }
                 $this->unit_types_cache[$row['id']] = $row;
@@ -58,6 +65,31 @@ class UnitManager
     public function getUnitById(int $id): ?array
     {
         return $this->unit_types_cache[$id] ?? null;
+    }
+
+    /**
+     * Resolve a coarse archetype for a unit for world multipliers.
+     */
+    private function resolveUnitArchetype(array $unit): string
+    {
+        $buildingType = strtolower($unit['building_type'] ?? '');
+        $internal = strtolower($unit['internal_name'] ?? '');
+
+        if ($buildingType === 'stable') {
+            return 'cav';
+        }
+        if ($buildingType === 'workshop' || $buildingType === 'garage') {
+            return 'siege';
+        }
+        if ($buildingType === 'barracks') {
+            // Treat obvious ranged names as ranged archetype.
+            if (str_contains($internal, 'archer') || str_contains($internal, 'bow') || str_contains($internal, 'ranger')) {
+                return 'rng';
+            }
+            return 'inf';
+        }
+        // Default to infantry if not matched.
+        return 'inf';
     }
 
     /**
@@ -102,7 +134,8 @@ class UnitManager
         require_once __DIR__ . '/WorldManager.php';
         $wm = new WorldManager($this->conn);
         $worldSpeed = $wm->getWorldSpeed();
-        $trainMultiplier = $wm->getTrainSpeed();
+        $archetype = $this->resolveUnitArchetype($unit);
+        $trainMultiplier = $wm->getTrainSpeedForArchetype($archetype);
 
         $time = $time / ($worldSpeed * $trainMultiplier);
 

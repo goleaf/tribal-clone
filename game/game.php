@@ -66,6 +66,7 @@ if (!empty($attackMessages)) {
 $buildings_data = $buildingManager->getVillageBuildingsViewData($village_id, $main_building_level);
 $production_rates = $resourceManager->getProductionRates($village_id);
 $active_upgrades = array_filter($buildings_data, static fn($b) => !empty($b['is_upgrading']));
+$build_queue_count = $buildingManager->getActivePendingQueueCount($village_id) ?? 0;
 
 // --- PAGE META ---
 $pageTitle = htmlspecialchars($village['name']) . ' - Village Overview';
@@ -114,6 +115,11 @@ require '../header.php';
             <?php if (!empty($message)): ?>
                 <div class="game-message accent">
                     <?= $message ?>
+                </div>
+            <?php endif; ?>
+            <?php if ($build_queue_count === 0): ?>
+                <div class="game-message info">
+                    Build queue is idle — start an upgrade to keep growing.
                 </div>
             <?php endif; ?>
             <?php if ($showDominanceBanner && isset($dominanceSnapshot['top'])): ?>

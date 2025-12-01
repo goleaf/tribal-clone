@@ -138,6 +138,12 @@
 - Hospital (if enabled) recovers correct % and respects speed by level; reports show wounded recovered.
 - Outposts expire correctly, block creation when hostile commands inbound, and clean up queues/markers on expiry.
 - Wall damage/repair queues apply expected level changes; optional decay toggles on/off per world.
+
+## Open Questions
+- Should parallel construction be globally allowed (resource + military) or world-configurable, and how to message when blocked?
+- Do hospitals recover wounded after all battles or only defenses? Define to avoid free sustain for attackers.
+- For watchtower detection of noble-bearing commands, is there a minimum scout count or always-on per level? Clarify for UI.
+- How many concurrent minting/training slots should Hall of Banners support (1 vs world-configurable), and does it share queue with other buildings?
 - [ ] Validation & errors: enforce prerequisites on queue submit, reject negative/zero levels, block builds while protected zones forbid (e.g., wall in safe zones if disallowed), and return reason codes (`ERR_PREREQ`, `ERR_POP`, `ERR_RES`, `ERR_PROTECTED`, `ERR_CAP`).
 - [ ] Auditing/telemetry: log build queue actions (add/reorder/cancel), costs, refunds, and actor; emit metrics on queue uptime, average build level per village type, and error-rate spikes.
 - [ ] Caching: cache per-building cost/time curves server-side with versioning; bust cache on config changes; expose version in API for client-side cache.

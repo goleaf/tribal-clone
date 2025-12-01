@@ -7,6 +7,29 @@ require_once '../lib/functions.php';
 header('Content-Type: application/json; charset=utf-8');
 // Encourage client-side caching; precise values finalized below after we compute freshness.
 header('Cache-Control: public, max-age=15, must-revalidate');
+$metricsStart = microtime(true);
+$mapMetricLog = __DIR__ . '/../logs/map_metrics.log';
+if (!is_dir(__DIR__ . '/../logs')) {
+    mkdir(__DIR__ . '/../logs', 0777, true);
+}
+
+function logMapMetric(int $status, int $bytes, string $etag, int $userId, int $centerX, int $centerY, int $size, float $durationMs, string $cacheStatus, string $logFile): void
+{
+    $line = sprintf(
+        "[%s] status=%d cache=%s bytes=%d dur_ms=%.2f etag=%s user=%d center=(%d,%d) size=%d\n",
+        date('Y-m-d H:i:s'),
+        $status,
+        $cacheStatus,
+        $bytes,
+        $durationMs,
+        $etag,
+        $userId,
+        $centerX,
+        $centerY,
+        $size
+    );
+    @file_put_contents($logFile, $line, FILE_APPEND);
+}
 
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
@@ -30,6 +53,8 @@ if (count($_SESSION['map_rate']) >= $rateMax) {
         'code' => 'ERR_RATE_LIMITED',
         'retry_after' => $retryAfter
     ]);
+    $durationMs = (microtime(true) - $metricsStart) * 1000;
+    logMapMetric(429, 0, 'n/a', (int)($_SESSION['user_id'] ?? 0), 0, 0, 0, $durationMs, 'rate_limit', $mapMetricLog);
     exit;
 }
 $_SESSION['map_rate'][] = $now;
@@ -90,9 +115,20 @@ function isUnderBeginnerProtection(array $userRow): bool
     return $days < $maxDays;
 }
 
+function computeActivityBucket(?int $lastActivityTs): string
+{
+    if (!$lastActivityTs) return 'unknown';
+    $diff = time() - $lastActivityTs;
+    if ($diff <= 3600) return '1h';
+    if ($diff <= 6 * 3600) return '6h';
+    if ($diff <= 24 * 3600) return '24h';
+    if ($diff <= 72 * 3600) return '72h';
+    return 'stale';
+}
+
 // Fetch villages with owner info inside the viewport
 $stmt = $conn->prepare("
-    SELECT v.id, v.x_coord, v.y_coord, v.name, v.user_id, v.points, u.username, u.ally_id, u.is_protected, u.created_at
+    SELECT v.id, v.x_coord, v.y_coord, v.name, v.user_id, v.points, u.username, u.ally_id, u.is_protected, u.created_at, u.last_activity_at
     FROM villages v
     LEFT JOIN users u ON v.user_id = u.id
     WHERE v.world_id = ? 
@@ -117,6 +153,7 @@ while ($row = $result->fetch_assoc()) {
     $ownerType = ($villageOwnerId === null || $villageOwnerId === -1) ? 'barbarian' : 'player';
     $isOwn = $villageOwnerId === $user_id;
     $createdAtTs = isset($row['created_at']) ? strtotime($row['created_at']) : 0;
+    $lastActivityTs = isset($row['last_activity_at']) ? strtotime($row['last_activity_at']) : null;
     if ($createdAtTs > $lastModifiedTs) {
         $lastModifiedTs = $createdAtTs;
     }
@@ -128,7 +165,9 @@ while ($row = $result->fetch_assoc()) {
         'ally_id' => $row['ally_id'] ?? null,
         'is_protected' => isset($row['is_protected']) ? (int)$row['is_protected'] : 0,
         'created_at' => $row['created_at'] ?? null,
+        'last_activity_at' => $row['last_activity_at'] ?? null,
     ];
+    $activityBucket = computeActivityBucket($lastActivityTs);
 
     $villages[] = [
         'id' => (int)$row['id'],
@@ -143,6 +182,8 @@ while ($row = $result->fetch_assoc()) {
         'is_own' => $isOwn,
         'is_protected' => $villageOwnerId > 0 ? isUnderBeginnerProtection($userRow) : false,
         'continent' => getContinent((int)$row['x_coord'], (int)$row['y_coord']),
+        'activity_bucket' => $activityBucket,
+        'last_activity_at' => $lastActivityTs,
         // Reserved and movement flags can be filled once those systems exist.
         'reserved_by' => null,
         'reserved_team' => null,
@@ -331,6 +372,11 @@ $etag = '"' . sha1($json) . '"';
 $lastModifiedTs = $lastModifiedTs ?: time();
 $lastModifiedHeader = gmdate('D, d M Y H:i:s', $lastModifiedTs) . ' GMT';
 $ttlSeconds = 15; // keep small for active map polling
+$ifNoneMatch = $_SERVER['HTTP_IF_NONE_MATCH'] ?? '';
+$ifModifiedSince = $_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? '';
+$ifModifiedSinceTs = $ifModifiedSince ? strtotime($ifModifiedSince) : 0;
+$durationMs = (microtime(true) - $metricsStart) * 1000;
+$cacheStatus = 'miss';
 
 foreach ([
     'Cache-Control' => 'public, max-age=' . $ttlSeconds . ', must-revalidate',
@@ -340,4 +386,19 @@ foreach ([
     header($k . ': ' . $v);
 }
 
+if ($ifNoneMatch && trim($ifNoneMatch) === $etag) {
+    $cacheStatus = 'etag';
+    http_response_code(304);
+    logMapMetric(304, 0, $etag, $user_id, $centerX, $centerY, $size, $durationMs, $cacheStatus, $mapMetricLog);
+    exit;
+}
+
+if ($ifModifiedSinceTs && $ifModifiedSinceTs >= $lastModifiedTs) {
+    $cacheStatus = 'last-modified';
+    http_response_code(304);
+    logMapMetric(304, 0, $etag, $user_id, $centerX, $centerY, $size, $durationMs, $cacheStatus, $mapMetricLog);
+    exit;
+}
+
 echo $json;
+logMapMetric(200, strlen($json), $etag, $user_id, $centerX, $centerY, $size, $durationMs, $cacheStatus, $mapMetricLog);

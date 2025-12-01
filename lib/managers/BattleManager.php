@@ -172,7 +172,7 @@ class BattleManager
                 return [
                     'success' => false,
                     'error' => 'You are under beginner protection and cannot attack stronger players yet.',
-                    'code' => 'BEGINNER_ATTACKER'
+                    'code' => 'ERR_PROTECTED'
                 ];
             }
         }
@@ -225,7 +225,7 @@ class BattleManager
                 return [
                     'success' => false,
                     'error' => $protectionCheck['error'] ?? 'Attack blocked due to beginner protection.',
-                    'code' => 'BEGINNER_BLOCK'
+                    'code' => 'ERR_PROTECTED'
                 ];
             }
         }
@@ -255,8 +255,15 @@ class BattleManager
         }
         $stmt_check_units->close();
         
-        // Ensure the player is not sending more units than available
+        // Ensure the player is not sending more units than available and counts are positive
         foreach ($units_sent as $unit_type_id => $count) {
+            if ($count <= 0) {
+                return [
+                    'success' => false,
+                    'error' => 'Unit counts must be positive.',
+                    'code' => 'ERR_INPUT'
+                ];
+            }
             if (!isset($available_units[$unit_type_id]) || $available_units[$unit_type_id] < $count) {
                 return [
                     'success' => false,
@@ -342,14 +349,14 @@ class BattleManager
                 return [
                     'success' => false,
                     'error' => 'Beginner shield: siege or loyalty attacks are blocked on protected villages.',
-                    'code' => 'BEGINNER_SIEGE_BLOCK'
+                    'code' => 'ERR_PROTECTED'
                 ];
             }
             if (!$raidAllowed) {
                 return [
                     'success' => false,
                     'error' => 'This village is under beginner protection. Raids are allowed only after 24 hours of account age.',
-                    'code' => 'BEGINNER_SHIELD'
+                    'code' => 'ERR_PROTECTED'
                 ];
             }
         }
@@ -747,7 +754,7 @@ class BattleManager
             FROM attacks
             WHERE is_completed = 0 AND is_canceled = 0 AND arrival_time <= ?
               AND (FIND_IN_SET(source_village_id, ?) OR FIND_IN_SET(target_village_id, ?))
-            ORDER BY arrival_time ASC
+            ORDER BY arrival_time ASC, id ASC
         ");
         
          if ($stmt_get_attacks === false) {
@@ -1368,10 +1375,26 @@ class BattleManager
                 $stmt_res->close();
 
                 $hiddenPerResource = $this->getHiddenResourcesPerType($attack['target_village_id']);
+                $vaultPct = 0.0;
+                if (!class_exists('WorldManager')) {
+                    require_once __DIR__ . '/WorldManager.php';
+                }
+                if (class_exists('WorldManager')) {
+                    $wm = new WorldManager($this->conn);
+                    if (method_exists($wm, 'getVaultProtectionPercent')) {
+                        $vaultPct = (float)$wm->getVaultProtectionPercent();
+                    }
+                }
+                $vaultFactor = max(0.0, min(100.0, $vaultPct)) / 100.0;
+                $vaultProtected = [
+                    'wood' => (int)ceil(($res['wood'] ?? 0) * $vaultFactor),
+                    'clay' => (int)ceil(($res['clay'] ?? 0) * $vaultFactor),
+                    'iron' => (int)ceil(($res['iron'] ?? 0) * $vaultFactor),
+                ];
                 $available = [
-                    'wood' => max(0, $res['wood'] - $hiddenPerResource),
-                    'clay' => max(0, $res['clay'] - $hiddenPerResource),
-                    'iron' => max(0, $res['iron'] - $hiddenPerResource),
+                    'wood' => max(0, $res['wood'] - max($hiddenPerResource, $vaultProtected['wood'])),
+                    'clay' => max(0, $res['clay'] - max($hiddenPerResource, $vaultProtected['clay'])),
+                    'iron' => max(0, $res['iron'] - max($hiddenPerResource, $vaultProtected['iron'])),
                 ];
 
                 $max_available = $available['wood'] + $available['clay'] + $available['iron'];
@@ -2106,12 +2129,20 @@ class BattleManager
 
         // Attacker under protection cannot attack outside protected range unless target is barbarian
         if ($attackerProtection && !$defenderProtection) {
-            return ['allowed' => false, 'error' => 'You are under beginner protection and cannot attack players outside protection.'];
+            return [
+                'allowed' => false,
+                'error' => 'You are under beginner protection and cannot attack other players yet.',
+                'code' => 'ERR_PROTECTED'
+            ];
         }
 
         // Defender under protection cannot be attacked by non-protected players
         if ($defenderProtection && !$attackerProtection) {
-            return ['allowed' => false, 'error' => 'Target player is under beginner protection.'];
+            return [
+                'allowed' => false,
+                'error' => 'Target player is under beginner protection.',
+                'code' => 'ERR_PROTECTED'
+            ];
         }
 
         return ['allowed' => true];

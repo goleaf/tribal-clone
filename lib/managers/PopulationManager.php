@@ -200,7 +200,7 @@ class PopulationManager
         $popCost = $this->getBuildingPopulationCost($buildingType, $targetLevel);
         
         if ($popCost === null) {
-            return ['success' => false, 'message' => 'Unknown building type.'];
+            return ['success' => false, 'message' => 'Unknown building type.', 'code' => 'ERR_INPUT'];
         }
         
         // Get current building level to calculate delta
@@ -222,7 +222,8 @@ class PopulationManager
                     $state['available'],
                     $state['used'],
                     $state['cap']
-                )
+                ),
+                'code' => 'ERR_POP'
             ];
         }
         

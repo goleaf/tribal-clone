@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../utils/EconomyError.php';
+
 class TradeManager {
     private $conn;
     private bool $tradeTablesEnsured = false;
@@ -161,7 +163,7 @@ class TradeManager {
         }
 
         if ($village['wood'] < $resources['wood'] || $village['clay'] < $resources['clay'] || $village['iron'] < $resources['iron']) {
-            return ['success' => false, 'message' => 'Not enough resources in this village.', 'code' => 'ERR_CAP'];
+            return ['success' => false, 'message' => 'Not enough resources in this village.', 'code' => EconomyError::ERR_CAP];
         }
 
         $targetVillage = $this->getVillageByCoords($targetX, $targetY);
@@ -174,13 +176,13 @@ class TradeManager {
 
         $marketLevel = $this->getMarketLevel($villageId);
         if ($marketLevel <= 0) {
-            return ['success' => false, 'message' => 'Build a market to send resources.', 'code' => 'ERR_CAP'];
+            return ['success' => false, 'message' => 'Build a market to send resources.', 'code' => EconomyError::ERR_CAP];
         }
 
         $tradersNeeded = $this->calculateTradersNeeded($resources);
         $availability = $this->getTraderAvailability($villageId);
         if ($availability['available'] < $tradersNeeded) {
-            return ['success' => false, 'message' => 'No traders available for this shipment.', 'code' => 'ERR_CAP'];
+            return ['success' => false, 'message' => 'No traders available for this shipment.', 'code' => EconomyError::ERR_CAP];
         }
 
         $distance = calculateDistance((float)$village['x_coord'], (float)$village['y_coord'], (float)$targetVillage['x_coord'], (float)$targetVillage['y_coord']);
@@ -456,7 +458,7 @@ class TradeManager {
     public function createOffer(int $userId, int $villageId, array $offerResources, array $requestResources): array
     {
         if (!$this->hasTradeOffersTable()) {
-            return ['success' => false, 'message' => 'Trading offers are not supported by this world yet.', 'code' => 'ERR_CAP'];
+            return ['success' => false, 'message' => 'Trading offers are not supported by this world yet.', 'code' => EconomyError::ERR_CAP];
         }
 
         $offerResources = [
@@ -484,17 +486,17 @@ class TradeManager {
 
         $marketLevel = $this->getMarketLevel($villageId);
         if ($marketLevel <= 0) {
-            return ['success' => false, 'message' => 'Build a market before creating offers.', 'code' => 'ERR_CAP'];
+            return ['success' => false, 'message' => 'Build a market before creating offers.', 'code' => EconomyError::ERR_CAP];
         }
 
         $tradersNeeded = $this->calculateTradersNeeded($offerResources);
         $availability = $this->getTraderAvailability($villageId);
         if ($availability['available'] < $tradersNeeded) {
-            return ['success' => false, 'message' => 'Not enough free traders to post this offer.', 'code' => 'ERR_CAP'];
+            return ['success' => false, 'message' => 'Not enough free traders to post this offer.', 'code' => EconomyError::ERR_CAP];
         }
 
         if ($village['wood'] < $offerResources['wood'] || $village['clay'] < $offerResources['clay'] || $village['iron'] < $offerResources['iron']) {
-            return ['success' => false, 'message' => 'Not enough resources to place this offer.', 'code' => 'ERR_CAP'];
+            return ['success' => false, 'message' => 'Not enough resources to place this offer.', 'code' => EconomyError::ERR_CAP];
         }
 
         $this->conn->begin_transaction();
@@ -611,7 +613,7 @@ class TradeManager {
     public function acceptOffer(int $userId, int $acceptingVillageId, int $offerId): array
     {
         if (!$this->hasTradeOffersTable()) {
-            return ['success' => false, 'message' => 'Trading offers are not supported by this world yet.', 'code' => 'ERR_CAP'];
+            return ['success' => false, 'message' => 'Trading offers are not supported by this world yet.', 'code' => EconomyError::ERR_CAP];
         }
 
         $offerStmt = $this->conn->prepare("
@@ -629,7 +631,7 @@ class TradeManager {
         $offerStmt->close();
 
         if (!$offer) {
-            return ['success' => false, 'message' => 'Offer not available anymore.', 'code' => 'ERR_CAP'];
+            return ['success' => false, 'message' => 'Offer not available anymore.', 'code' => EconomyError::ERR_CAP];
         }
 
         $acceptingVillage = $this->getVillageWithOwner($acceptingVillageId);
@@ -646,7 +648,7 @@ class TradeManager {
         // Market level check for the accepting village
         $marketLevel = $this->getMarketLevel($acceptingVillageId);
         if ($marketLevel <= 0) {
-            return ['success' => false, 'message' => 'Build a market before accepting offers.', 'code' => 'ERR_CAP'];
+            return ['success' => false, 'message' => 'Build a market before accepting offers.', 'code' => EconomyError::ERR_CAP];
         }
 
         // Resources + trader availability for the accepting village (to send requested goods)
@@ -659,13 +661,13 @@ class TradeManager {
 
         $availability = $this->getTraderAvailability($acceptingVillageId);
         if ($availability['available'] < $tradersNeededAcceptor) {
-            return ['success' => false, 'message' => 'Not enough traders available to accept this offer.', 'code' => 'ERR_CAP'];
+            return ['success' => false, 'message' => 'Not enough traders available to accept this offer.', 'code' => EconomyError::ERR_CAP];
         }
 
         if ($acceptingVillage['wood'] < $requiredFromAcceptor['wood'] ||
             $acceptingVillage['clay'] < $requiredFromAcceptor['clay'] ||
             $acceptingVillage['iron'] < $requiredFromAcceptor['iron']) {
-            return ['success' => false, 'message' => 'Not enough resources to accept this offer.', 'code' => 'ERR_CAP'];
+            return ['success' => false, 'message' => 'Not enough resources to accept this offer.', 'code' => EconomyError::ERR_CAP];
         }
 
         // Distance calculations
@@ -753,7 +755,7 @@ class TradeManager {
             ];
         } catch (Exception $e) {
             $this->conn->rollback();
-            return ['success' => false, 'message' => 'Could not accept offer: ' . $e->getMessage()];
+            return ['success' => false, 'message' => 'Could not accept offer: ' . $e->getMessage(), 'code' => EconomyError::ERR_CAP];
         }
     }
 
@@ -980,3 +982,4 @@ class TradeManager {
         }
     }
 }
+        require_once __DIR__ . '/../utils/EconomyError.php';

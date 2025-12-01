@@ -98,8 +98,8 @@
 - [x] Command ordering: deterministic tick ordering for simultaneous arrivals; include support if timestamp <= attack; log ordering for reports/audit. _(ordering spec below)_
 - [x] Fake/min-pop rules: enforce minimum payload for attack commands; tag fakes for reporting/intel filters; throttle sub-50-pop spam server-side. _(rate-limit spec added; fake tags surfaced for intel filters)_
 - [x] Overstack/penalties: optional world rule to apply diminishing defense past population threshold; ensure performance on large stacks. _(see overstack spec below)_
-- [ ] Night/terrain/weather flags: world-configurable toggles and modifiers; expose in battle report and UI.
-- [ ] Rate limits/backpressure: cap command creation per player/target/time window; apply friendly error codes; prevent laggy floods from degrading ticks.
+- [x] Night/terrain/weather flags: world-configurable toggles and modifiers; expose in battle report and UI. _(env modifier spec below)_
+- [x] Rate limits/backpressure: cap command creation per player/target/time window; apply friendly error codes; prevent laggy floods from degrading ticks. _(generic + scout-specific burst caps implemented in BattleManager)_
 - [ ] Reporting: generate battle reports with full context (modifiers, casualties, siege, plunder, allegiance change); redact intel when scouts die; support tribe sharing.
 
 ### Overstack Penalty Spec
@@ -117,15 +117,35 @@
 - **Determinism:** Stable sort with above keys; luck seeded per battle id; identical inputs yield identical outcomes across servers/replays.
 - **Logging:** Persist ordering list (command_id + arrival + sequence + type) for the tick in debug/audit; battle reports note “Simultaneous arrivals resolved; support included” when applicable.
 
+### Environment Modifiers (Night/Terrain/Weather) Spec
+- **World Flags:** `FEATURE_NIGHT_BONUS`, `FEATURE_TERRAIN_MODIFIERS`, `FEATURE_WEATHER_MODIFIERS` with per-world multiplier tables and schedules.
+- **Night Bonus:** Time windows per world; defender defense multiplier (e.g., 1.1–1.5) and optional scout/ram penalty. Applied after overstack and before luck. Reports show “Night bonus x1.xx”.
+- **Terrain:** Map tiles carry terrain; defense multipliers per unit type (forest buffs inf/ranged, plains buff cav, hills buff siege/def). Applied before wall/morale to keep ratios sensible. Stored on battle for replay consistency.
+- **Weather:** Rotating weather state per world/region (fog, rain, storm, clear) with effects: fog lowers scout fidelity and cav attack; rain lowers siege accuracy; storm narrows luck band. Timestamped and cached.
+- **UI/Reports:** Battle reports list active env modifiers and values; send form shows current night/weather state; incoming details flag noble detection + weather/night context.
+
+### Command Rate Limits & Backpressure Spec
+- **Per-player caps:** Sliding windows per sender (e.g., 30 commands/60s, 300/hour) with lower caps for scout spam; configurable per world and command type.
+- **Per-target caps:** Pair (attacker, target) limit (e.g., 5 commands/30s, 30/hour). Exceeding returns `ERR_RATE_LIMIT` with retry-after seconds.
+- **Backpressure:** When tick queue depth exceeds threshold, respond with `ERR_TRY_LATER` and recommended retry delay; log backpressure events and emit metrics.
+- **Storage:** Use fast cache keyed by sender and sender:target; sliding window counters; validated even if command ultimately blocked for protection/safe zone.
+- **Audit/UI:** Log rate-limit hits (sender_id, target_id, type, retry_after, ip_hash). UI shows friendly toast and next-available time; ops dashboards display spikes to tune defaults.
+
 ## QA & Acceptance
 - [ ] Unit tests for combat resolver: modifiers (morale/luck/night/terrain), siege damage scaling, overstack penalty, and proportional casualties.
 - [ ] Conquest hook tests: capture only on attacker win + surviving conquest units; blocked by protection/cooldowns; reason codes returned.
 - [ ] Timing tests: simultaneous arrivals ordering, support inclusion, and anti-sniping spacing enforcement.
 - [ ] Rate-limit tests: command creation caps and fake/min-pop enforcement return correct errors; no tick degradation under spam.
 - [ ] Report validation: reports show correct deltas, modifiers, plunder, allegiance change, and redact intel when scouts die; tribe sharing works with permissions.
+
+## Open Questions
+- Should casualty proportionality be linear or tuned per unit class (e.g., siege attrition different)? Decide before implementation.
+- How to seed luck for fairness (per-battle fixed seed vs per-round variance) to prevent variance stacking abuse?
+- What is the exact min-pop rule for fakes across worlds (uniform vs world-specific)? Document and expose to UI.
 - [ ] Safeguards: block attacks vs protected/newbie targets (return `ERR_PROTECTED`); validate payloads (non-zero troops, no negative counts); clamp luck/morale to configured ranges.
 - [ ] Audit/telemetry: log battle resolution traces with correlation ids; emit metrics (tick duration, battles resolved, casualty calc errors, report generation failures); alert on spikes.
 - [ ] Load tests: simulate large stacked battles and fake floods to validate performance of casualty loops, overstack penalties, and command ordering under load.
 - [ ] Determinism tests: ensure identical inputs produce identical casualty/wall/allegiance outputs across servers and replays.
 - [ ] Property fuzzing: fuzz negative/overflow troop counts, extreme modifiers, and malformed commands; expect graceful errors not crashes.
 - [ ] Integration sims: end-to-end scenarios covering fakes + clears + conquest waves + overstack penalties + night/weather; compare against golden reports.
+- [ ] Anti-cheat signals: flag impossible command patterns (sub-100ms repeated sends bypassing fake throttles), duplicate command ids, and tampered payloads; resolver must reject with reason codes and log for audit.

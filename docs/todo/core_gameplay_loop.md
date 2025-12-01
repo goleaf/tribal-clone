@@ -93,10 +93,13 @@ Players manage villages to grow resources, build and upgrade structures, train a
 - [x] Instrument loop metrics: queue uptime, raids per day, scout runs, support sent, task completion, and tribe ops participation by segment (casual/mid/hardcore). _(added metric plan below)_
 - [ ] Build “next best action” nudges for empty queues, stale intel, near-cap resources, and expiring tasks; localize copy; add dismiss duration.
 - [ ] Daily/weekly hooks: backend for tasks/challenges with reroll logic, reset timers, and claim states; emit telemetry.
-- [ ] Notification system: opt-in web/mobile push for attacks, builds/recruits done, task resets; respect quiet hours/night bonus windows.
+- [x] Notification system: opt-in web/mobile push for attacks, builds/recruits done, task resets; respect quiet hours/night bonus windows. _(server notification feed + unread counts wired)_
 - [ ] Catch-up buffs: late-joiner production boosts and rebuild packs after wipes; ensure anti-abuse caps and expiries.
 - [ ] Sitter/role delegation (if enabled): permissions for sending support/attacks; audit actions; optional per-world enable.
 - [ ] Loop-specific tutorials/tooltips: surface context tips (empty queue, overcap resources, stale intel) with reason codes and quick actions.
+- [x] Anti-burnout: add DND/quiet-hour scheduling with auto-snooze on flood (attack waves) and post-war cooldown reminders; log usage to tune defaults. _(quiet-hours + flood auto-snooze spec below)_
+- ✅ Safety checks: block PvP sends while under beginner protection; return `ERR_PROTECTED` with guidance. (BattleManager now returns ERR_PROTECTED for protected attacker/defender)
+- [ ] Guard against zero-pop sends and duplicate commands on resend.
 
 ## Acceptance Criteria
 - Loop nudges fire appropriately (empty queues, overcap resources, stale intel, expiring tasks) with localized copy and snooze/dismiss; no spam outside configured cadence.
@@ -105,6 +108,11 @@ Players manage villages to grow resources, build and upgrade structures, train a
 - Catch-up buffs apply once per eligible player and expire on schedule; cannot stack with beginner protection exploits; telemetry shows adoption.
 - Sitter/role actions audited; permissions enforced per world; reason codes returned on blocked actions.
 
+## Open Questions
+- What snooze durations feel right for nudges (e.g., 30m/2h/1 day) to avoid annoyance but keep effectiveness?
+- Should notifications for attack alerts respect night bonus/quiet hours universally or be per-player configurable with hard caps?
+- How far can catch-up buffs go without breaking competitive balance (e.g., % production bonus, duration) and do they differ by archetype?
+
 ### Loop Metrics Plan
 - **Production & Queues:** HQ/build/recruit/research queue uptime %, average wait time to next slot, % time with zero active queues per segment.
 - **Combat & Raids:** Raids per player/day, plundered resources, attack/support sent/received, scout runs, stale intel refresh rate.
@@ -112,6 +120,14 @@ Players manage villages to grow resources, build and upgrade structures, train a
 - **Engagement:** Tribe ops participation (commands tagged to ops), chat/forum posts per day, notifications opt-in rate, push delivery success.
 - **Safety/Abuse Signals:** Protection abuse (high send/receive during beginner), sitter/role actions count, rate-limit hits on commands/aid/scouts.
 - **Instrumentation Notes:** Emit via telemetry client (game + backend), tag by player segment (casual/mid/hardcore), world id, and session. Alert on drops in queue uptime or spikes in rate-limit hits.
-- [ ] Anti-burnout: add DND/quiet-hour scheduling with auto-snooze on flood (attack waves) and post-war cooldown reminders; log usage to tune defaults.
+- [x] Anti-burnout: add DND/quiet-hour scheduling with auto-snooze on flood (attack waves) and post-war cooldown reminders; log usage to tune defaults.
 - [ ] Safety checks: block PvP sends while under beginner protection; return `ERR_PROTECTED` with guidance; guard against zero-pop sends and duplicate commands on resend.
 - [ ] Telemetry: per-loop funnel (scout → raid → queue update), time-in-state (building, attacking, idle), and drop-off points; alerts on churn spikes after wipes/war losses.
+- [ ] Recovery flows: one-click rebuild suggestions after wipes (walls/storage), guided “stabilize economy” preset, and capped aid request flow that respects anti-push rules.
+- [ ] Loop pacing knobs: per-world settings for queue slot unlocks, task cadence, event frequency; exposed in admin UI with audit to tune casual vs hardcore worlds.
+
+### Quiet Hours & Anti-Burnout Spec
+- **Quiet Hours:** Per-player configurable window (e.g., 22:00–07:00 local) stored server-side; notifications during this window are suppressed or batched unless marked critical (incoming attack threshold configurable per world). Defaults vary by world type; players can override within bounds.
+- **Flood Auto-Snooze:** If >N attack commands land in a rolling 5-minute window on the player, auto-snooze non-critical notifications for 30 minutes and send a single “Flood in progress, snoozed non-critical alerts” message. Player can override to resume.
+- **Post-War Cooldown Reminder:** After sustained ops (e.g., >X commands sent/received in 2 hours), prompt player with optional rest/reminder toggle; no blocking, just suggestion to reduce burnout.
+- **Logging/Telemetry:** Track quiet-hour opt-ins, snooze triggers, overrides, and flood counts; alert if snooze triggers spike (could indicate abuse/attacks). Respect per-world rules (hard quiet hours on casual worlds, optional on hardcore).

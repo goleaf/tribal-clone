@@ -23,6 +23,7 @@
 - **Server-side culling:** Curb returned commands/markers outside viewport + padding; enforce max payload size with continuation tokens.
 - **Client perf logging:** Log render duration and dropped frames on map interactions (sampled); ship to telemetry for regression tracking.
 - **Fallback mode:** If device perf is low (dropped frames threshold), auto-switch to simplified visuals: hide minor overlays, reduce command line density/update frequency; allow user opt-back.
+- **Offline/poor-connection mode:** Cache last tiles/markers for current viewport; queue marker drops locally and sync on reconnect with conflict resolution; show stale indicator on data.
 
 ## Acceptance Criteria
 - Map endpoints return 304 with ETag/Last-Modified when unchanged; payload size tracked and stable under load.

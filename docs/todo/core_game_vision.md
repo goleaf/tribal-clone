@@ -100,7 +100,8 @@
 ## Implementation TODOs
 - [ ] Pillar alignment audit: map systems (combat, conquest, tribes, economy, map) to pillars (tribe-first, clarity, counterplay, fairness, recovery, variety) and flag gaps.
 - [ ] Lexicon pass: replace legacy tribal-war terms with unique naming across UI/tutorials/marketing; maintain a glossary.
-- [ ] World presets: document archetype defaults (casual/classic/hardcore/experimental/seasonal) consistent with this vision.
+  - Progress: IP-safe glossary created (docs/ip-glossary.md) and unit/building renames underway.
+- [x] World presets: documented archetype defaults (casual/classic/hardcore/experimental/seasonal) in `docs/world-presets.md`.
 - [ ] Vision KPIs: track fairness (protection/rate-limit hits), social engagement (ops, chat), progression pacing (time to 2nd village), and spend-parity metrics.
 - [ ] Player-facing manifesto: in-game/help page with vision/pillars and anti-P2W stance; keep in sync with marketing copy.
 - [ ] Differentiation proof: document unique mechanics (influence-based conquest, weather fronts, beacon networks, intel decay/misdirection) with comparisons to legacy games to support IP defensibility.
@@ -112,3 +113,10 @@
 - World preset docs published with defaults and rationale; used in world creation flows.
 - Vision KPIs wired to telemetry/dashboard with weekly review; alerts on fairness/social/pacing regressions.
 - Manifesto page live in help/marketing; updated when vision changes; clearly states anti-P2W stance.
+- Differentiation proof doc published comparing unique mechanics vs legacy games; legal/IP review signed off.
+- UX tone guide adopted in string linting/localization; audits show removal of legacy jargon in tooltips/reports/tutorials.
+
+## Open Questions
+- Which legacy terms are still risky for IP overlap and need renaming first? (list candidates and owners)
+- How frequently should the vision/pillar audit be revisited (per season, per major release)?
+- Do archetype presets need hard enforcement or are they templates with warnings on divergence?

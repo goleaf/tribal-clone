@@ -296,7 +296,8 @@ class BuildingManager {
                 $requiredBuildingDisplayName = $this->buildingConfigManager->getBuildingConfig($requiredBuildingName)['name'] ?? $requiredBuildingName;
                 return [
                     'success' => false,
-                    'message' => "Requires " . htmlspecialchars($requiredBuildingDisplayName) . " at level " . $requiredLevel . ". Your current level: " . $currentLevel
+                    'message' => "Requires " . htmlspecialchars($requiredBuildingDisplayName) . " at level " . $requiredLevel . ". Your current level: " . $currentLevel,
+                    'code' => 'ERR_PREREQ'
                 ];
             }
         }
@@ -422,6 +423,7 @@ class BuildingManager {
         $popManager = $this->getPopulationManager();
         $popCheck = $popManager->canAffordBuildingPopulation($villageId, $internalName, $nextLevel);
         if (!$popCheck['success']) {
+            $popCheck['code'] = $popCheck['code'] ?? 'ERR_POP';
             return $popCheck;
         }
         
@@ -432,7 +434,7 @@ class BuildingManager {
     {
         // Check if there's already an item in the queue for this village
         if ($this->isAnyBuildingInQueue($villageId)) {
-            return ['success' => false, 'message' => 'Another task is already in this village\'s build queue.'];
+            return ['success' => false, 'message' => 'Another task is already in this village\'s build queue.', 'code' => 'ERR_CAP'];
         }
 
         // Get current building level
@@ -442,16 +444,16 @@ class BuildingManager {
         // Get building config to check max level
         $config = $this->buildingConfigManager->getBuildingConfig($internalName);
         if (!$config) {
-             return ['success' => false, 'message' => 'Unknown building type.'];
+             return ['success' => false, 'message' => 'Unknown building type.', 'code' => 'ERR_INPUT'];
         }
         
         if ($currentLevel >= $config['max_level']) {
-            return ['success' => false, 'message' => 'Maximum level reached for this building.'];
+            return ['success' => false, 'message' => 'Maximum level reached for this building.', 'code' => 'ERR_CAP'];
         }
 
         // Check if requirements are met (although this should be checked before calling this method, good to double-check)
         $requirementsCheck = $this->checkBuildingRequirements($internalName, $villageId);
-         if (!$requirementsCheck['success']) {
+        if (!$requirementsCheck['success']) {
             return $requirementsCheck; // Return the specific requirement message
         }
 
@@ -460,7 +462,7 @@ class BuildingManager {
         $upgradeTimeSeconds = $this->buildingConfigManager->calculateUpgradeTime($internalName, $currentLevel, $mainBuildingLevel); // calculateUpgradeTime uses currentLevel
 
         if ($upgradeTimeSeconds === null) {
-             return ['success' => false, 'message' => 'Cannot calculate upgrade time.'];
+             return ['success' => false, 'message' => 'Cannot calculate upgrade time.', 'code' => 'ERR_INPUT'];
         }
 
         $finishTime = date('Y-m-d H:i:s', time() + $upgradeTimeSeconds);
@@ -468,7 +470,7 @@ class BuildingManager {
         // Get the village_building_id for the specific building in this village
         $villageBuilding = $this->getVillageBuilding($villageId, $internalName);
         if (!$villageBuilding) {
-             return ['success' => false, 'message' => 'Building not found in the village.'];
+             return ['success' => false, 'message' => 'Building not found in the village.', 'code' => 'ERR_INPUT'];
         }
         $villageBuildingId = $villageBuilding['village_building_id'] ?? null; // Ensure this is the correct column name
         
@@ -476,7 +478,7 @@ class BuildingManager {
         $buildingTypeId = $config['id'] ?? null;
         if ($villageBuildingId === null || $buildingTypeId === null) {
              error_log("Missing village_building_id ($villageBuildingId) or building_type_id ($buildingTypeId) for village $villageId, building $internalName");
-             return ['success' => false, 'message' => 'Internal server error (missing IDs).'];
+             return ['success' => false, 'message' => 'Internal server error (missing IDs).', 'code' => 'ERR_CAP'];
         }
 
         // Add to building_queue table

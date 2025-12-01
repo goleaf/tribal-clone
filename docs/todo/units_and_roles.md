@@ -146,6 +146,9 @@ Status markers:
 - [ ] Mantlet effect: reduce ranged damage taken by escorted siege; integrate into combat resolver efficiently.
 - [ ] Seasonal/event unit lifecycle: spawn/expiry dates, sunset handling (auto-convert to resources or disable training), no permanent power creep.
 - [ ] Data audit: battle reports include unit-specific modifiers (aura, mantlet, healer applied) for clarity.
+- [ ] Aura/stacking rules: define Banner Guard stacking (cap/overwrite) and Healer recovery caps per battle to prevent runaway buffs; encode in resolver and docs.
+- [ ] World archetype gates: disable or tighten seasonal/elite units on hardcore worlds; expose per-archetype overrides in admin UI with audit trail.
+- [x] Add mantlet unit data: stats/cost/speed added to units.json for siege-cover role (effect still to wire into combat).
 
 ## Acceptance Criteria
 - Unit stats/unlocks/caps in `units.json`/DB match design tables; RPS interactions validated in combat tests (pikes>cav, cav>ranged in field, ranged>inf blobs).
@@ -153,6 +156,12 @@ Status markers:
 - Banner Guard aura, War Healer recovery, and mantlet damage reduction apply in combat/resolution and appear in battle reports.
 - Caps on siege/elite/event/conquest units enforced per village/account; errors surfaced; no training beyond limits under load.
 - Sunset handling removes/locks expired event units cleanly; conversions/logging validated.
-- [ ] Balance hooks: world-configurable multipliers per archetype (inf/cav/ranged/siege) and per-unit overrides for special worlds; expose in admin UI with audit.
+- Stacking rules for auras/healers enforced and visible; archetype gates per world applied and auditable.
+
+## Open Questions
+- Do Banner Guard auras stack or overwrite? Define stacking rules and cap to avoid runaway buffs.
+- How is healer recovery capped per battle (per unit, per pop, global %) to prevent infinite sustain?
+- Should seasonal/event units be disabled entirely on hardcore worlds or just capped tighter? Decide per archetype.
+- [x] Balance hooks: world-configurable multipliers per archetype (inf/cav/ranged/siege) and per-unit overrides for special worlds; expose in admin UI with audit. _(worlds now carry per-archetype train multipliers; UnitManager applies them in recruitment time calc)_
 - [ ] Validation: recruit endpoint rejects zero/negative counts, enforces pop/resource availability, and respects per-village/per-account caps with reason codes.
 - [ ] Telemetry: emit recruit attempts, cap hits, and aura/mantlet/healer usage; alert on cap-hit spikes or disabled unit training errors.

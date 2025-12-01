@@ -30,20 +30,30 @@ class BuildingQueueManager
     {
         try {
             $this->conn->begin_transaction();
+            $errorCode = null;
 
             // Lock village row for update
-            $stmt = $this->conn->prepare("SELECT * FROM villages WHERE id = ? AND user_id = ?");
+            $stmt = $this->conn->prepare("
+                SELECT v.*, u.is_protected 
+                FROM villages v 
+                JOIN users u ON u.id = v.user_id
+                WHERE v.id = ? AND v.user_id = ?
+            ");
             $stmt->bind_param("ii", $villageId, $userId);
             $stmt->execute();
             $village = $stmt->get_result()->fetch_assoc();
             $stmt->close();
             
             if (!$village) {
+                $errorCode = 'ERR_PREREQ';
                 throw new Exception("Village not found or access denied.");
             }
 
             // Get current building level
             $currentLevel = $this->getBuildingLevel($villageId, $buildingInternalName);
+            if ($currentLevel < 0) {
+                $currentLevel = 0;
+            }
             
             // Calculate costs and time
             $costs = $this->configManager->calculateUpgradeCost($buildingInternalName, $currentLevel);
@@ -51,18 +61,28 @@ class BuildingQueueManager
             $buildTime = $this->configManager->calculateUpgradeTime($buildingInternalName, $currentLevel, $hqLevel);
 
             if (!$costs || $buildTime === null) {
+                $errorCode = 'ERR_PREREQ';
                 throw new Exception("Unable to calculate upgrade cost or time.");
             }
 
             // Check queue capacity (active + pending)
             $queueCount = $this->getQueueCount($villageId);
             if ($queueCount >= $this->maxQueueItems) {
+                $errorCode = 'ERR_CAP';
                 throw new Exception("Build queue is full (max {$this->maxQueueItems}).");
             }
 
             // Check resources
             if (!$this->hasResources($village, $costs)) {
+                $errorCode = 'ERR_RES';
                 throw new Exception("Not enough resources.");
+            }
+
+            // Protected zones may forbid wall builds (e.g., beginner protection worlds)
+            $blockWallInProtection = defined('SAFE_ZONE_BLOCK_WALL') ? (bool)SAFE_ZONE_BLOCK_WALL : true;
+            if ($blockWallInProtection && $buildingInternalName === 'wall' && !empty($village['is_protected'])) {
+                $errorCode = 'ERR_PROTECTED';
+                throw new Exception("Cannot build Wall while under protection.");
             }
 
             // Deduct resources immediately
@@ -124,7 +144,8 @@ class BuildingQueueManager
             $this->conn->rollback();
             return [
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
+                'code' => $errorCode
             ];
         }
     }

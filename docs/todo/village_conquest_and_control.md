@@ -88,7 +88,7 @@
 - **Defenders:** Stack or snipe; boost allegiance regen; pre-queue traps; counter-attack noble villages; use watchtowers to spot fakes; rotate support to avoid overstack penalties (if any).
 
 ## Implementation TODOs
-- [ ] Conquest resolver: compute allegiance drop per surviving Standard Bearer with modifiers (wall level, escort size, repeated attacks, distance penalty if used), and capture when threshold <= 0.
+- [x] Conquest resolver: compute allegiance drop per surviving Standard Bearer with modifiers (wall level, escort size, repeated attacks, distance penalty if used), and capture when threshold <= 0. _(see allegiance calculation service spec)_
 - [ ] State machine: enforce prerequisites (combat win, bearer survival, cooldowns, safe zones, protection status, tribe handover mode); return reason codes for failed conquest attempts.
 - [ ] Training pipeline: Hall of Banners requirements, minting/consumption of standards/coins, per-village/per-day training limits, queue integration.
 - [ ] Regen system: allegiance regeneration ticks with bonuses (buildings/tribe tech) and caps; pause rules during combat/occupation; floor after capture (anti-ping-pong buffer).
@@ -105,6 +105,7 @@
 - [ ] Capture aftermath: set starting allegiance to configurable low value; optional random building loss; grace period before further drops.
 - [ ] Anti-abuse: block conquest on protected/newbie targets; detect repeated captures between same accounts; tribe handover opt-in flow.
 - [ ] Reports: include morale/luck, allegiance damage per wave, surviving SB count, and reason codes for failed conquest attempts.
+- [ ] Tests: unit tests for drop/regen math, anti-snipe floor, random band distribution, wall reduction, and capture threshold; property tests for clamping and overflow safety.
 
 ## Progress
 - Added `lib/services/AllegianceService.php` to encapsulate allegiance drop/regen math with wall reduction, random drop per bearer, anti-snipe floor, and regen tick helper.
@@ -131,3 +132,8 @@
 - [ ] Simulate multi-wave train: verify ordering per tick, capture triggers once, post-capture floor set, and reports show deltas/modifiers.
 - [ ] Load test allegiance resolver under 1k waves/tick; p95 within target; no race conditions on concurrent waves to same village.
 - [ ] Reports display morale/luck, allegiance drop, regen applied, anti-snipe status, surviving SBs, and block reasons when applicable.
+
+## Open Questions
+- For control/uptime worlds vs allegiance-drop worlds, can the same resolver be parameterized, or do we maintain two distinct code paths?
+- Should anti-snipe floors block control gain entirely or just floor the minimum (e.g., cannot drop below 10 but can still gain)? Clarify to avoid exploits.
+- What are default distance/wall modifiers for allegiance drop, and are they world-specific? Need documented defaults for UI.
