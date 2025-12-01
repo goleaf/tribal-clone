@@ -2,124 +2,166 @@
 declare(strict_types=1);
 
 /**
- * Migration: Add conquest configuration columns to worlds table
- *
- * Adds world-specific conquest settings for both allegiance-drop and control-uptime modes
+ * Migration: Add conquest system configuration columns to worlds table
+ * 
+ * Adds all conquest-related configuration fields to support both allegiance-drop
+ * and control-uptime conquest modes with full configurability per world.
+ * 
+ * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5
  */
 
 require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/../lib/functions.php';
 
 $conn = $GLOBALS['conn'] ?? null;
 if (!$conn) {
-    echo "No database connection.\n";
+    echo "No database connection available.\n";
     exit(1);
 }
 
-echo "Running conquest world configuration migration...\n";
+echo "Adding conquest configuration columns to worlds table...\n";
 
-function columnExists($conn, string $table, string $column): bool
-{
-    $stmt = $conn->prepare("SHOW COLUMNS FROM $table LIKE ?");
-    if ($stmt) {
-        $stmt->bind_param("s", $column);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $exists = $result && $result->num_rows > 0;
-        $stmt->close();
-        return $exists;
-    }
-    return false;
-}
+$isSqlite = is_object($conn) && method_exists($conn, 'getPdo');
 
-// Conquest configuration columns for worlds table (SQLite syntax)
-$conquestColumns = [
-    // Core settings
-    'conquest_enabled' => "INTEGER NOT NULL DEFAULT 1",
-    'conquest_mode' => "TEXT NOT NULL DEFAULT 'allegiance'",
+// Define all conquest configuration columns
+$columns = [
+    // Core conquest feature flags
+    'conquest_enabled' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN conquest_enabled INTEGER NOT NULL DEFAULT 1"
+        : "ALTER TABLE worlds ADD COLUMN conquest_enabled TINYINT(1) NOT NULL DEFAULT 1",
     
-    // Allegiance/Control mechanics
-    'alleg_regen_per_hour' => "REAL NOT NULL DEFAULT 2.0",
-    'alleg_wall_reduction_per_level' => "REAL NOT NULL DEFAULT 0.02",
-    'alleg_drop_min' => "INTEGER NOT NULL DEFAULT 18",
-    'alleg_drop_max' => "INTEGER NOT NULL DEFAULT 28",
+    // Conquest mode: 'allegiance' (drop mode) or 'control' (uptime mode)
+    'conquest_mode' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN conquest_mode TEXT NOT NULL DEFAULT 'allegiance'"
+        : "ALTER TABLE worlds ADD COLUMN conquest_mode VARCHAR(32) NOT NULL DEFAULT 'allegiance'",
     
-    // Anti-snipe protection
-    'anti_snipe_floor' => "INTEGER NOT NULL DEFAULT 10",
-    'anti_snipe_seconds' => "INTEGER NOT NULL DEFAULT 900",
-    'post_capture_start' => "INTEGER NOT NULL DEFAULT 25",
-    'capture_cooldown_seconds' => "INTEGER NOT NULL DEFAULT 900",
+    // Allegiance regeneration rate (percentage points per hour)
+    'alleg_regen_per_hour' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN alleg_regen_per_hour REAL NOT NULL DEFAULT 2.0"
+        : "ALTER TABLE worlds ADD COLUMN alleg_regen_per_hour DECIMAL(6,3) NOT NULL DEFAULT 2.0",
     
-    // Control/Uptime mode settings
-    'uptime_duration_seconds' => "INTEGER NOT NULL DEFAULT 900",
-    'control_gain_rate_per_min' => "INTEGER NOT NULL DEFAULT 5",
-    'control_decay_rate_per_min' => "INTEGER NOT NULL DEFAULT 3",
+    // Wall reduction factor per level (e.g., 0.02 = 2% per level)
+    'alleg_wall_reduction_per_level' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN alleg_wall_reduction_per_level REAL NOT NULL DEFAULT 0.02"
+        : "ALTER TABLE worlds ADD COLUMN alleg_wall_reduction_per_level DECIMAL(6,4) NOT NULL DEFAULT 0.02",
     
-    // Wave mechanics
-    'wave_spacing_ms' => "INTEGER NOT NULL DEFAULT 300",
-    'max_envoys_per_command' => "INTEGER NOT NULL DEFAULT 1",
+    // Allegiance drop range per Envoy (min)
+    'alleg_drop_min' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN alleg_drop_min INTEGER NOT NULL DEFAULT 18"
+        : "ALTER TABLE worlds ADD COLUMN alleg_drop_min INT NOT NULL DEFAULT 18",
     
-    // Training limits
-    'conquest_daily_mint_cap' => "INTEGER NOT NULL DEFAULT 5",
-    'conquest_daily_train_cap' => "INTEGER NOT NULL DEFAULT 3",
-    'conquest_min_defender_points' => "INTEGER NOT NULL DEFAULT 1000",
+    // Allegiance drop range per Envoy (max)
+    'alleg_drop_max' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN alleg_drop_max INTEGER NOT NULL DEFAULT 28"
+        : "ALTER TABLE worlds ADD COLUMN alleg_drop_max INT NOT NULL DEFAULT 28",
     
-    // Post-capture settings
-    'conquest_building_loss_enabled' => "INTEGER NOT NULL DEFAULT 0",
-    'conquest_building_loss_chance' => "REAL NOT NULL DEFAULT 0.100",
-    'conquest_resource_transfer_pct' => "REAL NOT NULL DEFAULT 1.000",
+    // Anti-snipe floor value (minimum allegiance during grace period)
+    'anti_snipe_floor' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN anti_snipe_floor INTEGER NOT NULL DEFAULT 10"
+        : "ALTER TABLE worlds ADD COLUMN anti_snipe_floor INT NOT NULL DEFAULT 10",
     
-    // Abandonment decay
-    'conquest_abandonment_decay_enabled' => "INTEGER NOT NULL DEFAULT 0",
-    'conquest_abandonment_threshold_hours' => "INTEGER NOT NULL DEFAULT 168",
-    'conquest_abandonment_decay_rate' => "REAL NOT NULL DEFAULT 1.0",
+    // Anti-snipe duration in seconds (e.g., 900 = 15 minutes)
+    'anti_snipe_seconds' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN anti_snipe_seconds INTEGER NOT NULL DEFAULT 900"
+        : "ALTER TABLE worlds ADD COLUMN anti_snipe_seconds INT NOT NULL DEFAULT 900",
+    
+    // Post-capture starting allegiance value
+    'post_capture_start' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN post_capture_start INTEGER NOT NULL DEFAULT 25"
+        : "ALTER TABLE worlds ADD COLUMN post_capture_start INT NOT NULL DEFAULT 25",
+    
+    // Capture cooldown duration in seconds
+    'capture_cooldown_seconds' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN capture_cooldown_seconds INTEGER NOT NULL DEFAULT 900"
+        : "ALTER TABLE worlds ADD COLUMN capture_cooldown_seconds INT NOT NULL DEFAULT 900",
+    
+    // Uptime duration required for capture (control mode)
+    'uptime_duration_seconds' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN uptime_duration_seconds INTEGER NOT NULL DEFAULT 900"
+        : "ALTER TABLE worlds ADD COLUMN uptime_duration_seconds INT NOT NULL DEFAULT 900",
+    
+    // Control gain rate per minute (control mode)
+    'control_gain_rate_per_min' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN control_gain_rate_per_min INTEGER NOT NULL DEFAULT 5"
+        : "ALTER TABLE worlds ADD COLUMN control_gain_rate_per_min INT NOT NULL DEFAULT 5",
+    
+    // Control decay rate per minute (control mode)
+    'control_decay_rate_per_min' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN control_decay_rate_per_min INTEGER NOT NULL DEFAULT 3"
+        : "ALTER TABLE worlds ADD COLUMN control_decay_rate_per_min INT NOT NULL DEFAULT 3",
+    
+    // Minimum wave spacing in milliseconds
+    'wave_spacing_ms' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN wave_spacing_ms INTEGER NOT NULL DEFAULT 300"
+        : "ALTER TABLE worlds ADD COLUMN wave_spacing_ms INT NOT NULL DEFAULT 300",
+    
+    // Maximum Envoys per command
+    'max_envoys_per_command' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN max_envoys_per_command INTEGER NOT NULL DEFAULT 1"
+        : "ALTER TABLE worlds ADD COLUMN max_envoys_per_command INT NOT NULL DEFAULT 1",
+    
+    // Daily influence crest minting cap per account
+    'conquest_daily_mint_cap' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN conquest_daily_mint_cap INTEGER NOT NULL DEFAULT 5"
+        : "ALTER TABLE worlds ADD COLUMN conquest_daily_mint_cap INT NOT NULL DEFAULT 5",
+    
+    // Daily Envoy training cap per account
+    'conquest_daily_train_cap' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN conquest_daily_train_cap INTEGER NOT NULL DEFAULT 3"
+        : "ALTER TABLE worlds ADD COLUMN conquest_daily_train_cap INT NOT NULL DEFAULT 3",
+    
+    // Minimum defender points required for conquest
+    'conquest_min_defender_points' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN conquest_min_defender_points INTEGER NOT NULL DEFAULT 1000"
+        : "ALTER TABLE worlds ADD COLUMN conquest_min_defender_points INT NOT NULL DEFAULT 1000",
+    
+    // Optional building loss on capture (enabled/disabled)
+    'conquest_building_loss_enabled' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN conquest_building_loss_enabled INTEGER NOT NULL DEFAULT 0"
+        : "ALTER TABLE worlds ADD COLUMN conquest_building_loss_enabled TINYINT(1) NOT NULL DEFAULT 0",
+    
+    // Building loss probability (e.g., 0.100 = 10%)
+    'conquest_building_loss_chance' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN conquest_building_loss_chance REAL NOT NULL DEFAULT 0.100"
+        : "ALTER TABLE worlds ADD COLUMN conquest_building_loss_chance DECIMAL(5,3) NOT NULL DEFAULT 0.100",
+    
+    // Resource transfer percentage on capture (e.g., 1.000 = 100%)
+    'conquest_resource_transfer_pct' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN conquest_resource_transfer_pct REAL NOT NULL DEFAULT 1.000"
+        : "ALTER TABLE worlds ADD COLUMN conquest_resource_transfer_pct DECIMAL(5,3) NOT NULL DEFAULT 1.000",
+    
+    // Abandonment decay feature (enabled/disabled)
+    'conquest_abandonment_decay_enabled' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN conquest_abandonment_decay_enabled INTEGER NOT NULL DEFAULT 0"
+        : "ALTER TABLE worlds ADD COLUMN conquest_abandonment_decay_enabled TINYINT(1) NOT NULL DEFAULT 0",
+    
+    // Abandonment threshold in hours (e.g., 168 = 7 days)
+    'conquest_abandonment_threshold_hours' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN conquest_abandonment_threshold_hours INTEGER NOT NULL DEFAULT 168"
+        : "ALTER TABLE worlds ADD COLUMN conquest_abandonment_threshold_hours INT NOT NULL DEFAULT 168",
+    
+    // Abandonment decay rate (percentage points per hour)
+    'conquest_abandonment_decay_rate' => $isSqlite
+        ? "ALTER TABLE worlds ADD COLUMN conquest_abandonment_decay_rate REAL NOT NULL DEFAULT 1.0"
+        : "ALTER TABLE worlds ADD COLUMN conquest_abandonment_decay_rate DECIMAL(6,3) NOT NULL DEFAULT 1.0",
 ];
 
-echo "\nAdding conquest configuration columns to worlds table...\n";
-
-foreach ($conquestColumns as $column => $definition) {
-    if (columnExists($conn, 'worlds', $column)) {
-        echo " - Column $column already exists, skipping.\n";
+foreach ($columns as $name => $sql) {
+    if (dbColumnExists($conn, 'worlds', $name)) {
+        echo "- Column {$name} already exists. Skipping.\n";
+        continue;
+    }
+    
+    $ok = $conn->query($sql);
+    if ($ok === false) {
+        $error = isset($conn->error) ? $conn->error : 'Unknown error';
+        echo "- Failed to add {$name}: {$error}\n";
     } else {
-        $sql = "ALTER TABLE worlds ADD COLUMN $column $definition";
-        if ($conn->query($sql)) {
-            echo " - Added $column\n";
-        } else {
-            echo " [!] Failed to add $column: " . $conn->error . "\n";
-        }
+        echo "- Added column {$name}.\n";
     }
 }
 
-// Update existing worlds with default values
-echo "\nBackfilling default values for existing worlds...\n";
-$defaults = [
-    'conquest_enabled' => 1,
-    'conquest_mode' => "'allegiance'",
-    'alleg_regen_per_hour' => 2.0,
-    'alleg_wall_reduction_per_level' => 0.02,
-    'alleg_drop_min' => 18,
-    'alleg_drop_max' => 28,
-    'anti_snipe_floor' => 10,
-    'anti_snipe_seconds' => 900,
-    'post_capture_start' => 25,
-    'capture_cooldown_seconds' => 900,
-    'uptime_duration_seconds' => 900,
-    'control_gain_rate_per_min' => 5,
-    'control_decay_rate_per_min' => 3,
-    'wave_spacing_ms' => 300,
-    'max_envoys_per_command' => 1,
-    'conquest_daily_mint_cap' => 5,
-    'conquest_daily_train_cap' => 3,
-    'conquest_min_defender_points' => 1000,
-    'conquest_building_loss_enabled' => 0,
-    'conquest_building_loss_chance' => 0.100,
-    'conquest_resource_transfer_pct' => 1.000,
-    'conquest_abandonment_decay_enabled' => 0,
-    'conquest_abandonment_threshold_hours' => 168,
-    'conquest_abandonment_decay_rate' => 1.0,
-];
+echo "\nConquest configuration migration complete.\n";
+echo "All worlds now support conquest system configuration.\n";
+echo "Default values have been set for backward compatibility.\n";
 
-foreach ($defaults as $col => $val) {
-    $conn->query("UPDATE worlds SET {$col} = {$val} WHERE {$col} IS NULL");
-}
-
-echo "\nConquest world configuration migration completed.\n";
