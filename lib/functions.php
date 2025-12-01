@@ -51,10 +51,10 @@ function sanitizeSql($conn, $input) {
         return $input;
     }
     
-    if ($conn instanceof mysqli) {
+    if (is_object($conn) && method_exists($conn, 'real_escape_string')) {
         return $conn->real_escape_string($input);
     }
-    
+
     return addslashes($input);
 }
 

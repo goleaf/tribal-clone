@@ -2,6 +2,10 @@
 // Database configuration – using SQLite instead of MySQL
 define('DB_DRIVER', 'sqlite');
 define('DB_PATH', __DIR__ . '/../data/tribal_wars.sqlite');
+define('DB_HOST', 'localhost'); // kept for backwards compatibility
+define('DB_USER', '');
+define('DB_PASS', '');
+define('DB_NAME', 'tribal_wars_new');
 
 // Tryb debugowania (true dla środowiska deweloperskiego, false dla produkcji)
 define('DEBUG_MODE', true);
