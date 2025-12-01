@@ -2368,6 +2368,35 @@ class BattleManager
     }
 
     /**
+     * Simple duplicate command guard keyed by attacker->target->type within a short window.
+     */
+    private function enforceDuplicateCommandGuard(int $attackerUserId, int $targetVillageId, string $attackType): bool
+    {
+        if (!isset($_SESSION['recent_commands'])) {
+            $_SESSION['recent_commands'] = [];
+        }
+        $now = microtime(true);
+        $window = self::DUP_GUARD_WINDOW_SECONDS;
+        // Clean old entries
+        $_SESSION['recent_commands'] = array_filter($_SESSION['recent_commands'], function ($entry) use ($now, $window) {
+            return isset($entry['ts']) && ($entry['ts'] + $window) > $now;
+        });
+
+        $key = $attackerUserId . ':' . $targetVillageId . ':' . $attackType;
+        foreach ($_SESSION['recent_commands'] as $entry) {
+            if (($entry['key'] ?? '') === $key) {
+                return false;
+            }
+        }
+
+        $_SESSION['recent_commands'][] = [
+            'key' => $key,
+            'ts' => $now
+        ];
+        return true;
+    }
+
+    /**
      * Whether current server time is inside the configured night window.
      */
     private function isNightTimeWorldConfig(): bool

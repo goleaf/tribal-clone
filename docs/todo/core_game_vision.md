@@ -110,6 +110,13 @@
 - [ ] Lexicon enforcement: add string linting to CI against ip-glossary banned list; generate weekly report of violations; assign owners per module to fix.
 - [ ] Preset enforcement: add world-creation guardrails that auto-apply archetype presets and require explicit override acknowledgements; log divergence metrics and alert on repeated overrides.
 
+### Preset Enforcement Plan
+- World creator defaults: selecting archetype (casual/classic/hardcore/experimental) pre-fills economy/combat/map/conquest flags and caps; overrides require explicit “override preset” checkbox with reason text.
+- Divergence logging: store preset chosen, overrides applied, user id, timestamp; emit metric `world_preset_divergence_total` with fields (preset, field, delta). Alert if divergence rate rises or critical fields (protection, P2W toggles) overridden.
+- UI warnings: red badge on overridden fields with tooltip linking to preset rationale; blocking confirmation for high-risk overrides (e.g., disabling protections on casual).
+- Audit/export: weekly report of new worlds with overrides and reasons; shared with design/ops for review; stored in `reports/world_preset_overrides.csv`.
+- Admin guardrails: optional role-based restriction that prevents non-admins from overriding high-risk fields; configurable per environment.
+
 ### Lexicon Enforcement Plan
 - CI lint: add glossary-based string scan over `/lang`, `/ui/strings`, and templates; fail build on new banned terms; warnings for legacy terms with Jira ticket link.
 - Baseline suppression: allow existing violations via waiver list with expiry/owner; weekly job sends summary to owners; no new waivers without approval.

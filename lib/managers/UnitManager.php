@@ -112,6 +112,14 @@ class UnitManager
     }
 
     /**
+     * Get unit config version info if available.
+     */
+    public function getUnitConfigVersion(): ?array
+    {
+        return $this->unitConfigVersion;
+    }
+
+    /**
      * Get units that can be recruited in a building.
      *
      * @param string $building_type Building type (barracks, stable, workshop, academy, statue)
