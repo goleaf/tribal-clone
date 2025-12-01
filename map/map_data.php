@@ -48,6 +48,7 @@ $players = [];
 while ($row = $result->fetch_assoc()) {
     $villageOwnerId = isset($row['user_id']) ? (int)$row['user_id'] : null;
     $ownerType = ($villageOwnerId === null || $villageOwnerId === -1) ? 'barbarian' : 'player';
+    $isOwn = $villageOwnerId === $user_id;
 
     $villages[] = [
         'id' => (int)$row['id'],
@@ -57,7 +58,12 @@ while ($row = $result->fetch_assoc()) {
         'user_id' => $villageOwnerId,
         'owner' => $row['username'] ?? null,
         'points' => (int)$row['points'],
-        'type' => $ownerType
+        'type' => $ownerType,
+        'is_own' => $isOwn,
+        // Reserved and movement flags can be filled once those systems exist.
+        'reserved_by' => null,
+        'reserved_team' => null,
+        'movements' => []
     ];
 
     if ($villageOwnerId && !isset($players[$villageOwnerId])) {
