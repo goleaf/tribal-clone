@@ -35,6 +35,9 @@ CREATE TABLE IF NOT EXISTS worlds (
     name TEXT NOT NULL UNIQUE,
     world_speed REAL NOT NULL DEFAULT 1.0,
     troop_speed REAL NOT NULL DEFAULT 1.0,
+    build_speed REAL NOT NULL DEFAULT 1.0,
+    train_speed REAL NOT NULL DEFAULT 1.0,
+    research_speed REAL NOT NULL DEFAULT 1.0,
     enable_archer INTEGER NOT NULL DEFAULT 1,
     enable_paladin INTEGER NOT NULL DEFAULT 1,
     enable_paladin_weapons INTEGER NOT NULL DEFAULT 1,
@@ -42,6 +45,8 @@ CREATE TABLE IF NOT EXISTS worlds (
     tribe_member_limit INTEGER DEFAULT NULL,
     victory_type TEXT DEFAULT NULL,
     victory_value INTEGER DEFAULT NULL,
+    winner_tribe_id INTEGER DEFAULT NULL,
+    victory_at TEXT DEFAULT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -128,6 +133,8 @@ CREATE TABLE IF NOT EXISTS villages (
     farm_capacity INTEGER DEFAULT 0,
     loyalty INTEGER NOT NULL DEFAULT 100,
     last_loyalty_update TEXT DEFAULT CURRENT_TIMESTAMP,
+    is_capital INTEGER NOT NULL DEFAULT 0,
+    conquered_at TEXT DEFAULT NULL,
     coins INTEGER NOT NULL DEFAULT 0,
     points INTEGER DEFAULT 0,
     last_resource_update TEXT DEFAULT CURRENT_TIMESTAMP,

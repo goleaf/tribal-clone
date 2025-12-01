@@ -27,6 +27,8 @@ class BattleManager
     private const LOYALTY_MAX = 100;
     private const LOYALTY_DROP_MIN = 20;
     private const LOYALTY_DROP_MAX = 35;
+    private const LOYALTY_FAIL_DROP_MIN = 5;
+    private const LOYALTY_FAIL_DROP_MAX = 10;
 
     /**
      * @param mysqli $conn Database connection
@@ -1143,34 +1145,63 @@ class BattleManager
         $villageConquered = false;
         $loyalty_before = $this->getVillageLoyalty($attack['target_village_id']);
         $loyalty_after = $loyalty_before;
-        if ($attacker_win && $this->hasNobleUnit($attacking_units) && !$defenderAlive) {
+        $loyalty_cap = method_exists($this->villageManager, 'getEffectiveLoyaltyCap')
+            ? (int)round($this->villageManager->getEffectiveLoyaltyCap($attack['target_village_id']))
+            : self::LOYALTY_MAX;
+        $dropMultiplier = method_exists($this->villageManager, 'getLoyaltyDropMultiplier')
+            ? $this->villageManager->getLoyaltyDropMultiplier($attack['target_village_id'])
+            : 1.0;
+
+        $loyalty_floor = $this->getEffectiveLoyaltyFloor($attacking_units);
+        $noblePresent = $this->hasNobleUnit($attacking_units);
+
+        if ($noblePresent) {
             $dropMin = defined('NOBLE_MIN_DROP') ? (int)NOBLE_MIN_DROP : self::LOYALTY_DROP_MIN;
             $dropMax = defined('NOBLE_MAX_DROP') ? (int)NOBLE_MAX_DROP : self::LOYALTY_DROP_MAX;
-            $drop = random_int($dropMin, $dropMax);
-            $loyalty_floor = $this->getEffectiveLoyaltyFloor($attacking_units);
-            $loyalty_after = max($loyalty_floor, $loyalty_before - $drop);
-            $villageConquered = ($loyalty_floor === self::LOYALTY_MIN) && $loyalty_after <= self::LOYALTY_MIN;
+            $dropBase = 0;
+            $dropApplied = 0;
 
-            // Enforce conquest point-range gate (50%-150%) when not barbarian
-            $defender_points = $this->getVillagePointsWithFallback($attack['target_village_id']);
-            $attacker_points = $this->getVillagePointsWithFallback($attack['source_village_id']);
-            if ($attacker_points > 0 && $defender_points > 0) {
-                $ratio = $defender_points / $attacker_points;
-                if ($ratio < 0.5 || $ratio > 1.5) {
-                    $villageConquered = false; // Loyalty can drop, but cannot capture out-of-range targets
+            if ($attacker_win && !$defenderAlive) {
+                // Successful noble strike
+                $dropBase = random_int($dropMin, $dropMax);
+                $dropApplied = max(1, (int)round($dropBase * $dropMultiplier));
+                $loyalty_after = max($loyalty_floor, $loyalty_before - $dropApplied);
+                $villageConquered = ($loyalty_floor === self::LOYALTY_MIN) && $loyalty_after <= self::LOYALTY_MIN;
+
+                // Enforce conquest point-range gate (50%-150%) when not barbarian
+                $defender_points = $this->getVillagePointsWithFallback($attack['target_village_id']);
+                $attacker_points = $this->getVillagePointsWithFallback($attack['source_village_id']);
+                if ($attacker_points > 0 && $defender_points > 0) {
+                    $ratio = $defender_points / $attacker_points;
+                    if ($ratio < 0.5 || $ratio > 1.5) {
+                        $villageConquered = false; // Loyalty can drop, but cannot capture out-of-range targets
+                    }
+                }
+
+                if ($villageConquered) {
+                    $loyalty_after = $this->getConqueredLoyaltyReset((float)$loyalty_cap);
+                }
+            } else {
+                // Failed attempt still chips loyalty
+                $dropBase = random_int(self::LOYALTY_FAIL_DROP_MIN, self::LOYALTY_FAIL_DROP_MAX);
+                $dropApplied = max(0, (int)round($dropBase * $dropMultiplier));
+                if ($dropApplied > 0) {
+                    $loyalty_after = max($loyalty_floor, $loyalty_before - $dropApplied);
                 }
             }
 
-            if ($villageConquered) {
-                $loyalty_after = self::LOYALTY_MAX;
+            if ($dropApplied > 0 || $villageConquered) {
+                $loyalty_report = [
+                    'before' => $loyalty_before,
+                    'after' => $loyalty_after,
+                    'drop' => $dropApplied,
+                    'drop_base' => $dropBase,
+                    'conquered' => $villageConquered,
+                    'floor' => $loyalty_floor,
+                    'cap' => $loyalty_cap,
+                    'drop_multiplier' => $dropMultiplier
+                ];
             }
-            $loyalty_report = [
-                'before' => $loyalty_before,
-                'after' => $loyalty_after,
-                'drop' => $drop,
-                'conquered' => $villageConquered,
-                'floor' => $loyalty_floor
-            ];
         }
 
         // --- TRANSACTION ---
@@ -2327,7 +2358,7 @@ class BattleManager
         if ($stmt === false) {
             return;
         }
-        $loyalty = max(self::LOYALTY_MIN, min(self::LOYALTY_MAX, $loyalty));
+        $loyalty = $this->clampLoyalty($villageId, $loyalty);
         $stmt->bind_param("ii", $loyalty, $villageId);
         $stmt->execute();
         $stmt->close();
@@ -2335,14 +2366,60 @@ class BattleManager
 
     private function transferVillageOwnership(int $villageId, int $newUserId, int $loyaltyAfter): void
     {
-        $stmt = $this->conn->prepare("UPDATE villages SET user_id = ?, loyalty = ?, last_loyalty_update = CURRENT_TIMESTAMP WHERE id = ?");
+        $setClauses = "user_id = ?, loyalty = ?, last_loyalty_update = CURRENT_TIMESTAMP";
+        if ($this->villageColumnExists('conquered_at')) {
+            $setClauses .= ", conquered_at = CURRENT_TIMESTAMP";
+        }
+        $stmt = $this->conn->prepare("UPDATE villages SET {$setClauses} WHERE id = ?");
         if ($stmt === false) {
             return;
         }
-        $loyaltyAfter = max(self::LOYALTY_MIN, min(self::LOYALTY_MAX, $loyaltyAfter));
+        $loyaltyAfter = $this->clampLoyalty($villageId, $loyaltyAfter);
         $stmt->bind_param("iii", $newUserId, $loyaltyAfter, $villageId);
         $stmt->execute();
         $stmt->close();
+    }
+
+    /**
+     * Clamp loyalty to min/max bounds (dynamic cap aware).
+     */
+    private function clampLoyalty(int $villageId, int $loyalty): int
+    {
+        $cap = self::LOYALTY_MAX;
+        if (method_exists($this->villageManager, 'getEffectiveLoyaltyCap')) {
+            try {
+                $cap = (int)round($this->villageManager->getEffectiveLoyaltyCap($villageId));
+            } catch (\Throwable $e) {
+                $cap = self::LOYALTY_MAX;
+            }
+        }
+        $cap = max(self::LOYALTY_MIN, $cap);
+        return max(self::LOYALTY_MIN, min($cap, $loyalty));
+    }
+
+    /**
+     * Recently conquered villages restart at a vulnerable loyalty.
+     */
+    private function getConqueredLoyaltyReset(float $cap): int
+    {
+        // Spec: recently conquered villages start at ~50% loyalty
+        $reset = 50;
+        return (int)max(self::LOYALTY_MIN, min($cap, $reset));
+    }
+
+    /**
+     * Column existence helper (cached).
+     */
+    private function villageColumnExists(string $column): bool
+    {
+        static $cache = [];
+        if (isset($cache[$column])) {
+            return $cache[$column];
+        }
+        if (function_exists('dbColumnExists')) {
+            return $cache[$column] = dbColumnExists($this->conn, 'villages', $column);
+        }
+        return $cache[$column] = false;
     }
 
     /**
@@ -2783,6 +2860,45 @@ class BattleManager
             'success' => true,
             'report' => $report
         ];
+    }
+
+    /**
+     * Process a single attack by ID based on its mission type.
+     * Public entry point for tick-based processors.
+     *
+     * @param int $attack_id Attack command ID.
+     * @return array Result of processing.
+     */
+    public function processAttackArrival(int $attack_id): array
+    {
+        $stmt = $this->conn->prepare("
+            SELECT id, attack_type
+            FROM attacks
+            WHERE id = ? AND is_completed = 0 AND is_canceled = 0
+            LIMIT 1
+        ");
+        if ($stmt === false) {
+            return ['success' => false, 'error' => 'Failed to load attack.'];
+        }
+        $stmt->bind_param("i", $attack_id);
+        $stmt->execute();
+        $attack = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$attack) {
+            return ['success' => false, 'error' => 'Attack not found or already resolved.'];
+        }
+
+        switch ($attack['attack_type']) {
+            case 'spy':
+                return $this->processSpyMission($attack_id);
+            case 'support':
+                return $this->processSupportArrival($attack_id);
+            case 'return':
+                return $this->processReturnArrival($attack_id);
+            default:
+                return $this->processBattle($attack_id);
+        }
     }
     
     /**

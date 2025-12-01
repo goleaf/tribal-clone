@@ -28,6 +28,10 @@ class VillageManager
         $village_info = $result->fetch_assoc();
         $stmt->close();
 
+        if ($village_info) {
+            $this->regenVillageLoyalty($village_info);
+        }
+
         return $village_info;
     }
 
@@ -37,6 +41,362 @@ class VillageManager
     public function getVillageDetails($village_id)
     {
         return $this->getVillageInfo($village_id);
+    }
+
+    /**
+     * Regenerate loyalty over time (+1 per hour idle) up to 100.
+     * Updates the passed village array by reference with refreshed loyalty.
+     */
+    private function regenVillageLoyalty(array &$village): void
+    {
+        if (!isset($village['loyalty'])) {
+            return;
+        }
+
+        $loyaltyCap = $this->getEffectiveLoyaltyCap((int)$village['id'], $village);
+        $loyalty = (float)$village['loyalty'];
+        $lastUpdate = isset($village['last_loyalty_update']) ? strtotime((string)$village['last_loyalty_update']) : null;
+
+        if ($loyalty >= $loyaltyCap - 0.01) {
+            return;
+        }
+
+        $now = time();
+        if (!$lastUpdate || $lastUpdate <= 0) {
+            $lastUpdate = $now;
+        }
+        $elapsedSeconds = $now - $lastUpdate;
+        if ($elapsedSeconds <= 0) {
+            return;
+        }
+
+        $regenPerHour = $this->getLoyaltyRegenPerHour((int)$village['id'], $village);
+        $gain = ($regenPerHour / 3600) * $elapsedSeconds;
+
+        if ($gain <= 0.01) {
+            // Still update the timestamp to avoid reprocessing tiny deltas repeatedly
+            $village['last_loyalty_update'] = date('Y-m-d H:i:s', $now);
+            return;
+        }
+
+        $newLoyalty = min($loyaltyCap, $loyalty + $gain);
+        $village['loyalty'] = (int)round($newLoyalty);
+        $village['last_loyalty_update'] = date('Y-m-d H:i:s', $now);
+
+        $stmt = $this->conn->prepare("UPDATE villages SET loyalty = ?, last_loyalty_update = ? WHERE id = ?");
+        if ($stmt) {
+            $loyaltyToStore = (int)round($newLoyalty);
+            $stmt->bind_param("isi", $loyaltyToStore, $village['last_loyalty_update'], $village['id']);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+
+    /**
+    * Effective loyalty cap (capital + bonuses/penalties).
+    */
+    public function getEffectiveLoyaltyCap(int $villageId, ?array $village = null): float
+    {
+        $context = $this->getLoyaltyContext($villageId, $village);
+        return $context['cap'];
+    }
+
+    /**
+     * Loyalty regen per hour (uses hybrid rules).
+     */
+    public function getLoyaltyRegenPerHour(int $villageId, ?array $village = null): float
+    {
+        $context = $this->getLoyaltyContext($villageId, $village);
+        $cap = $context['cap'];
+        $hqLevel = $context['hq_level'];
+        $churchLevel = $context['church_level'];
+
+        // Base: 5% of cap per day
+        $perDay = $cap * 0.05;
+
+        // HQ/Palace bonus: +1% per 5 levels per day (max via cap already bounded)
+        $perDay += floor($hqLevel / 5) * 0.01 * $cap;
+
+        // Tribe loyalty building proxy: any church gives +5% per day
+        if ($churchLevel > 0) {
+            $perDay += 0.05 * $cap;
+        }
+
+        // Active defense: +10% per successful defense in last 24h
+        if ($this->hasRecentSuccessfulDefense($villageId, 24)) {
+            $perDay += 0.10 * $cap;
+        }
+
+        return $perDay / 24.0;
+    }
+
+    /**
+     * How much loyalty drop is resisted or amplified (multiplier).
+     */
+    public function getLoyaltyDropMultiplier(int $villageId, ?array $village = null): float
+    {
+        $context = $this->getLoyaltyContext($villageId, $village);
+        return $context['drop_multiplier'];
+    }
+
+    /**
+     * Gather loyalty-related modifiers in one place.
+     */
+    private function getLoyaltyContext(int $villageId, ?array $village = null): array
+    {
+        $stub = $village ?: $this->getMinimalVillageRow($villageId);
+        $baseCap = (!empty($stub['is_capital'])) ? 150.0 : 100.0;
+
+        $buildingLevels = $this->getBuildingLevels($villageId, ['main_building', 'wall', 'church', 'first_church']);
+        $hqLevel = $buildingLevels['main_building'] ?? 0;
+        $wallLevel = $buildingLevels['wall'] ?? 0;
+        $churchLevel = $buildingLevels['church'] ?? ($buildingLevels['first_church'] ?? 0);
+
+        // Positive bonuses
+        $bonusPct = 0.0;
+        $bonusPct += min(0.30, $hqLevel * 0.01);           // +1% per HQ level, max 30%
+        $bonusPct += min(0.15, $wallLevel * 0.005);        // +0.5% per wall level, max 15%
+
+        $garrisonUnits = $this->countVillageUnits($villageId);
+        $bonusPct += min(0.20, ($garrisonUnits / 10) * 0.001); // +0.1% per 10 units, max 20%
+
+        // Penalties
+        $penaltyPct = 0.0;
+        $recentAttackPenalty = $this->countRecentAttacks($villageId, 24) * 0.05; // -5% per attack in last 24h
+        $penaltyPct += min(0.25, $recentAttackPenalty);
+
+        $distancePenalty = 0.0;
+        if (empty($stub['is_capital'])) {
+            $distancePenalty = $this->getDistancePenalty($stub);
+            $penaltyPct += $distancePenalty;
+        }
+
+        $netPct = $bonusPct - $penaltyPct;
+        $cap = max(50.0, round($baseCap * (1 + $netPct), 2));
+
+        // Multiplier applied to loyalty drop: <1 resists, >1 amplifies
+        $dropMultiplier = 1 - $bonusPct + $penaltyPct;
+        $dropMultiplier = max(0.5, min(1.3, $dropMultiplier));
+
+        return [
+            'cap' => $cap,
+            'base_cap' => $baseCap,
+            'bonus_pct' => $bonusPct,
+            'penalty_pct' => $penaltyPct,
+            'hq_level' => $hqLevel,
+            'wall_level' => $wallLevel,
+            'church_level' => $churchLevel,
+            'garrison_units' => $garrisonUnits,
+            'drop_multiplier' => $dropMultiplier,
+            'distance_penalty' => $distancePenalty,
+            'recent_attack_penalty' => $recentAttackPenalty,
+        ];
+    }
+
+    /**
+     * Minimal village row for loyalty calculations.
+     */
+    private function getMinimalVillageRow(int $villageId): array
+    {
+        $columns = ['id', 'user_id', 'x_coord', 'y_coord', 'loyalty'];
+        if ($this->villageColumnExists('is_capital')) {
+            $columns[] = 'is_capital';
+        }
+        if ($this->villageColumnExists('conquered_at')) {
+            $columns[] = 'conquered_at';
+        }
+        if ($this->villageColumnExists('last_loyalty_update')) {
+            $columns[] = 'last_loyalty_update';
+        }
+        $sql = "SELECT " . implode(', ', $columns) . " FROM villages WHERE id = ? LIMIT 1";
+
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return ['id' => $villageId, 'user_id' => null, 'x_coord' => 0, 'y_coord' => 0, 'loyalty' => 100, 'is_capital' => 0];
+        }
+
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc() ?: [];
+        $stmt->close();
+
+        $row['is_capital'] = $row['is_capital'] ?? 0;
+        return $row;
+    }
+
+    /**
+     * Check village column existence (cached).
+     */
+    private function villageColumnExists(string $column): bool
+    {
+        static $cache = [];
+        if (isset($cache[$column])) {
+            return $cache[$column];
+        }
+        if (function_exists('dbColumnExists')) {
+            return $cache[$column] = dbColumnExists($this->conn, 'villages', $column);
+        }
+        return $cache[$column] = false;
+    }
+
+    /**
+     * Bulk fetch specific building levels.
+     */
+    private function getBuildingLevels(int $villageId, array $internalNames): array
+    {
+        if (empty($internalNames)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($internalNames), '?'));
+        $types = str_repeat('s', count($internalNames));
+
+        $sql = "
+            SELECT bt.internal_name, vb.level
+            FROM village_buildings vb
+            JOIN building_types bt ON vb.building_type_id = bt.id
+            WHERE vb.village_id = ? AND bt.internal_name IN ($placeholders)
+        ";
+
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return [];
+        }
+
+        // Bind village id + internal names
+        $types = 'i' . $types;
+        $params = array_merge([$types, $villageId], $internalNames);
+        $stmt->bind_param(...$this->refValues($params));
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        $levels = [];
+        while ($row = $res->fetch_assoc()) {
+            $levels[$row['internal_name']] = (int)$row['level'];
+        }
+        $stmt->close();
+        return $levels;
+    }
+
+    /**
+     * Count total stationed units (for garrison bonus).
+     */
+    private function countVillageUnits(int $villageId): int
+    {
+        $stmt = $this->conn->prepare("SELECT SUM(count) AS total FROM village_units WHERE village_id = ?");
+        if (!$stmt) {
+            return 0;
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return (int)($row['total'] ?? 0);
+    }
+
+    /**
+     * Count recent attacks hitting this village.
+     */
+    private function countRecentAttacks(int $villageId, int $hours): int
+    {
+        if (!function_exists('dbTableExists') || !dbTableExists($this->conn, 'battle_reports')) {
+            return 0;
+        }
+        $since = date('Y-m-d H:i:s', time() - ($hours * 3600));
+        $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM battle_reports WHERE target_village_id = ? AND battle_time >= ?");
+        if (!$stmt) {
+            return 0;
+        }
+        $stmt->bind_param("is", $villageId, $since);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return (int)($row['cnt'] ?? 0);
+    }
+
+    /**
+     * Whether the village won a defense recently.
+     */
+    private function hasRecentSuccessfulDefense(int $villageId, int $hours): bool
+    {
+        if (!function_exists('dbTableExists') || !dbTableExists($this->conn, 'battle_reports')) {
+            return false;
+        }
+        $since = date('Y-m-d H:i:s', time() - ($hours * 3600));
+        $stmt = $this->conn->prepare("
+            SELECT 1 FROM battle_reports 
+            WHERE target_village_id = ? AND battle_time >= ? AND attacker_won = 0 
+            LIMIT 1
+        ");
+        if (!$stmt) {
+            return false;
+        }
+        $stmt->bind_param("is", $villageId, $since);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return !empty($row);
+    }
+
+    /**
+     * Capital distance penalty: -1% per 10 tiles, max -20%.
+     */
+    private function getDistancePenalty(array $villageStub): float
+    {
+        if (empty($villageStub['user_id']) || !$this->villageColumnExists('is_capital')) {
+            return 0.0;
+        }
+        $capital = $this->getCapitalCoords((int)$villageStub['user_id']);
+        if (!$capital) {
+            return 0.0;
+        }
+        $dx = ($capital['x_coord'] ?? 0) - (int)($villageStub['x_coord'] ?? 0);
+        $dy = ($capital['y_coord'] ?? 0) - (int)($villageStub['y_coord'] ?? 0);
+        $distance = sqrt(($dx * $dx) + ($dy * $dy));
+        return min(0.20, floor($distance / 10) * 0.01);
+    }
+
+    private function getCapitalCoords(int $userId): ?array
+    {
+        if (!$this->villageColumnExists('is_capital')) {
+            return null;
+        }
+        $stmt = $this->conn->prepare("SELECT x_coord, y_coord FROM villages WHERE user_id = ? AND is_capital = 1 LIMIT 1");
+        if ($stmt) {
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $row = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            if ($row) {
+                return $row;
+            }
+        }
+
+        // Fallback to first village
+        $stmt = $this->conn->prepare("SELECT x_coord, y_coord FROM villages WHERE user_id = ? ORDER BY id ASC LIMIT 1");
+        if ($stmt) {
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $row = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            if ($row) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Helper to bind params with variadics.
+     */
+    private function refValues(array $arr): array
+    {
+        // mysqli bind_param expects references
+        $refs = [];
+        foreach ($arr as $key => $value) {
+            $refs[$key] = &$arr[$key];
+        }
+        return $refs;
     }
 
     /**
@@ -414,11 +774,11 @@ class VillageManager
         // Unique village name
         $village_name = $name ?: ("Village " . $username);
         
-        // Respect player village limit if configured
+        // Respect player village limit if configured (per world)
         $villageLimit = defined('PLAYER_VILLAGE_LIMIT') ? (int)PLAYER_VILLAGE_LIMIT : 0;
         if ($villageLimit > 0) {
-            $countStmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM villages WHERE user_id = ?");
-            $countStmt->bind_param("i", $user_id);
+            $countStmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM villages WHERE user_id = ? AND world_id = ?");
+            $countStmt->bind_param("ii", $user_id, CURRENT_WORLD_ID);
             $countStmt->execute();
             $countRow = $countStmt->get_result()->fetch_assoc();
             $countStmt->close();
@@ -434,8 +794,8 @@ class VillageManager
         do {
             $x_try = $x ?? random_int(0, $worldSize - 1);
             $y_try = $y ?? random_int(0, $worldSize - 1);
-            $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM villages WHERE x_coord = ? AND y_coord = ?");
-            $stmt->bind_param("ii", $x_try, $y_try);
+            $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM villages WHERE x_coord = ? AND y_coord = ? AND world_id = ?");
+            $stmt->bind_param("iii", $x_try, $y_try, CURRENT_WORLD_ID);
             $stmt->execute();
             $cnt = $stmt->get_result()->fetch_assoc()['cnt'];
             $stmt->close();
@@ -445,7 +805,7 @@ class VillageManager
         if (!$found) return ['success'=>false,'message'=>'No free tiles found in the world bounds.'];
         
         // Starting resources and buildings
-        $worldId = defined('INITIAL_WORLD_ID') ? INITIAL_WORLD_ID : 1;
+        $worldId = defined('CURRENT_WORLD_ID') ? CURRENT_WORLD_ID : (defined('INITIAL_WORLD_ID') ? INITIAL_WORLD_ID : 1);
         $wood = defined('INITIAL_WOOD') ? INITIAL_WOOD : 500;
         $clay = defined('INITIAL_CLAY') ? INITIAL_CLAY : 500;
         $iron = defined('INITIAL_IRON') ? INITIAL_IRON : 500;
