@@ -1079,9 +1079,12 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
             updateUrl(mapState.center.x, mapState.center.y, mapState.size);
         }
         const renderMs = performance.now() - renderStart;
+        const dropSample = lastTelemetryDroppedFrames !== null ? lastTelemetryDroppedFrames : pullDroppedFrameSample();
+        lastTelemetryDroppedFrames = null;
         sampleMapPerf({
             fetch_ms: Math.round(fetchMs),
             render_ms: Math.round(renderMs),
+            dropped_frames: dropSample,
             size: mapState.size,
             truncated: !!data.movements_truncated,
             center_x: mapState.center.x,
@@ -1392,14 +1395,13 @@ function startFrameMonitor() {
 }
 
 let lastTelemetrySend = 0;
-function maybeSendMapTelemetry(renderMs) {
+function maybeSendMapTelemetry(renderMs, droppedFramesSample = null) {
     const now = Date.now();
     // Sample 1 in 20 renders and throttle to once per 30s.
     if (Math.random() > PERF_SAMPLE_RATE) return;
     if (now - lastTelemetrySend < 30000) return;
     lastTelemetrySend = now;
-    const drops = frameDropCount;
-    frameDropCount = 0;
+    const drops = typeof droppedFramesSample === 'number' ? droppedFramesSample : pullDroppedFrameSample();
     fetch('../ajax/telemetry/map_perf.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

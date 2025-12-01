@@ -21,7 +21,7 @@
 - [x] **Debounce pan/zoom:** Debounce fetches during rapid pan/zoom; fetch only on idle state with a small delay; cancel in-flight requests. _(debounce + abortable fetch in map/map.php)_
 - **Delta compression:** Compress command deltas (binary/MessagePack) to shrink payloads for high-volume worlds.
 - **Server-side culling:** Curb returned commands/markers outside viewport + padding; enforce max payload size with continuation tokens.
-- **Client perf logging:** Log render duration and dropped frames on map interactions (sampled); ship to telemetry for regression tracking.
+- [x] **Client perf logging:** Log render duration and dropped frames on map interactions (sampled); ship to telemetry for regression tracking. _(map telemetry now sends render_ms + sampled dropped frames to telemetry endpoint)_
 - **Fallback mode:** If device perf is low (dropped frames threshold), auto-switch to simplified visuals: hide minor overlays, reduce command line density/update frequency; allow user opt-back.
 - **Offline/poor-connection mode:** Cache last tiles/markers for current viewport; queue marker drops locally and sync on reconnect with conflict resolution; show stale indicator on data.
 

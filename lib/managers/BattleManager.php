@@ -127,8 +127,8 @@ class BattleManager
         // Ensure both villages exist
         $stmt_check_villages = $this->conn->prepare("
             SELECT 
-                v1.id as source_id, v1.name as source_name, v1.x_coord as source_x, v1.y_coord as source_y, v1.user_id as source_user_id,
-                v2.id as target_id, v2.name as target_name, v2.x_coord as target_x, v2.y_coord as target_y, v2.user_id as target_user_id
+                v1.id as source_id, v1.name as source_name, v1.x_coord as source_x, v1.y_coord as source_y, v1.user_id as source_user_id, v1.world_id as source_world_id,
+                v2.id as target_id, v2.name as target_name, v2.x_coord as target_x, v2.y_coord as target_y, v2.user_id as target_user_id, v2.world_id as target_world_id
             FROM villages v1, villages v2
             WHERE v1.id = ? AND v2.id = ?
         ");
@@ -362,6 +362,8 @@ class BattleManager
         $hasSiege = false;
         $hasLoyaltyUnit = false;
         $loyaltyCount = 0;
+        $minPayloadPop = $this->getMinPayloadPop();
+        $enforceMinPayload = $this->isMinPayloadEnabled();
         foreach ($units_sent as $count) {
             $total_units += $count;
         }
@@ -407,10 +409,10 @@ class BattleManager
                 'code' => 'MIN_PAYLOAD'
             ];
         }
-        if ($total_pop < self::MIN_ATTACK_POP && !$hasSiege) {
+        if ($enforceMinPayload && $total_pop < $minPayloadPop && !$hasSiege) {
             return [
                 'success' => false,
-                'error' => sprintf('Minimum payload is %d population or at least one siege unit.', self::MIN_ATTACK_POP),
+                'error' => sprintf('Minimum payload is %d population or at least one siege unit.', $minPayloadPop),
                 'code' => 'MIN_PAYLOAD'
             ];
         }
@@ -481,7 +483,46 @@ class BattleManager
         }
 
         // Sitter restrictions: no loyalty attacks and stricter command cap.
+        $worldId = isset($villages['source_world_id']) ? (int)$villages['source_world_id'] : (defined('CURRENT_WORLD_ID') ? (int)CURRENT_WORLD_ID : 1);
         if ($sitterContext['is_sitter']) {
+            if (!class_exists('WorldManager')) {
+                require_once __DIR__ . '/WorldManager.php';
+            }
+            $wm = class_exists('WorldManager') ? new WorldManager($this->conn) : null;
+            $sitterAttackAllowed = $wm ? $wm->areSitterAttacksEnabled($worldId) : true;
+            $sitterSupportAllowed = $wm ? $wm->areSitterSupportsEnabled($worldId) : true;
+            if (!$sitterAttackAllowed && $attack_type !== 'support') {
+                $this->logSitterAction([
+                    'action' => 'blocked',
+                    'reason' => 'attack_disabled',
+                    'attack_type' => $attack_type,
+                    'owner_id' => $sitterContext['owner_id'],
+                    'sitter_id' => $sitterContext['sitter_id'],
+                    'source_village_id' => $source_village_id,
+                    'target_village_id' => $target_village_id
+                ]);
+                return [
+                    'success' => false,
+                    'error' => 'Sitter permissions: attacks are disabled on this world.',
+                    'code' => 'SITTER_ATTACKS_DISABLED'
+                ];
+            }
+            if (!$sitterSupportAllowed && $attack_type === 'support') {
+                $this->logSitterAction([
+                    'action' => 'blocked',
+                    'reason' => 'support_disabled',
+                    'attack_type' => $attack_type,
+                    'owner_id' => $sitterContext['owner_id'],
+                    'sitter_id' => $sitterContext['sitter_id'],
+                    'source_village_id' => $source_village_id,
+                    'target_village_id' => $target_village_id
+                ]);
+                return [
+                    'success' => false,
+                    'error' => 'Sitter permissions: support sends are disabled on this world.',
+                    'code' => 'SITTER_SUPPORT_DISABLED'
+                ];
+            }
             if ($hasLoyaltyUnit) {
                 return [
                     'success' => false,
@@ -630,6 +671,18 @@ class BattleManager
             $stmt_add_attack->execute();
             $attack_id = $stmt_add_attack->insert_id;
             $stmt_add_attack->close();
+            if ($sitterContext['is_sitter']) {
+                $this->logSitterAction([
+                    'action' => 'sent',
+                    'attack_type' => $attack_type,
+                    'owner_id' => $sitterContext['owner_id'],
+                    'sitter_id' => $sitterContext['sitter_id'],
+                    'source_village_id' => $source_village_id,
+                    'target_village_id' => $target_village_id,
+                    'attack_id' => $attack_id,
+                    'arrival_time' => $arrival_time
+                ]);
+            }
 
             // Notify defender of incoming attack (warning)
             if (!empty($villages['target_user_id']) && $villages['target_user_id'] != $villages['source_user_id']) {
@@ -2262,19 +2315,29 @@ class BattleManager
         return (int)$row['population'];
     }
 
-    /**
-     * Whether current server time is inside the configured night window.
-     */
-    private function isNightTimeWorldConfig(): bool
+    private function getWorldSettings(): array
     {
         if (!class_exists('WorldManager')) {
             require_once __DIR__ . '/WorldManager.php';
         }
         if (!class_exists('WorldManager')) {
-            return false;
+            $this->worldSettings = [];
+            return [];
+        }
+        if ($this->worldSettings !== null) {
+            return $this->worldSettings;
         }
         $wm = new WorldManager($this->conn);
-        $settings = $wm->getSettings(CURRENT_WORLD_ID);
+        $this->worldSettings = $wm->getSettings(CURRENT_WORLD_ID);
+        return $this->worldSettings;
+    }
+
+    /**
+     * Whether current server time is inside the configured night window.
+     */
+    private function isNightTimeWorldConfig(): bool
+    {
+        $settings = $this->getWorldSettings();
         if (empty($settings['night_bonus_enabled'])) {
             return false;
         }
@@ -2289,15 +2352,38 @@ class BattleManager
 
     private function getEnvMultiplier(string $key): float
     {
-        if (!class_exists('WorldManager')) {
-            require_once __DIR__ . '/WorldManager.php';
+        $settings = $this->getWorldSettings();
+        if (strpos($key, 'weather_') === 0) {
+            $enabled = $settings['weather_enabled'] ?? (defined('FEATURE_WEATHER_COMBAT_ENABLED') ? FEATURE_WEATHER_COMBAT_ENABLED : false);
+            if (!$enabled) {
+                return 1.0;
+            }
         }
-        if (!class_exists('WorldManager')) {
-            return 1.0;
-        }
-        $wm = new WorldManager($this->conn);
-        $settings = $wm->getSettings(CURRENT_WORLD_ID);
         return isset($settings[$key]) ? (float)$settings[$key] : 1.0;
+    }
+
+    private function isMinPayloadEnabled(): bool
+    {
+        $settings = $this->getWorldSettings();
+        if (array_key_exists('min_attack_pop_enabled', $settings)) {
+            return (bool)$settings['min_attack_pop_enabled'];
+        }
+        return defined('FEATURE_MIN_PAYLOAD_ENABLED') ? (bool)FEATURE_MIN_PAYLOAD_ENABLED : true;
+    }
+
+    private function getMinPayloadPop(): int
+    {
+        $settings = $this->getWorldSettings();
+        if (isset($settings['min_attack_pop'])) {
+            $val = (int)$settings['min_attack_pop'];
+            if ($val > 0) {
+                return $val;
+            }
+        }
+        if (defined('MIN_ATTACK_POP')) {
+            return max(1, (int)MIN_ATTACK_POP);
+        }
+        return self::MIN_ATTACK_POP;
     }
 
     /**
@@ -3085,10 +3171,22 @@ class BattleManager
      */
     private function getOverstackMultiplier(array $defendingUnits): array
     {
-        $enabled = defined('OVERSTACK_ENABLED') ? (bool)OVERSTACK_ENABLED : self::OVERSTACK_ENABLED_DEFAULT;
-        $threshold = defined('OVERSTACK_POP_THRESHOLD') ? max(0, (int)OVERSTACK_POP_THRESHOLD) : self::OVERSTACK_THRESHOLD_DEFAULT;
-        $penaltyRate = defined('OVERSTACK_PENALTY_RATE') ? (float)OVERSTACK_PENALTY_RATE : self::OVERSTACK_PENALTY_RATE_DEFAULT;
-        $minMultiplier = defined('OVERSTACK_MIN_MULTIPLIER') ? (float)OVERSTACK_MIN_MULTIPLIER : self::OVERSTACK_MIN_MULTIPLIER_DEFAULT;
+        $settings = $this->getWorldSettings();
+        $enabled = isset($settings['overstack_enabled'])
+            ? (bool)$settings['overstack_enabled']
+            : (defined('OVERSTACK_ENABLED') ? (bool)OVERSTACK_ENABLED : self::OVERSTACK_ENABLED_DEFAULT);
+
+        $threshold = isset($settings['overstack_pop_threshold'])
+            ? max(0, (int)$settings['overstack_pop_threshold'])
+            : (defined('OVERSTACK_POP_THRESHOLD') ? max(0, (int)OVERSTACK_POP_THRESHOLD) : self::OVERSTACK_THRESHOLD_DEFAULT);
+
+        $penaltyRate = isset($settings['overstack_penalty_rate'])
+            ? (float)$settings['overstack_penalty_rate']
+            : (defined('OVERSTACK_PENALTY_RATE') ? (float)OVERSTACK_PENALTY_RATE : self::OVERSTACK_PENALTY_RATE_DEFAULT);
+
+        $minMultiplier = isset($settings['overstack_min_multiplier'])
+            ? (float)$settings['overstack_min_multiplier']
+            : (defined('OVERSTACK_MIN_MULTIPLIER') ? (float)OVERSTACK_MIN_MULTIPLIER : self::OVERSTACK_MIN_MULTIPLIER_DEFAULT);
 
         if (!$enabled || $threshold <= 0 || $penaltyRate <= 0) {
             return [

@@ -107,6 +107,21 @@
 - [x] Reports: include morale/luck, allegiance damage per wave, surviving SB count, and reason codes for failed conquest attempts. _(battle loyalty report now carries morale/luck from battle context, allegiance drop/base, surviving nobles, and reason codes; conquest attempts logged with context)_
 - [ ] Tests: unit tests for drop/regen math, anti-snipe floor, random band distribution, wall reduction, and capture threshold; property tests for clamping and overflow safety.
 
+### Regen Rules — Decisions to Unblock Impl
+- Base tick: `ALLEG_REGEN_PER_HOUR` default 2.0; applied continuously using elapsed seconds; clamp to 100.
+- Multipliers: Shrine/Temple +2% per level (cap +20%), Hall of Banners +0.25 flat per level, tribe tech “Steadfast” +15% multiplicative capped by `MAX_REGEN_MULT=1.75`.
+- Pauses: during anti-snipe, active combat tick, occupation/uptime window, or when hostile command ETA ≤ `REGEN_PAUSE_WINDOW_MS` (default 5000). Regen resumes next tick without “catch-up”.
+- Decay (optional, off by default): `ABANDON_DECAY_PER_HOUR=0.5` when owner offline > 72h and no garrison; clamp floor 0.
+- Persistence: every regen tick writes `last_allegiance_update` and current allegiance; batch write once per tick per village to avoid churn; add Prometheus counter for paused ticks vs applied ticks.
+- Config surface: add to `worlds/<world>.json` keys: `alleg_regen_per_hour`, `max_regen_mult`, `regen_pause_window_ms`, `abandon_decay_per_hour`, `shrine_regen_bonus_per_level`, `hall_regen_flat_per_level`, `tribe_regen_mult`. Docs must reflect per-world overrides for UI tooltips.
+
+### Capture Aftermath Rules — Decisions
+- Post-capture start: set allegiance to `post_capture_start` (default 25, range 20–40 per world). Anti-snipe floor = min(post_capture_start - 10, 15).
+- Building loss variant (toggle): 10% chance per military building to lose 1 level, capped at 1 total building drop; disabled on casual worlds.
+- Grace periods: `capture_cooldown_until = now + capture_grace_ms` (default 15m). During grace, allegiance cannot be reduced below `allegiance_floor`. Regen stays paused first 2m to prevent instant reflip.
+- Safe re-entry: allied support may stay if `allow_allied_support_after_capture=true`; otherwise auto-return with message. Command ownership transfer happens immediately; queued outgoing attacks cancelled.
+- UI/reporting: capture report should show post-capture allegiance, grace duration, and whether building-loss variant fired (with building id/level delta if yes).
+
 ## Progress
 - Added `lib/services/AllegianceService.php` to encapsulate allegiance drop/regen math with wall reduction, random drop per bearer, anti-snipe floor, and regen tick helper.
 

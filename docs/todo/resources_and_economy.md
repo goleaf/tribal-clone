@@ -93,7 +93,7 @@
 - [x] Safeguards: cap storage overflows, block trades/aid to protected alts (power delta + IP/alt flags), and enforce fair-market bounds on offers to reduce pushing. _(TradeManager enforces headroom, fair ratios on create/accept, and now blocks linked/flagged accounts or extreme power gaps with ERR_ALT_BLOCK reasons)_
 - [x] Error codes: standardize economy errors (`ERR_CAP`, `ERR_TAX`, `ERR_ALT_BLOCK`, `ERR_RATE_LIMIT`) and surface retry/next steps in UI. _(see error code spec below)_
  - [x] Auditing: append-only logs for trades/aid/minting with actor, target, amounts, ip_hash/ua_hash, and world_id; retain 180 days. _(trade/a id logger added; writes hashed IP/UA + payload to logs/trade_audit.log)_
-- [ ] Load shedding: if trade/aid endpoints face spikes, degrade gracefully (queue/try-later) instead of overloading DB; emit backpressure metric.
+- [x] Load shedding: if trade/aid endpoints face spikes, degrade gracefully (queue/try-later) instead of overloading DB; emit backpressure metric. _(trade manager now polls active routes/open offers with a soft limit + backpressure metric `trade_load_shed` and returns ERR_RATE_LIMIT with retry window)_
 - [x] Validation: block zero/negative resource sends, enforce storage limits at send/receive, and reject offers with extreme exchange ratios outside configured band. _(trade send now checks target storage headroom + ERR_RATIO already enforced on offers)_
 - [ ] Economy tests: unit tests for vault protection math, tax calculation, overflow/decay triggers, and fair-market bounds; integration tests for trade/aid flows with caps and power-delta taxes applied.
 
@@ -113,6 +113,7 @@
 - Resource tick now loads per-world economy config up front so decay/threshold toggles apply consistently and no undefined config paths fire during updates.
 - Trade/aid errors use standardized economy codes; send flow enforces storage headroom and resource availability with `ERR_RES` instead of `ERR_CAP`.
 - Anti-push/alt guard: TradeManager now blocks trades to linked/flagged accounts and extreme power gaps for protected/low-point players, returning `ERR_ALT_BLOCK` (`alt_link`/`alt_flag`/`power_delta`).
+- Trade load-shedding path returns `ERR_RATE_LIMIT` when active routes/offers cross soft caps and logs `trade_load_shed` metrics with counts/limits for tuning.
 
 ## Acceptance Criteria
 - World configs apply correct production/storage/vault/decay values and caps for the selected archetype; overrides logged.
@@ -145,6 +146,7 @@
 - **Redemption:** Purchase endpoint checks token balance, caps, and window; deducts tokens atomically. Returns `ERR_EVENT_EXPIRED`/`ERR_CAP`/`ERR_TOKENS` as needed.
 - **Telemetry/Audit:** Metrics for tokens granted/spent/expired, shop purchases by item, and modifier activation; append-only logs for grants/purchases with ip_hash/ua_hash.
 - **Abuse Guards:** Block event-token trades between accounts; cap token earn per day; detect and throttle repeated farm loops; expire unspent tokens cleanly on event end with clear messaging.
+- **UI/UX:** Event banner shows timers, current modifiers, token balance with expiry, and shop caps; purchase flow surfaces remaining caps and errors clearly.
 
 ### Trade System Spec
 - **Modes:** `fixed_rate` (beginner/casual worlds with configured fair ratios and tight bands) and `open_rate` (free market). World flag controls mode; UI shows mode badge.

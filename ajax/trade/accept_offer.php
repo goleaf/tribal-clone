@@ -26,6 +26,12 @@ try {
     if (!$limiter->allow($rateKey, $maxRequests, $windowSeconds)) {
         AjaxResponse::error('Too many trade actions. Please wait a moment.', ['retry_after_sec' => $windowSeconds], 429, EconomyError::ERR_RATE_LIMIT);
     }
+    $globalKey = 'trade_accept_global';
+    $globalMax = 50;
+    $globalWindow = 10;
+    if (!$limiter->allow($globalKey, $globalMax, $globalWindow)) {
+        AjaxResponse::error('Trade system busy. Please retry shortly.', ['retry_after_sec' => $globalWindow], 429, EconomyError::ERR_RATE_LIMIT);
+    }
 
     $villageId = isset($_POST['village_id']) ? (int)$_POST['village_id'] : 0;
     $offerId = isset($_POST['offer_id']) ? (int)$_POST['offer_id'] : 0;
