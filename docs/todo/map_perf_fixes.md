@@ -59,6 +59,7 @@
 - Offline/poor-connection: toggle offline, cache last viewport, queue marker drops, reconnect and confirm conflict resolution and stale indicators.
 - Fallback mode: force low-perf device profile; ensure minor overlays/lines hide, update rate drops, and user toggle works.
 - Rate limits: hammer map fetch/marker-drop endpoints to confirm `ERR_RATE_LIMITED` with retry-after and no server degradation.
+- Offline conflicts: create conflicting marker/bookmark edits offline vs online; on reconnect, verify server-wins merge, conflicts list populated, and telemetry logged.
 - Pagination: scroll command list with 1k+ entries; ensure cursors load next pages, no duplicates, and skeletons show while fetching.
 
 ## Profiling Plan

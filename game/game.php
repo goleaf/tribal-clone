@@ -43,6 +43,7 @@ if (!$village) {
     exit();
 }
 $village_id = $village['id'];
+$worldId = isset($village['world_id']) ? (int)$village['world_id'] : (defined('CURRENT_WORLD_ID') ? (int)CURRENT_WORLD_ID : 1);
 
 // Main building level (used for time reductions)
 $main_building_level = $buildingManager->getBuildingLevel($village_id, 'main_building');
@@ -58,12 +59,14 @@ $village = $villageManager->getVillageInfo($village_id);
 $attackMessages = $battleManager->processCompletedAttacks($user_id);
 if (!empty($attackMessages)) {
     $message .= implode('', $attackMessages);
-    $notificationManager->addNotification(
-        $user_id,
-        sprintf('%d attack(s) resolved.', count($attackMessages)),
-        'info',
-        '/messages/reports.php'
-    );
+    if ($worldManager->areNotificationsEnabled($worldId)) {
+        $notificationManager->addNotification(
+            $user_id,
+            sprintf('%d attack(s) resolved.', count($attackMessages)),
+            'info',
+            '/messages/reports.php'
+        );
+    }
 }
 
 // --- BUILDING DATA FOR VIEW ---

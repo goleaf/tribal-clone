@@ -61,6 +61,10 @@ define('FEATURE_MIN_PAYLOAD_ENABLED', true); // Enforce minimum pop payload for 
 define('MIN_ATTACK_POP', 5); // Minimum population required to send a command (unless siege is present)
 define('PLUNDER_DR_ENABLED', true); // Enable diminishing returns on repeated plunder within a window
 define('FEATURE_WEATHER_COMBAT_ENABLED', false); // Enable weather multipliers in combat resolution
+define('FEATURE_PARALLEL_QUEUES_ENABLED', false); // Allow resource + military build in parallel (world override)
+define('FEATURE_HOSPITAL_ENABLED', true); // Toggle hospital/wounded recovery systems
+define('FEATURE_OUTPOST_ENABLED', false); // Toggle temporary outpost/encampment building
+define('WALL_DECAY_ENABLED', false); // Optional passive wall decay when inactive
 define('INACTIVE_TO_BARBARIAN_DAYS', 30); // Days of inactivity before a player village becomes barbarian (cron-driven)
 define('PALADIN_WEAPON', 'none'); // Options: 'none', 'bonfire', 'vascos_scepter'
 define('PALADIN_WEAPON_BONFIRE_MULTIPLIER', 1.5); // Attack/defense multiplier for catapults when Bonfire is equipped
