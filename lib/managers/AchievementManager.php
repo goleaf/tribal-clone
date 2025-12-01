@@ -749,4 +749,129 @@ class AchievementManager
 
         return null;
     }
+
+    private function getOpponentsDefeated(int $userId): int
+    {
+        if (!$this->tableExists('battle_reports') || !$this->tableExists('battle_report_units')) {
+            return 0;
+        }
+
+        $sql = "
+            SELECT SUM(kills) AS total_kills FROM (
+                SELECT SUM(CASE WHEN bru.side = 'defender' THEN bru.lost_count ELSE 0 END) AS kills
+                FROM battle_reports br
+                JOIN battle_report_units bru ON bru.report_id = br.id
+                WHERE br.attacker_user_id = ?
+                UNION ALL
+                SELECT SUM(CASE WHEN bru.side = 'attacker' THEN bru.lost_count ELSE 0 END) AS kills
+                FROM battle_reports br
+                JOIN battle_report_units bru ON bru.report_id = br.id
+                WHERE br.defender_user_id = ?
+            ) agg
+        ";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return 0;
+        }
+        $stmt->bind_param("ii", $userId, $userId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row && isset($row['total_kills']) ? (int)$row['total_kills'] : 0;
+    }
+
+    private function countSuccessfulAttacks(int $userId): int
+    {
+        if (!$this->tableExists('battle_reports')) {
+            return 0;
+        }
+        $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM battle_reports WHERE attacker_user_id = ? AND attacker_won = 1");
+        if (!$stmt) {
+            return 0;
+        }
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ? (int)$row['cnt'] : 0;
+    }
+
+    private function countSuccessfulDefenses(int $userId): int
+    {
+        if (!$this->tableExists('battle_reports')) {
+            return 0;
+        }
+        $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM battle_reports WHERE defender_user_id = ? AND attacker_won = 0");
+        if (!$stmt) {
+            return 0;
+        }
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ? (int)$row['cnt'] : 0;
+    }
+
+    private function countConquests(int $userId): int
+    {
+        if (!$this->tableExists('battle_reports')) {
+            return 0;
+        }
+        $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM battle_reports WHERE attacker_user_id = ? AND attacker_won = 1");
+        if (!$stmt) {
+            return 0;
+        }
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ? (int)$row['cnt'] : 0;
+    }
+
+    private function countMaxedBuildingTypes(int $userId): int
+    {
+        if (!$this->tableExists('building_types') || !$this->tableExists('village_buildings')) {
+            return 0;
+        }
+
+        $stmt = $this->conn->prepare("
+            SELECT bt.id, bt.max_level, MAX(vb.level) AS lvl
+            FROM building_types bt
+            LEFT JOIN village_buildings vb ON vb.building_type_id = bt.id
+            LEFT JOIN villages v ON vb.village_id = v.id AND v.user_id = ?
+            GROUP BY bt.id, bt.max_level
+        ");
+        if (!$stmt) {
+            return 0;
+        }
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $maxed = 0;
+        while ($row = $result->fetch_assoc()) {
+            if ((int)$row['lvl'] >= (int)$row['max_level']) {
+                $maxed++;
+            }
+        }
+        $stmt->close();
+        return $maxed;
+    }
+
+    private function tableExists(string $table): bool
+    {
+        $driver = defined('DB_DRIVER') ? DB_DRIVER : 'mysql';
+        if ($driver === 'sqlite') {
+            $stmt = $this->conn->prepare("SELECT name FROM sqlite_master WHERE type='table' AND name = ? LIMIT 1");
+        } else {
+            $stmt = $this->conn->prepare("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? LIMIT 1");
+        }
+        if (!$stmt) {
+            return true;
+        }
+        $stmt->bind_param("s", $table);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return (bool)$row;
+    }
 }

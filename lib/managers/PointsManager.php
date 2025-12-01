@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 class PointsManager
 {
-    private mysqli $conn;
+    private $conn;
     private bool $historyReady = false;
 
-    public function __construct(mysqli $conn)
+    public function __construct($conn)
     {
         $this->conn = $conn;
     }
@@ -145,7 +145,13 @@ class PointsManager
     {
         $this->ensureHistoryTable();
         $today = date('Y-m-d');
-        $sql = "INSERT OR REPLACE INTO player_points_history (user_id, recorded_on, points) VALUES (?, ?, ?)";
+        $driver = defined('DB_DRIVER') ? DB_DRIVER : 'mysql';
+        if ($driver === 'sqlite') {
+            $sql = "INSERT OR REPLACE INTO player_points_history (user_id, recorded_on, points) VALUES (?, ?, ?)";
+        } else {
+            $sql = "INSERT INTO player_points_history (user_id, recorded_on, points) VALUES (?, ?, ?)
+                    ON DUPLICATE KEY UPDATE points = VALUES(points)";
+        }
         $stmt = $this->conn->prepare($sql);
         if ($stmt) {
             $stmt->bind_param("isi", $userId, $today, $points);
@@ -186,18 +192,18 @@ class PointsManager
     private function getPointsAtDate(int $userId, int $days): ?int
     {
         $this->ensureHistoryTable();
+        $cutoff = date('Y-m-d', strtotime("-{$days} days"));
         $stmt = $this->conn->prepare("
             SELECT points
             FROM player_points_history
-            WHERE user_id = ? AND recorded_on <= date('now', ?)
+            WHERE user_id = ? AND recorded_on <= ?
             ORDER BY recorded_on DESC
             LIMIT 1
         ");
         if (!$stmt) {
             return null;
         }
-        $modifier = sprintf('-%d day', $days);
-        $stmt->bind_param("is", $userId, $modifier);
+        $stmt->bind_param("is", $userId, $cutoff);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
@@ -210,14 +216,27 @@ class PointsManager
             return;
         }
         $this->historyReady = true;
-        $this->conn->query("
-            CREATE TABLE IF NOT EXISTS player_points_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                recorded_on TEXT NOT NULL,
-                points INTEGER NOT NULL,
-                UNIQUE(user_id, recorded_on)
-            )
-        ");
+        $driver = defined('DB_DRIVER') ? DB_DRIVER : 'mysql';
+        if ($driver === 'sqlite') {
+            $this->conn->query("
+                CREATE TABLE IF NOT EXISTS player_points_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    recorded_on TEXT NOT NULL,
+                    points INTEGER NOT NULL,
+                    UNIQUE(user_id, recorded_on)
+                )
+            ");
+        } else {
+            $this->conn->query("
+                CREATE TABLE IF NOT EXISTS player_points_history (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    recorded_on DATE NOT NULL,
+                    points INT NOT NULL,
+                    UNIQUE KEY uniq_user_day (user_id, recorded_on)
+                )
+            ");
+        }
     }
 }

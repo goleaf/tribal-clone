@@ -91,6 +91,22 @@ class BattleManager
             ];
         }
 
+        // Beginner protection checks (skip for supports)
+        if ($attack_type !== 'support') {
+            $protectionCheck = $this->validateBeginnerProtection(
+                (int)$villages['source_user_id'],
+                (int)$villages['target_user_id'],
+                (int)$villages['source_id'],
+                (int)$villages['target_id']
+            );
+            if (!$protectionCheck['allowed']) {
+                return [
+                    'success' => false,
+                    'error' => $protectionCheck['error'] ?? 'Attack blocked due to beginner protection.'
+                ];
+            }
+        }
+
         // Require Rally Point to send any troops
         $rallyLevel = $this->buildingManager->getBuildingLevel((int)$source_village_id, 'rally_point');
         if ($rallyLevel <= 0) {
@@ -198,7 +214,9 @@ class BattleManager
 
         // Calculate travel time in seconds (distance in fields, speed in fields/hour -> seconds)
         $worldSpeed = defined('WORLD_UNIT_SPEED') ? max(0.1, (float)WORLD_UNIT_SPEED) : self::WORLD_UNIT_SPEED;
-        $travel_time = (int)ceil(($distance * $slowest_speed / $worldSpeed) * 3600);
+        $unitSpeedMultiplier = defined('UNIT_SPEED_MULTIPLIER') ? max(0.1, (float)UNIT_SPEED_MULTIPLIER) : 1.0;
+        $effectiveSpeed = $worldSpeed * $unitSpeedMultiplier;
+        $travel_time = (int)ceil(($distance * $slowest_speed / $effectiveSpeed) * 3600);
         $start_time = time();
         $arrival_time = $start_time + $travel_time;
         
@@ -1487,6 +1505,83 @@ class BattleManager
         $ratio = $defenderPoints / max(1, $attackerPoints);
         $morale = sqrt($ratio);
         return max(self::MIN_MORALE, min(1.0, $morale));
+    }
+
+    /**
+     * Validate beginner protection before an attack is sent.
+     * Returns ['allowed'=>bool, 'error'=>?]
+     */
+    private function validateBeginnerProtection(int $attackerUserId, int $defenderUserId, int $attackerVillageId, int $defenderVillageId): array
+    {
+        // Barbarian villages (-1 owner) are never protected
+        if ($defenderUserId <= 0 || $attackerUserId <= 0) {
+            return ['allowed' => true];
+        }
+
+        $protectionConfig = [
+            'min_days' => defined('NEWBIE_PROTECTION_DAYS_MIN') ? NEWBIE_PROTECTION_DAYS_MIN : 3,
+            'max_days' => defined('NEWBIE_PROTECTION_DAYS_MAX') ? NEWBIE_PROTECTION_DAYS_MAX : 7,
+            'points_cap' => defined('NEWBIE_PROTECTION_POINTS_CAP') ? NEWBIE_PROTECTION_POINTS_CAP : 200,
+        ];
+
+        $stmt = $this->conn->prepare("
+            SELECT id, created_at, points, is_protected
+            FROM users
+            WHERE id IN (?, ?)
+        ");
+        if ($stmt === false) {
+            return ['allowed' => true];
+        }
+        $stmt->bind_param("ii", $attackerUserId, $defenderUserId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $users = [];
+        while ($row = $res->fetch_assoc()) {
+            $users[(int)$row['id']] = $row;
+        }
+        $stmt->close();
+
+        $now = new DateTimeImmutable('now');
+        $attacker = $users[$attackerUserId] ?? null;
+        $defender = $users[$defenderUserId] ?? null;
+
+        if (!$attacker || !$defender) {
+            return ['allowed' => true];
+        }
+
+        $attackerPoints = (int)($attacker['points'] ?? 0);
+        $defenderPoints = (int)($defender['points'] ?? 0);
+
+        $attackerProtection = $this->isUnderProtection($attacker, $now, $protectionConfig);
+        $defenderProtection = $this->isUnderProtection($defender, $now, $protectionConfig);
+
+        // Attacker under protection cannot attack outside protected range unless target is barbarian
+        if ($attackerProtection && !$defenderProtection) {
+            return ['allowed' => false, 'error' => 'You are under beginner protection and cannot attack players outside protection.'];
+        }
+
+        // Defender under protection cannot be attacked by non-protected players
+        if ($defenderProtection && !$attackerProtection) {
+            return ['allowed' => false, 'error' => 'Target player is under beginner protection.'];
+        }
+
+        return ['allowed' => true];
+    }
+
+    private function isUnderProtection(array $userRow, DateTimeImmutable $now, array $config): bool
+    {
+        $pointsCap = $config['points_cap'];
+        if (($userRow['points'] ?? 0) > $pointsCap) {
+            return false;
+        }
+
+        $createdAt = isset($userRow['created_at']) ? new DateTimeImmutable($userRow['created_at']) : null;
+        if (!$createdAt) {
+            return false;
+        }
+
+        $daysSinceCreate = (int)$createdAt->diff($now)->format('%a');
+        return $daysSinceCreate < $config['max_days'];
     }
 
     /**
