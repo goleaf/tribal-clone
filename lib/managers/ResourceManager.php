@@ -48,11 +48,22 @@ class ResourceManager {
 
         $mult = $resourceMultiplier * $catchupMultiplier;
 
-        return [
+        $rates = [
             'wood' => $this->buildingManager->getHourlyProduction('sawmill', $levels['sawmill'] ?? 0) * $mult,
             'clay' => $this->buildingManager->getHourlyProduction('clay_pit', $levels['clay_pit'] ?? 0) * $mult,
             'iron' => $this->buildingManager->getHourlyProduction('iron_mine', $levels['iron_mine'] ?? 0) * $mult,
         ];
+
+        // Occupation tax: reduce production for recently conquered villages.
+        $occupationMult = $this->getOccupationMultiplier($village_id);
+        if ($occupationMult < 1.0) {
+            foreach (['wood', 'clay', 'iron'] as $res) {
+                $rates[$res] = ($rates[$res] ?? 0) * $occupationMult;
+            }
+            $rates['occupation_multiplier'] = $occupationMult;
+        }
+
+        return $rates;
     }
 
     /**
@@ -400,5 +411,37 @@ class ResourceManager {
             'resource_multiplier' => 1.0,
             'vault_protect_pct' => 10
         ];
+    }
+
+    /**
+     * Occupation tax multiplier for recently conquered villages.
+     */
+    private function getOccupationMultiplier(int $villageId): float
+    {
+        $durationHours = defined('OCCUPATION_TAX_DURATION_HOURS') ? (int)OCCUPATION_TAX_DURATION_HOURS : 72;
+        $multiplier = defined('OCCUPATION_TAX_MULTIPLIER') ? (float)OCCUPATION_TAX_MULTIPLIER : 0.8;
+        if ($durationHours <= 0 || $multiplier >= 1.0) {
+            return 1.0;
+        }
+        $stmt = $this->conn->prepare("SELECT conquered_at FROM villages WHERE id = ? LIMIT 1");
+        if (!$stmt) {
+            return 1.0;
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$row || empty($row['conquered_at'])) {
+            return 1.0;
+        }
+        $conqueredTs = strtotime($row['conquered_at']);
+        if ($conqueredTs <= 0) {
+            return 1.0;
+        }
+        $ageHours = (time() - $conqueredTs) / 3600;
+        if ($ageHours > $durationHours) {
+            return 1.0;
+        }
+        return max(0.1, $multiplier);
     }
 }

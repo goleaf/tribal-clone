@@ -16,6 +16,8 @@ class TradeManager {
     private const MAX_FAIR_RATE = 4.0;  // offered/requested upper bound (400%)
     private const PUSH_POINTS_RATIO = 5; // block aid when sender points exceed target by 5x and target is protected/low points
     private const ACTIVE_ROUTE_SOFT_LIMIT = 5000; // soft global cap for in-flight trade routes
+    private int $lastLoadCheckTs = 0;
+    private bool $lastLoadCheckBusy = false;
 
     public function __construct($db_connection) {
         $this->conn = $db_connection;
@@ -1562,5 +1564,50 @@ class TradeManager {
         if ($line !== false) {
             @file_put_contents($logFile, $line . PHP_EOL, FILE_APPEND | LOCK_EX);
         }
+    }
+
+    private function isTradeSystemOverloaded(): bool
+    {
+        $now = time();
+        $ttl = defined('TRADE_LOADCHECK_TTL_SEC') ? max(1, (int)TRADE_LOADCHECK_TTL_SEC) : 5;
+        if (($now - $this->lastLoadCheckTs) < $ttl) {
+            return $this->lastLoadCheckBusy;
+        }
+
+        $routeLimit = defined('TRADE_ACTIVE_ROUTE_SOFT_LIMIT') ? (int)TRADE_ACTIVE_ROUTE_SOFT_LIMIT : self::ACTIVE_ROUTE_SOFT_LIMIT;
+        $offerLimit = defined('TRADE_OPEN_OFFERS_SOFT_LIMIT') ? (int)TRADE_OPEN_OFFERS_SOFT_LIMIT : 5000;
+        $activeRoutes = 0;
+        $openOffers = 0;
+
+        if ($routeLimit > 0) {
+            $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM trade_routes WHERE arrival_time > NOW()");
+            $stmt->execute();
+            $row = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            $activeRoutes = (int)($row['cnt'] ?? 0);
+        }
+
+        if ($offerLimit > 0 && $this->hasTradeOffersTable()) {
+            $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM trade_offers WHERE status = 'open'");
+            $stmt->execute();
+            $row = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            $openOffers = (int)($row['cnt'] ?? 0);
+        }
+
+        $overloaded = ($routeLimit > 0 && $activeRoutes > $routeLimit) || ($offerLimit > 0 && $openOffers > $offerLimit);
+        $this->lastLoadCheckTs = $now;
+        $this->lastLoadCheckBusy = $overloaded;
+
+        if ($overloaded) {
+            $this->logEconomyMetric('trade_load_shed', [
+                'active_routes' => $activeRoutes,
+                'route_limit' => $routeLimit,
+                'open_offers' => $openOffers,
+                'offer_limit' => $offerLimit
+            ]);
+        }
+
+        return $overloaded;
     }
 }

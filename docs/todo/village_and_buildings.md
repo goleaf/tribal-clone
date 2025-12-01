@@ -165,6 +165,19 @@
 - Outposts: creation blocked when hostile commands inbound; expiry cleans temp slots/queues/markers.
 - Wall: siege damage reduces levels; repair queue restores; decay toggle obeys world config.
 - Cache/versioning: client receives cost/time version; cache bust verified on config change.
+
+## Profiling & Load Plan
+- Stress-test build queue API under high concurrency (enqueue/reorder/cancel) with caps/prereqs enabled; measure p50/p95/p99 latency and refund accuracy.
+- Watchtower detection load: simulate heavy incoming commands to ensure detection/flagging stays within p95 targets and does not spam logs.
+- Hospital recovery processing: bulk apply recoveries post-battle at scale; measure resolver overhead and report generation time.
+- Outpost lifecycle soak: mass create/expire outposts to validate cleanup and queue removal without leaks or slowdowns.
+- Wall damage/repair: batch siege events and repairs to profile state updates and ensure decay toggle checks are cheap.
+
+## Rollout Checklist
+- [ ] Feature flags per world for parallel queues, watchtower intel, hospital recovery, and outposts/decay; defaults aligned to archetypes.
+- [ ] Migrations/config changes for building caps/queue rules tested with rollback; sane defaults when settings absent.
+- [ ] Backward-compatible building endpoints (cost/queue) while new fields roll out; version responses to avoid client breakage.
+- [ ] Release comms/help: explain queue rules, watchtower intel, hospital recovery, and outpost behavior; include examples/tooltips.
 ## Open Questions
 - Should parallel construction be globally allowed (resource + military) or world-configurable, and how to message when blocked?
 - Do hospitals recover wounded after all battles or only defenses? Define to avoid free sustain for attackers.

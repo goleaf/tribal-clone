@@ -333,6 +333,7 @@ let lastMapFetchMs = null;
 let mapCacheStatus = 'miss';
 let frameDropCount = 0;
 let lastFrameTs = null;
+let lastTelemetryDroppedFrames = null;
 
 function trackFrameDrops(ts) {
     if (lastFrameTs !== null) {
@@ -345,6 +346,14 @@ function trackFrameDrops(ts) {
     requestAnimationFrame(trackFrameDrops);
 }
 requestAnimationFrame(trackFrameDrops);
+
+function pullDroppedFrameSample() {
+    const dropSample = Math.max(frameDropCount, lastDroppedFrames ?? 0);
+    frameDropCount = 0;
+    lastDroppedFrames = null;
+    return dropSample;
+}
+
 const filters = {
     barbarians: true,
     players: true,
@@ -518,6 +527,7 @@ async function jumpToBookmark(match) {
 document.addEventListener('DOMContentLoaded', () => {
     initHighContrast();
     initReducedMotion();
+    startFrameMonitor();
     document.addEventListener('keydown', handleMapKeydown);
     const sizeInput = document.getElementById('map-size');
     const sizeLabel = document.getElementById('map-size-label');
@@ -1356,7 +1366,9 @@ function renderMap() {
 
     mapGrid.appendChild(fragment);
     const renderDuration = performance.now() - renderStart;
-    maybeSendMapTelemetry(renderDuration);
+    const dropSample = pullDroppedFrameSample();
+    lastTelemetryDroppedFrames = dropSample;
+    maybeSendMapTelemetry(renderDuration, dropSample);
 }
 
 function startFrameMonitor() {

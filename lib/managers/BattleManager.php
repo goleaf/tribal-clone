@@ -12,6 +12,7 @@ class BattleManager
     private $tribeWarManager; // Tribe war tracking
     private $intelManager; // Scouting/intel logging
     private string $conquestLogFile;
+    private ?array $worldSettings = null;
 
     private const RANDOM_VARIANCE = 0.25; // +/- 25% luck
     private const FAITH_DEFENSE_PER_LEVEL = 0.05; // 5% per church level
@@ -2623,6 +2624,24 @@ class BattleManager
         $stmt->bind_param("iss", $userId, $code, $metaJson);
         $stmt->execute();
         $stmt->close();
+    }
+
+    private function logConquestAttempt(string $event, int $attackerUserId, ?int $defenderUserId, int $targetVillageId, bool $allowed, array $meta = []): void
+    {
+        $entry = [
+            'ts' => date('c'),
+            'event' => $event,
+            'attacker_user_id' => $attackerUserId,
+            'defender_user_id' => $defenderUserId,
+            'target_village_id' => $targetVillageId,
+            'world_id' => defined('CURRENT_WORLD_ID') ? CURRENT_WORLD_ID : null,
+            'allowed' => $allowed,
+            'meta' => $meta
+        ];
+        $line = json_encode($entry);
+        if ($line !== false) {
+            @file_put_contents($this->conquestLogFile, $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+        }
     }
 
     private function getAbusePenaltyMultiplier(int $userId): float

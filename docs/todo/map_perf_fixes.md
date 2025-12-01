@@ -61,7 +61,7 @@
 - [ ] Feature flags per world for batching/pagination/clustering/fallback mode; enable gradually by archetype.
 - [ ] Schema/config changes (if any) for map settings validated with rollback; ensure new settings are read with sane defaults when absent.
 - [ ] Backward compatibility: maintain legacy map endpoints/fields while new deltas/clustering roll out; version responses to avoid client breaks.
-- [ ] Release comms/help: explain new map performance modes (conditional requests, clustering, fallback) and how to toggle high-contrast/reduced-motion.
+- [x] Release comms/help: explain new map performance modes (conditional requests, clustering, fallback) and how to toggle high-contrast/reduced-motion. _(see docs/map_performance_comms.md for release copy + FAQ)_
 - [x] Monitoring: client perf logging enabled (render time/dropped frames) with alerts on regressions; server map_metrics dashboards up (latency/cache hit/payload). _(map_data.php now writes alert log on slow/large responses; client perf telemetry triggers alert log on high render time/dropped frames)_
 - [ ] Low-perf/offline toggles surfaced in UI with state retention per device/session; QA covers toggle on/off and re-entry.
 

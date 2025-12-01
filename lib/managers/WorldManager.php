@@ -120,11 +120,11 @@ class WorldManager
                         foreach ($selectable as $key) {
                             if (array_key_exists($key, $row) && $row[$key] !== null) {
                                 $val = $row[$key];
-                                if (in_array($key, ['world_speed', 'troop_speed', 'build_speed', 'train_speed', 'research_speed', 'resource_production_multiplier', 'resource_multiplier', 'vault_protection_percent', 'vault_protect_pct', 'inf_train_multiplier', 'cav_train_multiplier', 'rng_train_multiplier', 'siege_train_multiplier'], true)) {
+                                if (in_array($key, ['world_speed', 'troop_speed', 'build_speed', 'train_speed', 'research_speed', 'resource_production_multiplier', 'resource_multiplier', 'vault_protection_percent', 'vault_protect_pct', 'inf_train_multiplier', 'cav_train_multiplier', 'rng_train_multiplier', 'siege_train_multiplier', 'overstack_penalty_rate', 'overstack_min_multiplier'], true)) {
                                     $defaults[$key] = (float)$val;
-                                } elseif ($key === 'tribe_member_limit' || $key === 'victory_value') {
+                                } elseif ($key === 'tribe_member_limit' || $key === 'victory_value' || $key === 'overstack_pop_threshold' || $key === 'min_attack_pop') {
                                     $defaults[$key] = $val === null ? null : (int)$val;
-                                } elseif (in_array($key, ['enable_archer', 'enable_paladin', 'enable_paladin_weapons', 'night_bonus_enabled', 'resource_decay_enabled'], true)) {
+                                } elseif (in_array($key, ['enable_archer', 'enable_paladin', 'enable_paladin_weapons', 'night_bonus_enabled', 'resource_decay_enabled', 'overstack_enabled', 'min_attack_pop_enabled', 'weather_enabled'], true)) {
                                     $defaults[$key] = (bool)$val;
                                 } elseif (in_array($key, ['night_start_hour', 'night_end_hour'], true)) {
                                     $defaults[$key] = (int)$val;
@@ -342,9 +342,16 @@ class WorldManager
             'night_bonus_enabled' => 0,
             'night_start_hour' => 22,
             'night_end_hour' => 6,
+            'weather_enabled' => 0,
             'resource_production_multiplier' => 1.0,
             'vault_protection_percent' => 0.0,
             'resource_decay_enabled' => 0,
+            'overstack_enabled' => 0,
+            'overstack_pop_threshold' => 0,
+            'overstack_penalty_rate' => 0.1,
+            'overstack_min_multiplier' => 0.4,
+            'min_attack_pop_enabled' => 1,
+            'min_attack_pop' => 5,
             'terrain_attack_multiplier' => 1.0,
             'terrain_defense_multiplier' => 1.0,
             'weather_attack_multiplier' => 1.0,
