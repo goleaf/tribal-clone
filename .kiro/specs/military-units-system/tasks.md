@@ -46,7 +46,7 @@
   - Return boolean availability
   - _Requirements: 10.1, 10.2, 15.5_
 
-- [x] 2.3 Implement getEffectiveUnitStats() method
+- [-] 2.3 Implement getEffectiveUnitStats() method
   - Load base stats from unit_types
   - Apply world training time multipliers by archetype
   - Apply world cost multipliers by archetype
