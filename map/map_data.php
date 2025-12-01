@@ -102,6 +102,7 @@ $mapFeatures = [
     'clustering' => $wm->isMapClusteringEnabled(CURRENT_WORLD_ID),
     'delta' => $wm->isMapDeltaEnabled(CURRENT_WORLD_ID),
     'fallback' => $wm->isMapFallbackEnabled(CURRENT_WORLD_ID),
+    'pagination' => $wm->isMapPaginationEnabled(CURRENT_WORLD_ID),
 ];
 
 // Handle conditional requests for data freshness without excessive payloads.
@@ -453,6 +454,18 @@ if (!$lowPerfMode && !empty($movementAttackIds)) {
                 unset($move);
             }
             unset($v);
+
+            // Mark batches that include nobles to help clients highlight critical lines
+            foreach ($nobleAttackIds as $attackId => $flag) {
+                if (empty($movementBatchAttackMap[$attackId])) {
+                    continue;
+                }
+                foreach ($movementBatchAttackMap[$attackId] as [$villageId, $bucketKey]) {
+                    if (isset($movementBatches[$villageId][$bucketKey])) {
+                        $movementBatches[$villageId][$bucketKey]['has_noble'] = true;
+                    }
+                }
+            }
         }
     }
 }
@@ -479,6 +492,17 @@ foreach ($villages as &$v) {
     }
 }
 unset($v);
+
+// Normalize movement batch arrays for JSON output
+foreach ($movementBatches as $vid => $batches) {
+    foreach ($batches as $bucketKey => &$batch) {
+        if (isset($batch['sample_coords']) && is_array($batch['sample_coords'])) {
+            $batch['sample_coords'] = array_values($batch['sample_coords']);
+        }
+    }
+    unset($batch);
+    $movementBatches[$vid] = array_values($batches);
+}
 
 // Fetch tribes/alliances if the table exists (optional)
 $allies = [];

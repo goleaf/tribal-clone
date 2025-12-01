@@ -232,6 +232,9 @@ class VillageManager
         if ($this->villageColumnExists('last_loyalty_update')) {
             $columns[] = 'last_loyalty_update';
         }
+        if ($this->villageColumnExists('anti_snipe_until')) {
+            $columns[] = 'anti_snipe_until';
+        }
         $sql = "SELECT " . implode(', ', $columns) . " FROM villages WHERE id = ? LIMIT 1";
 
         $stmt = $this->conn->prepare($sql);

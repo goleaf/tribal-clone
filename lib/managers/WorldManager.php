@@ -46,10 +46,6 @@ class WorldManager
         'hospital_enabled' => "INTEGER NOT NULL DEFAULT 1",
         'outpost_enabled' => "INTEGER NOT NULL DEFAULT 0",
         'wall_decay_enabled' => "INTEGER NOT NULL DEFAULT 0",
-        'map_batching_enabled' => "INTEGER NOT NULL DEFAULT 0",
-        'map_clustering_enabled' => "INTEGER NOT NULL DEFAULT 0",
-        'map_delta_enabled' => "INTEGER NOT NULL DEFAULT 0",
-        'map_fallback_enabled' => "INTEGER NOT NULL DEFAULT 0",
         'terrain_attack_multiplier' => "REAL NOT NULL DEFAULT 1.0",
         'terrain_defense_multiplier' => "REAL NOT NULL DEFAULT 1.0",
         'weather_attack_multiplier' => "REAL NOT NULL DEFAULT 1.0",
@@ -317,6 +313,15 @@ class WorldManager
         }
         $settings = $this->getSettings($worldId);
         return !empty($settings['map_fallback_enabled']);
+    }
+
+    public function isMapPaginationEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        if (defined('MAP_PAGINATION_ENABLED')) {
+            return (bool)MAP_PAGINATION_ENABLED;
+        }
+        $settings = $this->getSettings($worldId);
+        return !empty($settings['map_pagination_enabled']);
     }
 
     public function getWorldSpeed(int $worldId = CURRENT_WORLD_ID): float
