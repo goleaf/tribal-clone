@@ -188,9 +188,10 @@ class UnitManager
      *
      * @param int $unit_type_id Unit type ID
      * @param int $village_id Village ID
+     * @param int $count Number of units to recruit (for cap checks)
      * @return array Status and reason on failure
      */
-    public function checkRecruitRequirements($unit_type_id, $village_id)
+    public function checkRecruitRequirements($unit_type_id, $village_id, $count = 1)
     {
         if (!isset($this->unit_types_cache[$unit_type_id])) {
             return ['can_recruit' => false, 'reason' => 'unit_not_found', 'code' => 'ERR_PREREQ'];
@@ -222,6 +223,34 @@ class UnitManager
                 'unit' => $internal,
                 'window_start' => $window['start'],
                 'window_end' => $window['end']
+            ];
+        }
+
+        // Get user ID for elite cap checks
+        $stmtUser = $this->conn->prepare("SELECT user_id FROM villages WHERE id = ? LIMIT 1");
+        if (!$stmtUser) {
+            return ['can_recruit' => false, 'reason' => 'database_error', 'code' => 'ERR_SERVER'];
+        }
+        $stmtUser->bind_param("i", $village_id);
+        $stmtUser->execute();
+        $villageRow = $stmtUser->get_result()->fetch_assoc();
+        $stmtUser->close();
+        
+        if (!$villageRow) {
+            return ['can_recruit' => false, 'reason' => 'village_not_found', 'code' => 'ERR_PREREQ'];
+        }
+        $userId = (int)$villageRow['user_id'];
+
+        // Check elite unit caps
+        $capCheck = $this->checkEliteUnitCap($userId, $internal, $count);
+        if (!$capCheck['can_train']) {
+            return [
+                'can_recruit' => false,
+                'reason' => 'elite_cap_reached',
+                'code' => 'ERR_CAP',
+                'unit' => $internal,
+                'current_count' => $capCheck['current'],
+                'max_cap' => $capCheck['max']
             ];
         }
 

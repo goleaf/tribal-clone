@@ -103,12 +103,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $unitInternal = $unitMeta['internal_name'] ?? '';
 
     // Check requirements
-    $requirements = $unitManager->checkRecruitRequirements($unit_id, $village_id);
+    $requirements = $unitManager->checkRecruitRequirements($unit_id, $village_id, $count);
     if (!$requirements['can_recruit']) {
         http_response_code(400);
         $msg = "Cannot recruit unit: " . $requirements['reason'];
-        echo json_encode(['error' => $msg, 'code' => 'ERR_PREREQ']);
-        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_PREREQ', $msg);
+        $code = $requirements['code'] ?? 'ERR_PREREQ';
+        $response = ['error' => $msg, 'code' => $code];
+        
+        // Add additional details for specific error types
+        if ($code === 'ERR_CAP' && isset($requirements['current_count'], $requirements['max_cap'])) {
+            $response['current_count'] = $requirements['current_count'];
+            $response['max_cap'] = $requirements['max_cap'];
+        } elseif ($code === 'ERR_SEASONAL_EXPIRED' && isset($requirements['window_start'], $requirements['window_end'])) {
+            $response['window_start'] = $requirements['window_start'];
+            $response['window_end'] = $requirements['window_end'];
+        }
+        
+        echo json_encode($response);
+        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', $code, $msg);
         exit();
     }
 
