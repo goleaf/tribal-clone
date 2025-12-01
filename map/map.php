@@ -619,6 +619,9 @@ function renderMap() {
                 if (relationClass) {
                     tile.classList.add(relationClass);
                 }
+                if (village.is_protected) {
+                    tile.classList.add('protected');
+                }
                 const villageLayer = document.createElement('div');
                 villageLayer.classList.add('village-layer');
                 villageLayer.style.backgroundImage = `url(${getVillageSprite(village)})`;
@@ -663,6 +666,12 @@ function renderMap() {
                 meta.classList.add('village-meta');
                 const ownerName = village.owner || 'Barbarian';
                 meta.textContent = `${ownerName} · ${village.points || 0} pts`;
+                if (village.is_protected) {
+                    const prot = document.createElement('span');
+                    prot.classList.add('protected-pill');
+                    prot.textContent = 'Protected';
+                    meta.appendChild(prot);
+                }
                 tile.appendChild(meta);
             } else {
                 tile.classList.add('empty');
@@ -759,7 +768,7 @@ function showVillagePopup(x, y) {
     popupVillageName.textContent = village.name;
     popupVillageOwner.textContent = ownerLabel;
     popupVillageCoords.textContent = `${x}|${y} (${formatContinent(x, y)})`;
-    popupVillagePoints.textContent = `${village.points || 0} pts`;
+    popupVillagePoints.textContent = `${village.points || 0} pts${village.is_protected ? ' • Protected' : ''}`;
 
     popupSendUnitsButton.dataset.villageId = village.id;
     popupAttackButton.dataset.villageId = village.id;
@@ -1082,6 +1091,9 @@ function renderMiniMap() {
 .map-tile.reserved {
     box-shadow: inset 0 0 0 2px rgba(162, 106, 49, 0.4);
 }
+.map-tile.protected {
+    box-shadow: inset 0 0 0 2px rgba(29, 110, 216, 0.35);
+}
 
 .map-tile.filtered-out {
     opacity: 0.45;
@@ -1225,6 +1237,15 @@ function renderMiniMap() {
 .owner-pill { background: #e6f2ff; border-color: #aac6f1; }
 .coords-pill { background: #e7f6e8; border-color: #b6dfc1; }
 .points-pill { background: #f6e7d3; border-color: #e0c59a; }
+.protected-pill {
+    margin-left: 6px;
+    padding: 2px 6px;
+    background: #e6f4ff;
+    border: 1px solid #9ac8ff;
+    color: #1d6ed8;
+    border-radius: 8px;
+    font-size: 11px;
+}
 
 .popup-actions {
     display: flex;

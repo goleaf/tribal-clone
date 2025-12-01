@@ -34,6 +34,21 @@ define('BUILD_SPEED_MULTIPLIER', 1.0);      // Additional multiplier applied to 
 define('UNIT_TRAINING_MULTIPLIER', 1.0);    // Multiplier for recruitment times
 define('RESEARCH_SPEED_MULTIPLIER', 1.0);   // Multiplier for research times
 
+// World configuration
+define('WORLD_SIZE', 1000);               // Square world size (e.g., 500, 1000)
+define('TRIBE_MEMBER_LIMIT', 0);          // 0 = unlimited, otherwise max members per tribe
+define('PLAYER_VILLAGE_LIMIT', 0);        // 0 = unlimited, otherwise max villages per player
+define('NOBLE_COIN_COST_WOOD', 40000);
+define('NOBLE_COIN_COST_CLAY', 50000);
+define('NOBLE_COIN_COST_IRON', 50000);
+define('BEGINNER_PROTECTION_HOURS', 72);  // Duration of beginner protection (hours) for new players
+define('MORALE_TYPE', 'points');          // 'points', 'none'
+define('FEATURE_CHURCH_ENABLED', false);
+define('FEATURE_PALADIN_ENABLED', false);
+define('FEATURE_WATCHTOWER_ENABLED', false);
+define('WORLD_VICTORY_CONDITION', 'domination'); // descriptive string
+define('WORLD_DURATION_DAYS', 0);         // 0 = unlimited; otherwise days until end
+
 // Paths and game constants
 define('BASE_URL', 'http://localhost:8000/'); // Change to the appropriate URL if the project is not in the htdocs root
 define('TRADER_SPEED', 100); // Trader speed in fields per hour

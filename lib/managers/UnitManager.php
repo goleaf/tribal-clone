@@ -79,7 +79,12 @@ class UnitManager
         $base_time = $unit['training_time_base'];
 
         // Higher building level -> faster recruitment (5% per level)
-        return floor($base_time * pow(0.95, $building_level - 1));
+        $time = $base_time * pow(0.95, $building_level - 1);
+
+        $worldSpeed = defined('WORLD_SPEED') ? max(0.1, (float)WORLD_SPEED) : 1.0;
+        $trainMultiplier = defined('UNIT_TRAINING_MULTIPLIER') ? max(0.1, (float)UNIT_TRAINING_MULTIPLIER) : 1.0;
+
+        return (int)floor($time / ($worldSpeed * $trainMultiplier));
     }
 
     /**

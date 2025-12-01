@@ -276,10 +276,12 @@ class ResearchManager {
         $time_for_level = floor($base_time * pow($research['research_time_factor'], $targetLevel - 1));
         
         // Reduce time based on building level
-        // Example: time / (1 + (building_level * 0.05))
-        // This factor can vary by building type
         $time_reduction_factor = 0.05;
         $time_with_building = floor($time_for_level / (1 + ($buildingLevel * $time_reduction_factor)));
+
+        $worldSpeed = defined('WORLD_SPEED') ? max(0.1, (float)WORLD_SPEED) : 1.0;
+        $researchMultiplier = defined('RESEARCH_SPEED_MULTIPLIER') ? max(0.1, (float)RESEARCH_SPEED_MULTIPLIER) : 1.0;
+        $time_with_building = (int)floor($time_with_building / ($worldSpeed * $researchMultiplier));
         
         return max(10, $time_with_building); // Minimum research time is 10 seconds
     }

@@ -585,6 +585,28 @@ class BattleManager
                                     $messages[] = "<p class='error-message'>Your village <b>{$target_name}</b> was defeated in an attack from village <b>{$source_name}</b>. Resources were lost.</p>";
                                 }
                             }
+
+                            // Loyalty and conquest messaging
+                            $loyaltyInfo = $report['details']['loyalty'] ?? null;
+                            if ($loyaltyInfo && !empty($loyaltyInfo['drop'])) {
+                                if (!empty($loyaltyInfo['conquered'])) {
+                                    if (in_array($attack['source_village_id'], $user_village_ids)) {
+                                        $messages[] = "<p class='success-message'>Loyalty of <b>{$target_name}</b> dropped to zero. The village was conquered!</p>";
+                                    }
+                                    if (in_array($attack['target_village_id'], $user_village_ids)) {
+                                        $messages[] = "<p class='error-message'>Your village <b>{$target_name}</b> was conquered after losing all loyalty.</p>";
+                                    }
+                                } else {
+                                    $drop = (int)$loyaltyInfo['drop'];
+                                    $after = (int)$loyaltyInfo['after'];
+                                    if (in_array($attack['source_village_id'], $user_village_ids)) {
+                                        $messages[] = "<p class='info-message'>Noble attack reduced loyalty of <b>{$target_name}</b> by {$drop} to {$after}.</p>";
+                                    }
+                                    if (in_array($attack['target_village_id'], $user_village_ids)) {
+                                        $messages[] = "<p class='error-message'>Loyalty of <b>{$target_name}</b> was reduced by {$drop}. Current loyalty: {$after}.</p>";
+                                    }
+                                }
+                            }
                         }
 
                         // Add a link to the full battle report here if available
@@ -1566,6 +1588,12 @@ class BattleManager
             return 1.0;
         }
 
+        $moraleType = defined('MORALE_TYPE') ? strtolower((string)MORALE_TYPE) : 'points';
+        if ($moraleType === 'none') {
+            return 1.0;
+        }
+
+        // Default points-based morale
         $ratio = $defenderPoints / max(1, $attackerPoints);
         $morale = sqrt($ratio);
         return max(self::MIN_MORALE, min(1.0, $morale));
@@ -1582,9 +1610,10 @@ class BattleManager
             return ['allowed' => true];
         }
 
+        $hours = defined('BEGINNER_PROTECTION_HOURS') ? (int)BEGINNER_PROTECTION_HOURS : 72;
         $protectionConfig = [
-            'min_days' => defined('NEWBIE_PROTECTION_DAYS_MIN') ? NEWBIE_PROTECTION_DAYS_MIN : 3,
-            'max_days' => defined('NEWBIE_PROTECTION_DAYS_MAX') ? NEWBIE_PROTECTION_DAYS_MAX : 7,
+            'min_hours' => $hours,
+            'max_hours' => $hours,
             'points_cap' => defined('NEWBIE_PROTECTION_POINTS_CAP') ? NEWBIE_PROTECTION_POINTS_CAP : 200,
         ];
 
@@ -1648,8 +1677,8 @@ class BattleManager
             return false;
         }
 
-        $daysSinceCreate = (int)$createdAt->diff($now)->format('%a');
-        return $daysSinceCreate < $config['max_days'];
+        $hoursSinceCreate = (int)floor(($now->getTimestamp() - $createdAt->getTimestamp()) / 3600);
+        return $hoursSinceCreate < ($config['max_hours'] ?? 72);
     }
 
     /**
@@ -1779,63 +1808,6 @@ class BattleManager
             return 'siege';
         }
         return 'infantry';
-    }
-
-    private function villageHasLoyalty(): bool
-    {
-        static $cached = null;
-        if ($cached !== null) {
-            return $cached;
-        }
-        if (function_exists('dbColumnExists')) {
-            $cached = dbColumnExists($this->conn, 'villages', 'loyalty');
-        } else {
-            $cached = false;
-        }
-        return $cached;
-    }
-
-    private function getVillageLoyalty(int $villageId): int
-    {
-        if (!$this->villageHasLoyalty()) {
-            return 100;
-        }
-        $stmt = $this->conn->prepare("SELECT loyalty FROM villages WHERE id = ? LIMIT 1");
-        if ($stmt === false) {
-            return 100;
-        }
-        $stmt->bind_param("i", $villageId);
-        $stmt->execute();
-        $res = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        return isset($res['loyalty']) ? (int)$res['loyalty'] : 100;
-    }
-
-    private function updateVillageLoyalty(int $villageId, int $loyalty): void
-    {
-        if (!$this->villageHasLoyalty()) {
-            return;
-        }
-        $stmt = $this->conn->prepare("UPDATE villages SET loyalty = ? WHERE id = ?");
-        if ($stmt === false) {
-            return;
-        }
-        $stmt->bind_param("ii", $loyalty, $villageId);
-        $stmt->execute();
-        $stmt->close();
-    }
-
-    private function countUnitsByInternalName(array $remaining, array $meta, array $names): int
-    {
-        $names = array_map('strtolower', $names);
-        $count = 0;
-        foreach ($remaining as $unitTypeId => $qty) {
-            $internal = strtolower($meta[$unitTypeId]['internal_name'] ?? '');
-            if (in_array($internal, $names, true)) {
-                $count += $qty;
-            }
-        }
-        return $count;
     }
 
     private function getSmithyBonus(?int $villageId, string $unitInternal, bool $isAttack): float
@@ -1983,6 +1955,260 @@ class BattleManager
         }
 
         return min(1.0, $loss_ratio);
+    }
+
+    /**
+     * Fetch all research levels for a village keyed by internal_name.
+     */
+    private function getResearchLevelsMap(int $villageId): array
+    {
+        $levels = [];
+        $stmt = $this->conn->prepare("
+            SELECT rt.internal_name, vr.level
+            FROM village_research vr
+            JOIN research_types rt ON vr.research_type_id = rt.id
+            WHERE vr.village_id = ?
+        ");
+        if ($stmt === false) {
+            return $levels;
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $levels[$row['internal_name']] = (int)$row['level'];
+        }
+        $stmt->close();
+        return $levels;
+    }
+
+    /**
+     * Apply smithy research bonuses to a unit's attack/defense values.
+     */
+    private function applyTechBonusesToUnit(array $unit, string $category, array $researchLevels, bool $isDefense): array
+    {
+        $attack = (float)($unit['attack'] ?? 0);
+        $defense = (float)($unit['defense'] ?? 0);
+
+        if ($category === 'infantry') {
+            $attack *= 1 + (($researchLevels['improved_axe'] ?? 0) * self::RESEARCH_BONUS_PER_LEVEL);
+            if ($isDefense) {
+                $defense *= 1 + (($researchLevels['improved_armor'] ?? 0) * self::RESEARCH_BONUS_PER_LEVEL);
+            }
+        } elseif ($category === 'cavalry') {
+            $attack *= 1 + (($researchLevels['improved_sword'] ?? 0) * self::RESEARCH_BONUS_PER_LEVEL);
+            if ($isDefense) {
+                $defense *= 1 + (($researchLevels['horseshoe'] ?? 0) * self::RESEARCH_BONUS_PER_LEVEL);
+            }
+        } elseif ($category === 'siege') {
+            $attack *= 1 + (($researchLevels['improved_catapult'] ?? 0) * self::RESEARCH_BONUS_PER_LEVEL);
+        }
+
+        return [
+            'attack' => (float)$attack,
+            'defense' => (float)$defense
+        ];
+    }
+
+    /**
+     * Map internal/building type to combat category.
+     */
+    private function getUnitCategory(string $internalName, string $buildingType): string
+    {
+        $name = strtolower($internalName);
+        if (in_array($name, ['archer', 'marcher'], true)) {
+            return 'archer';
+        }
+        if (in_array($name, ['light', 'heavy', 'spy', 'scout', 'paladin', 'knight'], true) || $buildingType === 'stable') {
+            return 'cavalry';
+        }
+        if (in_array($name, ['ram', 'catapult'], true) || $buildingType === 'garage') {
+            return 'siege';
+        }
+        return 'infantry';
+    }
+
+    /**
+     * Resolve one combat phase and mutate unit counts.
+     */
+    private function resolveCombatPhase(
+        string $phase,
+        array &$attackingUnits,
+        array &$defendingUnits,
+        float $morale,
+        float $defenseMultiplier,
+        float $attackLuck,
+        bool $isRaid
+    ): array {
+        $attackersInPhase = array_filter($attackingUnits, function ($unit) use ($phase) {
+            $category = $unit['category'] ?? 'infantry';
+            return $category === $phase || ($phase === 'infantry' && $category === 'siege');
+        });
+
+        if (empty($attackersInPhase)) {
+            return [
+                'phase' => $phase,
+                'attack_power' => 0,
+                'defense_power' => 0,
+                'attacker_loss_factor' => 0,
+                'defender_loss_factor' => 0,
+                'attacker_losses' => [],
+                'defender_losses' => []
+            ];
+        }
+
+        $attackPowerBase = 0.0;
+        foreach ($attackersInPhase as $unit) {
+            $attackPowerBase += ($unit['attack'] ?? 0) * ($unit['count'] ?? 0);
+        }
+        $defensePowerBase = 0.0;
+        foreach ($defendingUnits as $unit) {
+            $defensePowerBase += ($unit['defense'] ?? 0) * ($unit['count'] ?? 0);
+        }
+
+        $attackPower = $attackPowerBase * $morale * $attackLuck;
+        $defensePower = $defensePowerBase * $defenseMultiplier;
+
+        if ($attackPower <= 0 || $defensePower <= 0) {
+            return [
+                'phase' => $phase,
+                'attack_power' => $attackPower,
+                'defense_power' => $defensePower,
+                'attacker_loss_factor' => 0,
+                'defender_loss_factor' => 1,
+                'attacker_losses' => [],
+                'defender_losses' => []
+            ];
+        }
+
+        $ratio = $attackPower / max(1e-6, $defensePower);
+        $baseLossModifier = 0.7 * ($isRaid ? self::RAID_CASUALTY_FACTOR : 1.0);
+
+        if ($attackPower >= $defensePower) {
+            $defenderLossFactor = min(1.0, $baseLossModifier * pow($ratio, 0.85));
+            $attackerLossFactor = min(1.0, max(self::WINNER_MINIMUM_LOSS, $baseLossModifier * pow(1 / $ratio, 0.55)));
+        } else {
+            $attackerLossFactor = min(1.0, $baseLossModifier * pow(1 / max(0.0001, $ratio), 0.85));
+            $defenderLossFactor = min(1.0, max(self::WINNER_MINIMUM_LOSS, $baseLossModifier * pow($ratio, 0.55)));
+        }
+
+        $attackerLosses = [];
+        foreach ($attackingUnits as $id => &$unit) {
+            $category = $unit['category'] ?? 'infantry';
+            if ($category !== $phase && !($phase === 'infantry' && $category === 'siege')) {
+                continue;
+            }
+            $lossCount = (int)round(($unit['count'] ?? 0) * $attackerLossFactor);
+            $unit['count'] = max(0, ($unit['count'] ?? 0) - $lossCount);
+            $attackerLosses[$id] = $lossCount;
+        }
+        unset($unit);
+
+        $defenderLosses = [];
+        foreach ($defendingUnits as $id => &$unit) {
+            $lossCount = (int)round(($unit['count'] ?? 0) * $defenderLossFactor);
+            $unit['count'] = max(0, ($unit['count'] ?? 0) - $lossCount);
+            $defenderLosses[$id] = $lossCount;
+        }
+        unset($unit);
+
+        return [
+            'phase' => $phase,
+            'attack_power' => $attackPower,
+            'defense_power' => $defensePower,
+            'attacker_loss_factor' => $attackerLossFactor,
+            'defender_loss_factor' => $defenderLossFactor,
+            'attacker_losses' => $attackerLosses,
+            'defender_losses' => $defenderLosses
+        ];
+    }
+
+    /**
+     * Sum total power (attack or defense) for a side.
+     */
+    private function sumPower(array $units, string $key): float
+    {
+        $total = 0.0;
+        foreach ($units as $unit) {
+            $total += ($unit[$key] ?? 0) * ($unit['count'] ?? 0);
+        }
+        return $total;
+    }
+
+    /**
+     * Detect surviving nobles in the attacking army.
+     */
+    private function hasNobleUnit(array $attackingUnits): bool
+    {
+        $nobleNames = ['noble', 'nobleman', 'nobleman_unit'];
+        foreach ($attackingUnits as $unit) {
+            if (($unit['count'] ?? 0) > 0 && in_array(strtolower($unit['internal_name'] ?? ''), $nobleNames, true)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Ensure loyalty column exists in villages table.
+     */
+    private function ensureLoyaltyColumn(): void
+    {
+        static $checked = false;
+        if ($checked) return;
+        $checked = true;
+        try {
+            $result = $this->conn->query("SHOW COLUMNS FROM villages LIKE 'loyalty'");
+            if ($result && $result->num_rows > 0) {
+                return;
+            }
+        } catch (\Throwable $e) {
+            // fallback for SQLite or failures
+        }
+
+        try {
+            $this->conn->query("ALTER TABLE villages ADD COLUMN loyalty INT NOT NULL DEFAULT 100");
+        } catch (\Throwable $e) {
+            // Ignore if cannot alter; functions will fallback to default in getters
+        }
+    }
+
+    private function getVillageLoyalty(int $villageId): int
+    {
+        $stmt = $this->conn->prepare("SELECT loyalty FROM villages WHERE id = ? LIMIT 1");
+        if ($stmt === false) {
+            return self::LOYALTY_MAX;
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result ? $result->fetch_assoc() : null;
+        $stmt->close();
+        return isset($row['loyalty']) ? (int)$row['loyalty'] : self::LOYALTY_MAX;
+    }
+
+    private function updateVillageLoyalty(int $villageId, int $loyalty): void
+    {
+        $stmt = $this->conn->prepare("UPDATE villages SET loyalty = ? WHERE id = ?");
+        if ($stmt === false) {
+            return;
+        }
+        $loyalty = max(self::LOYALTY_MIN, min(self::LOYALTY_MAX, $loyalty));
+        $stmt->bind_param("ii", $loyalty, $villageId);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    private function transferVillageOwnership(int $villageId, int $newUserId, int $loyaltyAfter): void
+    {
+        $stmt = $this->conn->prepare("UPDATE villages SET user_id = ?, loyalty = ? WHERE id = ?");
+        if ($stmt === false) {
+            return;
+        }
+        $loyaltyAfter = max(self::LOYALTY_MIN, min(self::LOYALTY_MAX, $loyaltyAfter));
+        $stmt->bind_param("iii", $newUserId, $loyaltyAfter, $villageId);
+        $stmt->execute();
+        $stmt->close();
     }
 
     /**

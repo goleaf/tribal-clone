@@ -414,12 +414,26 @@ class VillageManager
         // Unique village name
         $village_name = $name ?: ("Village " . $username);
         
-        // Random free coordinates near map center (e.g., 40-60)
+        // Respect player village limit if configured
+        $villageLimit = defined('PLAYER_VILLAGE_LIMIT') ? (int)PLAYER_VILLAGE_LIMIT : 0;
+        if ($villageLimit > 0) {
+            $countStmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM villages WHERE user_id = ?");
+            $countStmt->bind_param("i", $user_id);
+            $countStmt->execute();
+            $countRow = $countStmt->get_result()->fetch_assoc();
+            $countStmt->close();
+            if (($countRow['cnt'] ?? 0) >= $villageLimit) {
+                return ['success' => false, 'message' => 'Village limit reached for this player.'];
+            }
+        }
+
+        // Random free coordinates within world bounds
+        $worldSize = defined('WORLD_SIZE') ? max(10, (int)WORLD_SIZE) : 1000;
         $found = false;
         $tries = 0;
         do {
-            $x_try = $x ?? random_int(40, 60);
-            $y_try = $y ?? random_int(40, 60);
+            $x_try = $x ?? random_int(0, $worldSize - 1);
+            $y_try = $y ?? random_int(0, $worldSize - 1);
             $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM villages WHERE x_coord = ? AND y_coord = ?");
             $stmt->bind_param("ii", $x_try, $y_try);
             $stmt->execute();
@@ -427,8 +441,8 @@ class VillageManager
             $stmt->close();
             if ($cnt == 0) { $found = true; $x = $x_try; $y = $y_try; }
             $tries++;
-        } while (!$found && $tries < 100);
-        if (!$found) return ['success'=>false,'message'=>'No free tiles in the map center!'];
+        } while (!$found && $tries < 200);
+        if (!$found) return ['success'=>false,'message'=>'No free tiles found in the world bounds.'];
         
         // Starting resources and buildings
         $worldId = defined('INITIAL_WORLD_ID') ? INITIAL_WORLD_ID : 1;
