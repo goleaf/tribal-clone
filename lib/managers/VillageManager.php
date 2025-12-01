@@ -303,8 +303,8 @@ class VillageManager
         $found = false;
         $tries = 0;
         do {
-            $x_try = $x ?? rand(40, 60);
-            $y_try = $y ?? rand(40, 60);
+            $x_try = $x ?? random_int(40, 60);
+            $y_try = $y ?? random_int(40, 60);
             $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM villages WHERE x_coord = ? AND y_coord = ?");
             $stmt->bind_param("ii", $x_try, $y_try);
             $stmt->execute();

@@ -93,8 +93,8 @@ if (isset($_POST['add_barb_villages']) && isset($_POST['barb_count'])) {
     $added = 0;
     for ($i=0; $i<$count; $i++) {
         do {
-            $x = rand(0, $map_size-1);
-            $y = rand(0, $map_size-1);
+            $x = random_int(0, $map_size-1);
+            $y = random_int(0, $map_size-1);
             $key = $x.'_'.$y;
         } while (isset($used_coords[$key]));
         $used_coords[$key] = true;

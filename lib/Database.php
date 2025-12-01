@@ -1,19 +1,21 @@
 <?php
+declare(strict_types=1);
 
 if (!defined('MYSQLI_ASSOC')) {
     define('MYSQLI_ASSOC', 1);
 }
 
 class Database {
-    private $driver;
-    private $host;
-    private $user;
-    private $pass;
-    private $dbname;
-    private $conn;
+    private string $driver;
+    private ?string $host;
+    private ?string $user;
+    private ?string $pass;
+    private ?string $dbname;
+    /** @var mysqli|SQLiteAdapter|null */
+    private $conn = null;
 
-    public function __construct($host = null, $user = null, $pass = null, $dbname = null) {
-        $this->driver = defined('DB_DRIVER') ? DB_DRIVER : 'mysql';
+    public function __construct(?string $host = null, ?string $user = null, ?string $pass = null, ?string $dbname = null) {
+        $this->driver = defined('DB_DRIVER') ? (string)DB_DRIVER : 'mysql';
         $this->host = $host;
         $this->user = $user;
         $this->pass = $pass;
@@ -21,53 +23,58 @@ class Database {
         $this->connect();
     }
 
-    private function connect() {
+    private function connect(): void {
         if ($this->driver === 'sqlite') {
             $dbPath = defined('DB_PATH') ? DB_PATH : ($this->dbname ?: __DIR__ . '/../data/tribal_wars.sqlite');
             $this->conn = new SQLiteAdapter($dbPath);
             return;
         }
 
-        $this->conn = new mysqli($this->host, $this->user, $this->pass, $this->dbname);
-
-        if ($this->conn->connect_error) {
-            die("Connection failed: " . $this->conn->connect_error);
+        if (!class_exists('mysqli')) {
+            throw new \RuntimeException('The mysqli extension is not available but DB_DRIVER is set to mysql.');
         }
+
+        mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+        $this->conn = new mysqli($this->host, $this->user, $this->pass, $this->dbname);
         $this->conn->set_charset("utf8mb4");
     }
 
-    public function getConnection() {
+    public function getConnection(): mysqli|SQLiteAdapter {
+        if ($this->conn === null) {
+            throw new \RuntimeException('Database connection has not been initialised.');
+        }
         return $this->conn;
     }
 
-    public function closeConnection() {
-        if (method_exists($this->conn, 'close')) {
+    public function closeConnection(): void {
+        if ($this->conn && method_exists($this->conn, 'close')) {
             $this->conn->close();
         }
+        $this->conn = null;
     }
 
-    public function query($sql) {
-        return $this->conn->query($sql);
+    public function query(string $sql): mixed {
+        return $this->getConnection()->query($sql);
     }
 
-    public function prepare($sql) {
-        return $this->conn->prepare($sql);
+    public function prepare(string $sql): mysqli_stmt|SQLiteStatement|false {
+        return $this->getConnection()->prepare($sql);
     }
 
-    public function real_escape_string($string) {
-        return method_exists($this->conn, 'real_escape_string')
-            ? $this->conn->real_escape_string($string)
+    public function real_escape_string(string $string): string {
+        return method_exists($this->getConnection(), 'real_escape_string')
+            ? $this->getConnection()->real_escape_string($string)
             : $string;
     }
 }
 
 class SQLiteAdapter {
-    public $insert_id = 0;
-    public $error = '';
+    public int $insert_id = 0;
+    public string $error = '';
 
-    private $pdo;
+    private ?PDO $pdo = null;
 
-    public function __construct($dbPath) {
+    public function __construct(string $dbPath) {
         $dir = dirname($dbPath);
         if (!is_dir($dir)) {
             mkdir($dir, 0777, true);
@@ -76,7 +83,11 @@ class SQLiteAdapter {
         $this->pdo = new PDO('sqlite:' . $dbPath);
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        $this->pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+        $this->pdo->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, false);
         $this->pdo->exec('PRAGMA foreign_keys = ON');
+        $this->pdo->exec('PRAGMA busy_timeout = 5000');
+        $this->pdo->exec('PRAGMA journal_mode = WAL');
 
         // Register MySQL-like helper functions for compatibility
         if (method_exists($this->pdo, 'sqliteCreateFunction')) {
@@ -86,28 +97,31 @@ class SQLiteAdapter {
         }
     }
 
-    public function getPdo() {
+    public function getPdo(): PDO {
+        if (!$this->pdo) {
+            throw new \RuntimeException('SQLite connection is not available.');
+        }
         return $this->pdo;
     }
 
-    public function prepare($sql) {
+    public function prepare(string $sql): SQLiteStatement {
         return new SQLiteStatement($this, $sql);
     }
 
-    public function query($sql) {
+    public function query(string $sql): SQLiteResult|bool {
         try {
             $converted = SQLiteStatement::convertSql($sql);
             $trimmed = ltrim($converted);
             $isSelect = stripos($trimmed, 'SELECT') === 0 || stripos($trimmed, 'PRAGMA') === 0 || stripos($trimmed, 'WITH') === 0;
 
             if ($isSelect) {
-                $stmt = $this->pdo->query($converted);
-                $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
-                return new SQLiteResult($rows);
-            }
+            $stmt = $this->getPdo()->query($converted);
+            $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+            return new SQLiteResult($rows);
+        }
 
-            $this->pdo->exec($converted);
-            $this->insert_id = (int)$this->pdo->lastInsertId();
+            $this->getPdo()->exec($converted);
+            $this->insert_id = (int)$this->getPdo()->lastInsertId();
             $this->error = '';
             return true;
         } catch (PDOException $e) {
@@ -116,52 +130,52 @@ class SQLiteAdapter {
         }
     }
 
-    public function real_escape_string($string) {
-        return substr($this->pdo->quote($string), 1, -1);
+    public function real_escape_string(string $string): string {
+        return substr($this->getPdo()->quote($string), 1, -1);
     }
 
-    public function set_charset($charset) {
+    public function set_charset(string $charset): bool {
         // Not needed for SQLite, provided for API compatibility
         return true;
     }
 
-    public function begin_transaction() {
-        return $this->pdo->beginTransaction();
+    public function begin_transaction(): bool {
+        return $this->getPdo()->beginTransaction();
     }
 
-    public function commit() {
-        return $this->pdo->commit();
+    public function commit(): bool {
+        return $this->getPdo()->commit();
     }
 
-    public function rollback() {
-        return $this->pdo->rollBack();
+    public function rollback(): bool {
+        return $this->getPdo()->rollBack();
     }
 
-    public function close() {
+    public function close(): void {
         $this->pdo = null;
     }
 }
 
 class SQLiteStatement {
-    public $error = '';
-    public $num_rows = 0;
-    public $insert_id = 0;
-    public $affected_rows = 0;
+    public string $error = '';
+    public int $num_rows = 0;
+    public int $insert_id = 0;
+    public int $affected_rows = 0;
 
-    private $conn;
-    private $sql;
-    private $pdoStmt;
-    private $boundParams = [];
-    private $boundResultVars = [];
-    private $resultRows = [];
-    private $resultIndex = 0;
+    private SQLiteAdapter $conn;
+    private string $sql;
+    private ?PDOStatement $pdoStmt = null;
+    private array $boundParams = [];
+    private array $boundResultVars = [];
+    private array $resultRows = [];
+    private int $resultIndex = 0;
 
-    public function __construct($conn, $sql) {
+    public function __construct(SQLiteAdapter $conn, string $sql) {
         $this->conn = $conn;
         $this->sql = self::convertSql($sql);
     }
 
-    public static function convertSql($sql) {
+    public static function convertSql(string $sql): string {
         $sql = str_replace('`', '"', $sql);
         $sql = preg_replace('/\bNOW\s*\(\)/i', 'CURRENT_TIMESTAMP', $sql);
         $sql = preg_replace("/UNIX_TIMESTAMP\s*\(\s*\)/i", "strftime('%s','now')", $sql);
@@ -170,7 +184,7 @@ class SQLiteStatement {
         return $sql;
     }
 
-    public function bind_param($types, &...$vars) {
+    public function bind_param(string $types, &...$vars): bool {
         $this->boundParams = [];
         $typeChars = str_split($types);
         foreach ($typeChars as $index => $typeChar) {
@@ -182,7 +196,7 @@ class SQLiteStatement {
         return true;
     }
 
-    public function bind_result(&...$vars) {
+    public function bind_result(&...$vars): bool {
         $this->boundResultVars = [];
         foreach ($vars as &$var) {
             $this->boundResultVars[] = &$var;
@@ -190,7 +204,7 @@ class SQLiteStatement {
         return true;
     }
 
-    private function mapType(string $typeChar) {
+    private function mapType(string $typeChar): int {
         return match ($typeChar) {
             'i' => PDO::PARAM_INT,
             'd' => PDO::PARAM_STR,
@@ -198,7 +212,7 @@ class SQLiteStatement {
         };
     }
 
-    public function execute() {
+    public function execute(): bool {
         try {
             $this->pdoStmt = $this->conn->getPdo()->prepare($this->sql);
             foreach ($this->boundParams as $index => $meta) {
@@ -224,16 +238,16 @@ class SQLiteStatement {
         }
     }
 
-    public function get_result() {
+    public function get_result(): SQLiteResult {
         return new SQLiteResult($this->resultRows);
     }
 
-    public function store_result() {
+    public function store_result(): bool {
         // Results are already stored eagerly
         return true;
     }
 
-    public function fetch() {
+    public function fetch(): bool {
         if ($this->resultIndex >= count($this->resultRows)) {
             return false;
         }
@@ -246,7 +260,7 @@ class SQLiteStatement {
         return true;
     }
 
-    public function close() {
+    public function close(): bool {
         $this->pdoStmt = null;
         $this->resultRows = [];
         $this->resultIndex = 0;
@@ -255,32 +269,32 @@ class SQLiteStatement {
 }
 
 class SQLiteResult {
-    public $num_rows = 0;
-    private $rows = [];
-    private $index = 0;
+    public int $num_rows = 0;
+    private array $rows = [];
+    private int $index = 0;
 
-    public function __construct($rows = []) {
-        $this->rows = $rows ?: [];
+    public function __construct(array $rows = []) {
+        $this->rows = $rows;
         $this->num_rows = count($this->rows);
     }
 
-    public function fetch_assoc() {
+    public function fetch_assoc(): ?array {
         if ($this->index >= $this->num_rows) {
             return null;
         }
         return $this->rows[$this->index++];
     }
 
-    public function fetch_all($mode = MYSQLI_ASSOC) {
+    public function fetch_all(int $mode = MYSQLI_ASSOC): array {
         return $this->rows;
     }
 
-    public function free() {
+    public function free(): void {
         $this->rows = [];
         $this->num_rows = 0;
     }
 
-    public function close() {
+    public function close(): bool {
         $this->free();
         return true;
     }

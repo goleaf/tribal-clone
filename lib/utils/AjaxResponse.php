@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 /**
  * AjaxResponse class - helpers for AJAX responses
@@ -12,7 +13,7 @@ class AjaxResponse
      * @param string $message Optional success message
      * @return void
      */
-    public static function success($data = null, $message = '') 
+    public static function success(mixed $data = null, string $message = ''): void 
     {
         self::send([
             'status' => 'success',
@@ -29,7 +30,7 @@ class AjaxResponse
      * @param int $code Optional HTTP status code
      * @return void
      */
-    public static function error($message, $data = null, $code = 400) 
+    public static function error(string $message, mixed $data = null, int $code = 400): void 
     {
         // Set the HTTP status header
         http_response_code($code);
@@ -49,7 +50,7 @@ class AjaxResponse
      * @param mixed $data Optional extra data
      * @return void
      */
-    public static function warning($message, $data = null) 
+    public static function warning(string $message, mixed $data = null): void 
     {
         self::send([
             'status' => 'warning',
@@ -65,7 +66,7 @@ class AjaxResponse
      * @param mixed $data Optional extra data
      * @return void
      */
-    public static function info($message, $data = null) 
+    public static function info(string $message, mixed $data = null): void 
     {
         self::send([
             'status' => 'info',
@@ -80,7 +81,7 @@ class AjaxResponse
      * @param array $data Payload to send
      * @return void
      */
-    private static function send($data) 
+    private static function send(array $data): void 
     {
         // Set JSON headers
         header('Content-Type: application/json; charset=utf-8');
@@ -111,7 +112,7 @@ class AjaxResponse
      *
      * @return bool True when it is an AJAX request
      */
-    public static function isAjaxRequest() 
+    public static function isAjaxRequest(): bool 
     {
         return (
             !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
@@ -127,7 +128,7 @@ class AjaxResponse
      * @param bool $logException Whether to log the exception (default true)
      * @return void
      */
-    public static function handleException($exception, $logException = true) 
+    public static function handleException(\Throwable $exception, bool $logException = true): void 
     {
         // Optionally log the exception
         if ($logException && class_exists('ErrorHandler')) {

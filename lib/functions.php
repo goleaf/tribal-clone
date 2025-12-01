@@ -8,21 +8,21 @@
 /**
  * Formats seconds to HH:MM:SS.
  */
-function formatTime($seconds) {
-    return gmdate("H:i:s", $seconds);
+function formatTime(int $seconds): string {
+    return gmdate("H:i:s", max(0, $seconds));
 }
 
 /**
  * Formats a timestamp into a human-readable date string.
  */
-function formatDate($timestamp) {
+function formatDate(int $timestamp): string {
     return date("Y-m-d H:i:s", $timestamp);
 }
 
 /**
  * Filters and sanitizes input data.
  */
-function sanitizeInput($input) {
+function sanitizeInput(mixed $input): mixed {
     if (is_array($input)) {
         foreach ($input as $key => $value) {
             $input[$key] = sanitizeInput($value);
@@ -39,7 +39,7 @@ function sanitizeInput($input) {
 /**
  * Sanitizes input for SQL queries.
  */
-function sanitizeSql($conn, $input) {
+function sanitizeSql($conn, mixed $input): mixed {
     if (is_array($input)) {
         foreach ($input as $key => $value) {
             $input[$key] = sanitizeSql($conn, $value);
@@ -80,21 +80,21 @@ function dbTableExists($conn, string $tableName): bool {
 /**
  * Generates a unique token for the session.
  */
-function generateToken($length = 32) {
+function generateToken(int $length = 32): string {
     return bin2hex(random_bytes($length));
 }
 
 /**
  * Calculates distance between two map points.
  */
-function calculateDistance($x1, $y1, $x2, $y2) {
+function calculateDistance(float $x1, float $y1, float $x2, float $y2): float {
     return sqrt(pow($x2 - $x1, 2) + pow($y2 - $y1, 2));
 }
 
 /**
  * Calculates unit travel time between villages (seconds).
  */
-function calculateTravelTime($distance, $speed) {
+function calculateTravelTime(float $distance, float $speed): float {
     // Speed is in fields per hour; output is seconds.
     return ($distance / $speed) * 3600;
 }
@@ -102,14 +102,14 @@ function calculateTravelTime($distance, $speed) {
 /**
  * Calculates task end time (build, recruit, etc.).
  */
-function calculateEndTime($duration_seconds) {
+function calculateEndTime(int $duration_seconds): int {
     return time() + $duration_seconds;
 }
 
 /**
  * Calculates player points from buildings and units.
  */
-function calculatePlayerPoints($conn, $user_id) {
+function calculatePlayerPoints($conn, int $user_id): int {
     // Building points
     $stmt = $conn->prepare("
         SELECT SUM(bt.base_points * vb.level) AS building_points
@@ -146,28 +146,28 @@ function calculatePlayerPoints($conn, $user_id) {
 /**
  * Returns coordinates as "X|Y".
  */
-function formatCoordinates($x, $y) {
+function formatCoordinates(int $x, int $y): string {
     return $x . "|" . $y;
 }
 
 /**
  * Calculates position index based on map coordinates.
  */
-function calculateMapPosition($x, $y, $map_size) {
+function calculateMapPosition(int $x, int $y, int $map_size): int {
     return ($y * $map_size) + $x;
 }
 
 /**
  * Rounds a number to the given decimals.
  */
-function roundNumber($number, $decimals = 0) {
+function roundNumber(float $number, int $decimals = 0): float {
     return round($number, $decimals);
 }
 
 /**
  * Formats number with thousand separators.
  */
-function formatNumber($number) {
+function formatNumber(int|float $number): string {
     // English formatting: comma as thousands separator
     return number_format($number, 0, '.', ',');
 }
@@ -175,7 +175,7 @@ function formatNumber($number) {
 /**
  * Converts seconds to HH:MM:SS.
  */
-function secondsToTime($seconds) {
+function secondsToTime(int $seconds): string {
     $hours = floor($seconds / 3600);
     $minutes = floor(($seconds % 3600) / 60);
     $seconds = $seconds % 60;
@@ -186,7 +186,7 @@ function secondsToTime($seconds) {
 /**
  * Validates username for allowed characters.
  */
-function isValidUsername($username) {
+function isValidUsername(string $username): bool {
     // 3-20 chars, letters, digits, underscore.
     return preg_match('/^[a-zA-Z0-9_]{3,20}$/', $username);
 }
@@ -194,7 +194,7 @@ function isValidUsername($username) {
 /**
  * Validates village name for allowed characters.
  */
-function isValidVillageName($name) {
+function isValidVillageName(string $name): bool {
     // 2-30 chars; letters, digits, spaces, and basic punctuation.
     return preg_match('/^[a-zA-Z0-9 \.\,\-\_]{2,30}$/', $name);
 }
@@ -202,29 +202,29 @@ function isValidVillageName($name) {
 /**
  * Hashes a password using modern PHP hashing.
  */
-function hashPassword($password) {
+function hashPassword(string $password): string {
     return password_hash($password, PASSWORD_DEFAULT);
 }
 
 /**
  * Verifies a password against its hash.
  */
-function verifyPassword($password, $hash) {
+function verifyPassword(string $password, string $hash): bool {
     return password_verify($password, $hash);
 }
 
 /**
  * Generates a random player color.
  */
-function generatePlayerColor() {
+function generatePlayerColor(): string {
     $colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ff8000', '#8000ff'];
-    return $colors[array_rand($colors)];
+    return $colors[random_int(0, count($colors) - 1)];
 }
 
 /**
  * Retrieves client IP address.
  */
-function getClientIP() {
+function getClientIP(): string {
     if (isset($_SERVER['HTTP_CLIENT_IP'])) {
         return $_SERVER['HTTP_CLIENT_IP'];
     } else if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
@@ -244,13 +244,13 @@ function getClientIP() {
 /**
  * Generates random coordinates for a new village.
  */
-function generateRandomCoordinates($conn, $map_size = 100) {
+function generateRandomCoordinates($conn, int $map_size = 100): array {
     $max_attempts = 50; // Max attempts to find free coordinates.
     $attempt = 0;
 
     do {
-        $x = rand(0, $map_size - 1);
-        $y = rand(0, $map_size - 1);
+        $x = random_int(0, $map_size - 1);
+        $y = random_int(0, $map_size - 1);
 
         $stmt = $conn->prepare("SELECT COUNT(*) AS count FROM villages WHERE x_coord = ? AND y_coord = ?");
         $stmt->bind_param("ii", $x, $y);
@@ -274,21 +274,16 @@ function generateRandomCoordinates($conn, $map_size = 100) {
 /**
  * Returns terrain type for coordinates (pseudo-random but deterministic).
  */
-function getTerrainType($x, $y) {
-    $hash = $x * 1000 + $y;
+function getTerrainType(int $x, int $y): string {
     $types = ['plain', 'forest', 'hill', 'mountain', 'water'];
-
-    srand($hash);
-    $type = $types[rand(0, count($types) - 1)];
-    srand(time()); // Restore randomness
-
-    return $type;
+    $hash = crc32($x . ':' . $y);
+    return $types[$hash % count($types)];
 }
 
 /**
  * Generates or returns existing CSRF token stored in session.
  */
-function getCSRFToken() {
+function getCSRFToken(): string {
     if (session_status() !== PHP_SESSION_ACTIVE) {
         session_start();
     }
@@ -301,7 +296,7 @@ function getCSRFToken() {
 /**
  * Adds a toast message to the session queue.
  */
-function setGameMessage($message, $type = 'info') {
+function setGameMessage(string $message, string $type = 'info'): void {
     if (session_status() !== PHP_SESSION_ACTIVE) {
         session_start();
     }
@@ -315,7 +310,7 @@ function setGameMessage($message, $type = 'info') {
  * Validates CSRF token in POST requests.
  * Terminates script with 403 if invalid.
  */
-function validateCSRF() {
+function validateCSRF(): void {
     $is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
     if (empty($_SESSION['csrf_token']) || empty($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
@@ -335,7 +330,7 @@ function validateCSRF() {
 /**
  * Returns the name of the current world.
  */
-function getCurrentWorldName($conn) {
+function getCurrentWorldName($conn): string {
     $worldId = CURRENT_WORLD_ID;
     $stmt = $conn->prepare("SELECT name FROM worlds WHERE id = ?");
     $stmt->bind_param("i", $worldId);
@@ -349,7 +344,7 @@ function getCurrentWorldName($conn) {
 /**
  * Formats time to a human-friendly "in X time" string.
  */
-function formatTimeToHuman($timestamp) {
+function formatTimeToHuman(int $timestamp): string {
     $now = time();
     $diff = $timestamp - $now;
 
@@ -378,7 +373,7 @@ function formatTimeToHuman($timestamp) {
 /**
  * Renders a resource icon/value snippet.
  */
-function displayResource($resource_type, $amount, $show_max = false, $max_amount = 0) {
+function displayResource(string $resource_type, int|float $amount, bool $show_max = false, int|float $max_amount = 0): string {
     $icons = [
         'wood' => '../img/ds_graphic/wood.png',
         'clay' => '../img/ds_graphic/stone.png',
@@ -430,7 +425,7 @@ function displayResource($resource_type, $amount, $show_max = false, $max_amount
  * Calculates hourly production for a building level.
  * @deprecated Use ResourceManager->getHourlyProductionRate()
  */
-function calculateHourlyProduction($building_type, $level) {
+function calculateHourlyProduction(string $building_type, int $level): int {
     $base_production = 100; // Base hourly production for level 1
     $growth_factor = 1.2; // Growth factor per level
 
@@ -444,7 +439,7 @@ function calculateHourlyProduction($building_type, $level) {
 /**
  * Adds a notification for a user.
  */
-function addNotification($conn, $user_id, $type, $message, $link = '', $expires_at = 0) {
+function addNotification($conn, int $user_id, string $type, string $message, string $link = '', int $expires_at = 0): bool {
     // Default expiration: 7 days
     if ($expires_at <= 0) {
         $expires_at = time() + (7 * 24 * 60 * 60);
@@ -482,7 +477,7 @@ function addNotification($conn, $user_id, $type, $message, $link = '', $expires_
 /**
  * Retrieves notifications for a user.
  */
-function getNotifications($conn, $user_id, $only_unread = false, $limit = 10) {
+function getNotifications($conn, int $user_id, bool $only_unread = false, int $limit = 10): array {
     $table_exists = dbTableExists($conn, 'notifications');
 
     if (!$table_exists) {
@@ -523,7 +518,7 @@ function getNotifications($conn, $user_id, $only_unread = false, $limit = 10) {
 /**
  * Marks a notification as read.
  */
-function markNotificationAsRead($conn, $notification_id, $user_id) {
+function markNotificationAsRead($conn, int $notification_id, int $user_id): bool {
     $stmt = $conn->prepare("UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?");
     $stmt->bind_param("ii", $notification_id, $user_id);
     $result = $stmt->execute();
@@ -535,7 +530,7 @@ function markNotificationAsRead($conn, $notification_id, $user_id) {
 /**
  * Checks if the player has enough resources.
  */
-function hasEnoughResources($available, $required) {
+function hasEnoughResources(array $available, array $required): bool {
     return $available['wood'] >= $required['wood'] &&
            $available['clay'] >= $required['clay'] &&
            $available['iron'] >= $required['iron'];
@@ -544,7 +539,7 @@ function hasEnoughResources($available, $required) {
 /**
  * Calculates remaining time text for build/recruit tasks.
  */
-function getRemainingTimeText($ends_at) {
+function getRemainingTimeText(int $ends_at): string {
     $now = time();
     $remaining = $ends_at - $now;
 
@@ -562,7 +557,7 @@ function getRemainingTimeText($ends_at) {
 /**
  * Generates a link to a player profile.
  */
-function generatePlayerLink($user_id, $username = '') {
+function generatePlayerLink(int $user_id, string $username = ''): string {
     if (empty($username)) {
         $username = 'Player #' . $user_id;
     }
@@ -573,7 +568,7 @@ function generatePlayerLink($user_id, $username = '') {
 /**
  * Generates a link to a village.
  */
-function generateVillageLink($village_id, $village_name = '', $x = null, $y = null) {
+function generateVillageLink(int $village_id, string $village_name = '', ?int $x = null, ?int $y = null): string {
     $html = '<a href="game.php?village_id=' . $village_id . '" class="village-link">';
 
     if (!empty($village_name)) {
@@ -593,7 +588,7 @@ function generateVillageLink($village_id, $village_name = '', $x = null, $y = nu
 /**
  * Converts duration in seconds to a human-friendly string.
  */
-function formatDuration($seconds, $long_format = false) {
+function formatDuration(int $seconds, bool $long_format = false): string {
     if ($seconds < 60) {
         return $seconds . ($long_format ? " seconds" : "s");
     }
@@ -630,7 +625,7 @@ function formatDuration($seconds, $long_format = false) {
 /**
  * Returns button text for a building in village view.
  */
-function getBuildingActionText($building_internal_name) {
+function getBuildingActionText(string $building_internal_name): string {
     switch ($building_internal_name) {
         case 'main_building': return 'Village overview';
         case 'barracks': return 'Recruit infantry';

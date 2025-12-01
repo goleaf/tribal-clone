@@ -10,8 +10,9 @@ class ResourceUpdater {
      */
     constructor(options = {}) {
         // Default options
+        const defaultApiUrl = `${window.location.origin}/ajax_proxy.php`;
         this.options = {
-            apiUrl: 'http://localhost/ajax_proxy.php', // Full URL to the proxy
+            apiUrl: defaultApiUrl, // Same-origin proxy avoids CORS issues
             updateInterval: 30000, // 30 seconds
             tickInterval: 1000, // 1 second
             resourcesSelector: '#resources-bar',
@@ -33,6 +34,7 @@ class ResourceUpdater {
         this.tickTimer = null;
         this.lastServerUpdate = null;
         this.lastClientUpdate = null;
+        this.abortController = null;
         
         // Initialize
         this.init();
@@ -62,13 +64,16 @@ class ResourceUpdater {
      */
     async fetchUpdate() {
         try {
+            if (this.abortController) {
+                this.abortController.abort();
+            }
+            this.abortController = new AbortController();
+
             // Build request URL
             let url = this.options.apiUrl;
             if (this.options.villageId) {
                 url += `?village_id=${this.options.villageId}`;
             }
-            
-            console.log(`Fetching resources from: ${url}`);
             
             // Perform request
             const response = await fetch(url, {
@@ -78,7 +83,8 @@ class ResourceUpdater {
                     'Pragma': 'no-cache',
                     'Expires': '0'
                 },
-                credentials: 'same-origin'
+                credentials: 'same-origin',
+                signal: this.abortController.signal
             });
             
             // Validate response
@@ -154,9 +160,13 @@ class ResourceUpdater {
             
             return data;
         } catch (error) {
-            console.error('Error fetching resource updates:', error);
+            if (error.name !== 'AbortError') {
+                console.error('Error fetching resource updates:', error);
+            }
             // Keep running with previous values
             return null;
+        } finally {
+            this.abortController = null;
         }
     }
     
@@ -184,7 +194,7 @@ class ResourceUpdater {
     updateResourceDisplay(container, resourceType, resourceData) {
         const currentAmount = Math.floor(resourceData.amount);
         const capacity = resourceData.capacity;
-        const productionPerHour = resourceData.production_per_hour;
+        const productionPerHour = resourceData.production ?? resourceData.production_per_hour ?? 0;
 
         // Update main resource bar
         const valueElement = container.querySelector(`#current-${resourceType}`);

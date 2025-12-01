@@ -5,13 +5,13 @@ require '../init.php';
 $message = '';
 
 // Generate unique village coordinates using prepared statements
-function findUniqueCoordinates($conn, $max_coord = 100) {
+function findUniqueCoordinates($conn, int $max_coord = 100): array|false {
     $attempts = 0;
     $max_attempts = 1000; // Prevent infinite loop
 
     do {
-        $x = rand(1, $max_coord);
-        $y = rand(1, $max_coord);
+        $x = random_int(1, $max_coord);
+        $y = random_int(1, $max_coord);
 
         $stmt_check = $conn->prepare("SELECT id FROM villages WHERE x_coord = ? AND y_coord = ?");
         // Ensure prepare succeeded

@@ -19,8 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($users as $user) {
         // Look for unique coordinates
         do {
-            $x = rand(0, $map_size - 1);
-            $y = rand(0, $map_size - 1);
+            $x = random_int(0, $map_size - 1);
+            $y = random_int(0, $map_size - 1);
             $check = $conn->prepare("SELECT COUNT(*) AS cnt FROM villages WHERE x_coord = ? AND y_coord = ?");
             $check->bind_param('ii', $x, $y);
             $check->execute();

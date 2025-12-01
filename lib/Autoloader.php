@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 /**
  * Autoloader class - loads classes automatically
@@ -8,7 +9,7 @@ class Autoloader
     /**
      * Registers the autoloader
      */
-    public static function register() 
+    public static function register(): void 
     {
         spl_autoload_register([self::class, 'loadClass']);
     }
@@ -19,7 +20,7 @@ class Autoloader
      * @param string $className Class name to load
      * @return void
      */
-    public static function loadClass($className) 
+    public static function loadClass(string $className): void 
     {
         // Check whether the class name contains a namespace
         if (strpos($className, '\\') !== false) {

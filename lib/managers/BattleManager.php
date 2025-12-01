@@ -528,8 +528,8 @@ class BattleManager
         }
         $stmt_get_defense_units->close();
         // --- RANDOMNESS: +/-10% ---
-        $attack_random = mt_rand(90, 110) / 100;
-        $defense_random = mt_rand(90, 110) / 100;
+        $attack_random = random_int(90, 110) / 100;
+        $defense_random = random_int(90, 110) / 100;
         // --- MORALE: simple factor (e.g., weaker attacker could get bonus) ---
         $morale = 1.0;
         // Placeholder morale calculation:
@@ -638,7 +638,7 @@ class BattleManager
             }
 
             if ($surviving_rams > 0 && $wall_level > 0) {
-                $ram_effectiveness = (mt_rand(8, 12) / 10); // 0.8 to 1.2
+                $ram_effectiveness = (random_int(8, 12) / 10); // 0.8 to 1.2
                 $levels_destroyed = floor(($surviving_rams / 4) * $ram_effectiveness);
 
                 if ($levels_destroyed > 0) {
@@ -675,7 +675,7 @@ class BattleManager
                 if (!empty($target_building_name)) {
                     $initial_level = $this->buildingManager->getBuildingLevel($attack['target_village_id'], $target_building_name);
                     if ($initial_level > 0) {
-                        $catapult_effectiveness = (mt_rand(8, 12) / 10);
+                        $catapult_effectiveness = (random_int(8, 12) / 10);
                         $levels_destroyed = floor(($surviving_catapults / 8) * $catapult_effectiveness);
 
                         if ($levels_destroyed > 0) {

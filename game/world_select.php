@@ -30,18 +30,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Automatically create a village if one does not exist on this world
         $user_id = $_SESSION['user_id'];
-        $stmt = $conn->prepare("SELECT id FROM villages WHERE user_id = ? AND world_id = ? LIMIT 1");
-        $stmt->bind_param("ii", $user_id, $world_id);
-        $stmt->execute();
-        $stmt->store_result();
-        if ($stmt->num_rows === 0) {
-            require_once 'lib/VillageManager.php';
-            $villageManager = new VillageManager($conn);
-            // Random coordinates near the center of the map (adjust range as needed)
-            $x = rand(40, 60);
-            $y = rand(40, 60);
-            $villageManager->createVillage($user_id, 'Player village', $x, $y);
-        }
+            $stmt = $conn->prepare("SELECT id FROM villages WHERE user_id = ? AND world_id = ? LIMIT 1");
+            $stmt->bind_param("ii", $user_id, $world_id);
+            $stmt->execute();
+            $stmt->store_result();
+            if ($stmt->num_rows === 0) {
+                require_once 'lib/VillageManager.php';
+                $villageManager = new VillageManager($conn);
+                // Random coordinates near the center of the map (adjust range as needed)
+                $x = random_int(40, 60);
+                $y = random_int(40, 60);
+                $villageManager->createVillage($user_id, 'Player village', $x, $y);
+            }
         $stmt->close();
         // Redirect to the chosen page
         $final_redirect_url = $redirect;
