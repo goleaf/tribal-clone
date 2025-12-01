@@ -37,6 +37,7 @@ $center_y = isset($_GET['y']) ? (int)$_GET['y'] : $defaultY;
 $size = isset($_GET['size']) ? max(7, min(31, (int)$_GET['size'])) : 15;
 $center_x = max(0, min($worldSize - 1, $center_x));
 $center_y = max(0, min($worldSize - 1, $center_y));
+$low_perf_mode = !empty($_GET['lowperf']) ? 'true' : 'false';
 
 $pageTitle = 'World Map';
 require '../header.php';
@@ -108,7 +109,7 @@ require '../header.php';
                     <label><input type="checkbox" id="filter-commands-support" checked> Support</label>
                 </div>
                 <div class="filter-row secondary-filters">
-                    <label><input type="checkbox" id="filter-low-perf"> Low performance mode (hide movements)</label>
+                    <label><input type="checkbox" id="filter-low-perf" <?= $low_perf_mode === 'true' ? 'checked' : '' ?>> Low performance mode (hide movements)</label>
                 </div>
                 <div class="filter-row secondary-filters">
                     <label for="filter-activity" style="font-weight:600;">Activity</label>

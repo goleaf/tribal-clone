@@ -110,6 +110,7 @@
 - Added per-world economy knobs on `worlds` (`resource_multiplier`, `vault_protect_pct`) with migration/backfill defaults; `ResourceManager` applies per-world production scaling.
 - Vault protection percent now applied in plunder: BattleManager subtracts the greater of hiding place protection or world vault % per resource before loot.
 - Resource production multiplier now sourced via WorldManager in ResourceManager to align production rates with per-world config.
+- Resource tick now loads per-world economy config up front so decay/threshold toggles apply consistently and no undefined config paths fire during updates.
 - Trade/aid errors use standardized economy codes; send flow enforces storage headroom and resource availability with `ERR_RES` instead of `ERR_CAP`.
 
 ## Acceptance Criteria

@@ -159,6 +159,12 @@
 - Vision/pillar audit run at least once per season; gaps tracked with owners and due dates.
 - Archetype presets enforced in world creation UI with warnings on divergence; deviations require explicit acknowledgment.
 
+## Monitoring Plan
+- Monitor KPI dashboard freshness and alert delivery; alert if dashboards stale or alerts suppressed.
+- Track lexicon lint violations over time; alert on spikes or repeated offenders by module.
+- Watch preset usage vs overrides in world creation; alert if divergences exceed threshold without acknowledgment.
+- Survey fairness/social/pacing KPIs weekly; trigger review if crossing predefined thresholds.
+
 ## Open Questions
 - Which legacy terms are still risky for IP overlap and need renaming first? (list candidates and owners)
 - How frequently should the vision/pillar audit be revisited (per season, per major release)?

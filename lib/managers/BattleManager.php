@@ -3501,6 +3501,19 @@ class BattleManager
         return max(self::LOYALTY_MIN, min($cap, $loyalty));
     }
 
+    private function getUserPoints(int $userId): ?int
+    {
+        $stmt = $this->conn->prepare("SELECT points FROM users WHERE id = ? LIMIT 1");
+        if ($stmt === false) {
+            return null;
+        }
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row && isset($row['points']) ? (int)$row['points'] : null;
+    }
+
     /**
      * Recently conquered villages restart at a vulnerable loyalty.
      */
