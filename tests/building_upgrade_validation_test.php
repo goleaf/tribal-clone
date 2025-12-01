@@ -161,6 +161,17 @@ class BuildingUpgradeValidationTest {
     }
     
     private function testMaxLevelCap() {
+        // Ensure main_building is at sufficient level
+        $stmt = $this->db->prepare("
+            UPDATE village_buildings 
+            SET level = 10 
+            WHERE village_id = ? 
+            AND building_type_id = (SELECT id FROM building_types WHERE internal_name = 'main_building')
+        ");
+        $stmt->bind_param("i", $this->testVillageId);
+        $stmt->execute();
+        $stmt->close();
+        
         // Set barracks to max level
         $stmt = $this->db->prepare("
             UPDATE village_buildings 
@@ -186,6 +197,17 @@ class BuildingUpgradeValidationTest {
     }
     
     private function testInsufficientResources() {
+        // Ensure main_building is at sufficient level
+        $stmt = $this->db->prepare("
+            UPDATE village_buildings 
+            SET level = 10 
+            WHERE village_id = ? 
+            AND building_type_id = (SELECT id FROM building_types WHERE internal_name = 'main_building')
+        ");
+        $stmt->bind_param("i", $this->testVillageId);
+        $stmt->execute();
+        $stmt->close();
+        
         // Set barracks to level 0 first
         $stmt = $this->db->prepare("
             UPDATE village_buildings 
@@ -255,23 +277,23 @@ class BuildingUpgradeValidationTest {
     }
     
     private function testValidUpgrade() {
-        // Ensure barracks is at level 0 and main_building is at level 5
+        // Ensure main_building is at level 10 (meets barracks requirement of level 3)
         $stmt = $this->db->prepare("
             UPDATE village_buildings 
-            SET level = 0 
+            SET level = 10 
             WHERE village_id = ? 
-            AND building_type_id = (SELECT id FROM building_types WHERE internal_name = 'barracks')
+            AND building_type_id = (SELECT id FROM building_types WHERE internal_name = 'main_building')
         ");
         $stmt->bind_param("i", $this->testVillageId);
         $stmt->execute();
         $stmt->close();
         
-        // Ensure main_building is at level 5 (meets barracks requirement of level 3)
+        // Ensure barracks is at level 0
         $stmt = $this->db->prepare("
             UPDATE village_buildings 
-            SET level = 5 
+            SET level = 0 
             WHERE village_id = ? 
-            AND building_type_id = (SELECT id FROM building_types WHERE internal_name = 'main_building')
+            AND building_type_id = (SELECT id FROM building_types WHERE internal_name = 'barracks')
         ");
         $stmt->bind_param("i", $this->testVillageId);
         $stmt->execute();
