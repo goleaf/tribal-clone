@@ -301,6 +301,68 @@ class IntelManager
     }
 
     /**
+     * Returns age (seconds) of the newest intel report accessible to the user (own or tribe-shared).
+     * Null if none exist or on error.
+     */
+    public function getLatestReportAgeSecondsForUser(int $userId): ?int
+    {
+        if ($userId <= 0) {
+            return null;
+        }
+
+        try {
+            $tribeId = null;
+            if ($this->tribeManager) {
+                $membership = $this->tribeManager->getMembershipPublic($userId);
+                $tribeId = $membership['tribe_id'] ?? null;
+            }
+
+            if ($tribeId) {
+                $sql = "
+                    SELECT MAX(r.gathered_at) AS newest
+                    FROM intel_reports r
+                    LEFT JOIN intel_shares s ON s.report_id = r.id AND s.tribe_id = ?
+                    WHERE r.source_user_id = ? OR r.target_user_id = ? OR s.id IS NOT NULL
+                ";
+                $stmt = $this->conn->prepare($sql);
+                if ($stmt === false) {
+                    return null;
+                }
+                $stmt->bind_param("iii", $tribeId, $userId, $userId);
+            } else {
+                $sql = "
+                    SELECT MAX(r.gathered_at) AS newest
+                    FROM intel_reports r
+                    WHERE r.source_user_id = ? OR r.target_user_id = ?
+                ";
+                $stmt = $this->conn->prepare($sql);
+                if ($stmt === false) {
+                    return null;
+                }
+                $stmt->bind_param("ii", $userId, $userId);
+            }
+
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $row = $res ? $res->fetch_assoc() : null;
+            $res && $res->free();
+            $stmt->close();
+
+            if (!$row || empty($row['newest'])) {
+                return null;
+            }
+            $gatheredAt = (int)$row['newest'];
+            if ($gatheredAt <= 0) {
+                return null;
+            }
+            return max(0, time() - $gatheredAt);
+        } catch (Throwable $e) {
+            error_log('IntelManager::getLatestReportAgeSecondsForUser failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Attach tags for report IDs.
      *
      * @param array<int> $reportIds

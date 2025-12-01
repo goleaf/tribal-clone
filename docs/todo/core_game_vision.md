@@ -108,6 +108,7 @@
 - [x] UX tone guide: codify voice/tone for tooltips/warnings/reports aligned with pillars (clear, fair, tribe-first) and ban legacy jargon; share with localization. _(see docs/ux-tone-guide.md for principles, terminology, and review checklist)_
 - [x] Lexicon pass: replace legacy tribal-war terms with unique naming across UI/tutorials/marketing; maintain a glossary. _(ip-glossary.md drafted; glossary pass applied to conquest/units/docs; remaining UI strings flagged for sweep)_
 - [ ] Lexicon enforcement: add string linting to CI against ip-glossary banned list; generate weekly report of violations; assign owners per module to fix.
+- [ ] Preset enforcement: add world-creation guardrails that auto-apply archetype presets and require explicit override acknowledgements; log divergence metrics and alert on repeated overrides.
 
 ### Differentiation Notes (IP Support)
 - **Conquest:** Standard Bearer + allegiance system (anti-coin nobles), post-capture floors, and influence aura variant vs legacy noble captures.

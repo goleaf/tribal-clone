@@ -154,6 +154,19 @@ class BuildingQueueManager
 
             $this->conn->commit();
 
+            $this->logQueueEvent('enqueue', [
+                'queue_item_id' => $queueItemId,
+                'village_id' => $villageId,
+                'user_id' => $userId,
+                'building' => $buildingInternalName,
+                'level' => $nextLevel,
+                'costs' => $costs,
+                'build_time' => $buildTime,
+                'start_at' => $finalStart,
+                'finish_at' => $finalFinish,
+                'status' => $finalStatus
+            ]);
+
             return [
                 'success' => true,
                 'queue_item_id' => $queueItemId,
@@ -317,6 +330,11 @@ class BuildingQueueManager
 
         } catch (Exception $e) {
             $this->conn->rollback();
+            $this->logQueueEvent('cancel_failed', [
+                'queue_item_id' => $queueItemId,
+                'user_id' => $userId,
+                'error' => $e->getMessage()
+            ]);
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }

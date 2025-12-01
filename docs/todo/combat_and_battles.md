@@ -198,6 +198,13 @@
 - [ ] Determinism tests: ensure identical inputs produce identical casualty/wall/allegiance outputs across servers and replays.
 - [ ] Property fuzzing: fuzz negative/overflow troop counts, extreme modifiers, and malformed commands; expect graceful errors not crashes.
 - [ ] Integration sims: end-to-end scenarios covering fakes + clears + conquest waves + overstack penalties + night/weather; compare against golden reports.
+
+### Casualty Proportionality Options (Decision Aid)
+- **Linear (current default):** Casualties distributed proportionally by each unit type’s share of total attack/defense. Simple and predictable; easier to reason about in reports.
+- **Class Weights:** Apply per-class survivability multipliers (e.g., siege takes 1.2x, cav 0.9x) to model fragility; increases complexity and requires clear report flags.
+- **Front/Backline Model:** Split units into frontline/backline buckets; frontline absorbs until depleted, then backline. Better flavor but breaks expectations in existing metas.
+- **Hybrid:** Keep linear but add a small siege fragility factor (configurable) to curb siege staying power without rewriting the model.
+- **Recommendation:** Stay linear by default; add world-configurable optional `SIEGE_ATTRITION_MULT` for worlds needing extra siege fragility, surfaced in reports when active.
 - [ ] Anti-cheat signals: flag impossible command patterns (sub-100ms repeated sends bypassing fake throttles), duplicate command ids, and tampered payloads; resolver must reject with reason codes and log for audit.
 - [ ] Plunder math tests: verify vault protection vs hiding place, plunder caps, and loot split across surviving carriers; ensure report matches calculations.
 

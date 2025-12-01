@@ -137,7 +137,7 @@ if (!empty($nearCapResources)) {
     $nudges[] = [
         'code' => 'resource_cap',
         'severity' => 'warning',
-        'message' => implode(', ', array_map('htmlspecialchars', $nearCapResources)) . ' near storage cap — spend or trade to avoid overflow.',
+        'message' => implode(', ', $nearCapResources) . ' near storage cap — spend or trade to avoid overflow.',
         'action' => [
             'type' => 'building',
             'label' => 'Upgrade warehouse',
