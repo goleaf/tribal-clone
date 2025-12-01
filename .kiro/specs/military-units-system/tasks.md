@@ -19,7 +19,7 @@
   - Add aura_config JSON column for support units
   - _Requirements: 1.4, 6.3, 14.2_
 
-- [-] 1.4 Populate data/units.json with complete 16+ unit roster
+- [x] 1.4 Populate data/units.json with complete 16+ unit roster
   - Add infantry units (Pikeneer, Shieldbearer, Raider, Warden)
   - Add ranged units (Militia Bowman, Longbow Scout, Ranger)
   - Add cavalry units (Skirmisher Cavalry, Lancer)
