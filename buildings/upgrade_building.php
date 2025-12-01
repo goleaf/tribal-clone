@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 error_log("DEBUG: upgrade_building.php - Start");
 require '../init.php';
 error_log("DEBUG: upgrade_building.php - After init.php");
