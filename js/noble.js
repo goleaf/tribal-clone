@@ -14,7 +14,7 @@ async function fetchAndRenderNoblePanel(villageId, buildingInternalName) {
     }
 
     // Show loading indicator
-    actionContent.innerHTML = '<p>Ładowanie panelu Statuy...</p>';
+    actionContent.innerHTML = '<p>Loading Statue panel...</p>';
     actionContent.style.display = 'block';
     detailsContent.style.display = 'none'; // Hide details when showing action content
 
@@ -25,30 +25,30 @@ async function fetchAndRenderNoblePanel(villageId, buildingInternalName) {
 
         if (data.status === 'success' && data.action_type === 'noble') {
             // Assuming backend provides necessary data for the noble system
-            const buildingName = data.data.building_name_pl;
+            const buildingName = data.data.building_name;
             const buildingLevel = data.data.building_level;
             // TODO: Extract noble-specific data from data.data
 
             // Render the Noble panel HTML
             let html = `
-                <h3>${buildingName} (Poziom ${buildingLevel}) - Szlachcic</h3>
-                <p>Tutaj możesz rekrutować/zarządzać szlachcicami.</p>
+                <h3>${buildingName} (Level ${buildingLevel}) - Noble</h3>
+                <p>Recruit/manage nobles here.</p>
 
-                <h4>Status szlachcica:</h4>
+                <h4>Noble status:</h4>
                 <div class="noble-status">
-                    <p>TODO: Wyświetl status obecnego szlachcica (jeśli istnieje).</p>
+                    <p>TODO: Display current noble status (if any).</p>
                 </div>
 
-                <h4>Rekrutacja szlachcica:</h4>
+                <h4>Noble recruitment:</h4>
                 <div class="noble-recruitment">
-                    <p>TODO: Formularz rekrutacji szlachcica (koszt, czas, wymagania).</p>
-                     <button class="btn-primary" disabled>Rekrutuj Szlachcica (TODO)</button>
+                    <p>TODO: Recruitment form (cost, time, requirements).</p>
+                     <button class="btn-primary" disabled>Recruit noble (TODO)</button>
                 </div>
 
-                <h4>Wybijanie monet:</h4>
+                <h4>Coin minting:</h4>
                 <div class="coin-minting">
-                    <p>TODO: Interfejs wybijania monet (jeśli to w Statui, w Dzikich Plemionach było w Pałacu/Rezydencji).</p>
-                     <button class="btn-primary" disabled>Wybij Monety (TODO)</button>
+                    <p>TODO: Coin minting interface (if applicable).</p>
+                     <button class="btn-primary" disabled>Mint coins (TODO)</button>
                 </div>
 
                 <!-- Add other noble-related options -->
@@ -61,16 +61,16 @@ async function fetchAndRenderNoblePanel(villageId, buildingInternalName) {
             setupNobleListeners(villageId, buildingInternalName);
 
         } else if (data.error) {
-            actionContent.innerHTML = '<p>Błąd ładowania panelu Statuy: ' + data.error + '</p>';
+            actionContent.innerHTML = '<p>Error loading Statue panel: ' + data.error + '</p>';
             window.toastManager.showToast(data.error, 'error');
         } else {
-             actionContent.innerHTML = '<p>Nieprawidłowa odpowiedź serwera lub akcja nie dotyczy Statuy.</p>';
+             actionContent.innerHTML = '<p>Invalid server response or action does not belong to Statue.</p>';
          }
 
     } catch (error) {
-        console.error('Błąd AJAX pobierania panelu Statuy:', error);
-        actionContent.innerHTML = '<p>Błąd komunikacji z serwera.</p>';
-        window.toastManager.showToast('Błąd komunikacji z serwera podczas pobierania panelu Statuy.', 'error');
+        console.error('AJAX error fetching Statue panel:', error);
+        actionContent.innerHTML = '<p>Server communication error.</p>';
+        window.toastManager.showToast('Server communication error while fetching Statue panel.', 'error');
     }
 }
 

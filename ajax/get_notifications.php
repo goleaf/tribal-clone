@@ -5,7 +5,7 @@ require_once '../lib/managers/NotificationManager.php';
 header('Content-Type: application/json');
 
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Nie jesteś zalogowany.']);
+    echo json_encode(['status' => 'error', 'message' => 'You are not logged in.']);
     exit();
 }
 
@@ -30,7 +30,7 @@ if ($notifications !== false) {
         ]
     ]);
 } else {
-    echo json_encode(['status' => 'error', 'message' => 'Nie udało się pobrać powiadomień.']);
+    echo json_encode(['status' => 'error', 'message' => 'Failed to fetch notifications.']);
 }
 
 $conn->close();

@@ -1,13 +1,13 @@
 CREATE TABLE IF NOT EXISTS `building_queue` (
     id INT AUTO_INCREMENT PRIMARY KEY,
     village_id INT NOT NULL,
-    village_building_id INT NOT NULL, -- ID wpisu w village_buildings
-    building_type_id INT NOT NULL, -- ID typu budynku z building_types
-    level INT NOT NULL, -- Poziom po zakończeniu budowy
-    starts_at DATETIME NOT NULL, -- Czas rozpoczęcia budowy
-    finish_time DATETIME NOT NULL, -- Czas zakończenia budowy
+    village_building_id INT NOT NULL, -- ID entry in village_buildings
+    building_type_id INT NOT NULL, -- ID of the building type from building_types
+    level INT NOT NULL, -- Level after the build finishes
+    starts_at DATETIME NOT NULL, -- Build start time
+    finish_time DATETIME NOT NULL, -- Build finish time
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (village_id) REFERENCES villages(id) ON DELETE CASCADE,
     FOREIGN KEY (village_building_id) REFERENCES village_buildings(id) ON DELETE CASCADE,
     FOREIGN KEY (building_type_id) REFERENCES building_types(id) ON DELETE CASCADE
-); 
+);

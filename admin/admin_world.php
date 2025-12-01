@@ -1,23 +1,23 @@
 <?php
 require_once '../lib/VillageManager.php';
-// admin_world.php - Generator świata dla administratora
+// admin_world.php - World generator for administrators
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     validateCSRF();
     $map_size = isset($_POST['map_size']) ? (int)$_POST['map_size'] : 100;
-    // Wyczyść istniejące dane świata
+    // Clear existing world data
     $tables = ['building_queue','unit_queue','research_queue','trade_routes','villages','village_buildings'];
     foreach ($tables as $table) {
         $conn->query("DELETE FROM $table");
     }
-    // Pobierz wszystkich użytkowników
+    // Fetch all non-admin users
     $stmt = $conn->prepare("SELECT id, username FROM users WHERE is_admin = 0");
     $stmt->execute();
     $users = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
-    // Generuj wioski dla każdego użytkownika
+    // Generate villages for each user
     $vm = new VillageManager($conn);
     foreach ($users as $user) {
-        // Szukaj unikalnych koordynatów
+        // Look for unique coordinates
         do {
             $x = rand(0, $map_size - 1);
             $y = rand(0, $map_size - 1);
@@ -27,16 +27,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $cnt = $check->get_result()->fetch_assoc()['cnt'];
             $check->close();
         } while ($cnt > 0);
-        // Tworzenie wioski
-        $vm->createVillage($user['id'], 'Wioska '.$user['username'], $x, $y);
+        // Create the village
+        $vm->createVillage($user['id'], 'Village '.$user['username'], $x, $y);
     }
-    echo '<p class="success-message">Świat wygenerowany pomyślnie!</p>';
+    echo '<p class="success-message">World generated successfully!</p>';
 }
 ?>
 <form method="POST" action="admin.php?screen=world" class="form-container">
-    <h2>Generator Świata</h2>
+    <h2>World Generator</h2>
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
-    <label for="map_size">Rozmiar mapy (przykładowe X i Y):</label>
+    <label for="map_size">Map size (example X and Y):</label>
     <input type="number" id="map_size" name="map_size" value="100" min="10" max="500">
-    <button type="submit" class="btn btn-primary">Generuj Świat</button>
-</form> 
+    <button type="submit" class="btn btn-primary">Generate world</button>
+</form>

@@ -6,28 +6,28 @@ error_reporting(E_ALL);
 require '../init.php';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') validateCSRF();
 
-// Sprawdź, czy użytkownik jest zalogowany
+// Ensure the user is logged in
 if (!isset($_SESSION['user_id'])) {
     if (isset($_POST['ajax'])) {
         header('Content-Type: application/json');
-        echo json_encode(['error' => 'Nie jesteś zalogowany.']);
+        echo json_encode(['error' => 'You are not logged in.']);
     } else {
-        $_SESSION['game_message'] = "<p class='error-message'>Musisz być zalogowany, aby wykonać tę akcję.</p>";
-        header("Location: ../auth/login.php");
+        $_SESSION['game_message'] = "<p class='error-message'>You must be logged in to perform this action.</p>";
+        header('Location: ../auth/login.php');
     }
     exit();
 }
 
-// Sprawdź, czy przekazano wymagane parametry
+// Validate required parameters
 if (!isset($_POST['village_id']) || !is_numeric($_POST['village_id']) || 
     !isset($_POST['building_id']) || !is_numeric($_POST['building_id']) ||
     !isset($_POST['recruit']) || !is_array($_POST['recruit'])) {
     if (isset($_POST['ajax'])) {
         header('Content-Type: application/json');
-        echo json_encode(['error' => 'Brak wymaganych parametrów.']);
+        echo json_encode(['error' => 'Required parameters are missing.']);
     } else {
-        $_SESSION['game_message'] = "<p class='error-message'>Brak wymaganych parametrów.</p>";
-        header("Location: ../game/game.php");
+        $_SESSION['game_message'] = "<p class='error-message'>Required parameters are missing.</p>";
+        header('Location: ../game/game.php');
     }
     exit();
 }
@@ -37,15 +37,12 @@ $village_id = (int)$_POST['village_id'];
 $building_id = (int)$_POST['building_id'];
 $recruit_data = $_POST['recruit'];
 
-// Wymagane pliki
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'managers' . DIRECTORY_SEPARATOR . 'UnitManager.php';
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'managers' . DIRECTORY_SEPARATOR . 'VillageManager.php';
 
-// Połącz z bazą danych
-// Database connection: $conn provided by init.php
-
+// Database connection: $conn is provided by init.php
 if (!$conn) {
-    $_SESSION['game_message'] = 'Błąd: Nie udało się połączyć z bazą danych.';
+    $_SESSION['game_message'] = 'Error: Could not connect to the database.';
     header('Location: ../game/game.php');
     exit();
 }
@@ -53,73 +50,66 @@ if (!$conn) {
 $unitManager = new UnitManager($conn);
 
 try {
-    // Rozpocznij transakcję
     $conn->begin_transaction();
     
-    // Sprawdź, czy wioska należy do użytkownika
+    // Verify the village belongs to the user
     $stmt_check_village = $conn->prepare("SELECT id FROM villages WHERE id = ? AND user_id = ?");
-    $stmt_check_village->bind_param("ii", $village_id, $user_id);
+    $stmt_check_village->bind_param('ii', $village_id, $user_id);
     $stmt_check_village->execute();
     $result_village = $stmt_check_village->get_result();
     
     if ($result_village->num_rows === 0) {
-        throw new Exception("Brak uprawnień do tej wioski.");
+        throw new Exception('You do not have access to this village.');
     }
     $stmt_check_village->close();
     
-    // Sprawdź, czy budynek to koszary i należy do wioski
+    // Verify the building is the village barracks
     $stmt_check_building = $conn->prepare("
         SELECT vb.id, bt.internal_name, vb.level 
-    FROM village_buildings vb 
-    JOIN building_types bt ON vb.building_type_id = bt.id 
+        FROM village_buildings vb 
+        JOIN building_types bt ON vb.building_type_id = bt.id 
         WHERE vb.id = ? AND vb.village_id = ? AND bt.internal_name = 'barracks'
     ");
-    $stmt_check_building->bind_param("ii", $building_id, $village_id);
+    $stmt_check_building->bind_param('ii', $building_id, $village_id);
     $stmt_check_building->execute();
     $result_building = $stmt_check_building->get_result();
     
     if ($result_building->num_rows === 0) {
-        throw new Exception("Nieprawidłowy budynek.");
+        throw new Exception('Invalid building.');
     }
     
     $building = $result_building->fetch_assoc();
     $barracks_level = $building['level'];
     $stmt_check_building->close();
     
-    // Pobierz aktualną ilość kolejek rekrutacji dla tych koszar (dla danego budynku/typu kolejki)
-    // Zmieniamy zapytanie, żeby sprawdzało dla building_id, nie tylko building_type
+    // Check current recruitment queues for this building
     $stmt_check_queue = $conn->prepare("
         SELECT COUNT(*) as queue_count 
         FROM unit_queue 
         WHERE village_id = ? AND building_type = ?
     ");
-    // Pobierz building_type na podstawie building_id (lub internal_name z building_types)
-    // Na razie użyjemy 'barracks' na sztywno, ale docelowo powinno być dynamiczne
-    $queue_building_type = 'barracks'; // Może wymagać pobrania z building_types na podstawie building_id
+    $queue_building_type = 'barracks';
 
-    $stmt_check_queue->bind_param("is", $village_id, $queue_building_type); // Używamy village_id i building_type
+    $stmt_check_queue->bind_param('is', $village_id, $queue_building_type);
     $stmt_check_queue->execute();
     $result_queue = $stmt_check_queue->get_result();
     $queue_count = $result_queue->fetch_assoc()['queue_count'];
     $stmt_check_queue->close();
     
-    // Sprawdź, czy nie przekroczono limitu kolejek rekrutacji (2 dla koszar) - TO MOŻE BYĆ ZMIENNE ZALEŻNE OD POZIOMU BUDYNKU
-    // Na razie zostawiamy na sztywno 2, ale warto dodać konfigurację np. w building_types lub oddzielnej tabeli
-    $max_queues = 2; // Domyślny limit kolejek rekrutacji w jednym budynku (np. koszarach)
-    // if ($barracks_level >= 10) $max_queues = 3; // Przykładowy dynamiczny limit
-
+    // Enforce queue limit (static for now, could depend on building level)
+    $max_queues = 2;
     if ($queue_count >= $max_queues) {
-        throw new Exception("Maksymalna ilość kolejek rekrutacji ($max_queues) została osiągnięta dla tego budynku.");
+        throw new Exception("The maximum recruitment queue count ($max_queues) has been reached for this building.");
     }
 
-// Pobierz aktualne zasoby wioski
-    $stmt_resources = $conn->prepare("SELECT wood, clay, iron, population FROM villages WHERE id = ?");
-    $stmt_resources->bind_param("i", $village_id);
+    // Fetch current village resources
+    $stmt_resources = $conn->prepare('SELECT wood, clay, iron, population FROM villages WHERE id = ?');
+    $stmt_resources->bind_param('i', $village_id);
     $stmt_resources->execute();
     $resources = $stmt_resources->get_result()->fetch_assoc();
     $stmt_resources->close();
     
-    // Sprawdź, czy wybrano jakiekolwiek jednostki
+    // Aggregate requested units and total costs
     $total_units = 0;
     $total_population = 0;
     $total_wood = 0;
@@ -133,154 +123,129 @@ try {
         
         $total_units += $count;
         
-        // Pobierz informacje o jednostce
+        // Pull unit info
         $stmt_unit = $conn->prepare("
-            SELECT internal_name, name_pl, cost_wood, cost_clay, cost_iron, population, training_time_base, required_building_level
+            SELECT internal_name, name, cost_wood, cost_clay, cost_iron, population, training_time_base, required_building_level
             FROM unit_types 
             WHERE id = ? AND building_type = 'barracks'
         ");
-        $stmt_unit->bind_param("i", $unit_type_id);
+        $stmt_unit->bind_param('i', $unit_type_id);
         $stmt_unit->execute();
         $result_unit = $stmt_unit->get_result();
         
         if ($result_unit->num_rows === 0) {
-            throw new Exception("Nieprawidłowa jednostka.");
+            throw new Exception('Invalid unit.');
         }
         
         $unit = $result_unit->fetch_assoc();
         $stmt_unit->close();
         
-        // Sprawdź, czy poziom koszar jest wystarczający
+        // Ensure the barracks level is high enough
         if ($barracks_level < $unit['required_building_level']) {
-            throw new Exception("Zbyt niski poziom koszar dla jednostki " . $unit['name_pl'] . ".");
+            throw new Exception('Barracks level is too low for unit ' . $unit['name'] . '.');
         }
         
-        // Oblicz koszt i czas treningu
+        // Calculate costs and training time
         $wood_cost = $count * $unit['cost_wood'];
         $clay_cost = $count * $unit['cost_clay'];
         $iron_cost = $count * $unit['cost_iron'];
         $population_cost = $count * $unit['population'];
         
-        // Dodaj do sumy
         $total_wood += $wood_cost;
         $total_clay += $clay_cost;
         $total_iron += $iron_cost;
         $total_population += $population_cost;
         
-        // Oblicz czas treningu z uwzględnieniem poziomu koszar (5% szybciej na poziom) - TYMCZASOWO OBCZAMY CZAS NA JEDNOSTKĘ
-        // CAŁKOWITY czas dla partii jednostek będzie obliczany przy dodawaniu do kolejki
+        // Training time per unit (5% faster per barracks level)
         $training_time_base = $unit['training_time_base'];
-        $training_time_per_unit = floor($training_time_base * pow(0.95, $barracks_level - 1)); // Czas na jednostkę
-        // Całkowity czas treningu dla tej partii jednostek = $training_time_per_unit * $count;
+        $training_time_per_unit = floor($training_time_base * pow(0.95, $barracks_level - 1));
         
         $units_to_recruit[] = [
             'unit_type_id' => $unit_type_id,
             'count' => $count,
-            'training_time_per_unit' => $training_time_per_unit, // Czas na jednostkę
-            'name' => $unit['name_pl'],
+            'training_time_per_unit' => $training_time_per_unit,
+            'name' => $unit['name'],
             'internal_name' => $unit['internal_name']
         ];
     }
     
-    // Sprawdź, czy wybrano jakiekolwiek jednostki
     if ($total_units === 0) {
-        throw new Exception("Nie wybrano żadnych jednostek do rekrutacji.");
+        throw new Exception('No units selected for recruitment.');
     }
     
-    // Sprawdź, czy gracz ma wystarczające zasoby i populację
+    // Validate resources and population capacity
     if ($resources['wood'] < $total_wood || 
         $resources['clay'] < $total_clay || 
         $resources['iron'] < $total_iron ||
-        ($resources['population'] + $total_population) > $village['farm_capacity']) { // Sprawdź limit populacji
-        // Trzeba pobrać aktualną farm_capacity wioski. Pobraliśmy tylko wood, clay, iron, population.
-        // Pobierz pełne dane wioski, żeby mieć farm_capacity
-        $village_data = $villageManager->getVillageInfo($village_id); // Pobierz pełne dane
+        ($resources['population'] + $total_population) > $village['farm_capacity']) {
+        // Fetch full village data for current farm capacity
+        $village_data = $villageManager->getVillageInfo($village_id);
         if (!$village_data || ($village_data['population'] + $total_population) > $village_data['farm_capacity']) {
-            throw new Exception("Brak wystarczającej ilości wolnej populacji w wiosce.");
+            throw new Exception('Not enough free population in the village.');
         }
         
-        throw new Exception("Brak wystarczających zasobów lub wolnej populacji na rekrutację wybranych jednostek.");
+        throw new Exception('Not enough resources or free population to recruit the selected units.');
     }
     
-    // === ODEJMIJ ZASOBY i populację ===
-    $stmt_deduct_resources = $conn->prepare("UPDATE villages SET wood = wood - ?, clay = clay - ?, iron = iron - ?, population = population + ? WHERE id = ?");
-     // Upewnij się, że odejmujesz koszty i dodajesz populację (ludność jest 'zużywana', więc dodajemy do obecnej liczby ludności w wiosce)
-    $stmt_deduct_resources->bind_param("ddiii", $total_wood, $total_clay, $total_iron, $total_population, $village_id);
+    // Deduct resources and population
+    $stmt_deduct_resources = $conn->prepare('UPDATE villages SET wood = wood - ?, clay = clay - ?, iron = iron - ?, population = population + ? WHERE id = ?');
+    $stmt_deduct_resources->bind_param('ddiii', $total_wood, $total_clay, $total_iron, $total_population, $village_id);
     if (!$stmt_deduct_resources->execute()) {
-        throw new Exception("Błąd podczas odejmowania zasobów i dodawania populacji: " . $stmt_deduct_resources->error);
+        throw new Exception('Error while deducting resources and adding population: ' . $stmt_deduct_resources->error);
     }
     $stmt_deduct_resources->close();
-    // ===============================
 
-    // Rekrutuj jednostki - dla każdego typu jednostki utwórz osobną kolejkę
-    // Czas zakończenia kolejnego zadania zależy od czasu zakończenia poprzedniego ZADANIA Z TEGO SAMEGO BUDYNKU (KOSZAR)
+    // Queue recruitment tasks
     $recruited_queues = [];
     $current_time = time();
-    $last_finish_time = $current_time; // Czas zakończenia ostatniego zadania w tej kolejce
+    $last_finish_time = $current_time;
 
-    // Pobierz czas zakończenia ostatniego zadania w obecnej kolejce dla tego budynku
-    $stmt_last_queue = $conn->prepare("
-        SELECT finish_at FROM unit_queue 
-        WHERE village_id = ? AND building_type = ? 
-        ORDER BY finish_at DESC LIMIT 1");
-    $stmt_last_queue->bind_param("is", $village_id, $queue_building_type);
+    $stmt_last_queue = $conn->prepare('SELECT finish_at FROM unit_queue WHERE village_id = ? AND building_type = ? ORDER BY finish_at DESC LIMIT 1');
+    $stmt_last_queue->bind_param('is', $village_id, $queue_building_type);
     $stmt_last_queue->execute();
     $result_last_queue = $stmt_last_queue->get_result();
     if ($row_last_queue = $result_last_queue->fetch_assoc()) {
-        $last_finish_time = max($last_finish_time, $row_last_queue['finish_at']); // Użyj najpóźniejszego czasu
+        $last_finish_time = max($last_finish_time, $row_last_queue['finish_at']);
     }
     $stmt_last_queue->close();
 
     foreach ($units_to_recruit as $recruit_data) {
         $unit_type_id = $recruit_data['unit_type_id'];
         $count = $recruit_data['count'];
-        $training_time_per_unit = $recruit_data['training_time_per_unit']; // Czas na 1 jednostkę
+        $training_time_per_unit = $recruit_data['training_time_per_unit'];
         
-        // Całkowity czas treningu dla tej partii (wszystkich jednostek tego samego typu w tym zadaniu)
         $total_training_time_for_batch = $training_time_per_unit * $count;
-        
-        // Czas rozpoczęcia tego zadania to czas zakończenia poprzedniego
         $started_at_this_task = $last_finish_time;
-        // Czas zakończenia tego zadania
         $finish_at_this_task = $started_at_this_task + $total_training_time_for_batch;
         
-        // Dodaj do kolejki rekrutacji
-        $stmt_add_queue = $conn->prepare("
-            INSERT INTO unit_queue (village_id, unit_type_id, count, count_finished, started_at, finish_at, building_type)
-            VALUES (?, ?, ?, 0, ?, ?, ?)
-        ");
-        $stmt_add_queue->bind_param("iiiiss", $village_id, $unit_type_id, $count, $started_at_this_task, $finish_at_this_task, $queue_building_type);
+        $stmt_add_queue = $conn->prepare('INSERT INTO unit_queue (village_id, unit_type_id, count, count_finished, started_at, finish_at, building_type) VALUES (?, ?, ?, 0, ?, ?, ?)');
+        $stmt_add_queue->bind_param('iiiiss', $village_id, $unit_type_id, $count, $started_at_this_task, $finish_at_this_task, $queue_building_type);
         
         if (!$stmt_add_queue->execute()) {
-            throw new Exception("Błąd podczas dodawania zadania rekrutacji do kolejki: " . $stmt_add_queue->error);
+            throw new Exception('Error while adding the recruitment task to the queue: ' . $stmt_add_queue->error);
         }
         
-        // Zaktualizuj czas zakończenia dla następnego zadania w pętli
         $last_finish_time = $finish_at_this_task;
         
-        $recruited_queues[] = [ // Zbierz dane o dodanych zadaniach
+        $recruited_queues[] = [
             'queue_id' => $conn->insert_id,
             'unit_name' => $recruit_data['name'],
             'count' => $count,
-            'finish_at' => $finish_at_this_task // Zwróć timestamp
+            'finish_at' => $finish_at_this_task
         ];
     }
     
     $stmt_add_queue->close();
 
-    // === Zatwierdź transakcję ===
     $conn->commit();
-    // ==========================
 
-    // === Przygotuj odpowiedź (AJAX lub przekierowanie) ===
     if (isset($_POST['ajax'])) {
         header('Content-Type: application/json');
-        // Pobierz zaktualizowane dane wioski po odjęciu zasobów i dodaniu populacji
         $updatedVillageInfo = $villageManager->getVillageInfo($village_id);
         AjaxResponse::success([
-            'message' => 'Jednostki dodano do kolejki rekrutacji!',
+            'message' => 'Units have been added to the recruitment queue!',
             'recruited_queues' => $recruited_queues,
-            'village_info' => [ // Zwróć zaktualizowane info o wiosce
+            'village_info' => [
                 'wood' => $updatedVillageInfo['wood'],
                 'clay' => $updatedVillageInfo['clay'],
                 'iron' => $updatedVillageInfo['iron'],
@@ -290,33 +255,26 @@ try {
             ]
         ]);
     } else {
-        // Przygotuj komunikat sukcesu i przekieruj
-        $_SESSION['game_message'] = "<p class='success-message'>Rekrutacja jednostek została dodana do kolejki.</p>";
-        header("Location: ../game/game.php");
+        $_SESSION['game_message'] = "<p class='success-message'>Unit recruitment has been added to the queue.</p>";
+        header('Location: ../game/game.php');
     }
-    // ==================================================
     
 } catch (Exception $e) {
-    // === Wycofaj transakcję w przypadku błędu ===
     $conn->rollback();
-    // =======================================
 
-    // === Obsłuż wyjątek i zwróć błąd ===
     if (isset($_POST['ajax'])) {
         header('Content-Type: application/json');
         AjaxResponse::error(
-            'Błąd podczas rekrutacji jednostek: ' . $e->getMessage(),
+            'An error occurred while recruiting units: ' . $e->getMessage(),
             ['file' => $e->getFile(), 'line' => $e->getLine(), 'trace' => $e->getTraceAsString()],
-            500 // HTTP status code
+            500
         );
     } else {
-        $_SESSION['game_message'] = "<p class='error-message'>Błąd podczas rekrutacji jednostek: " . htmlspecialchars($e->getMessage()) . "</p>";
-        header("Location: ../game/game.php");
+        $_SESSION['game_message'] = "<p class='error-message'>An error occurred while recruiting units: " . htmlspecialchars($e->getMessage()) . "</p>";
+        header('Location: ../game/game.php');
     }
-    // ==================================
 } finally {
-    // Upewnij się, że połączenie jest zamknięte, jeśli nie używasz init.php w ten sposób
-    // init.php powinno zarządzać połączeniem
+    // init.php manages the connection lifecycle
     $conn->close();
 }
-?> 
+?>

@@ -1,5 +1,5 @@
 /**
- * Obsługa powiadomień typu "toast"
+ * Toast notification handling and dropdown rendering.
  */
 
 class ToastManager {
@@ -18,10 +18,10 @@ class ToastManager {
     }
 
     /**
-     * Wyświetla powiadomienie typu "toast".
-     * @param {string} message Treść komunikatu.
-     * @param {string} type Typ komunikatu (success, error, info, warning).
-     * @param {number} duration Czas wyświetlania w milisekundach.
+     * Show a toast notification.
+     * @param {string} message Text to display.
+     * @param {string} type Notification type (success, error, info, warning).
+     * @param {number} duration Display time in ms.
      */
     showToast(message, type = 'info', duration = 5000) {
         const toast = document.createElement('div');
@@ -30,32 +30,34 @@ class ToastManager {
 
         this.toastContainer.appendChild(toast);
 
-        // Pokaż toast
+        // Animate in
         setTimeout(() => {
             toast.classList.add('visible');
-        }, 100); // Krótkie opóźnienie dla animacji
+        }, 100);
 
-        // Ukryj i usuń toast po czasie
+        // Hide and remove after duration
         setTimeout(() => {
             toast.classList.remove('visible');
-            toast.addEventListener('transitionend', () => {
-                toast.remove();
-            }, { once: true });
+            toast.addEventListener(
+                'transitionend',
+                () => toast.remove(),
+                { once: true }
+            );
         }, duration);
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    window.toastManager = new ToastManager(); // Ustaw globalnie
+    window.toastManager = new ToastManager();
 
-    // Wyświetl komunikaty przekazane z PHP
+    // Display messages passed from PHP
     if (window.gameMessages && Array.isArray(window.gameMessages)) {
         window.gameMessages.forEach(msg => {
             window.toastManager.showToast(msg.message, msg.type);
         });
     }
 
-    // Obsługa kliknięć na ikonę powiadomień w nagłówku
+    // Notifications dropdown handling
     const notificationsToggle = document.getElementById('notifications-toggle');
     const notificationsDropdown = document.getElementById('notifications-dropdown');
     const notificationCountBadge = document.getElementById('notification-count');
@@ -63,24 +65,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const markAllReadBtn = document.getElementById('mark-all-read');
 
     if (notificationsToggle && notificationsDropdown) {
-        notificationsToggle.addEventListener('click', (e) => {
+        notificationsToggle.addEventListener('click', e => {
             e.preventDefault();
             notificationsDropdown.classList.toggle('show');
-            // Jeśli otwieramy, pobierz najnowsze powiadomienia
             if (notificationsDropdown.classList.contains('show')) {
                 fetchNotifications();
             }
         });
 
-        // Zamknij dropdown po kliknięciu poza nim
-        document.addEventListener('click', (e) => {
-            if (!notificationsToggle.contains(e.target) && !notificationsDropdown.contains(e.target)) {
+        // Close dropdown when clicking outside
+        document.addEventListener('click', e => {
+            if (
+                !notificationsToggle.contains(e.target) &&
+                !notificationsDropdown.contains(e.target)
+            ) {
                 notificationsDropdown.classList.remove('show');
             }
         });
     }
 
-    // Funkcja do pobierania i renderowania powiadomień
+    // Fetch and render notifications
     async function fetchNotifications() {
         try {
             const response = await fetch('ajax/get_notifications.php?unreadOnly=true&limit=5');
@@ -89,23 +93,23 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.status === 'success') {
                 renderNotifications(data.data.notifications, data.data.unread_count);
             } else {
-                console.error('Błąd pobierania powiadomień:', data.message);
-                toastManager.showToast('Błąd pobierania powiadomień.', 'error');
+                console.error('Error fetching notifications:', data.message);
+                toastManager.showToast('Error fetching notifications.', 'error');
             }
         } catch (error) {
-            console.error('Błąd AJAX powiadomień:', error);
-            toastManager.showToast('Błąd komunikacji z serwerem.', 'error');
+            console.error('Notifications AJAX error:', error);
+            toastManager.showToast('Server communication error.', 'error');
         }
     }
 
-    // Funkcja do renderowania powiadomień w dropdownie
+    // Render notifications in the dropdown
     function renderNotifications(notifications, unreadCount) {
         if (!notificationsList) return;
 
-        notificationsList.innerHTML = ''; // Wyczyść listę
+        notificationsList.innerHTML = '';
 
         if (notifications.length === 0) {
-            notificationsList.innerHTML = '<div class="no-notifications">Brak nowych powiadomień</div>';
+            notificationsList.innerHTML = '<div class="no-notifications">No new notifications</div>';
         } else {
             const ul = document.createElement('ul');
             ul.classList.add('notifications-list-items');
@@ -113,10 +117,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const li = document.createElement('li');
                 li.classList.add('notification-item', `notification-${notification.type}`);
                 li.dataset.id = notification.id;
-                
-                const iconClass = notification.type === 'success' ? 'fa-check-circle' : 
-                                  (notification.type === 'error' ? 'fa-exclamation-circle' : 
-                                  (notification.type === 'info' ? 'fa-info-circle' : 'fa-bell'));
+
+                const iconClass =
+                    notification.type === 'success'
+                        ? 'fa-check-circle'
+                        : notification.type === 'error'
+                        ? 'fa-exclamation-circle'
+                        : notification.type === 'info'
+                        ? 'fa-info-circle'
+                        : 'fa-bell';
 
                 li.innerHTML = `
                     <div class="notification-icon">
@@ -126,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="notification-message">${notification.message}</div>
                         <div class="notification-time">${relativeTime(new Date(notification.created_at).getTime() / 1000)}</div>
                     </div>
-                    <button class="mark-read-btn" data-id="${notification.id}" title="Oznacz jako przeczytane">
+                    <button class="mark-read-btn" data-id="${notification.id}" title="Mark as read">
                         <i class="fas fa-check"></i>
                     </button>
                 `;
@@ -135,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
             notificationsList.appendChild(ul);
         }
 
-        // Zaktualizuj badge z liczbą nieprzeczytanych
+        // Update unread badge
         if (notificationCountBadge) {
             if (unreadCount > 0) {
                 notificationCountBadge.textContent = unreadCount;
@@ -146,37 +155,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Obsługa oznaczania pojedynczego powiadomienia jako przeczytane
-    notificationsList.addEventListener('click', async (e) => {
-        if (e.target.closest('.mark-read-btn')) {
-            const button = e.target.closest('.mark-read-btn');
-            const notificationId = button.dataset.id;
-            try {
-                const response = await fetch('ajax/mark_notification_read.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: `notification_id=${notificationId}&csrf_token=${document.querySelector('meta[name="csrf-token"]').content}`
-                });
-                const data = await response.json();
-                if (data.status === 'success') {
-                    toastManager.showToast('Powiadomienie oznaczone jako przeczytane.', 'success');
-                    fetchNotifications(); // Odśwież listę powiadomień
-                } else {
-                    toastManager.showToast(data.message || 'Błąd oznaczania powiadomienia.', 'error');
+    // Mark a single notification as read
+    if (notificationsList) {
+        notificationsList.addEventListener('click', async e => {
+            if (e.target.closest('.mark-read-btn')) {
+                const button = e.target.closest('.mark-read-btn');
+                const notificationId = button.dataset.id;
+                try {
+                    const response = await fetch('ajax/mark_notification_read.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: `id=${notificationId}`
+                    });
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        button.closest('.notification-item')?.remove();
+                        fetchNotifications();
+                    }
+                } catch (error) {
+                    console.error('Error marking notification as read:', error);
+                    toastManager.showToast('Error marking notification as read.', 'error');
                 }
-            } catch (error) {
-                console.error('Błąd AJAX oznaczania powiadomienia:', error);
-                toastManager.showToast('Błąd komunikacji z serwerem.', 'error');
             }
-        }
-    });
+        });
+    }
 
-    // Obsługa oznaczania wszystkich powiadomień jako przeczytane
+    // Mark all as read
     if (markAllReadBtn) {
-        markAllReadBtn.addEventListener('click', async (e) => {
+        markAllReadBtn.addEventListener('click', async e => {
             e.preventDefault();
             try {
                 const response = await fetch('ajax/mark_all_notifications_read.php', {
@@ -184,21 +193,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                         'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: `csrf_token=${document.querySelector('meta[name="csrf-token"]').content}`
+                    }
                 });
                 const data = await response.json();
                 if (data.status === 'success') {
-                    toastManager.showToast('Wszystkie powiadomienia oznaczone jako przeczytane.', 'success');
-                    fetchNotifications(); // Odśwież listę powiadomień
-                } else {
-                    toastManager.showToast(data.message || 'Błąd oznaczania wszystkich powiadomień.', 'error');
+                    notificationsList.innerHTML = '<div class="no-notifications">No new notifications</div>';
+                    if (notificationCountBadge) {
+                        notificationCountBadge.style.display = 'none';
+                    }
                 }
             } catch (error) {
-                console.error('Błąd AJAX oznaczania wszystkich powiadomień:', error);
-                toastManager.showToast('Błąd komunikacji z serwerem.', 'error');
+                console.error('Error marking all notifications as read:', error);
+                toastManager.showToast('Error marking notifications as read.', 'error');
             }
         });
     }
-
 });

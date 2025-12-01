@@ -1,32 +1,32 @@
 <?php
 require '../init.php';
 validateCSRF();
-header('Content-Type: text/html; charset=UTF-8'); // Zwracamy HTML po akcji POST
+header('Content-Type: text/html; charset=UTF-8'); // Return HTML after POST
 
 // Configuration and DB connection provided by init.php
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'managers' . DIRECTORY_SEPARATOR . 'BuildingManager.php';
 require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'managers' . DIRECTORY_SEPARATOR . 'VillageManager.php';
-require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'managers' . DIRECTORY_SEPARATOR . 'BuildingConfigManager.php'; // Potrzebujemy BuildingConfigManager
+require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'managers' . DIRECTORY_SEPARATOR . 'BuildingConfigManager.php'; // Need BuildingConfigManager
 
-// Sprawdź, czy użytkownik jest zalogowany
+// Ensure user is logged in
 if (!isset($_SESSION['user_id'])) {
     if (isset($_POST['ajax'])) {
         header('Content-Type: application/json');
-        echo json_encode(['error' => 'Nie jesteś zalogowany.']);
+        echo json_encode(['error' => 'You are not logged in.']);
     } else {
-        $_SESSION['game_message'] = "<p class='error-message'>Musisz być zalogowany, aby wykonać tę akcję.</p>";
+        $_SESSION['game_message'] = "<p class='error-message'>You must be logged in to perform this action.</p>";
         header("Location: ../auth/login.php");
     }
     exit();
 }
 
-// Sprawdź, czy przekazano ID zadania do anulowania
+// Validate queue item ID
 if (!isset($_POST['queue_item_id']) || !is_numeric($_POST['queue_item_id'])) {
     if (isset($_POST['ajax'])) {
         header('Content-Type: application/json');
-        echo json_encode(['error' => 'Nieprawidłowe ID zadania.']);
+        echo json_encode(['error' => 'Invalid queue item ID.']);
     } else {
-        $_SESSION['game_message'] = "<p class='error-message'>Nieprawidłowe ID zadania.</p>";
+        $_SESSION['game_message'] = "<p class='error-message'>Invalid queue item ID.</p>";
         header("Location: ../game/game.php");
     }
     exit();
@@ -40,9 +40,9 @@ $villageManager = new VillageManager($conn);
 $buildingConfigManager = new BuildingConfigManager($conn);
 
 try {
-    // Pobierz informacje o zadaniu z kolejki i upewnij się, że należy do wioski zalogowanego użytkownika
+    // Fetch queue item and ensure it belongs to the user's village
     $stmt = $conn->prepare("
-        SELECT bq.id, bq.village_id, bq.village_building_id, bt.name_pl, bq.building_type_id, bq.level
+        SELECT bq.id, bq.village_id, bq.village_building_id, bt.name, bq.building_type_id, bq.level
         FROM building_queue bq
         JOIN building_types bt ON bq.building_type_id = bt.id
         JOIN villages v ON bq.village_id = v.id
@@ -55,9 +55,9 @@ try {
     if ($result->num_rows === 0) {
         if (isset($_POST['ajax'])) {
             header('Content-Type: application/json');
-            echo json_encode(['error' => 'Zadanie nie istnieje lub nie masz do niego dostępu.']);
+            echo json_encode(['error' => 'Task does not exist or you do not have access to it.']);
         } else {
-            $_SESSION['game_message'] = "<p class='error-message'>Zadanie nie istnieje lub nie masz do niego dostępu.</p>";
+            $_SESSION['game_message'] = "<p class='error-message'>Task does not exist or you do not have access to it.</p>";
             header("Location: ../game/game.php");
         }
         $stmt->close();
@@ -67,11 +67,11 @@ try {
     $queue_item = $result->fetch_assoc();
     $stmt->close();
     
-    // Pobierz szczegóły budynku dla anulowanego zadania (potrzebne do obliczenia kosztu)
-    $building_type_id = $queue_item['building_type_id']; // Zakładając, że building_queue zawiera building_type_id
+    // Fetch building details for the cancelled task (to compute costs)
+    $building_type_id = $queue_item['building_type_id']; // building_queue should include building_type_id
     $cancelled_level = $queue_item['level'];
     
-    // Pobierz internal_name z building_types na podstawie building_type_id
+    // Get internal_name from building_types by ID
     $stmt_get_internal_name = $conn->prepare("SELECT internal_name FROM building_types WHERE id = ?");
     $stmt_get_internal_name->bind_param("i", $building_type_id);
     $stmt_get_internal_name->execute();
@@ -79,41 +79,40 @@ try {
     $stmt_get_internal_name->close();
     
     if (!$building_type_row) {
-         throw new Exception("Nie znaleziono typu budynku dla anulowanego zadania.");
+         throw new Exception("Building type not found for the cancelled task.");
     }
     $cancelled_building_internal_name = $building_type_row['internal_name'];
 
-    // Oblicz koszt rozbudowy do anulowanego poziomu (poprzedni poziom + 1)
-    // Koszty są obliczane dla przejścia Z poziomu $cancelled_level-1 NA poziom $cancelled_level
+    // Calculate upgrade cost for the cancelled level (previous level + 1)
     $cost_level_before_cancel = $cancelled_level - 1; 
     $upgrade_costs = $buildingConfigManager->calculateUpgradeCost($cancelled_building_internal_name, $cost_level_before_cancel);
     
     if (!$upgrade_costs) {
-         error_log("Błąd obliczania kosztów dla anulowanej budowy: " . $cancelled_building_internal_name . " do poziomu " . $cancelled_level);
-         // Kontynuuj usuwanie zadania nawet jeśli koszty nie udało się obliczyć (lepiej usunąć niż zostawić wiszące zadanie)
+         error_log("Error calculating costs for cancelled build: " . $cancelled_building_internal_name . " level " . $cancelled_level);
+         // Continue removal even if costs cannot be calculated
     }
     
-    // Rozpocznij transakcję dla atomowości (usunięcie z kolejki + zwrot surowców)
+    // Transaction for atomic queue removal and resource refund
     $conn->begin_transaction();
 
-    // Usuń zadanie z kolejki
+    // Delete task from queue
     $stmt_delete = $conn->prepare("DELETE FROM building_queue WHERE id = ?");
     $stmt_delete->bind_param("i", $queue_item_id);
     $success = $stmt_delete->execute();
     $stmt_delete->close();
 
     if (!$success) {
-         throw new Exception("Błąd podczas usuwania zadania z kolejki.");
+         throw new Exception("Failed to remove task from queue.");
     }
 
-    // Zwróć część surowców, jeśli koszty były dostępne
+    // Refund part of the resources if costs were available
     if ($upgrade_costs) {
-        $return_percentage = 0.9; // 90% zwrotu surowców
+        $return_percentage = 0.9; // 90% refund
         $returned_wood = floor($upgrade_costs['wood'] * $return_percentage);
         $returned_clay = floor($upgrade_costs['clay'] * $return_percentage);
         $returned_iron = floor($upgrade_costs['iron'] * $return_percentage);
         
-        // Dodaj surowce do wioski
+        // Add resources back to the village
         $stmt_add_resources = $conn->prepare("
             UPDATE villages 
             SET wood = wood + ?, clay = clay + ?, iron = iron + ? 
@@ -122,35 +121,35 @@ try {
         $stmt_add_resources->bind_param("iiii", $returned_wood, $returned_clay, $returned_iron, $queue_item['village_id']);
         
         if (!$stmt_add_resources->execute()) {
-            // Zaloguj błąd, ale nie rzucaj wyjątku, żeby nie cofać usunięcia z kolejki
-            error_log("Błąd podczas zwracania surowców dla anulowanej budowy zadania ID " . $queue_item_id . ": " . $conn->error);
+            // Log error but do not rollback queue deletion
+            error_log("Error refunding resources for cancelled task ID " . $queue_item_id . ": " . $conn->error);
         }
          $stmt_add_resources->close();
     }
 
-    // Zatwierdź transakcję
+    // Commit transaction
     $conn->commit();
 
     if (isset($_POST['ajax'])) {
         header('Content-Type: application/json');
-        // Pobierz zaktualizowane zasoby wioski po zwróceniu surowców
+        // Fetch updated village resources after refund
         $updatedVillageInfo = $villageManager->getVillageInfo($queue_item['village_id']);
         $response = [
             'success' => true,
-            'message' => 'Zadanie budowy zostało anulowane. Odzyskano część surowców.',
-            'queue_item_id' => $queue_item_id, // Zwróć ID anulowanego zadania
+            'message' => 'Construction task cancelled. A portion of the resources has been refunded.',
+            'queue_item_id' => $queue_item_id, // Return cancelled task ID
             'village_id' => $queue_item['village_id'],
             'village_building_id' => $queue_item['village_building_id'],
-            'building_internal_name' => $cancelled_building_internal_name, // Zwróć internal_name
-            'new_resources' => null // Docelowo zwróć aktualne surowce lub zaktualizuj je przez resourceUpdater
+            'building_internal_name' => $cancelled_building_internal_name, // Return internal_name
+            'new_resources' => null // Optionally return updated resources via resource updater
         ];
          if ($updatedVillageInfo) {
-             // Zwróć aktualne zasoby, populację i pojemności
+             // Return current resources, population, and capacities
              $response['village_info'] = [
                  'wood' => $updatedVillageInfo['wood'],
                  'clay' => $updatedVillageInfo['clay'],
                  'iron' => $updatedVillageInfo['iron'],
-                 'population' => $updatedVillageInfo['population'], // Może się zmienić jeśli anulowano farmę
+                 'population' => $updatedVillageInfo['population'], // Could change if farm was cancelled
                  'warehouse_capacity' => $updatedVillageInfo['warehouse_capacity'],
                  'farm_capacity' => $updatedVillageInfo['farm_capacity']
              ];
@@ -158,17 +157,17 @@ try {
 
         echo json_encode($response);
     } else {
-        $_SESSION['game_message'] = "<p class='success-message'>Zadanie budowy zostało anulowane. Odzyskano część surowców.</p>";
+        $_SESSION['game_message'] = "<p class='success-message'>Construction task cancelled. A portion of the resources has been refunded.</p>";
         header("Location: ../game/game.php");
     }
 
 } catch (Exception $e) {
-    $conn->rollback(); // Cofnij transakcję w przypadku błędu
+    $conn->rollback(); // Roll back on error
     if (isset($_POST['ajax'])) {
         header('Content-Type: application/json');
-        echo json_encode(['error' => 'Wystąpił błąd: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'An error occurred: ' . $e->getMessage()]);
     } else {
-        $_SESSION['game_message'] = "<p class='error-message'>Wystąpił błąd: " . htmlspecialchars($e->getMessage()) . "</p>";
+        $_SESSION['game_message'] = "<p class='error-message'>An error occurred: " . htmlspecialchars($e->getMessage()) . "</p>";
         header("Location: ../game/game.php");
     }
 }

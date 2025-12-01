@@ -1,6 +1,6 @@
 <?php
-// Skrypt: probot.php
-// Rozwija losowo budynki w wioskach barbarzyńskich (user_id = -1)
+// Script: probot.php
+// Randomly upgrades buildings in barbarian villages (user_id = -1)
 require_once '../config/config.php';
 require_once '../lib/Database.php';
 require_once '../lib/BuildingManager.php';
@@ -8,7 +8,7 @@ require_once '../lib/BuildingManager.php';
 $database = new Database(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 $conn = $database->getConnection();
 
-// Pobierz wszystkie wioski barbarzyńskie
+// Fetch all barbarian villages
 $sql = "SELECT * FROM villages WHERE user_id = -1";
 $res = $conn->query($sql);
 $barb_villages = [];
@@ -18,11 +18,11 @@ while ($row = $res->fetch_assoc()) {
 $res->close();
 
 if (empty($barb_villages)) {
-    echo json_encode(['success'=>false,'msg'=>'Brak wiosek barbarzyńskich.']);
+    echo json_encode(['success'=>false,'msg'=>'No barbarian villages found.']);
     exit;
 }
 
-// Lista budynków do rozwoju (możesz rozbudować)
+// Buildings that can be developed (extend if needed)
 $buildings = [
     'main', 'barracks', 'stable', 'garage', 'smithy', 'market',
     'wood', 'clay', 'iron', 'farm', 'storage', 'wall'
@@ -31,14 +31,14 @@ $buildings = [
 $bm = new BuildingManager($conn);
 $developed = 0;
 foreach ($barb_villages as $village) {
-    // Losowy budynek
+    // Pick a random building to upgrade
     $building = $buildings[array_rand($buildings)];
     $current_level = (int)$village[$building];
     $max_level = $bm->getMaxLevel($building);
     if ($current_level < $max_level && $bm->canUpgrade($village, $building)) {
         $bm->upgradeBuilding($village['id'], $building);
         $developed++;
-        // Loguj akcję AI
+        // Log the AI action
         $stmt_log = $conn->prepare("INSERT INTO ai_logs (action, village_id, details) VALUES (?, ?, ?)");
         $action = 'upgrade_building';
         $details = json_encode([
@@ -53,4 +53,4 @@ foreach ($barb_villages as $village) {
 }
 
 $database->closeConnection();
-echo json_encode(['success'=>true,'msg'=>'Rozwinięto '.$developed.' budynków w wioskach barbarzyńskich.']); 
+echo json_encode(['success'=>true,'msg'=>'Upgraded '.$developed.' buildings in barbarian villages.']); 

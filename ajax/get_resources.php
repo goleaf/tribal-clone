@@ -1,13 +1,15 @@
 <?php
 require_once $_SERVER['DOCUMENT_ROOT'] . '/init.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/lib/functions.php'; // Dodano, aby funkcje globalne były dostępne
-require_once $_SERVER['DOCUMENT_ROOT'] . '/lib/VillageManager.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/lib/ResourceManager.php'; // Potrzebny do obliczania produkcji
+require_once $_SERVER['DOCUMENT_ROOT'] . '/lib/functions.php'; // Make sure global helpers are available
+require_once $_SERVER['DOCUMENT_ROOT'] . '/lib/managers/VillageManager.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/lib/managers/BuildingManager.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/lib/managers/BuildingConfigManager.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/lib/managers/ResourceManager.php'; // Needed for production calculations
 
 header('Content-Type: application/json');
 
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['error' => 'Nie jesteś zalogowany.']);
+    echo json_encode(['error' => 'You are not logged in.']);
     exit();
 }
 
@@ -15,24 +17,24 @@ $user_id = $_SESSION['user_id'];
 $village_id = isset($_GET['village_id']) ? (int)$_GET['village_id'] : null;
 
 if (!$village_id) {
-    echo json_encode(['error' => 'Brak ID wioski.']);
+    echo json_encode(['error' => 'Village ID is missing.']);
     exit();
 }
 
 $villageManager = new VillageManager($conn);
-$resourceManager = new ResourceManager($conn, new BuildingManager($conn, new BuildingConfigManager($conn))); // BuildingManager i BuildingConfigManager są potrzebne przez ResourceManager
+$resourceManager = new ResourceManager($conn, new BuildingManager($conn, new BuildingConfigManager($conn))); // BuildingManager and BuildingConfigManager are required by ResourceManager
 
-// Sprawdź, czy wioska należy do zalogowanego użytkownika
+// Ensure the village belongs to the logged-in user
 $village = $villageManager->getVillageInfo($village_id);
 if (!$village || $village['user_id'] !== $user_id) {
-    echo json_encode(['error' => 'Brak dostępu do wioski.']);
+    echo json_encode(['error' => 'No access to this village.']);
     exit();
 }
 
-// Zaktualizuj zasoby wioski przed ich pobraniem
+// Update village resources before returning them
 $villageManager->updateResources($village_id);
 
-// Pobierz zaktualizowane zasoby
+// Fetch the updated resources
 $currentRes = $villageManager->getVillageInfo($village_id);
 
 if ($currentRes) {
@@ -67,7 +69,7 @@ if ($currentRes) {
     ];
     echo json_encode(['status' => 'success', 'data' => $response_data]);
 } else {
-    echo json_encode(['status' => 'error', 'message' => 'Nie udało się pobrać zasobów wioski.']);
+    echo json_encode(['status' => 'error', 'message' => 'Failed to fetch village resources.']);
 }
 
 $conn->close();

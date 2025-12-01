@@ -1,6 +1,6 @@
 <?php
 // require_once 'lib/BuildingManager.php'; // Old path
-require_once __DIR__ . '/BuildingManager.php'; // Poprawiona ścieżka
+require_once __DIR__ . '/BuildingManager.php'; // Corrected path
 
 class ResourceManager {
     private $conn;
@@ -12,7 +12,7 @@ class ResourceManager {
     }
 
     /**
-     * Pobiera produkcję surowców na godzinę dla danej wioski (wszystkie typy)
+     * Gets hourly resource production for a village (all types)
      */
     public function getProductionRates(int $village_id): array {
         $stmt = $this->conn->prepare(
@@ -38,10 +38,10 @@ class ResourceManager {
     }
 
     /**
-     * Pobiera produkcję pojedynczego surowca na godzinę dla danej wioski.
+     * Gets hourly production for a single resource type for the village.
      */
     public function getHourlyProductionRate(int $village_id, string $resource_type): float {
-        // Sprawdź, czy typ surowca jest prawidłowy i ma odpowiadający budynek
+        // Validate the resource type and its matching building
         $building_map = [
             'wood' => 'sawmill',
             'clay' => 'clay_pit',
@@ -49,13 +49,13 @@ class ResourceManager {
         ];
 
         if (!isset($building_map[$resource_type])) {
-            // Nieprawidłowy typ surowca, zwróć 0 lub zgłoś błąd
+            // Invalid resource type, return 0
             return 0.0;
         }
 
         $building_internal_name = $building_map[$resource_type];
 
-        // Pobierz poziom odpowiedniego budynku produkcyjnego
+        // Get level of the relevant production building
         $stmt = $this->conn->prepare("
             SELECT vb.level 
             FROM village_buildings vb
@@ -71,12 +71,12 @@ class ResourceManager {
         }
         $stmt->close();
 
-        // Użyj BuildingManager do obliczenia produkcji na godzinę
+        // Use BuildingManager to calculate hourly production
         return $this->buildingManager->getHourlyProduction($building_internal_name, $level);
     }
 
     /**
-     * Aktualizuje surowce w bazie i zwraca zaktualizowane dane wioski
+     * Updates village resources in the database and returns the refreshed village data.
      */
     public function updateVillageResources(array $village): array {
         $village_id = (int)$village['id'];
@@ -89,8 +89,8 @@ class ResourceManager {
         $produced_clay = ($rates['clay'] / 3600) * $elapsed;
         $produced_iron = ($rates['iron'] / 3600) * $elapsed;
 
-        // Pobierz pojemność magazynu - najlepiej z aktualnych danych wioski
-        $warehouse_capacity = $village['warehouse_capacity']; // Używamy pojemności z przekazanej tablicy wioski
+        // Warehouse capacity from current village data
+        $warehouse_capacity = $village['warehouse_capacity'];
 
         $village['wood'] = min($village['wood'] + $produced_wood, $warehouse_capacity);
         $village['clay'] = min($village['clay'] + $produced_clay, $warehouse_capacity);
@@ -101,14 +101,14 @@ class ResourceManager {
              SET wood = ?, clay = ?, iron = ?, last_resource_update = NOW()
              WHERE id = ?"
         );
-        // Upewnij się, że przekazujesz numeryczne wartości (double) dla surowców
+        // Bind numeric (double) values for resources
         $stmt->bind_param("dddi", $village['wood'], $village['clay'], $village['iron'], $village_id);
         $stmt->execute();
         $stmt->close();
 
         $village['last_resource_update'] = date('Y-m-d H:i:s', $now);
         
-        // Zwróć całą zaktualizowaną tablicę wioski
+        // Return the updated village array
         return $village;
     }
 } 

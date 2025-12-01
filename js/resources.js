@@ -1,25 +1,25 @@
 /**
- * Dynamiczna aktualizacja zasobów w grze bez odświeżania strony
+ * Dynamic resource updates without page refresh
  */
 
-// Klasa ResourceUpdater do zarządzania aktualizacją zasobów w czasie rzeczywistym
+// ResourceUpdater manages real-time resource updates
 class ResourceUpdater {
     /**
-     * Konstruktor klasy
-     * @param {Object} options - Opcje konfiguracyjne
+     * Constructor
+     * @param {Object} options - Configuration options
      */
     constructor(options = {}) {
-        // Domyślne opcje
+        // Default options
         this.options = {
-            apiUrl: 'http://localhost/ajax_proxy.php', // Zmieniono na pełną ścieżkę URL do proxy
-            updateInterval: 30000, // 30 sekund
-            tickInterval: 1000, // 1 sekunda
+            apiUrl: 'http://localhost/ajax_proxy.php', // Full URL to the proxy
+            updateInterval: 30000, // 30 seconds
+            tickInterval: 1000, // 1 second
             resourcesSelector: '#resources-bar',
             villageId: null,
             ...options
         };
         
-        // Stan zasobów
+        // Resource state
         this.resources = {
             wood: { amount: 0, capacity: 0, production: 0, production_per_second: 0 },
             clay: { amount: 0, capacity: 0, production: 0, production_per_second: 0 },
@@ -27,50 +27,50 @@ class ResourceUpdater {
             population: { amount: 0 }
         };
         
-        // Flagi
+        // Flags
         this.isInitialized = false;
         this.updateTimer = null;
         this.tickTimer = null;
         this.lastServerUpdate = null;
         this.lastClientUpdate = null;
         
-        // Inicjalizacja
+        // Initialize
         this.init();
     }
     
     /**
-     * Inicjalizuje aktualizator zasobów
+     * Initialize the resource updater
      */
     async init() {
         try {
-            // Pobierz początkowe dane
+            // Fetch initial data
             const data = await this.fetchUpdate();
             
-            // Jeśli dane zostały pobrane, rozpocznij timery
+            // Start timers if data loaded
             if (data) {
                 this.isInitialized = true;
                 this.startUpdateTimer();
                 this.startTickTimer();
             }
         } catch (error) {
-            console.error('Błąd inicjalizacji aktualizatora zasobów:', error);
+            console.error('Resource updater initialization error:', error);
         }
     }
     
     /**
-     * Pobiera aktualizację zasobów z serwera
+     * Fetch resource updates from the server
      */
     async fetchUpdate() {
         try {
-            // Przygotuj URL zapytania
+            // Build request URL
             let url = this.options.apiUrl;
             if (this.options.villageId) {
                 url += `?village_id=${this.options.villageId}`;
             }
             
-            console.log(`Pobieranie zasobów z: ${url}`);
+            console.log(`Fetching resources from: ${url}`);
             
-            // Wykonaj zapytanie
+            // Perform request
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
@@ -81,46 +81,46 @@ class ResourceUpdater {
                 credentials: 'same-origin'
             });
             
-            // Sprawdź, czy odpowiedź jest poprawna
+            // Validate response
             if (!response.ok) {
-                // Specjalne traktowanie błędów 401 i 500
+                // Handle 401/500 explicitly
                 if (response.status === 401) {
-                    console.log('Sesja wygasła lub użytkownik nie jest zalogowany. Przekierowanie do strony logowania...');
-                    // Opcjonalne przekierowanie do strony logowania - można odkomentować
+                    console.log('Session expired or user not logged in. Redirect to login if desired...');
+                    // Optional redirect to login
                     // window.location.href = 'login.php';
                     return null;
                 }
                 
                 if (response.status === 500) {
                     const errorText = await response.text();
-                    console.error('Błąd serwera 500:', errorText);
-                    throw new Error(`Błąd HTTP 500: ${errorText.substring(0, 100)}...`);
+                    console.error('Server error 500:', errorText);
+                    throw new Error(`HTTP 500 error: ${errorText.substring(0, 100)}...`);
                 }
                 
-                throw new Error(`Błąd HTTP: ${response.status}`);
+                throw new Error(`HTTP error: ${response.status}`);
             }
             
-            // Przetwórz odpowiedź JSON - dodaj obsługę błędów
+            // Parse JSON with error handling
             let data;
             try {
                 const text = await response.text();
                 try {
                     data = JSON.parse(text);
                 } catch (e) {
-                    console.error('Nieprawidłowa odpowiedź JSON:', text.substring(0, 100) + '...');
-                    throw new Error('Serwer zwrócił nieprawidłowy format danych');
+                    console.error('Invalid JSON response:', text.substring(0, 100) + '...');
+                    throw new Error('Server returned invalid data format');
                 }
             } catch (e) {
-                console.error('Błąd przetwarzania odpowiedzi:', e);
+                console.error('Response processing error:', e);
                 throw e;
             }
             
-            // Sprawdź status odpowiedzi
+            // Check response status
             if (data.status !== 'success') {
-                throw new Error(data.message || 'Nieznany błąd serwera');
+                throw new Error(data.message || 'Unknown server error');
             }
             
-            // Zaktualizuj dane zasobów, w tym produkcję i produkcję na sekundę
+            // Update resource data, including production rates
             this.resources.wood = {
                 amount: parseFloat(data.data.wood.amount),
                 capacity: parseFloat(data.data.wood.capacity),
@@ -139,36 +139,36 @@ class ResourceUpdater {
                 production: parseFloat(data.data.iron.production) || 0,
                 production_per_second: parseFloat(data.data.iron.production_per_second) || 0
             };
-            // Populacja nie ma produkcji/capacity per second, tylko amount i capacity
+            // Population has no per-second production; only amount and capacity
             this.resources.population = {
                 amount: parseFloat(data.data.population.amount),
-                capacity: parseFloat(data.data.population.capacity) || 0 // Może być 0 na początkowych poziomach
+                capacity: parseFloat(data.data.population.capacity) || 0 // Can be 0 at early levels
             };
             
-            // Zapisz czas ostatniej aktualizacji
+            // Save timestamps
             this.lastServerUpdate = new Date(data.data.current_server_time);
             this.lastClientUpdate = new Date();
             
-            // Zaktualizuj UI
+            // Refresh UI
             this.updateUI();
             
             return data;
         } catch (error) {
-            console.error('Błąd pobierania aktualizacji zasobów:', error);
-            // Nie przerywaj działania programu, kontynuuj używając poprzednich wartości
+            console.error('Error fetching resource updates:', error);
+            // Keep running with previous values
             return null;
         }
     }
     
     /**
-     * Aktualizuje UI z aktualnymi wartościami zasobów
+     * Update the UI with current resource values
      */
     updateUI() {
-        // Znajdź kontener zasobów
+        // Find resource container
         const container = document.querySelector(this.options.resourcesSelector);
         if (!container) return;
         
-        // Aktualizuj wartości zasobów
+        // Update resource values
         this.updateResourceDisplay(container, 'wood', this.resources.wood);
         this.updateResourceDisplay(container, 'clay', this.resources.clay);
         this.updateResourceDisplay(container, 'iron', this.resources.iron);
@@ -176,17 +176,17 @@ class ResourceUpdater {
     }
     
     /**
-     * Aktualizuje wyświetlanie pojedynczego zasobu w UI, w tym tooltipy i paski.
-     * @param {HTMLElement} container - Główny kontener zasobów.
-     * @param {string} resourceType - Typ zasobu (np. 'wood', 'clay').
-     * @param {Object} resourceData - Obiekt z danymi zasobu (amount, capacity, production_per_hour, production_per_second).
+     * Update display of a single resource including tooltips/bars.
+     * @param {HTMLElement} container - Resource container.
+     * @param {string} resourceType - e.g. 'wood', 'clay'.
+     * @param {Object} resourceData - Data object (amount, capacity, production_per_hour, production_per_second).
      */
     updateResourceDisplay(container, resourceType, resourceData) {
         const currentAmount = Math.floor(resourceData.amount);
         const capacity = resourceData.capacity;
         const productionPerHour = resourceData.production_per_hour;
 
-        // Aktualizuj główny pasek zasobów
+        // Update main resource bar
         const valueElement = container.querySelector(`#current-${resourceType}`);
         if (valueElement) {
             valueElement.textContent = this.formatNumber(currentAmount);
@@ -213,7 +213,7 @@ class ResourceUpdater {
             productionElement.textContent = `+${this.formatNumber(productionPerHour)}/h`;
         }
 
-        // Aktualizuj tooltip
+        // Update tooltip
         const tooltipCurrent = container.querySelector(`#tooltip-current-${resourceType}`);
         if (tooltipCurrent) tooltipCurrent.textContent = this.formatNumber(currentAmount);
 
@@ -225,7 +225,7 @@ class ResourceUpdater {
             tooltipProduction.textContent = `+${this.formatNumber(productionPerHour)}/h`;
         }
 
-        // Aktualizuj pasek postępu w tooltipie
+        // Update progress bar in tooltip
         const progressBarInner = container.querySelector(`#bar-${resourceType}`);
         if (progressBarInner && capacity) {
             const percentage = Math.min(100, (currentAmount / capacity) * 100);
@@ -234,39 +234,39 @@ class ResourceUpdater {
     }
     
     /**
-     * Aktualizuje wartości zasobów na podstawie upływu czasu
+     * Update resources based on elapsed time
      */
     tick() {
         if (!this.isInitialized || !this.lastClientUpdate) return;
         
-        // Oblicz czas, który upłynął od ostatniej aktualizacji klienta
+        // Calculate elapsed time since last client update
         const now = new Date();
         const elapsedSeconds = (now - this.lastClientUpdate) / 1000;
         this.lastClientUpdate = now;
         
-        // Zaktualizuj wartości zasobów na podstawie produkcji na sekundę
+        // Update resources using per-second production
         for (const resourceType of ['wood', 'clay', 'iron']) {
             const resource = this.resources[resourceType];
             
-            // Dodaj wyprodukowane zasoby
+            // Add produced resources
             if (resource.production_per_second > 0) {
                 const newAmount = resource.amount + (resource.production_per_second * elapsedSeconds);
                 
-                // Nie przekraczaj pojemności magazynu
+                // Do not exceed storage capacity
                 resource.amount = resource.capacity ? Math.min(newAmount, resource.capacity) : newAmount;
             }
         }
-        // Populacja nie ma produkcji, ale może mieć limit
+        // Population has no production but has a cap
         if (this.resources.population.capacity) {
             this.resources.population.amount = Math.min(this.resources.population.amount, this.resources.population.capacity);
         }
         
-        // Zaktualizuj UI
+        // Update UI
         this.updateUI();
     }
     
     /**
-     * Rozpoczyna timer aktualizacji z serwera
+     * Starts the server update timer
      */
     startUpdateTimer() {
         this.stopUpdateTimer();
@@ -274,7 +274,7 @@ class ResourceUpdater {
     }
     
     /**
-     * Zatrzymuje timer aktualizacji z serwera
+     * Stops the server update timer
      */
     stopUpdateTimer() {
         if (this.updateTimer) {
@@ -284,7 +284,7 @@ class ResourceUpdater {
     }
     
     /**
-     * Rozpoczyna timer tikowania
+     * Starts the client tick timer
      */
     startTickTimer() {
         this.stopTickTimer();
@@ -292,7 +292,7 @@ class ResourceUpdater {
     }
     
     /**
-     * Zatrzymuje timer tikowania
+     * Stops the client tick timer
      */
     stopTickTimer() {
         if (this.tickTimer) {
@@ -302,24 +302,23 @@ class ResourceUpdater {
     }
     
     /**
-     * Formatuje liczbę do wyświetlenia
+     * Formats a number for display
      */
     formatNumber(number) {
-        return window.formatNumber(number); // Użyj globalnej funkcji z utils.js
+        return window.formatNumber(number); // Use global function from utils.js
     }
 }
 
-// Inicjalizacja aktualizatora zasobów po załadowaniu dokumentu
 document.addEventListener('DOMContentLoaded', () => {
-    // Pobierz ID wioski z globalnej zmiennej JavaScript
+    // Get village ID from the global JavaScript variable
     const villageId = window.currentVillageId || null;
     
-    // Inicjalizuj aktualizator tylko jeśli ID wioski jest dostępne
+    // Initialize only if village ID is available
     if (villageId) {
         window.resourceUpdater = new ResourceUpdater({
             villageId: villageId
         });
     } else {
-        console.warn('Nie znaleziono ID wioski. Aktualizator zasobów nie zostanie uruchomiony.');
+        console.warn('Village ID not found. Resource updater will not start.');
     }
 });

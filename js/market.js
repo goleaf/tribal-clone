@@ -17,7 +17,7 @@ function updateTradeTimersPopup() {
         if (remainingTime > 0) {
             timerElement.textContent = formatDuration(remainingTime);
         } else {
-            timerElement.textContent = 'Przybył!';
+            timerElement.textContent = 'Arrived!';
             timerElement.classList.add('timer-finished');
             timerElement.removeAttribute('data-ends-at'); // Stop refreshing this timer
 
@@ -65,7 +65,7 @@ function setupMarketListeners(villageId, buildingInternalName) {
             const sendButton = form.querySelector('.send-button');
             if (sendButton) {
                 sendButton.disabled = true;
-                sendButton.textContent = 'Wysyłanie...'; // Show loading state
+                sendButton.textContent = 'Sending...'; // Show loading state
             }
 
             try {
@@ -96,17 +96,17 @@ function setupMarketListeners(villageId, buildingInternalName) {
                      }
 
                 } else {
-                    window.toastManager.showToast(data.message || 'Błąd wysyłania surowców.', 'error');
+                    window.toastManager.showToast(data.message || 'Error sending resources.', 'error');
                 }
 
             } catch (error) {
-                console.error('Błąd AJAX wysyłania surowców:', error);
-                window.toastManager.showToast('Błąd komunikacji z serwera podczas wysyłania surowców.', 'error');
+                console.error('Resource send AJAX error:', error);
+                window.toastManager.showToast('Server communication error while sending resources.', 'error');
             } finally {
                 // Re-enable button regardless of success or failure
                 if (sendButton) {
                     sendButton.disabled = false;
-                    sendButton.textContent = 'Wyślij zasoby'; // Restore original text
+                    sendButton.textContent = 'Send resources'; // Restore original text
                 }
             }
         });
@@ -123,7 +123,7 @@ async function fetchAndRenderMarketPanel(villageId, buildingInternalName) {
      }
 
      // Show loading indicator
-     actionContent.innerHTML = '<p>Ładowanie panelu rynku...</p>';
+     actionContent.innerHTML = '<p>Loading market panel...</p>';
      actionContent.style.display = 'block';
      detailsContent.style.display = 'none'; // Hide details when showing action content
 
@@ -143,16 +143,16 @@ async function fetchAndRenderMarketPanel(villageId, buildingInternalName) {
               updateTradeTimersPopup(); // Start timers for the popup queue
 
          } else if (data.error) {
-             actionContent.innerHTML = '<p>Błąd ładowania panelu rynku: ' + data.error + '</p>';
+             actionContent.innerHTML = '<p>Error loading market panel: ' + data.error + '</p>';
              window.toastManager.showToast(data.error, 'error');
          } else {
-              actionContent.innerHTML = '<p>Nieprawidłowa odpowiedź serwera lub akcja nie dotyczy rynku.</p>';
+              actionContent.innerHTML = '<p>Invalid server response or the action is not related to the market.</p>';
          }
 
      } catch (error) {
-         console.error('Błąd AJAX pobierania panelu rynku:', error);
-         actionContent.innerHTML = '<p>Błąd komunikacji z serwera.</p>';
-         window.toastManager.showToast('Błąd komunikacji z serwera podczas pobierania panelu rynku.', 'error');
+         console.error('Market panel AJAX error:', error);
+         actionContent.innerHTML = '<p>Server communication error.</p>';
+         window.toastManager.showToast('Server communication error while fetching the market panel.', 'error');
      }
 }
 

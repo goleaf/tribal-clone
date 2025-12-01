@@ -3,7 +3,7 @@ error_log("DEBUG: upgrade_building.php - Start");
 require '../init.php';
 error_log("DEBUG: upgrade_building.php - After init.php");
 
-// Walidacja CSRF dla żądań POST
+// CSRF validation for POST requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     validateCSRF();
 }
@@ -16,23 +16,23 @@ require_once '../lib/managers/BuildingConfigManager.php';
 
 error_log("DEBUG: upgrade_building.php - After including managers");
 
-// Sprawdź, czy użytkownik jest zalogowany
+// Ensure user is logged in
 if (!isset($_SESSION['user_id'])) {
     error_log("DEBUG: upgrade_building.php - User not logged in");
     header('Content-Type: application/json');
-    echo json_encode(['status' => 'error', 'message' => 'Nie jesteś zalogowany.', 'redirect' => 'auth/login.php']);
+    echo json_encode(['status' => 'error', 'message' => 'You are not logged in.', 'redirect' => 'auth/login.php']);
     exit();
 }
 
 error_log("DEBUG: upgrade_building.php - User logged in: " . $_SESSION['user_id']);
 
-// Sprawdź, czy przekazano wymagane parametry
+// Validate required parameters
 if (!isset($_POST['building_type_internal_name']) || empty($_POST['building_type_internal_name']) || 
     !isset($_POST['current_level']) || !is_numeric($_POST['current_level']) ||
     !isset($_POST['village_id']) || !is_numeric($_POST['village_id'])) {
     error_log("DEBUG: upgrade_building.php - Missing parameters or invalid village_id");
     header('Content-Type: application/json');
-    echo json_encode(['status' => 'error', 'message' => 'Brak wymaganych parametrów (building_type_internal_name, current_level, village_id).']);
+    echo json_encode(['status' => 'error', 'message' => 'Missing required parameters (building_type_internal_name, current_level, village_id).']);
     exit();
 }
 
@@ -58,28 +58,28 @@ try {
 
     $villageData = $villageManager->getVillageInfo($village_id);
     if (!$villageData || $villageData['user_id'] != $user_id) {
-         throw new Exception("Brak uprawnień do tej wioski.");
+         throw new Exception("You do not have access to this village.");
     }
     
-    // === Nowa walidacja: Sprawdź, czy wioska ma już zadanie w kolejce budowy ===
-    $existingQueueItem = $villageManager->getBuildingQueueItem($village_id); // Używamy VillageManager
+    // === Check if the village already has a construction task in queue ===
+    $existingQueueItem = $villageManager->getBuildingQueueItem($village_id); // Using VillageManager
     if ($existingQueueItem) {
-        throw new Exception("W tej wiosce trwa już inna budowa. Poczekaj na jej zakończenie.");
+        throw new Exception("Another construction is already in progress in this village. Wait for it to finish.");
     }
     // =========================================================================
 
     $building_config = $buildingConfigManager->getBuildingConfig($internal_name);
     if (!$building_config) {
-        throw new Exception("Nie znaleziono konfiguracji budynku.");
+        throw new Exception("Building configuration not found.");
     }
     if ($building_config['internal_name'] !== $internal_name) {
-         throw new Exception("Nieprawidłowy typ budynku.");
+         throw new Exception("Invalid building type.");
     }
-    $building_name_pl = $building_config['name_pl'];
+    $building_name = $building_config['name'];
 
     $actualCurrentLevel = $buildingManager->getBuildingLevel($village_id, $internal_name);
     if ($actualCurrentLevel !== $current_level) {
-         throw new Exception("Niezgodność poziomu budynku. Obecny poziom to " . $actualCurrentLevel . ". Odśwież stronę.");
+         throw new Exception("Building level mismatch. Current level is " . $actualCurrentLevel . ". Please refresh the page.");
     }
 
     $canUpgradeResult = $buildingManager->canUpgradeBuilding($village_id, $internal_name);
@@ -92,12 +92,12 @@ try {
     $upgrade_time_seconds = $buildingConfigManager->calculateUpgradeTime($internal_name, $current_level, $buildingManager->getBuildingLevel($village_id, 'main_building'));
 
     if (!$upgrade_costs || $upgrade_time_seconds === null) {
-        throw new Exception("Nie można obliczyć kosztów lub czasu rozbudowy.");
+        throw new Exception("Unable to calculate upgrade cost or time.");
     }
 
-    $villageResources = $villageManager->getVillageInfo($village_id); // Pobierz zaktualizowane zasoby
+    $villageResources = $villageManager->getVillageInfo($village_id); // Get current resources
     if (!$villageResources) {
-         throw new Exception("Nie udało się pobrać aktualnych zasobów wioski.");
+         throw new Exception("Failed to fetch current village resources.");
     }
 
     $newWood = $villageResources['wood'] - $upgrade_costs['wood'];
@@ -110,14 +110,14 @@ try {
     }
     $stmt_deduct->bind_param("iiii", $newWood, $newClay, $newIron, $village_id);
     if (!$stmt_deduct->execute()) {
-         throw new Exception("Błąd wykonania zapytania odejmowania zasobów: " . $stmt_deduct->error);
+         throw new Exception("Resource deduction query failed: " . $stmt_deduct->error);
     }
     $stmt_deduct->close();
 
-    // Pobierz village_building_id dla danego budynku w wiosce
+    // Fetch village_building_id for this building in the village
     $villageBuilding = $buildingManager->getVillageBuilding($village_id, $internal_name);
     if (!$villageBuilding || !isset($villageBuilding['village_building_id'])) {
-        throw new Exception("Nie znaleziono ID budynku w wiosce.");
+        throw new Exception("Building ID not found for this village.");
     }
     $village_building_id = $villageBuilding['village_building_id'];
 
@@ -132,30 +132,30 @@ try {
     $stmt_queue_add->bind_param("iiiis", $village_id, $village_building_id, $internal_name, $next_level, $finish_time);
     
     if (!$stmt_queue_add->execute()) {
-        throw new Exception("Błąd wykonania zapytania dodania do kolejki: " . $stmt_queue_add->error);
+        throw new Exception("Queue insertion failed: " . $stmt_queue_add->error);
     }
     $stmt_queue_add->close();
 
     $conn->commit();
 
-    $response = ['status' => 'success', 'message' => "Rozbudowa " . htmlspecialchars($building_name_pl) . " do poziomu " . $next_level . " rozpoczęta. Zakończenie: " . formatTimeToHuman(strtotime($finish_time))];
+    $response = ['status' => 'success', 'message' => "Upgrade of " . htmlspecialchars($building_name) . " to level " . $next_level . " started. Completion: " . formatTimeToHuman(strtotime($finish_time))];
 
     error_log("DEBUG: upgrade_building.php - Success: " . $response['message']);
     
     header('Content-Type: application/json');
-    // Dodaj zaktualizowane zasoby do odpowiedzi AJAX
+    // Include updated resources in the AJAX response
     $response['new_resources'] = [
         'wood' => $newWood,
         'clay' => $newClay,
         'iron' => $newIron
     ];
-    // Dodaj szczegóły zadania budowy
+    // Add building queue details
     $response['building_queue_item'] = [
         'building_internal_name' => $internal_name,
         'level' => $next_level,
-        'finish_time' => strtotime($finish_time) // Zwróć timestamp dla JS
+        'finish_time' => strtotime($finish_time) // Return timestamp for JS
     ];
-     // Pobierz zaktualizowane informacje o wiosce, w tym pojemność magazynu i populację
+     // Include updated village info (warehouse/population caps)
      $updatedVillageInfo = $villageManager->getVillageInfo($village_id);
      if ($updatedVillageInfo) {
          $response['village_info'] = [
@@ -175,7 +175,7 @@ try {
     error_log("DEBUG: upgrade_building.php - Error: " . $e->getMessage());
     
     header('Content-Type: application/json');
-    echo json_encode(['status' => 'error', 'message' => "Błąd podczas rozbudowy budynku: " . $e->getMessage()]);
+    echo json_encode(['status' => 'error', 'message' => "Building upgrade failed: " . $e->getMessage()]);
     exit();
 }
 ?>

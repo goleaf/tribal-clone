@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS `reports` (
 --  CONSTRAINT `fk_battle_reports_report_id` FOREIGN KEY (`report_id`) REFERENCES `reports` (`id`) ON DELETE CASCADE
 -- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Decyzja: Przyjmę drugie podejście - report_id w tabelach szczegółowych (np. battle_reports) będzie kluczem głównym i kluczem obcym do reports.id.
--- Będę musiał ręcznie zmodyfikować sql_create_battle_tables.sql lub dodać ALTER TABLE.
+-- Decision: use the second approach - report_id in detailed tables (e.g., battle_reports) is both primary key and foreign key to reports.id.
+-- sql_create_battle_tables.sql should be adjusted manually or via ALTER TABLE.
 
--- Na razie tworzę tylko tabelę 'reports'. Modyfikacja istniejących tabel i ich skryptów tworzących będzie osobnym krokiem. 
+-- For now only the 'reports' table is created. Updating existing tables/scripts is a separate step.

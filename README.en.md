@@ -108,31 +108,31 @@ The old version of the engine (VeryOldTemplate) was used as inspiration for the 
 ## Project Structure
 
 ```
-├── ajax/
-│   ├── buildings/      # AJAX endpoints related to buildings
-│   └── units/          # AJAX endpoints related to units
-├── config/             # Configuration files (e.g., config.php)
-├── css/                # CSS styles (main.css)
-├── docs/               # Project documentation
-├── game/               # Main game files (game.php, map.php)
-├── img/                # Images and graphics
-├── js/                 # JavaScript scripts
-├── lib/                # PHP classes
-│   └── managers/       # Classes managing business logic
-├── logs/               # Application logs
-├── *.php               # Main application files (index.php, install.php)
-└── readme.md           # This file
+- ajax/
+  - buildings/      # AJAX endpoints related to buildings
+  - units/          # AJAX endpoints related to units
+- config/             # Configuration files (e.g., config.php)
+- css/                # CSS styles (main.css)
+- docs/               # Project documentation
+- game/               # Main game files (game.php, map.php)
+- img/                # Images and graphics
+- js/                 # JavaScript scripts
+- lib/                # PHP classes
+  - managers/       # Classes managing business logic
+- logs/               # Application logs
+- *.php               # Main application files (index.php, install.php)
+- readme.md           # This file
 ```
 
 ## Installation
 
 1.  Clone or download the project files to the `htdocs` directory in XAMPP.
-2.  Make sure you have a running MySQL server (part of XAMPP).
-3.  Create a MySQL database named `tribal_wars_new`.
-4.  Import the database structure by running the `sql_create_*.sql` scripts located in the `docs/sql` directory (e.g., using phpMyAdmin or a MySQL client). You can also use the `install.php` script.
-5.  Configure the `config/config.php` file with your database connection details (username, password - by default, root and no password for XAMPP).
-6.  Open the page in your browser: `http://localhost/`
-7.  Follow the on-screen instructions (registration, village creation).
+2.  Database options:
+    - SQLite (recommended for quick local setup): no server needed. Set `DB_DRIVER` to `sqlite` in `config/config.php`. A ready schema is in `docs/sql/sqlite_schema.sql` and will be auto-loaded via `install.php` (SQLite path).
+    - MySQL (legacy option): create a database `tribal_wars_new`, import `docs/sql/sql_create_*.sql` or use `install.php` (MySQL path).
+3.  Configure `config/config.php` with your database connection details or SQLite path.
+4.  Run locally (example): `php -S localhost:8000 -t .` then open `http://localhost:8000/`.
+5.  Follow the on-screen instructions (registration, village creation).
 
 ## Documentation
 
@@ -151,7 +151,7 @@ The project can be further developed by implementing and expanding planned funct
 
 ## Authors
 
-The project is based on the game plemiona.pl, rewritten and developed by PSteczka.
+The project is inspired by the classic Tribal Wars, rewritten and developed by PSteczka.
 
 ## License
 

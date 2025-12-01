@@ -1,43 +1,51 @@
 <?php
 require_once '../config/config.php';
 require_once '../lib/Database.php';
+require_once '../lib/functions.php';
 
 // Display errors for debugging
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-echo "<h1>Dodawanie brakujących kolumn</h1>";
+$isSqlite = defined('DB_DRIVER') && DB_DRIVER === 'sqlite';
+
+echo "<h1>Adding missing columns</h1>";
+
+if ($isSqlite) {
+    echo "<p>SQLite mode: schema is managed via docs/sql/sqlite_schema.sql. No changes applied.</p>";
+    exit;
+}
 
 $db = new Database(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 $conn = $db->getConnection();
 
 // Add upgrade_level_to column
 $checkColumn1 = $conn->query("SHOW COLUMNS FROM village_buildings LIKE 'upgrade_level_to'");
-if ($checkColumn1->num_rows == 0) {
+if ($checkColumn1 && $checkColumn1->num_rows == 0) {
     if ($conn->query("ALTER TABLE village_buildings ADD COLUMN upgrade_level_to INT DEFAULT NULL")) {
-        echo "<p style='color: green;'>Kolumna upgrade_level_to dodana pomyślnie.</p>";
+        echo "<p style='color: green;'>Column upgrade_level_to added successfully.</p>";
     } else {
-        echo "<p style='color: red;'>Błąd podczas dodawania kolumny upgrade_level_to: " . $conn->error . "</p>";
+        echo "<p style='color: red;'>Error while adding upgrade_level_to: " . ($conn->error ?? 'unknown error') . "</p>";
     }
 } else {
-    echo "<p>Kolumna upgrade_level_to już istnieje.</p>";
+    echo "<p>Column upgrade_level_to already exists.</p>";
 }
 
 // Add upgrade_ends_at column
 $checkColumn2 = $conn->query("SHOW COLUMNS FROM village_buildings LIKE 'upgrade_ends_at'");
-if ($checkColumn2->num_rows == 0) {
+if ($checkColumn2 && $checkColumn2->num_rows == 0) {
     if ($conn->query("ALTER TABLE village_buildings ADD COLUMN upgrade_ends_at DATETIME DEFAULT NULL")) {
-        echo "<p style='color: green;'>Kolumna upgrade_ends_at dodana pomyślnie.</p>";
+        echo "<p style='color: green;'>Column upgrade_ends_at added successfully.</p>";
     } else {
-        echo "<p style='color: red;'>Błąd podczas dodawania kolumny upgrade_ends_at: " . $conn->error . "</p>";
+        echo "<p style='color: red;'>Error while adding upgrade_ends_at: " . ($conn->error ?? 'unknown error') . "</p>";
     }
 } else {
-    echo "<p>Kolumna upgrade_ends_at już istnieje.</p>";
+    echo "<p>Column upgrade_ends_at already exists.</p>";
 }
 
 // Show table structure after changes
-echo "<h2>Struktura tabeli village_buildings po zmianach</h2>";
+echo "<h2>village_buildings table structure after changes</h2>";
 $result = $conn->query('DESCRIBE village_buildings');
 
 if ($result) {
@@ -57,10 +65,10 @@ if ($result) {
     
     echo "</table>";
 } else {
-    echo "Error: " . $conn->error;
+    echo "Error: " . ($conn->error ?? 'unknown error');
 }
 
-echo "<p><a href='../game/game.php'>Przejdź do strony głównej gry</a></p>";
+echo "<p><a href='../game/game.php'>Return to the main game page</a></p>";
 
 $db->closeConnection();
 ?> 

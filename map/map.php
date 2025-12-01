@@ -4,7 +4,7 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' 
 require_once '../config/config.php';
 require_once '../lib/Database.php';
 
-// Zabezpieczenie dostępu - tylko dla zalogowanych
+// Access control - only for logged-in users
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../auth/login.php");
     exit();
@@ -13,24 +13,24 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 
-// Pobierz aktywną wioskę użytkownika
+// Fetch the user's first village
 $villageManager = new VillageManager($conn);
 $village_id = $villageManager->getFirstVillage($user_id);
 
-// Ustal pozycję startową (środek mapy lub wioska gracza)
+// Establish the starting position (map center or the player's village)
 $x = isset($_GET['x']) ? (int)$_GET['x'] : 50;
 $y = isset($_GET['y']) ? (int)$_GET['y'] : 50;
 $size = isset($_GET['size']) ? max(7, min(31, (int)$_GET['size'])) : 15;
 
-// Parametry widoku mapy (z GET lub domyślne)
+// Map view parameters (from GET or defaults)
 $center_x = isset($_GET['x']) ? (int)$_GET['x'] : 0;
 $center_y = isset($_GET['y']) ? (int)$_GET['y'] : 0;
 
-// Jeśli mamy wioskę, użyj jej współrzędnych jako domyślne centrum mapy
+// If we have a village, use its coordinates as the default map center
 if ($village_id) {
     $village = $villageManager->getVillageInfo($village_id);
     if ($village) {
-        // Jeśli nie podano współrzędnych w GET, użyj koordynatów wioski
+        // If GET coordinates were not provided, use the village coordinates
         if (!isset($_GET['x'])) $center_x = $village['x_coord'];
         if (!isset($_GET['y'])) $center_y = $village['y_coord'];
     }
@@ -38,11 +38,11 @@ if ($village_id) {
 
 $radius = isset($_GET['radius']) ? (int)$_GET['radius'] : 5;
 
-// Ograniczenie maksymalnego promienia
+// Limit the maximum radius
 if ($radius > 20) $radius = 20;
 if ($radius < 3) $radius = 3;
 
-// Pobierz wioski w zakresie
+// Fetch villages within range
 $stmt = $conn->prepare("
     SELECT v.id, v.name, v.x_coord, v.y_coord, v.user_id, u.username
     FROM villages v
@@ -64,30 +64,30 @@ $stmt->bind_param("iiiii", $world_id, $min_x, $max_x, $min_y, $max_y);
 $stmt->execute();
 $result = $stmt->get_result();
 
-// Przygotuj tablicę wiosek
+// Build a map of villages keyed by coordinates
 $villages_map = [];
 while ($row = $result->fetch_assoc()) {
     $villages_map[$row['y_coord']][$row['x_coord']] = [
         'id' => $row['id'],
         'name' => $row['name'],
-        'owner' => $row['username'] ?? 'Wolna wioska',
+        'owner' => $row['username'] ?? 'Unoccupied village',
         'user_id' => $row['user_id'],
         'is_own' => ($row['user_id'] == $user_id)
     ];
 }
 
-$pageTitle = 'Mapa Świata';
+$pageTitle = 'World Map';
 require '../header.php';
 ?>
 
 <div id="game-container">
     <header id="main-header">
         <div class="header-title">
-            <span class="game-logo">🗺️</span> <!-- Ikona dla mapy -->
-            <span>Mapa Świata</span>
+            <span class="game-logo">Map</span> <!-- Map label -->
+            <span>World Map</span>
         </div>
         <div class="header-user">
-            Gracz: <?= htmlspecialchars($username) ?><br>
+            Player: <?= htmlspecialchars($username) ?><br>
             <?php if ($village): ?>
                 <span class="village-name-display" data-village-id="<?= $village['id'] ?>"><?= htmlspecialchars($village['name']) ?> (<?= $village['x_coord'] ?>|<?= $village['y_coord'] ?>)</span>
             <?php endif; ?>
@@ -95,17 +95,17 @@ require '../header.php';
     </header>
 
     <main id="main-content">
-        <h2>Mapa świata</h2>
+        <h2>World map</h2>
 
         <div class="map-container">
             <div class="map-controls">
-                <button onclick="moveMap(0,-1)">↑</button>
-                <button onclick="moveMap(-1,0)">←</button>
-                <button onclick="centerMap()">Centruj</button>
-                <button onclick="moveMap(1,0)">→</button>
-                <button onclick="moveMap(0,1)">↓</button>
-                <label>Rozmiar: <input type="number" id="map-size" min="7" max="31" value="<?php echo $size; ?>" style="width:50px;"> </label>
-                <button onclick="resizeMap()">Zmień</button>
+                <button onclick="moveMap(0,-1)">Up</button>
+                <button onclick="moveMap(-1,0)">Left</button>
+                <button onclick="centerMap()">Center</button>
+                <button onclick="moveMap(1,0)">Right</button>
+                <button onclick="moveMap(0,1)">Down</button>
+                <label>Size: <input type="number" id="map-size" min="7" max="31" value="<?php echo $size; ?>" style="width:50px;"> </label>
+                <button onclick="resizeMap()">Update</button>
             </div>
             <div id="map-grid" class="map-grid"></div>
         </div>
@@ -114,10 +114,10 @@ require '../header.php';
         <div id="map-popup" class="map-popup" style="display: none;">
             <button class="popup-close-btn">&times;</button>
             <h4 id="popup-village-name"></h4>
-            <div><b>Właściciel:</b> <span id="popup-village-owner"></span></div>
-            <div><b>Współrzędne:</b> <span id="popup-village-coords"></span></div>
-            <button id="popup-send-units" class="btn">Wyślij jednostki</button>
-            <!-- <button id="popup-send-resources" class="btn">Wyślij surowce</button> -->
+            <div><b>Owner:</b> <span id="popup-village-owner"></span></div>
+            <div><b>Coordinates:</b> <span id="popup-village-coords"></span></div>
+            <button id="popup-send-units" class="btn">Send units</button>
+            <!-- <button id="popup-send-resources" class="btn">Send resources</button> -->
         </div>
     </main>
 </div>
@@ -223,17 +223,17 @@ function renderMap(villages, center, radius, size, currentVillageId) {
             if (village) {
                 if (village.is_own) {
                     villageClass = 'own-village';
-                    tileContent = '<img src="../img/ds_graphic/buildings/main_building.png" alt="Wioska gracza">'; // Placeholder image
+                    tileContent = '<img src="../img/ds_graphic/buildings/main_building.png" alt="Player village">'; // Placeholder image
                 } else if (village.user_id === null) {
                     villageClass = 'barbarian';
-                    tileContent = '<img src="../img/ds_graphic/buildings/main_building.png" alt="Wioska barbarzyńska">'; // Placeholder image
+                    tileContent = '<img src="../img/ds_graphic/buildings/main_building.png" alt="Barbarian village">'; // Placeholder image
                 } else {
                     villageClass = 'player';
-                    tileContent = '<img src="../img/ds_graphic/buildings/main_building.png" alt="Wioska gracza">'; // Placeholder image
+                    tileContent = '<img src="../img/ds_graphic/buildings/main_building.png" alt="Player village">'; // Placeholder image
                 }
             } else {
                 // Example background image for empty tiles
-                 tileContent = '<img src="../img/map/map_bg/grass.jpg" alt="Teran">'; // You might have different terrains
+                 tileContent = '<img src="../img/map/map_bg/grass.jpg" alt="Terrain">'; // You might have different terrains
                  // tileContent = ''; // Leave empty for now if no terrain images
             }
             
@@ -271,7 +271,7 @@ function resizeMap() {
           const newRadius = Math.floor((newSize - 1) / 2); // Calculate new radius based on size
           window.location.href = `map.php?x=${centerCoords.x}&y=${centerCoords.y}&radius=${newRadius}&size=${newSize}`;
      } else {
-          alert('Rozmiar mapy musi być liczbą między 7 a 31.');
+          alert('Map size must be a number between 7 and 31.');
      }
 }
 

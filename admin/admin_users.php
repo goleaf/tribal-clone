@@ -1,4 +1,4 @@
-<h2>Zarządzanie użytkownikami</h2>
+<h2>User management</h2>
 <?php
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_admin'])) {
     validateCSRF();
@@ -7,7 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_admin'])) {
     $stmt->bind_param('i', $uid);
     $stmt->execute();
     $stmt->close();
-    echo '<p class="success-message">Uprawnienia zostały zaktualizowane.</p>';
+    echo '<p class="success-message">Privileges updated.</p>';
 }
 $stmt = $conn->prepare('SELECT id, username, email, is_admin FROM users');
 $stmt->execute();
@@ -18,7 +18,7 @@ $stmt->close();
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
     <table class="users-table">
         <thead>
-            <tr><th>ID</th><th>Użytkownik</th><th>E-mail</th><th>Admin</th><th>Akcja</th></tr>
+            <tr><th>ID</th><th>User</th><th>Email</th><th>Admin</th><th>Action</th></tr>
         </thead>
         <tbody>
         <?php while ($user = $users->fetch_assoc()): ?>
@@ -26,14 +26,14 @@ $stmt->close();
                 <td><?= $user['id'] ?></td>
                 <td><?= htmlspecialchars($user['username']) ?></td>
                 <td><?= htmlspecialchars($user['email']) ?></td>
-                <td><?= $user['is_admin'] ? 'Tak' : 'Nie' ?></td>
+                <td><?= $user['is_admin'] ? 'Yes' : 'No' ?></td>
                 <td>
                     <button type="submit" name="toggle_admin" value="<?= $user['id'] ?>">
-                        <?= $user['is_admin'] ? 'Odbierz uprawnienia' : 'Nadaj uprawnienia' ?>
+                        <?= $user['is_admin'] ? 'Remove admin' : 'Grant admin' ?>
                     </button>
                 </td>
             </tr>
         <?php endwhile; ?>
         </tbody>
     </table>
-</form> 
+</form>

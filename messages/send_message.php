@@ -7,12 +7,12 @@ require_once __DIR__ . '/../lib/managers/MessageManager.php'; // For message ope
 require_once __DIR__ . '/../lib/managers/NotificationManager.php'; // For notifications
 require_once __DIR__ . '/../lib/functions.php'; // For addNotification (if still needed, or move to manager)
 
-// Zabezpieczenie dostępu - tylko dla zalogowanych
+// Access guard - only for logged-in users
 if (!isset($_SESSION['user_id'])) {
-    // Jeśli to żądanie AJAX, zwróć błąd JSON; w przeciwnym przypadku przekieruj
+    // For AJAX requests return JSON, otherwise redirect
     if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
         header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'Użytkownik niezalogowany.', 'redirect' => 'auth/login.php']);
+        echo json_encode(['success' => false, 'message' => 'User not logged in.', 'redirect' => 'auth/login.php']);
         exit();
     } else {
     header("Location: ../auth/login.php");
@@ -23,12 +23,12 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 
-// Inicjalizacja menedżerów
+// Managers
 $userManager = new UserManager($conn);
 $messageManager = new MessageManager($conn);
 $notificationManager = new NotificationManager($conn); // Assuming constructor takes $conn
 
-// Obsługa odpowiedzi na wiadomość (pre-fill formularza)
+// Reply handling (pre-fill form)
 $reply_to = isset($_GET['reply_to']) ? (int)$_GET['reply_to'] : 0;
 $recipient_username = '';
 $original_subject = '';
@@ -36,8 +36,7 @@ $original_body = '';
 $prefilled_subject = '';
 
 if ($reply_to > 0) {
-    // Pobierz oryginalną wiadomość (tylko jeśli użytkownik jest odbiorcą)
-    // Użyj MessageManager do pobrania wiadomości
+    // Fetch original message (only if the user is the receiver)
     $original_message = $messageManager->getMessageByIdForUser($reply_to, $user_id); // Assuming this method checks receiver_id
 
     if ($original_message) {
@@ -45,45 +44,19 @@ if ($reply_to > 0) {
         $original_subject = $original_message['subject'];
         $original_body = $original_message['body'];
         
-        // Dodaj "Re:" na początku tematu, jeśli jeszcze go nie ma
+        // Add "Re:" prefix if missing
         if (strpos($original_subject, 'Re:') !== 0) {
             $prefilled_subject = 'Re: ' . $original_subject;
         } else {
             $prefilled_subject = $original_subject;
         }
     }
-    // Remove manual database query
-    /*
-    $stmt = $conn->prepare("
-        SELECT m.subject, m.body, u.username 
-        FROM messages m
-        JOIN users u ON m.sender_id = u.id
-        WHERE m.id = ? AND m.receiver_id = ? LIMIT 1
-    ");
-    $stmt->bind_param("ii", $reply_to, $user_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($row = $result->fetch_assoc()) {
-        $recipient_username = $row['username'];
-        $original_subject = $row['subject'];
-        $original_body = $row['body'];
-        
-        // Dodaj "Re:" na początku tematu, jeśli jeszcze go nie ma
-        if (strpos($original_subject, 'Re:') !== 0) {
-            $prefilled_subject = 'Re: ' . $original_subject;
-        } else {
-            $prefilled_subject = $original_subject;
-        }
-    }
-    $stmt->close();
-    */
 }
 
-// Obsługa wysyłania wiadomości (AJAX POST)
+// Handle send message (AJAX POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
-    validateCSRF(); // Sprawdź token CSRF
+    validateCSRF(); // Validate CSRF token
     
     $receiver_username = trim($_POST['receiver_username'] ?? '');
     $subject = trim($_POST['subject'] ?? '');
@@ -92,56 +65,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $response = ['success' => false, 'message' => ''];
 
     if (empty($receiver_username) || empty($subject) || empty($body)) {
-        $response['message'] = 'Wszystkie pola są wymagane!';
+        $response['message'] = 'All fields are required!';
     } else {
-        // Znajdź odbiorcę po nazwie użytkownika
-        // Użyj UserManager do znalezienia odbiorcy
+        // Find recipient by username
         $receiver = $userManager->getUserByUsername($receiver_username);
 
         if ($receiver) {
             $receiver_id = $receiver['id'];
 
-            // Sprawdź, czy nie wysyłasz wiadomości do samego siebie
+            // Prevent sending to self
             if ($receiver_id == $user_id) {
-                $response['message'] = 'Nie możesz wysłać wiadomości do samego siebie.';
+                $response['message'] = 'You cannot send a message to yourself.';
             } else {
-                // Wyślij wiadomość przy użyciu MessageManager
+                // Send the message via MessageManager
                 $sendMessageResult = $messageManager->sendMessage($user_id, $receiver_id, $subject, $body);
 
                 if ($sendMessageResult['success']) {
                     $response['success'] = true;
-                    $response['message'] = 'Wiadomość wysłana pomyślnie!';
+                    $response['message'] = 'Message sent successfully!';
                     $response['newMessageId'] = $sendMessageResult['message_id'];
-                    $response['redirect'] = 'messages.php?tab=sent'; // Tymczasowe przekierowanie
+                    $response['redirect'] = 'messages.php?tab=sent'; // Temporary redirect
 
-                     // Dodaj powiadomienie dla odbiorcy przy użyciu NotificationManager
-                     $notification_message = "Otrzymałeś nową wiadomość od {$username}";
+                     // Add notification for the recipient
+                     $notification_message = "You received a new message from {$username}";
                      $notification_link = "view_message.php?id=" . $sendMessageResult['message_id'];
-                     $notificationManager->addNotification($receiver_id, 'info', $notification_message, $notification_link); // Assuming method signature
+                     $notificationManager->addNotification($receiver_id, 'info', $notification_message, $notification_link);
 
                 } else {
-                    $response['message'] = 'Błąd podczas wysyłania wiadomości.';
-                    // Optionally, get more detailed error from $sendMessageResult if provided
+                    $response['message'] = 'Error while sending the message.';
                 }
             }
         } else {
-            $response['message'] = 'Nie znaleziono użytkownika: ' . htmlspecialchars($receiver_username);
+            $response['message'] = 'User not found: ' . htmlspecialchars($receiver_username);
         }
     }
     
     echo json_encode($response);
-    exit(); // Zakończ skrypt po odpowiedzi AJAX
+    exit(); // End script after AJAX response
 }
 
-// Przygotowanie danych i renderowanie HTML formularza (dla bezpośredniego dostępu lub AJAX do wstrzyknięcia)
+// Prepare data and render HTML form (for direct access or AJAX injection)
 $formHtml = '';
-ob_start(); // Rozpocznij buforowanie wyjścia
+ob_start(); // Start output buffering
 ?>
 
 <div class="message-compose-container" data-reply-to="<?= $reply_to ?>">
-    <h2>Napisz nową wiadomość</h2>
+    <h2>Write a new message</h2>
     
-    <!-- Wiadomości o błędach/sukcesach będą wyświetlane przez toasty/powiadomienia -->
     <?php /* if (!empty($message)): ?>
         <div class="message-container">
             <?= $message ?>
@@ -152,21 +122,20 @@ ob_start(); // Rozpocznij buforowanie wyjścia
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
         
         <div class="form-group">
-            <label for="receiver_username">Odbiorca:</label>
+            <label for="receiver_username">Recipient:</label>
             <input type="text" id="receiver_username" name="receiver_username" value="<?= htmlspecialchars($recipient_username) ?>" required>
         </div>
         
         <div class="form-group">
-            <label for="subject">Temat:</label>
+            <label for="subject">Subject:</label>
             <input type="text" id="subject" name="subject" value="<?= htmlspecialchars($prefilled_subject) ?>" required>
         </div>
         
         <div class="form-group">
-            <label for="body">Treść wiadomości:</label>
+            <label for="body">Message body:</label>
             <textarea id="body" name="body" rows="10" required><?php 
             if ($reply_to > 0 && !empty($original_body)) {
-                echo "\n\n---\nW dniu " . date('d.m.Y', strtotime($original_message['sent_at'] ?? 'now')) . ", " . htmlspecialchars($recipient_username) . " napisał(a):\n"; // Użyj daty wysłania originalnej wiadomości
-                // Dodaj cytowany tekst z wcięciem
+                echo "\n\n---\nOn " . date('d.m.Y', strtotime($original_message['sent_at'] ?? 'now')) . ", " . htmlspecialchars($recipient_username) . " wrote:\n";
                 $quoted_body = '';
                 $lines = explode("\n", $original_body);
                 foreach ($lines as $line) {
@@ -179,20 +148,19 @@ ob_start(); // Rozpocznij buforowanie wyjścia
         
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">
-                <i class="fas fa-paper-plane"></i> Wyślij wiadomość
+                <i class="fas fa-paper-plane"></i> Send message
             </button>
-            <!-- Przycisk Anuluj powinien wracać do listy wiadomości -->
-            <a href="messages.php" class="btn btn-secondary">Anuluj</a>
+            <a href="messages.php" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
     
     <?php if ($reply_to > 0 && !empty($original_body)): ?>
     <div class="original-message">
-        <h3>Oryginalna wiadomość</h3>
+        <h3>Original message</h3>
         <div class="original-message-content">
             <div class="original-message-header">
-                <div><strong>Od:</strong> <?= htmlspecialchars($recipient_username) ?></div>
-                <div><strong>Temat:</strong> <?= htmlspecialchars($original_subject) ?></div>
+                <div><strong>From:</strong> <?= htmlspecialchars($recipient_username) ?></div>
+                <div><strong>Subject:</strong> <?= htmlspecialchars($original_subject) ?></div>
             </div>
             <div class="original-message-body">
                 <?= nl2br(htmlspecialchars($original_body)) ?>
@@ -203,13 +171,13 @@ ob_start(); // Rozpocznij buforowanie wyjścia
 </div>
 
 <?php
-$formHtml = ob_get_clean(); // Pobierz zawartość bufora i zakończ buforowanie
+$formHtml = ob_get_clean(); // Capture buffer and stop buffering
 
-// Sprawdź, czy żądanie jest AJAX
+// Detect AJAX request
 $is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
 if ($is_ajax) {
-    // Zwróć tylko HTML formularza (jeśli potrzebne np. do popupu) lub tylko JSON po wysyłce POST
+    // Return only the form HTML (for popup use) or JSON after POST
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
          // If it's a GET request (e.g., to get the form HTML for a popup)
          echo json_encode([
@@ -221,20 +189,20 @@ if ($is_ajax) {
     // POST requests are handled and exit earlier
 } else {
     // If it's a standard page request (not AJAX)
-    $pageTitle = 'Napisz wiadomość';
+    $pageTitle = 'Write a message';
     require 'header.php';
     ?>
     <div id="game-container">
         <?php // Add header ?>
          <header id="main-header">
              <div class="header-title">
-                 <span class="game-logo">📧</span>
-                 <span>Nowa wiadomość</span>
+                 <span class="game-logo">&#128231;</span>
+                 <span>New message</span>
              </div>
              <?php // User section will be included by header.php if logic is there ?>
              <?php if (isset($_SESSION['user_id']) && ($currentUserVillage = $villageManager->getFirstVillage($_SESSION['user_id']))): ?>
               <div class="header-user">
-                  Gracz: <?= htmlspecialchars($_SESSION['username']) ?><br>
+                  Player: <?= htmlspecialchars($_SESSION['username']) ?><br>
                   <span class="village-name-display" data-village-id="<?= $currentUserVillage['id'] ?>"><?= htmlspecialchars($currentUserVillage['name']) ?> (<?= $currentUserVillage['x_coord'] ?>|<?= $currentUserVillage['y_coord'] ?>)</span>
               </div>
              <?php endif; ?>
@@ -252,16 +220,16 @@ if ($is_ajax) {
 ?>
 
 <script>
-// Skrypt do obsługi wysyłania wiadomości za pomocą AJAX
+// Script to handle sending messages via AJAX
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('send-message-form');
     if (!form) return;
 
     form.addEventListener('submit', function(event) {
-        event.preventDefault(); // Zapobiegaj domyślnemu wysłaniu formularza
+        event.preventDefault(); // Prevent default submit
 
-        // Pokaż loader
-        showLoading(); // Zakładając istnienie funkcji showLoading()
+        // Show loader
+        showLoading(); // Requires global showLoading()
 
         const formData = new FormData(form);
 
@@ -271,50 +239,44 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
-            hideLoading(); // Ukryj loader
+            hideLoading();
             if (data.success) {
-                showToast('success', data.message); // Pokaż powiadomienie o sukcesie
-                
-                // Tutaj można dodać logikę np. czyszczenia formularza lub przekierowania
-                // Obecnie ustawione jest tymczasowe przekierowanie w PHP, ale docelowo JS to obsłuży
+                showToast('success', data.message);
                  if (data.redirect) {
-                     window.location.href = data.redirect; // Przekierowanie po sukcesie (tymczasowe)
+                     window.location.href = data.redirect; // Temporary redirect on success
                  } else {
-                     // Jeśli nie ma przekierowania, np. w popupie, można wyczyścić formularz:
-                     // form.reset();
-                     // // Ewentualnie zamknąć popup:
-                     // if (window.closeSendMessagePopup) { window.closeSendMessagePopup(); }
+                     // When no redirect, e.g., popup: form.reset(); close popup if needed
                  }
 
             } else {
-                showToast('error', data.message); // Pokaż powiadomienie o błędzie
+                showToast('error', data.message);
             }
         })
         .catch(error => {
             hideLoading();
-            console.error('Błąd AJAX:', error);
-            showToast('error', 'Wystąpił błąd komunikacji z serwerem.');
+            console.error('AJAX error:', error);
+            showToast('error', 'A communication error occurred.');
         });
     });
 });
 
-// Zakładane globalne funkcje (muszą być zdefiniowane w main.js lub innym wspólnym pliku)
-// function showLoading() { /* implementacja */ }
-// function hideLoading() { /* implementacja */ }
-// function showToast(type, message) { /* implementacja */ }
+// Expected global helpers (define in main.js or another shared file)
+// function showLoading() { /* implementation */ }
+// function hideLoading() { /* implementation */ }
+// function showToast(type, message) { /* implementation */ }
 </script>
 
 <style>
-/* Style specyficzne dla formularza wysyłania wiadomości */
+/* Styles specific to the send message form */
 
-/* Usunięto style dotyczące całego kontenera gry i paska bocznego, ponieważ plik może być ładowany przez AJAX */
+/* Removed global game container/sidebar styles because this file can be loaded via AJAX */
 
 .message-compose-container {
     background-color: var(--beige-light);
     border-radius: var(--border-radius-medium);
     box-shadow: var(--box-shadow-default);
     padding: var(--spacing-lg);
-    margin-top: var(--spacing-md); /* Można dostosować */
+    margin-top: var(--spacing-md);
 }
 
 .message-compose-form {
@@ -342,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
     background-color: #fff;
     font-family: var(--font-main);
     font-size: var(--font-size-normal);
-    width: calc(100% - var(--spacing-sm) * 2); /* Uwzględnij padding */
+    width: calc(100% - var(--spacing-sm) * 2); /* Account for padding */
     box-sizing: border-box;
 }
 
@@ -358,7 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
     margin-top: var(--spacing-md);
 }
 
-/* Style dla oryginalnej wiadomości przy odpowiedzi */
+/* Styles for quoted original message */
 .original-message {
     margin-top: var(--spacing-lg);
     padding: var(--spacing-md);

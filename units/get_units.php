@@ -5,20 +5,20 @@ require_once '../lib/managers/UnitManager.php';
 header('Content-Type: text/html; charset=utf-8');
 
 if (!isset($_SESSION['user_id'])) {
-    echo '<div class="error">Brak dostępu</div>';
+    echo '<div class="error">Access denied</div>';
     exit;
 }
 $user_id = $_SESSION['user_id'];
 
-// Pobierz wioskę gracza
-$stmt = $conn->prepare("SELECT id FROM villages WHERE user_id = ? LIMIT 1");
-$stmt->bind_param("i", $user_id);
+// Fetch the player's village
+$stmt = $conn->prepare('SELECT id FROM villages WHERE user_id = ? LIMIT 1');
+$stmt->bind_param('i', $user_id);
 $stmt->execute();
 $res = $stmt->get_result();
 $village = $res->fetch_assoc();
 $stmt->close();
 if (!$village) {
-    echo '<div class="error">Brak wioski</div>';
+    echo '<div class="error">No village found</div>';
     exit;
 }
 $village_id = $village['id'];
@@ -26,7 +26,7 @@ $village_id = $village['id'];
 $unitManager = new UnitManager($conn);
 $units = $unitManager->getVillageUnits($village_id);
 
-// Mapowanie ikon jednostek
+// Unit icon mapping
 $unit_icons = [
     'militia' => 'unit_militia.png',
     'spear' => 'unit_spear.png',
@@ -43,7 +43,7 @@ $unit_icons = [
 ];
 
 if (!$units) {
-    echo '<div>Brak jednostek w wiosce.</div>';
+    echo '<div>No units in the village.</div>';
     exit;
 }
 echo '<div class="current-units-table">';

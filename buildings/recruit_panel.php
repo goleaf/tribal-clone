@@ -20,8 +20,8 @@
             <?php foreach ($available_units as $unit): ?>
                 <tr>
                     <td>
-                        <strong><?= htmlspecialchars($unit['name_pl']) ?></strong>
-                        <p><?= htmlspecialchars($unit['description_pl']) ?></p>
+                        <strong><?= htmlspecialchars($unit['name']) ?></strong>
+                        <p><?= htmlspecialchars($unit['description']) ?></p>
                     </td>
                     <td><?= $unit['attack'] ?> / <?= $unit['defense'] ?></td>
                     <td>
@@ -49,7 +49,7 @@
             <ul>
                 <?php foreach ($recruitment_queue as $queue_item): ?>
                     <li>
-                        <?= htmlspecialchars($queue_item['count']) ?> x <?= htmlspecialchars($queue_item['name_pl']) ?>
+                        <?= htmlspecialchars($queue_item['count']) ?> x <?= htmlspecialchars($queue_item['name']) ?>
                         - Finishes in <span class="timer" data-finish-time="<?= $queue_item['finish_at'] ?>">...</span>
                     </li>
                 <?php endforeach; ?>

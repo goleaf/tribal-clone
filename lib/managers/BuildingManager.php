@@ -10,8 +10,8 @@ class BuildingManager {
     }
 
     /**
-     * Oblicza produkcję surowca przez dany budynek na danym poziomie na godzinę.
-     * Zwraca 0 jeśli budynek nie produkuje lub nie ma danych.
+     * Calculates hourly resource production for a building at a given level.
+     * Returns 0 when the building does not produce or data is missing.
      */
     public function getHourlyProduction($building_internal_name, $level) {
         if ($level == 0) return 0;
@@ -25,9 +25,8 @@ class BuildingManager {
     }
 
     /**
-     * Oblicza pojemność magazynu na danym poziomie.
-     * Na razie używamy stałej z config, ale w przyszłości to może zależeć od poziomu magazynu.
-     * Ta funkcja jest placeholderem, jeśli chcemy by pojemność magazynu była dynamiczna.
+     * Calculates warehouse capacity at a given level.
+     * Currently uses a config-based constant, but can be made dynamic later.
      */
     public function getWarehouseCapacityByLevel($warehouse_level) {
          if ($warehouse_level <= 0) {
@@ -41,7 +40,7 @@ class BuildingManager {
 
     public function getBuildingDisplayName($internal_name) {
         $config = $this->buildingConfigManager->getBuildingConfig($internal_name);
-        return $config ? $config['name_pl'] : 'Nieznany budynek';
+        return $config ? $config['name'] : 'Unknown building';
     }
 
     public function getBuildingMaxLevel($internal_name) {
@@ -50,8 +49,8 @@ class BuildingManager {
     }
 
     /**
-     * Oblicza koszt rozbudowy budynku do następnego poziomu.
-     * Zwraca tablicę ['wood' => koszt, 'clay' => koszt, 'iron' => koszt] lub null jeśli błąd.
+     * Calculates the cost to upgrade a building to the next level.
+     * Returns ['wood' => cost, 'clay' => cost, 'iron' => cost] or null on error.
      */
     public function getBuildingUpgradeCost($internal_name, $next_level) {
         if ($next_level <= 0) return null;
@@ -65,8 +64,8 @@ class BuildingManager {
     }
 
     /**
-     * Oblicza czas potrzebny na rozbudowę budynku do następnego poziomu (w sekundach).
-     * Czas zależy od poziomu Ratusza.
+     * Calculates the time to upgrade a building to the next level (seconds).
+     * The time depends on the town hall level.
      */
     public function getBuildingUpgradeTime($internal_name, $next_level, $main_building_level) {
         if ($next_level <= 0) return null;
@@ -99,28 +98,28 @@ class BuildingManager {
     }
     
     /**
-     * Alias dla getBuildingUpgradeCost dla zachowania zgodności
+     * Alias for getBuildingUpgradeCost for backward compatibility
      */
     public function getUpgradeCosts($internal_name, $next_level) {
         return $this->getBuildingUpgradeCost($internal_name, $next_level);
     }
     
     /**
-     * Alias dla getBuildingUpgradeTime dla zachowania zgodności
+     * Alias for getBuildingUpgradeTime for backward compatibility
      */
     public function getUpgradeTimeInSeconds($internal_name, $next_level, $main_building_level) {
         return $this->getBuildingUpgradeTime($internal_name, $next_level, $main_building_level);
     }
     
     /**
-     * Sprawdza czy spełnione są wymagania dotyczące innych budynków do rozbudowy danego budynku
-     * Inspirowane starą wersją - metoda check_needed z klasy builds
+     * Checks whether requirements for other buildings are met to upgrade this building.
+     * Inspired by the legacy builds::check_needed method.
      */
     public function checkBuildingRequirements($internal_name, $village_id) {
         $requirements = $this->buildingConfigManager->getBuildingRequirements($internal_name);
 
         if (empty($requirements)) {
-            return ['success' => true, 'message' => 'Brak dodatkowych wymagań dotyczących budynków.'];
+            return ['success' => true, 'message' => 'No additional building requirements.'];
         }
 
         $stmt = $this->conn->prepare("
@@ -146,15 +145,15 @@ class BuildingManager {
             $currentLevel = $village_buildings[$requiredBuildingName] ?? 0;
 
             if ($currentLevel < $requiredLevel) {
-                $requiredBuildingDisplayName = $this->buildingConfigManager->getBuildingConfig($requiredBuildingName)['name_pl'] ?? $requiredBuildingName;
+                $requiredBuildingDisplayName = $this->buildingConfigManager->getBuildingConfig($requiredBuildingName)['name'] ?? $requiredBuildingName;
                 return [
                     'success' => false,
-                    'message' => "Wymaga: " . htmlspecialchars($requiredBuildingDisplayName) . " na poziomie " . $requiredLevel . ". Twoj obecny poziom: " . $currentLevel
+                    'message' => "Requires " . htmlspecialchars($requiredBuildingDisplayName) . " at level " . $requiredLevel . ". Your current level: " . $currentLevel
                 ];
             }
         }
 
-        return ['success' => true, 'message' => 'Wymagania spełnione.'];
+        return ['success' => true, 'message' => 'Requirements met.'];
     }
 
     public function getBuildingLevel(int $villageId, string $internalName): int
@@ -191,17 +190,17 @@ class BuildingManager {
         
         $config = $this->buildingConfigManager->getBuildingConfig($internalName);
         if (!$config) {
-             return ['success' => false, 'message' => 'Nieznany typ budynku.'];
+             return ['success' => false, 'message' => 'Unknown building type.'];
         }
         
         if ($currentLevel >= $config['max_level']) {
-            return ['success' => false, 'message' => 'Osiągnięto maksymalny poziom dla tego budynku.'];
+            return ['success' => false, 'message' => 'Maximum level reached for this building.'];
         }
         
         $stmt_queue = $this->conn->prepare("SELECT COUNT(*) as count FROM building_queue WHERE village_id = ?");
          if ($stmt_queue === false) {
              error_log("Prepare failed for queue check: " . $this->conn->error);
-             return ['success' => false, 'message' => 'Błąd serwera podczas sprawdzania kolejki.'];
+             return ['success' => false, 'message' => 'Server error while checking the queue.'];
         }
         $stmt_queue->bind_param("i", $villageId);
         $stmt_queue->execute();
@@ -209,20 +208,20 @@ class BuildingManager {
         $stmt_queue->close();
         
         if ($queue_result['count'] > 0) {
-            return ['success' => false, 'message' => 'W tej wiosce trwa już inna rozbudowa.'];
+            return ['success' => false, 'message' => 'Another upgrade is already in progress in this village.'];
         }
 
         $nextLevel = $currentLevel + 1;
         $upgradeCosts = $this->buildingConfigManager->calculateUpgradeCost($internalName, $currentLevel);
         
         if (!$upgradeCosts) {
-             return ['success' => false, 'message' => 'Nie można obliczyć kosztów rozbudowy.'];
+             return ['success' => false, 'message' => 'Cannot calculate upgrade costs.'];
         }
 
         $stmt_resources = $this->conn->prepare("SELECT wood, clay, iron FROM villages WHERE id = ?");
          if ($stmt_resources === false) {
               error_log("Prepare failed for resource check: " . $this->conn->error);
-              return ['success' => false, 'message' => 'Błąd serwera podczas pobierania zasobów.'];
+              return ['success' => false, 'message' => 'Server error while fetching resources.'];
          }
         $stmt_resources->bind_param("i", $villageId);
         $stmt_resources->execute();
@@ -230,13 +229,13 @@ class BuildingManager {
         $stmt_resources->close();
         
         if (!$resources) {
-             return ['success' => false, 'message' => 'Nie można pobrać zasobów wioski.'];
+             return ['success' => false, 'message' => 'Cannot fetch village resources.'];
         }
 
         if ($resources['wood'] < $upgradeCosts['wood'] || 
             $resources['clay'] < $upgradeCosts['clay'] || 
             $resources['iron'] < $upgradeCosts['iron']) {
-            return ['success' => false, 'message' => 'Brak wystarczających surowców.'];
+            return ['success' => false, 'message' => 'Not enough resources.'];
         }
         
         $requirementsCheck = $this->checkBuildingRequirements($internalName, $villageId);
@@ -244,14 +243,14 @@ class BuildingManager {
             return $requirementsCheck;
         }
         
-        return ['success' => true, 'message' => 'Można rozbudować.'];
+        return ['success' => true, 'message' => 'Upgrade possible.'];
     }
     
     public function addBuildingToQueue(int $villageId, string $internalName): array
     {
         // Check if there's already an item in the queue for this village
         if ($this->isAnyBuildingInQueue($villageId)) {
-            return ['success' => false, 'message' => 'W kolejce budowy tej wioski znajduje się już inne zadanie.'];
+            return ['success' => false, 'message' => 'Another task is already in this village\'s build queue.'];
         }
 
         // Get current building level
@@ -261,11 +260,11 @@ class BuildingManager {
         // Get building config to check max level
         $config = $this->buildingConfigManager->getBuildingConfig($internalName);
         if (!$config) {
-             return ['success' => false, 'message' => 'Nieznany typ budynku.'];
+             return ['success' => false, 'message' => 'Unknown building type.'];
         }
         
         if ($currentLevel >= $config['max_level']) {
-            return ['success' => false, 'message' => 'Osiągnięto maksymalny poziom dla tego budynku.'];
+            return ['success' => false, 'message' => 'Maximum level reached for this building.'];
         }
 
         // Check if requirements are met (although this should be checked before calling this method, good to double-check)
@@ -279,7 +278,7 @@ class BuildingManager {
         $upgradeTimeSeconds = $this->buildingConfigManager->calculateUpgradeTime($internalName, $currentLevel, $mainBuildingLevel); // calculateUpgradeTime uses currentLevel
 
         if ($upgradeTimeSeconds === null) {
-             return ['success' => false, 'message' => 'Nie można obliczyć czasu rozbudowy.'];
+             return ['success' => false, 'message' => 'Cannot calculate upgrade time.'];
         }
 
         $finishTime = date('Y-m-d H:i:s', time() + $upgradeTimeSeconds);
@@ -287,7 +286,7 @@ class BuildingManager {
         // Get the village_building_id for the specific building in this village
         $villageBuilding = $this->getVillageBuilding($villageId, $internalName);
         if (!$villageBuilding) {
-             return ['success' => false, 'message' => 'Nie znaleziono budynku w wiosce.'];
+             return ['success' => false, 'message' => 'Building not found in the village.'];
         }
         $villageBuildingId = $villageBuilding['village_building_id'] ?? null; // Ensure this is the correct column name
         
@@ -295,36 +294,36 @@ class BuildingManager {
         $buildingTypeId = $config['id'] ?? null;
         if ($villageBuildingId === null || $buildingTypeId === null) {
              error_log("Missing village_building_id ($villageBuildingId) or building_type_id ($buildingTypeId) for village $villageId, building $internalName");
-             return ['success' => false, 'message' => 'Wewnętrzny błąd serwera (missing IDs).'];
+             return ['success' => false, 'message' => 'Internal server error (missing IDs).'];
         }
 
         // Add to building_queue table
         $stmt = $this->conn->prepare("INSERT INTO building_queue (village_id, village_building_id, building_type_id, level, start_time, finish_time) VALUES (?, ?, ?, ?, NOW(), ?)");
         if ($stmt === false) {
             error_log("Prepare failed for addBuildingToQueue INSERT: " . $this->conn->error);
-            return ['success' => false, 'message' => 'Błąd serwera podczas dodawania do kolejki.'];
+            return ['success' => false, 'message' => 'Server error while adding to the queue.'];
         }
         // Bind parameters: i (village_id), i (village_building_id), i (building_type_id), i (level), s (finish_time)
         $stmt->bind_param("iiiis", $villageId, $villageBuildingId, $buildingTypeId, $nextLevel, $finishTime);
         
         if ($stmt->execute()) {
             $stmt->close();
-            return ['success' => true, 'message' => 'Rozbudowa dodana do kolejki.'];
+            return ['success' => true, 'message' => 'Upgrade added to the queue.'];
         } else {
              error_log("Execute failed for addBuildingToQueue INSERT: " . $stmt->error);
             $stmt->close();
-            return ['success' => false, 'message' => 'Błąd bazy danych podczas dodawania do kolejki.'];
+            return ['success' => false, 'message' => 'Database error while adding to the queue.'];
         }
     }
 
     /**
-     * Pobiera dane konkretnego budynku w wiosce (np. jego poziom).
-     * @return array|null Tablica z danymi budynku lub null jeśli brak.
+     * Retrieves data for a specific building in a village (e.g., its level).
+     * @return array|null Building data or null when missing.
      */
     public function getVillageBuilding(int $villageId, string $internalName): ?array
     {
         $stmt = $this->conn->prepare("
-            SELECT vb.village_id, vb.building_type_id, vb.level, bt.internal_name, bt.name_pl, bt.production_type
+            SELECT vb.village_id, vb.building_type_id, vb.level, bt.internal_name, bt.name, bt.production_type
             FROM village_buildings vb
             JOIN building_types bt ON vb.building_type_id = bt.id
             WHERE vb.village_id = ? AND bt.internal_name = ? LIMIT 1
@@ -346,16 +345,16 @@ class BuildingManager {
     }
 
     /**
-     * Pobiera dane konkretnego budynku w wiosce na podstawie jego ID w tabeli village_buildings.
-     * Używane do pobrania szczegółów przed akcją (np. rozbudowa).
-     * Weryfikuje, czy budynek należy do danej wioski i ma podany internal_name.
-     * @return array|null Tablica z danymi budynku (vb.id, vb.level, bt.internal_name, bt.name_pl, bt.description_pl, ...), lub null jeśli brak.
+     * Retrieves building data in a village by its village_buildings ID.
+     * Used to load details before an action (e.g., upgrade).
+     * Verifies the building belongs to the given village and matches the internal name.
+     * @return array|null Building data (vb.id, vb.level, bt.internal_name, bt.name, bt.description, etc.) or null when missing.
      */
     public function getVillageBuildingDetailsById(int $villageBuildingId, int $villageId, string $internalName): ?array
     {
          $stmt = $this->conn->prepare("
              SELECT vb.id, vb.level, 
-                    bt.internal_name, bt.name_pl, bt.description_pl, 
+                    bt.internal_name, bt.name, bt.description, 
                     bt.production_type, bt.production_initial, bt.production_factor, 
                     bt.max_level, bt.id AS building_type_id
              FROM village_buildings vb
@@ -379,8 +378,8 @@ class BuildingManager {
     }
 
     /**
-     * Sprawdza czy w kolejce budowy dla danej wioski znajduje się jakiekolwiek zadanie.
-     * @return bool True jeśli kolejka nie jest pusta, false w przeciwnym razie.
+     * Checks whether any build task exists in the village queue.
+     * @return bool True when the queue is not empty, false otherwise.
      */
     public function isAnyBuildingInQueue(int $villageId): bool
     {
@@ -400,14 +399,14 @@ class BuildingManager {
     }
 
     /**
-     * Pobiera pojedynczy element z kolejki budowy dla danego budynku w wiosce.
-     * Przydatne do sprawdzania statusu rozbudowy.
-     * @return array|null Dane zadania budowy lub null jeśli brak.
+     * Fetches a single queue item for the village build queue.
+     * Useful for checking upgrade status.
+     * @return array|null Build task data or null when none.
      */
     public function getBuildingQueueItem(int $villageId): ?array
     {
         $stmt = $this->conn->prepare("
-            SELECT bq.id, bq.village_building_id, bq.level, bq.finish_time, bt.name_pl, bt.internal_name
+            SELECT bq.id, bq.village_building_id, bq.level, bq.finish_time, bt.name, bt.internal_name
             FROM building_queue bq
             JOIN building_types bt ON bq.building_type_id = bt.id
             WHERE bq.village_id = ?
@@ -426,34 +425,33 @@ class BuildingManager {
     }
 
     /**
-     * Pobiera wszystkie dane budynków dla widoku wioski,
-     * łącząc konfigurację, poziom w wiosce, status kolejki
-     * oraz informacje o rozbudowie.
+     * Collects all building data for the village view, combining config, current level,
+     * queue status, and upgrade information.
      *
-     * @param int $villageId ID wioski.
-     * @param int $mainBuildingLevel Poziom Ratusza w tej wiosce (potrzebny do obliczeń czasu rozbudowy).
-     * @return array Tablica danych budynków gotowa do wyświetlenia.
+     * @param int $villageId Village ID.
+     * @param int $mainBuildingLevel Town hall level in this village (needed for upgrade time calculations).
+     * @return array Building data array ready for display.
      */
     public function getVillageBuildingsViewData(int $villageId, int $mainBuildingLevel): array
     {
         $buildingsViewData = [];
 
-        // 1. Pobierz poziomy wszystkich budynków dla danej wioski
-        $villageBuildingsLevels = $this->getVillageBuildingsLevels($villageId); // Zakładamy istnienie takiej metody lub implementujemy ją poniżej
+        // 1. Fetch levels of all buildings for this village
+        $villageBuildingsLevels = $this->getVillageBuildingsLevels($villageId); // Implemented below
 
-        // 2. Pobierz aktualny element kolejki budowy dla tej wioski
+        // 2. Fetch the current build queue item for this village
         $queueItem = $this->getBuildingQueueItem($villageId);
 
-        // 3. Pobierz konfiguracje wszystkich budynków
+        // 3. Fetch configs for all buildings
         $allBuildingConfigs = $this->buildingConfigManager->getAllBuildingConfigs();
 
-        // 4. Połącz dane i przygotuj strukturę dla widoku
+        // 4. Merge data to prepare view structure
         foreach ($allBuildingConfigs as $config) {
             $internal_name = $config['internal_name'];
             $current_level = $villageBuildingsLevels[$internal_name] ?? 0;
             $max_level = (int)($config['max_level'] ?? 0);
 
-            // Sprawdź, czy budynek jest aktualnie w kolejce rozbudowy
+            // Check whether the building is currently in the upgrade queue
             $is_upgrading = false;
             $queue_finish_time = null;
             $queue_level_after = null;
@@ -461,11 +459,11 @@ class BuildingManager {
             if ($queueItem && $queueItem['village_id'] == $villageId && $queueItem['building_internal_name'] == $internal_name) {
                 $is_upgrading = true;
                 $queue_finish_time = $queueItem['finish_time'];
-                // Zakładamy, że poziom w kolejce to zawsze obecny poziom + 1
+                // Queue level is always current level + 1
                 $queue_level_after = $current_level + 1;
             }
 
-            // Przygotuj dane o następnej rozbudowie, jeśli możliwa
+            // Prepare next-upgrade data if available
             $next_level = $current_level + 1;
             $upgrade_costs = null;
             $upgrade_time_seconds = null;
@@ -473,14 +471,14 @@ class BuildingManager {
             $upgrade_not_available_reason = '';
 
             if (!$is_upgrading && $current_level < $max_level) {
-                // Sprawdź tylko wymagania budynków i brak kolejki globalnej
-                // Check if canUpgradeBuilding needs villageId and internalName only
-                $can_upgrade_check = $this->canUpgradeBuilding($villageId, $internal_name); // Ta metoda już sprawdza wymagania budynków i globalną kolejkę
+                // Check only building requirements and global queue
+                // canUpgradeBuilding already checks requirements and queue state
+                $can_upgrade_check = $this->canUpgradeBuilding($villageId, $internal_name);
                 $can_upgrade = $can_upgrade_check['success'];
                 $upgrade_not_available_reason = $can_upgrade_check['message'];
                 
-                // Sprawdzenie zasobów zostanie wykonane na froncie lub w AJAX handlerze
-                // Tutaj obliczamy tylko koszt i czas, jeśli rozbudowa jest technicznie możliwa
+                // Resource validation happens on the front end or AJAX handler.
+                // Here we compute cost and time only when the upgrade is technically possible.
                 if ($can_upgrade) {
                      $upgrade_costs = $this->buildingConfigManager->calculateUpgradeCost($internal_name, $current_level);
                      $upgrade_time_seconds = $this->buildingConfigManager->calculateUpgradeTime($internal_name, $current_level, $mainBuildingLevel);
@@ -489,9 +487,9 @@ class BuildingManager {
 
             $buildingsViewData[$internal_name] = [
                 'internal_name' => $internal_name,
-                'name_pl' => $config['name_pl'] ?? $internal_name,
+                'name' => $config['name'] ?? $internal_name,
                 'level' => (int)$current_level,
-                'description_pl' => $config['description_pl'] ?? 'Brak opisu.',
+                'description' => $config['description'] ?? 'No description.',
                 'max_level' => (int)$max_level,
                 'is_upgrading' => $is_upgrading,
                 'queue_finish_time' => $queue_finish_time,
@@ -501,14 +499,14 @@ class BuildingManager {
                 'upgrade_time_seconds' => $upgrade_time_seconds, // null if not upgradable or upgrading
                 'can_upgrade' => $can_upgrade, // Based on requirements and global queue
                 'upgrade_not_available_reason' => $upgrade_not_available_reason,
-                 // Dodaj inne potrzebne dane konfiguracyjne, np. production_type, population_cost
+                 // Additional config data
                 'production_type' => $config['production_type'] ?? null,
-                'population_cost' => $config['population_cost'] ?? null, // Koszt populacji na TYM poziomie
-                'next_level_population_cost' => $this->buildingConfigManager->calculatePopulationCost($internal_name, $next_level) // Koszt populacji na następnym poziomie
+                'population_cost' => $config['population_cost'] ?? null, // Population cost at THIS level
+                'next_level_population_cost' => $this->buildingConfigManager->calculatePopulationCost($internal_name, $next_level) // Population cost at the next level
             ];
         }
         
-        // Sortowanie budynków (domyślnie po internal_name)
+        // Sort buildings (default by internal_name)
         ksort($buildingsViewData);
 
         return $buildingsViewData;
@@ -517,7 +515,7 @@ class BuildingManager {
      /**
       * Helper method to get levels of all buildings for a village.
       *
-      * @param int $villageId ID wioski.
+      * @param int $villageId Village ID.
       * @return array Assoc array of building_internal_name => level.
       */
      private function getVillageBuildingsLevels(int $villageId): array
@@ -543,47 +541,47 @@ class BuildingManager {
              $levels[$row['internal_name']] = (int)$row['level'];
          }
 
-         $stmt->close();
+        $stmt->close();
 
-         return $levels;
-     }
+        return $levels;
+    }
 
     /**
-     * Oblicza bonus do obrony przyznawany przez mur na danym poziomie.
-     * Bonus jest wykładniczy, np. 1.04^poziom_muru.
-     * @param int $wall_level Poziom muru.
-     * @return float Mnożnik bonusu do obrony.
+     * Calculates the defense bonus granted by the wall at a given level.
+     * Bonus grows exponentially, e.g. 1.04^wall_level.
+     * @param int $wall_level Wall level.
+     * @return float Defense multiplier.
      */
     public function getWallDefenseBonus(int $wall_level): float
     {
         if ($wall_level <= 0) {
-            return 1.0; // Brak bonusu
+            return 1.0; // No bonus
         }
 
-        // Przykładowa formuła: 4% bonusu na każdy poziom, składany wykładniczo
+        // Example: 4% compound bonus per level
         $base_factor = 1.04;
 
         return pow($base_factor, $wall_level);
     }
 
     /**
-     * Ustawia poziom budynku w wiosce.
-     * @param int $villageId ID wioski.
-     * @param string $internalName Wewnętrzna nazwa budynku.
-     * @param int $newLevel Nowy poziom budynku.
-     * @return bool True jeśli operacja się powiodła, false w przeciwnym razie.
+     * Sets the level of a building in a village.
+     * @param int $villageId Village ID.
+     * @param string $internalName Building internal name.
+     * @param int $newLevel New building level.
+     * @return bool True on success, false otherwise.
      */
     public function setBuildingLevel(int $villageId, string $internalName, int $newLevel): bool
     {
         $config = $this->buildingConfigManager->getBuildingConfig($internalName);
         if (!$config) {
-            return false; // Nieznany budynek
+            return false; // Unknown building
         }
 
         $buildingTypeId = $config['id'];
         $maxLevel = $config['max_level'];
 
-        // Poziom nie może być ujemny ani większy od maksymalnego
+        // Level cannot be negative or exceed the maximum
         if ($newLevel < 0 || $newLevel > $maxLevel) {
             return false;
         }

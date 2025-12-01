@@ -1,4 +1,4 @@
--- Utworzenie tabeli powiadomień
+-- Create notifications table
 CREATE TABLE IF NOT EXISTS `notifications` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
   `user_id` INT(11) NOT NULL,
@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS `notifications` (
   `link` VARCHAR(255) DEFAULT '',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `is_read` TINYINT(1) DEFAULT 0,
-  `expires_at` INT(11) NOT NULL COMMENT 'timestamp wygaśnięcia',
+  `expires_at` INT(11) NOT NULL COMMENT 'Expiration timestamp',
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`),
   KEY `expires_at` (`expires_at`)

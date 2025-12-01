@@ -1,25 +1,25 @@
 <?php
 require '../init.php';
-require_once __DIR__ . '/../lib/managers/BuildingManager.php'; // Zaktualizowana ścieżka
-require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php'; // Dołącz BuildingConfigManager
-require_once __DIR__ . '/../lib/managers/VillageManager.php'; // Zaktualizowana ścieżka
-require_once __DIR__ . '/../lib/managers/ResourceManager.php'; // Zaktualizowana ścieżka
+require_once __DIR__ . '/../lib/managers/BuildingManager.php'; // Updated path
+require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php'; // Include BuildingConfigManager
+require_once __DIR__ . '/../lib/managers/VillageManager.php'; // Updated path
+require_once __DIR__ . '/../lib/managers/ResourceManager.php'; // Updated path
 // Require other managers if they are initialized and used here directly (e.g., UnitManager, BattleManager, ResearchManager)
-require_once __DIR__ . '/../lib/managers/UnitManager.php'; // Zaktualizowana ścieżka
-require_once __DIR__ . '/../lib/managers/BattleManager.php'; // Zaktualizowana ścieżka
-require_once __DIR__ . '/../lib/managers/ResearchManager.php'; // Zaktualizowana ścieżka
+require_once __DIR__ . '/../lib/managers/UnitManager.php'; // Updated path
+require_once __DIR__ . '/../lib/managers/BattleManager.php'; // Updated path
+require_once __DIR__ . '/../lib/managers/ResearchManager.php'; // Updated path
 
-require_once __DIR__ . '/../lib/functions.php'; // Dołącz plik z funkcjami pomocniczymi
+require_once __DIR__ . '/../lib/functions.php'; // Helper functions
 
 
-// Stwórz instancje menedżerów
+// Instantiate managers
 $buildingConfigManager = new BuildingConfigManager($conn);
 $buildingManager = new BuildingManager($conn, $buildingConfigManager);
 $villageManager = new VillageManager($conn);
 $resourceManager = new ResourceManager($conn, $buildingManager);
-$unitManager = new UnitManager($conn); // Inicjalizacja UnitManager
-$battleManager = new BattleManager($conn, $villageManager, $buildingManager); // Inicjalizacja BattleManager
-$researchManager = new ResearchManager($conn); // Inicjalizacja ResearchManager
+$unitManager = new UnitManager($conn); // Initialize UnitManager
+$battleManager = new BattleManager($conn, $villageManager, $buildingManager); // Initialize BattleManager
+$researchManager = new ResearchManager($conn); // Initialize ResearchManager
 
 
 if (!isset($_SESSION['user_id'])) {
@@ -29,51 +29,42 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
-$message = ''; // Do wyświetlania komunikatów
+$message = ''; // For user-facing messages
 
-// --- POBIERANIE DANYCH WIOSKI ---
-// Użyj VillageManager do pobrania danych wioski
+// --- FETCH VILLAGE DATA ---
 $village = $villageManager->getFirstVillage($user_id);
 
 if (!$village) {
-    // To nie powinno się zdarzyć po wprowadzeniu create_village.php, ale zostawiamy jako zabezpieczenie
+    // Should not happen after create_village.php, but keep as a guard
     header("Location: /player/create_village.php");
     exit();
 }
 $village_id = $village['id'];
 
-// Pobierz poziom Ratusza - potrzebny dla BuildingManager
+// Main building level (used for time reductions)
 $main_building_level = $buildingManager->getBuildingLevel($village_id, 'main_building');
 
-// --- PRZETWARZANIE ZAKOŃCZONYCH ZADAŃ ---
-// Wywołaj VillageManager::processCompletedTasksForVillage, aby przetworzyć
-// zakończone budowy, rekrutacje, badania i zaktualizować surowce.
-// Ta metoda zwróci komunikaty do wyświetlenia.
-// Przetwarzanie ataków zostanie przeniesione do BattleManager i wywołane stamtąd.
+// --- PROCESS COMPLETED TASKS ---
 $messages = $villageManager->processCompletedTasksForVillage($village_id);
-$message = implode('', $messages); // Połącz komunikaty w jeden string
+$message = implode('', $messages);
 
-// Po przetworzeniu zadań i aktualizacji surowców przez VillageManager->updateResources,
-// dane wioski w pamięci mogą być nieaktualne. Należy je pobrać ponownie.
-$village = $villageManager->getVillageInfo($village_id); // Pobierz zaktualizowane dane wioski
+// Refresh village after updates
+$village = $villageManager->getVillageInfo($village_id);
 
-// --- PRZETWARZANIE ZAKOŃCZONYCH ATAKÓW ---
-// Ta logika została przeniesiona z game.php do BattleManager::processCompletedAttacks
-$attackMessages = $battleManager->processCompletedAttacks($user_id); // Zakładamy, że processCompletedAttacks przyjmuje user_id
-// Dodaj komunikaty o atakach do głównych komunikatów
+// --- PROCESS COMPLETED ATTACKS ---
+$attackMessages = $battleManager->processCompletedAttacks($user_id);
 if (!empty($attackMessages)) {
     $message .= implode('', $attackMessages);
 }
 
-// --- POBIERANIE DANYCH BUDYNKÓW DLA WIDOKU ---
-// Użyj BuildingManager do pobrania wszystkich danych budynków potrzebnych dla widoku
-$buildings_data = $buildingManager->getVillageBuildingsViewData($village_id, $main_building_level); // Użyj nowej metody
+// --- BUILDING DATA FOR VIEW ---
+$buildings_data = $buildingManager->getVillageBuildingsViewData($village_id, $main_building_level);
 
-// --- WIDOK WIOSKI (HTML) ---
-$pageTitle = htmlspecialchars($village['name']) . ' - Widok Wioski';
+// --- PAGE META ---
+$pageTitle = htmlspecialchars($village['name']) . ' - Village Overview';
 
 // Determine time of day and set background image path
-date_default_timezone_set('Europe/Warsaw'); // Ustaw strefę czasową na europejską/warszawską (lub odpowiednią dla serwera XAMPP)
+date_default_timezone_set('Europe/Warsaw'); // Set appropriate timezone
 $current_hour = (int)date('H'); // Get current hour (0-23)
 
 $day_start_hour = 8;
@@ -98,29 +89,29 @@ require '../header.php';
     <!-- Game header with resources -->
     <header id="main-header">
         <div class="header-title">
-            <span class="game-logo">🏠</span> <!-- Ikona dla przeglądu wioski -->
-            <span>Przegląd</span>
+            <span class="game-logo">&#127968;</span>
+            <span>Overview</span>
         </div>
         <div class="header-user">
-            Gracz: <?= htmlspecialchars($username) ?><br>
+            Player: <?= htmlspecialchars($username) ?><br>
             <span class="village-name-display" data-village-id="<?= $village_id ?>"><?= htmlspecialchars($village['name']) ?> (<?= $village['x_coord'] ?>|<?= $village['y_coord'] ?>)</span>
         </div>
         <!-- Resource Bar -->
         <div id="resource-bar">
             <div class="resource-item">
-                <img src="/img/ds_graphic/wood.png" alt="Drewno">
+                <img src="/img/ds_graphic/wood.png" alt="Wood">
                 <span id="current-wood"><?= formatNumber($village['wood']) ?></span> / <span id="warehouse-wood-capacity"><?= formatNumber($village['warehouse_capacity']) ?></span>
             </div>
             <div class="resource-item">
-                <img src="/img/ds_graphic/stone.png" alt="Glina">
+                <img src="/img/ds_graphic/stone.png" alt="Clay">
                 <span id="current-clay"><?= formatNumber($village['clay']) ?></span> / <span id="warehouse-clay-capacity"><?= formatNumber($village['warehouse_capacity']) ?></span>
             </div>
             <div class="resource-item">
-                <img src="/img/ds_graphic/iron.png" alt="Żelazo">
+                <img src="/img/ds_graphic/iron.png" alt="Iron">
                 <span id="current-iron"><?= formatNumber($village['iron']) ?></span> / <span id="warehouse-iron-capacity"><?= formatNumber($village['warehouse_capacity']) ?></span>
             </div>
             <div class="resource-item">
-                <img src="/img/ds_graphic/resources/population.png" alt="Populacja">
+                <img src="/img/ds_graphic/resources/population.png" alt="Population">
                 <span id="current-population"><?= $village['population'] ?></span> / <span id="farm-population-capacity"><?= $village['farm_capacity'] ?></span>
             </div>
         </div>
@@ -135,11 +126,11 @@ require '../header.php';
 
         <section class="main-game-content">
             <div id="village-view-graphic">
-                <!-- Tutaj będzie grafika wioski z placeholderami budynków -->
-                <img src="<?= $village_background_image ?>" alt="Widok wioski" style="width: 100%; height: auto; border-radius: var(--border-radius-medium);">
-                <!-- Przykładowe pozycje placeholderów budynków (powinny być w JS lub CSS) -->
+                <!-- Village graphic with positioned building placeholders -->
+                <img src="<?= $village_background_image ?>" alt="Village view" style="width: 100%; height: auto; border-radius: var(--border-radius-medium);">
+                <!-- Example building placeholder positions (ideally in JS/CSS) -->
                 <?php
-                // Mapowanie internal_name budynków na nazwy plików grafik
+                // Map internal_name to graphic base filenames
                 $building_graphic_map = [
                     'main_building' => 'main',
                     'barracks' => 'barracks',
@@ -148,39 +139,39 @@ require '../header.php';
                     'academy' => 'academy',
                     'market' => 'market',
                     'smithy' => 'smith',
-                    'wood_production' => 'wood', // Nazwa pliku grafiki dla tartaku
-                    'clay_pit' => 'stone', // Nazwa pliku grafiki dla cegielni (używa 'stone' grafik)
-                    'iron_mine' => 'iron', // Nazwa pliku grafiki dla huty
+                    'wood_production' => 'wood', // Sawmill graphic base
+                    'clay_pit' => 'stone', // Clay pit graphic base
+                    'iron_mine' => 'iron', // Iron mine graphic base
                     'farm' => 'farm',
-                    'warehouse' => 'storage', // Nazwa pliku grafiki dla magazynu (używa 'storage' grafik)
+                    'warehouse' => 'storage', // Warehouse graphic base
                     'wall' => 'wall',
                     'statue' => 'statue',
                     'church' => 'church',
-                    'first_church' => 'church_f', // Nazwa pliku grafiki dla pierwszego kościoła
+                    'first_church' => 'church_f', // First church graphic base
                     'watchtower' => 'watchtower',
-                    // Dodaj inne budynki, jeśli mają grafiki
+                    // Add other buildings if graphics exist
                 ];
 
-                // Przykładowe pozycje dla placeholderów budynków
+                // Example positions for building placeholders
                 $building_positions = [
-                    // Pozycje odwzorowane na podstawie oryginalnego zrzutu ekranu Plemion (dostosowane do stałego rozmiaru kontenera i większych grafik)
-                    'main_building' => ['left' => '45%', 'top' => '35%', 'width' => '18%', 'height' => '28%'], // Ratusz (większy, przesunięty centralnie, dostosowany do tła)
-                    'barracks' => ['left' => '25%', 'top' => '58%', 'width' => '12%', 'height' => '18%'], // Koszary
-                    'stable' => ['left' => '60%', 'top' => '52%', 'width' => '12%', 'height' => '18%'], // Stajnia
-                    'workshop' => ['left' => '34%', 'top' => '28%', 'width' => '12%', 'height' => '18%'], // Warsztat
-                    'academy' => ['left' => '69%', 'top' => '64%', 'width' => '12%', 'height' => '18%'], // Akademia
-                    'market' => ['left' => '24%', 'top' => '24%', 'width' => '12%', 'height' => '18%'], // Targ
-                    'smithy' => ['left' => '17%', 'top' => '34%', 'width' => '12%', 'height' => '18%'], // Kuźnia
-                    'wood_production' => ['left' => '7%', 'top' => '55%', 'width' => '12%', 'height' => '18%'], // Tartak
-                    'clay_pit' => ['left' => '12%', 'top' => '75%', 'width' => '12%', 'height' => '18%'], // Cegielnia
-                    'iron_mine' => ['left' => '77%', 'top' => '70%', 'width' => '12%', 'height' => '18%'], // Huta żelaza
-                    'farm' => ['left' => '32%', 'top' => '60%', 'width' => '12%', 'height' => '18%'], // Farma
-                    'warehouse' => ['left' => '46%', 'top' => '50%', 'width' => '12%', 'height' => '18%'], // Magazyn
-                    'wall' => ['left' => '38%', 'top' => '88%', 'width' => '30%', 'height' => '10%'], // Mur (nieco wyżej i szerszy)
-                    'statue' => ['left' => '72%', 'top' => '15%', 'width' => '10%', 'height' => '15%'], // Posąg
-                    'church' => ['left' => '82%', 'top' => '30%', 'width' => '12%', 'height' => '18%'], // Kościół
-                    'first_church' => ['left' => '82%', 'top' => '30%', 'width' => '12%', 'height' => '18%'], // Pierwszy Kościół
-                    'watchtower' => ['left' => '2%', 'top' => '42%', 'width' => '10%', 'height' => '15%'], // Wieża
+                    // Positions adapted from original Tribal Wars layout
+                    'main_building' => ['left' => '45%', 'top' => '35%', 'width' => '18%', 'height' => '28%'], // Town hall
+                    'barracks' => ['left' => '25%', 'top' => '58%', 'width' => '12%', 'height' => '18%'], // Barracks
+                    'stable' => ['left' => '60%', 'top' => '52%', 'width' => '12%', 'height' => '18%'], // Stable
+                    'workshop' => ['left' => '34%', 'top' => '28%', 'width' => '12%', 'height' => '18%'], // Workshop
+                    'academy' => ['left' => '69%', 'top' => '64%', 'width' => '12%', 'height' => '18%'], // Academy
+                    'market' => ['left' => '24%', 'top' => '24%', 'width' => '12%', 'height' => '18%'], // Market
+                    'smithy' => ['left' => '17%', 'top' => '34%', 'width' => '12%', 'height' => '18%'], // Smithy
+                    'wood_production' => ['left' => '7%', 'top' => '55%', 'width' => '12%', 'height' => '18%'], // Sawmill
+                    'clay_pit' => ['left' => '12%', 'top' => '75%', 'width' => '12%', 'height' => '18%'], // Clay pit
+                    'iron_mine' => ['left' => '77%', 'top' => '70%', 'width' => '12%', 'height' => '18%'], // Iron mine
+                    'farm' => ['left' => '32%', 'top' => '60%', 'width' => '12%', 'height' => '18%'], // Farm
+                    'warehouse' => ['left' => '46%', 'top' => '50%', 'width' => '12%', 'height' => '18%'], // Warehouse
+                    'wall' => ['left' => '38%', 'top' => '88%', 'width' => '30%', 'height' => '10%'], // Wall
+                    'statue' => ['left' => '72%', 'top' => '15%', 'width' => '10%', 'height' => '15%'], // Statue
+                    'church' => ['left' => '82%', 'top' => '30%', 'width' => '12%', 'height' => '18%'], // Church
+                    'first_church' => ['left' => '82%', 'top' => '30%', 'width' => '12%', 'height' => '18%'], // First church
+                    'watchtower' => ['left' => '2%', 'top' => '42%', 'width' => '10%', 'height' => '15%'], // Watchtower
                 ];
                 // Sort positions by internal name for consistent rendering
                 ksort($building_positions);
@@ -245,8 +236,8 @@ require '../header.php';
                             }
                         }
 
-                        // Pobierz bazową nazwę pliku grafiki z mapowania
-                        $graphic_base_name = $building_graphic_map[$internalName] ?? $internalName; // Użyj internal_name jako fallback
+                        // Resolve graphic base name from the map (fallback to internal_name)
+                        $graphic_base_name = $building_graphic_map[$internalName] ?? $internalName;
 
                         // Determine the base path based on time of day
                         $base_building_image_path = ($current_hour >= $day_start_hour && $current_hour < $night_start_hour) ? '/img/ds_graphic/visual/' : '/img/ds_graphic/visual_night/'; // Corrected path
@@ -257,13 +248,7 @@ require '../header.php';
                             $building_image_path = $base_building_image_path . htmlspecialchars($graphic_base_name) . $image_variant . $image_extension;
                         }
 
-                        // Obsługa specjalnych przypadków i grafik GIF w JS (tymczasowo tylko PNG)
-                        // TODO: W przyszłości dodaj logikę sprawdzania, czy budynek jest aktywny (produkcja, rekrutacja, badania)
-                        // i wybieraj .gif jeśli istnieje i jest aktywny.
-
-                        // Sprawdzenie istnienia grafiki .png (opcjonalne, ale pomaga uniknąć błędów 404 w HTML)
-                        // Wymagałoby to sprawdzenia systemu plików na serwerze, czego nie możemy zrobić bezpośrednio w PHP w tym miejscu.
-                        // Zostawiamy ścieżkę, zakładając, że grafika PNG/GIF istnieje dla danego wariantu/poziomu.
+                        // JS should handle any special cases/animations; assume assets exist.
 
 
                         $is_upgrading_class = $isUpgrading ? 'building-upgrading' : '';
@@ -271,51 +256,46 @@ require '../header.php';
                         <div class="building-placeholder <?= $is_upgrading_class ?>" 
                              style="left: <?= $pos['left'] ?>; top: <?= $pos['top'] ?>; width: <?= $pos['width'] ?>; height: <?= $pos['height'] ?>;"
                              data-building-internal-name="<?= htmlspecialchars($building['internal_name']) ?>"
-                             data-village-id="<?= $village_id ?>">
+                             data-village-id="<?= $village_id ?>"
+                             title="<?= htmlspecialchars($building['name']) ?> (Level <?= (int)$building['level'] ?>)">
                             <?php if ($building_image_path): ?>
-                                <img src="<?= $building_image_path ?>" alt="<?= htmlspecialchars($building['name_pl']) ?>" class="building-icon building-graphic" data-building-internal-name="<?= htmlspecialchars($building['internal_name']) ?>" data-building-level="<?= $building['level'] ?>">
+                                <img src="<?= $building_image_path ?>" alt="<?= htmlspecialchars($building['name']) ?>" class="building-icon building-graphic" data-building-internal-name="<?= htmlspecialchars($building['internal_name']) ?>" data-building-level="<?= $building['level'] ?>">
                             <?php else: ?>
                                 <!-- No image for this building at this level -->
                                 <div class="building-icon building-graphic no-image" data-building-internal-name="<?= htmlspecialchars($building['internal_name']) ?>" data-building-level="<?= $building['level'] ?>"></div>
                             <?php endif; ?>
-                            <span class="placeholder-text"><?= htmlspecialchars($building['name_pl']) ?> (<?= $building['level'] ?>)</span>
+                            <span class="placeholder-text"><?= htmlspecialchars($building['name']) ?> (<?= $building['level'] ?>)</span>
                         </div>
                         <?php
                     }
                 }
 
-                 // Dodaj placeholder dla flagi Ratusza, jeśli Ratusz istnieje
+                 // Add a placeholder for the town hall flag if the hall exists
                  if (isset($buildings_data['main_building']) && $buildings_data['main_building']['level'] > 0) {
                      $main_building_level = $buildings_data['main_building']['level'];
-                     // Określ wariant flagi na podstawie poziomu Ratusza
+                     // Determine flag variant based on hall level
                      $flag_variant = 1;
                      if ($main_building_level >= 15) {
                          $flag_variant = 3;
                      } elseif ($main_building_level >= 10) {
                          $flag_variant = 2;
                      }
-                     // Ścieżka do grafiki flagi (domyślnie GIF)
-                     $flag_image_path = '/img/ds_graphic/visual/' . 'mainflag' . $flag_variant . '.gif'; // Corrected path
+                     $flag_image_path = '/img/ds_graphic/visual/' . 'mainflag' . $flag_variant . '.gif';
 
-                     // Tymczasowo używamy GIFa flagi zawsze, docelowo powinna być animowana tylko gdy ratusz pracuje (buduje coś)
-
-                     // Pozycja dla flagi Ratusza (może wymagać dostosowania)
-                     $flag_position = ['left' => '48%', 'top' => '25%', 'width' => '4%', 'height' => '5%']; // Przykładowa pozycja
-                      // Sprawdź, czy Ratusz jest w trakcie rozbudowy, aby ew. użyć GIF flagi
+                     // Position for the town hall flag (may need tuning)
+                     $flag_position = ['left' => '48%', 'top' => '25%', 'width' => '4%', 'height' => '5%']; // Example position
+                      // Check if the hall is upgrading to decide on GIF
                      $main_building_is_upgrading = $buildings_data['main_building']['is_upgrading'] ?? false;
 
-                     // Domyślnie PNG flagi, GIF tylko gdy Ratusz buduje
-                     $flag_image_name = 'mainflag' . $flag_variant; // Nazwa pliku bez rozszerzenia
-                     $flag_image_path = '/img/ds_graphic/visual/' . $flag_image_name . ($main_building_is_upgrading ? '.gif' : '.gif'); // Corrected path
-
-                      // Sprawdź, czy plik PNG/GIF flagi istnieje? Wymagałoby dostępu do systemu plików
-                      // Na razie zakładamy, że istnieją.
+                     // Use GIF when hall is upgrading, PNG otherwise
+                     $flag_image_name = 'mainflag' . $flag_variant;
+                     $flag_image_path = '/img/ds_graphic/visual/' . $flag_image_name . ($main_building_is_upgrading ? '.gif' : '.png');
 
                      ?>
                      <div class="building-placeholder main-flag" 
                           style="left: <?= $flag_position['left'] ?>; top: <?= $flag_position['top'] ?>; width: <?= $flag_position['width'] ?>; height: <?= $flag_position['height'] ?>;"
                           data-building-internal-name="main_building_flag" data-village-id="<?= $village_id ?>">
-                         <img src="<?= $flag_image_path ?>" alt="Flaga Ratusza" class="building-icon building-graphic" data-building-internal-name="main_building_flag" data-building-level="<?= $main_building_level ?>">
+                         <img src="<?= $flag_image_path ?>" alt="Town hall flag" class="building-icon building-graphic" data-building-internal-name="main_building_flag" data-building-level="<?= $main_building_level ?>">
                      </div>
                      <?php
                  }
@@ -356,46 +336,46 @@ require '../header.php';
                     $production_info = '';
                     if ($production_type) {
                          $hourly_production = $buildingManager->getHourlyProduction($building['internal_name'], $current_level);
-                         $production_info = "<p>Produkcja: " . formatNumber($hourly_production) . "/godz.</p>";
+                         $production_info = "<p>Production: " . formatNumber($hourly_production) . "/h</p>";
                     }
                     $population_info = '';
                     if ($population_cost !== null) {
-                         $population_info = "<p>Populacja: " . formatNumber($population_cost) . "</p>";
+                         $population_info = "<p>Population: " . formatNumber($population_cost) . "</p>";
                     }
                     $upgrade_time_formatted = ($upgrade_time_seconds !== null) ? formatDuration($upgrade_time_seconds) : '';
                     ?>
                     <div class="building-item" data-internal-name="<?= htmlspecialchars($building['internal_name']) ?>">
-                        <h3><?= htmlspecialchars($building['name_pl']) ?> (Poziom <?= $building['level'] ?>)</h3>
-                        <p><?= htmlspecialchars($building['description_pl']) ?></p>
+                        <h3><?= htmlspecialchars($building['name']) ?> (Level <?= $building['level'] ?>)</h3>
+                        <p><?= htmlspecialchars($building['description']) ?></p>
                         <?= $production_info ?>
                         <?= $population_info ?>
 
                         <?php if ($is_upgrading): ?>
-                            <p class="upgrade-status">W trakcie rozbudowy do poziomu <?= $queue_level_after ?>.</p>
+                            <p class="upgrade-status">Upgrading to level <?= $queue_level_after ?>.</p>
                             <p class="upgrade-timer" data-finish-time="<?= $queue_finish_time ?>"><?= getRemainingTimeText($queue_finish_time) ?></p>
                             <div class="progress-bar-container" data-finish-time="<?= $queue_finish_time ?>"><div class="progress-bar"></div><span class="progress-text"></span></div>
-                            <button class="btn btn-secondary cancel-upgrade-button" data-building-internal-name="<?= htmlspecialchars($building['internal_name']) ?>">Anuluj</button>
+                            <button class="btn btn-secondary cancel-upgrade-button" data-building-internal-name="<?= htmlspecialchars($building['internal_name']) ?>">Cancel</button>
                         <?php elseif ($current_level >= $max_level): ?>
-                             <p class="upgrade-status">Osiągnięto maksymalny poziom (<?= $max_level ?>).</p>
-                             <button class="btn btn-secondary" disabled>Maksymalny poziom</button>
+                            <p class="upgrade-status">Maximum level reached (<?= $max_level ?>).</p>
+                             <button class="btn btn-secondary" disabled>Max level</button>
                         <?php else: ?>
-                            <p class="upgrade-status">Rozbudowa do poziomu <?= $next_level ?>:</p>
+                            <p class="upgrade-status">Upgrade to level <?= $next_level ?>:</p>
                             <?php if ($upgrade_costs): ?>
-                                 <p>Koszt:
-                                    <span class="resource wood <?= ($village['wood'] < $upgrade_costs['wood']) ? 'not-enough' : '' ?>"><img src="/img/ds_graphic/wood.png" alt="Drewno"><?= formatNumber($upgrade_costs['wood']) ?></span>
-                                    <span class="resource clay <?= ($village['clay'] < $upgrade_costs['clay']) ? 'not-enough' : '' ?>"><img src="/img/ds_graphic/stone.png" alt="Glina"><?= formatNumber($upgrade_costs['clay']) ?></span>
-                                    <span class="resource iron <?= ($village['iron'] < $upgrade_costs['iron']) ? 'not-enough' : '' ?>"><img src="/img/ds_graphic/iron.png" alt="Żelazo"><?= formatNumber($upgrade_costs['iron']) ?></span>
+                                 <p>Cost:
+                                    <span class="resource wood <?= ($village['wood'] < $upgrade_costs['wood']) ? 'not-enough' : '' ?>"><img src="/img/ds_graphic/wood.png" alt="Wood"><?= formatNumber($upgrade_costs['wood']) ?></span>
+                                    <span class="resource clay <?= ($village['clay'] < $upgrade_costs['clay']) ? 'not-enough' : '' ?>"><img src="/img/ds_graphic/stone.png" alt="Clay"><?= formatNumber($upgrade_costs['clay']) ?></span>
+                                   <span class="resource iron <?= ($village['iron'] < $upgrade_costs['iron']) ? 'not-enough' : '' ?>"><img src="/img/ds_graphic/iron.png" alt="Iron"><?= formatNumber($upgrade_costs['iron']) ?></span>
                                  </p>
                                  <?php if ($next_level_population_cost > 0): ?>
-                                     <p>Wymagana wolna populacja: <span class="resource population <?= (($village['farm_capacity'] - $village['population']) < $next_level_population_cost) ? 'not-enough' : '' ?>"><img src="/img/ds_graphic/resources/population.png" alt="Populacja"><?= formatNumber($next_level_population_cost) ?></span></p>
+                                     <p>Required free population: <span class="resource population <?= (($village['farm_capacity'] - $village['population']) < $next_level_population_cost) ? 'not-enough' : '' ?>"><img src="/img/ds_graphic/resources/population.png" alt="Population"><?= formatNumber($next_level_population_cost) ?></span></p>
                                  <?php endif; ?>
-                                 <p>Czas budowy: <span class="upgrade-time-formatted"><?= $upgrade_time_formatted ?></span></p>
+                                 <p>Build time: <span class="upgrade-time-formatted"><?= $upgrade_time_formatted ?></span></p>
 
                                  <?php if ($can_upgrade): ?>
-                                     <button class="btn btn-primary upgrade-building-button" data-building-internal-name="<?= htmlspecialchars($building['internal_name']) ?>" data-village-id="<?= $village_id ?>">Rozbuduj do poziomu <?= $next_level ?></button>
+                                     <button class="btn btn-primary upgrade-building-button" data-building-internal-name="<?= htmlspecialchars($building['internal_name']) ?>" data-village-id="<?= $village_id ?>">Upgrade to level <?= $next_level ?></button>
                                  <?php else: ?>
                                      <p class="error-message"><?= htmlspecialchars($upgrade_not_available_reason) ?></p>
-                                     <button class="btn btn-primary" disabled>Rozbuduj do poziomu <?= $next_level ?></button>
+                                     <button class="btn btn-primary" disabled>Upgrade to level <?= $next_level ?></button>
                                  <?php endif; ?>
                             <?php endif; ?>
                         <?php endif; ?>
@@ -410,14 +390,14 @@ require '../header.php';
                     </div>
                     <?php
                 }
-                ?>
+               ?>
 
-                <h2>Budynki Surowcowe</h2>
+                <h2>Resource Buildings</h2>
                 <div class="buildings-list">
                     <?php foreach ($resource_buildings_data as $building) render_building_item($building, $village, $buildingManager, $village_id); ?>
                 </div>
 
-                <h2 style="margin-top: 30px;">Budynki Miejskie i Wojskowe</h2>
+                <h2 style="margin-top: 30px;">Town and Military Buildings</h2>
                 <div class="buildings-list">
                     <?php foreach ($other_buildings_data as $building) render_building_item($building, $village, $buildingManager, $village_id); ?>
                 </div>
@@ -458,7 +438,7 @@ require '../header.php';
 
 <script>
 // Helper functions (should be in a common.js file)
-// Usunięte zduplikowane funkcje PHP i JS - są w lib/functions.php i js/resources.js/inne pliki JS
+// Duplicate PHP/JS functions removed; see lib/functions.php and js/resources.js/etc.
 // function formatDuration(seconds) { ... }
 // function formatNumber(number) { ... }
 

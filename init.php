@@ -1,29 +1,29 @@
 <?php
-// Rozpocznij sesję tylko jeśli nie jest już aktywna
+// Start the session only if it is not already active
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-// Załaduj konfigurację
+// Load configuration
 require_once 'config/config.php';
 
-// Załaduj Autoloader
+// Load the autoloader
 require_once 'lib/Autoloader.php';
 
-// Załaduj podstawowe funkcje (zawiera getCSRFToken i validateCSRF)
+// Load common helpers (contains getCSRFToken and validateCSRF)
 require_once 'lib/functions.php';
 
-// Inicjalizuj obsługę błędów
+// Initialize error handling
 require_once 'lib/utils/ErrorHandler.php';
 ErrorHandler::initialize();
 
-// Usunięto globalną sanityzację GET i POST. 
-// Walidacja i sanityzacja danych wejściowych powinna odbywać się w miejscu ich użycia.
+// Global sanitization of GET/POST was removed.
+// Validation and sanitization should happen at the point of use.
 // $_GET = sanitizeInput($_GET);
 // $_POST = sanitizeInput($_POST);
 
-// Initialize CSRF token (generowane w getCSRFToken z functions.php)
-// getCSRFToken(); // Wywoływane w header.php, aby token był dostępny w META tagu
+// Initialize CSRF token (generated in getCSRFToken from functions.php)
+// getCSRFToken(); // Called in header.php so the token is available in a META tag
 
 // Explicitly include Database class
 require_once 'lib/Database.php';
@@ -38,21 +38,21 @@ if (!isset($_SESSION['world_id'])) {
 }
 define('CURRENT_WORLD_ID', (int)$_SESSION['world_id']);
 
-// Inicjalizacja folderu logs, jeśli nie istnieje
+// Initialize the logs folder if it does not exist
 if (!file_exists('logs')) {
     mkdir('logs', 0777, true);
 }
 
-// Sprawdzenie, czy użytkownik jest zalogowany i pobranie jego danych
+// Check if the user is logged in and fetch their data
 $user = null;
 if (isset($_SESSION['user_id'])) {
     $user_id = $_SESSION['user_id'];
-    // Upewnij się, że Autoloader działa i klasa UserManager jest dostępna
+    // Ensure the autoloader works and UserManager is available
     // require_once 'lib/managers/UserManager.php'; 
     // $userManager = new UserManager($conn);
     // $user = $userManager->getUserById($user_id);
 
-    // Tymczasowo używamy bezpośredniego zapytania z prepared statement
+    // Temporarily use a direct prepared statement query
     $stmt = $conn->prepare("SELECT id, username, is_admin, is_banned FROM users WHERE id = ? LIMIT 1");
      if ($stmt) {
         $stmt->bind_param("i", $user_id);
@@ -62,11 +62,11 @@ if (isset($_SESSION['user_id'])) {
         $stmt->close();
      } else {
          error_log("Database prepare failed in init.php for fetching user: " . $conn->error);
-         // Obsługa błędu: wylogowanie lub błąd krytyczny w zależności od polityki bezpieczeństwa
-         $user = null; // Ustaw użytkownika na null w przypadku błędu prepare
+         // Error handling: log out or critical failure depending on security policy
+         $user = null; // Set user to null on prepare failure
      }
 
-    // Jeśli użytkownik z sesji nie istnieje lub jest zbanowany, wyloguj go
+    // If the session user does not exist or is banned, log them out
     if (!$user || $user['is_banned']) {
         session_unset();
         session_destroy();
@@ -74,31 +74,31 @@ if (isset($_SESSION['user_id'])) {
         exit();
     }
 
-    // Zaktualizuj sesję na wypadek zmian w bazie
+    // Refresh session data in case it changed in the database
     $_SESSION['username'] = $user['username'];
     $_SESSION['is_admin'] = $user['is_admin'];
 
-    // Sprawdź i przetwarzaj ukończone zadania dla aktywnej wioski użytkownika
+    // Check and process completed tasks for the user's active village
     if (isset($_SESSION['village_id'])) {
-        // Upewnij się, że VillageManager jest załadowany (Autoloader powinien to zrobić)
+        // Ensure VillageManager is loaded (Autoloader should handle it)
         // require_once 'lib/VillageManager.php';
         // $villageManager = new VillageManager($conn);
         // $villageManager->processCompletedTasksForVillage($_SESSION['village_id']);
-        // Zostawiamy to do momentu implementacji ResourceManager i pełnego przetwarzania w game.php
+        // Left for when ResourceManager and full processing in game.php are implemented
     }
 
 } else {
-    // Jeśli użytkownik nie jest zalogowany, przekieruj na stronę logowania, chyba że to strona publiczna
-    $public_pages = ['index.php', 'auth/login.php', 'auth/register.php', 'install.php', 'admin/admin_login.php', 'admin/db_verify.php', 'favicon.ico', 'css/', 'js/', 'img/', 'ajax/']; // Dodaj inne publiczne ścieżki (katalogi i ajax)
+    // If the user is not logged in, redirect to login unless this is a public page
+    $public_pages = ['index.php', 'auth/login.php', 'auth/register.php', 'install.php', 'admin/', 'admin/admin_login.php', 'admin/db_verify.php', 'favicon.ico', 'css/', 'js/', 'img/', 'ajax/']; // Add other public paths (folders and ajax)
     $current_path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     $current_path = trim($current_path, '/');
     
     $is_public = false;
     
-    // Sprawdź, czy ścieżka pasuje do publicznych plików/katalogów
+    // Check whether the path matches public files/directories
     foreach ($public_pages as $public_item) {
         $public_item_trimmed = trim($public_item, '/');
-        // Jeśli ścieżka URL jest dokładnie publicznym plikiem LUB zaczyna się od publicznego katalogu/
+        // If the URL path is exactly the public file OR starts with the public directory/
         if ($current_path === $public_item_trimmed || (strpos($current_path, $public_item_trimmed . '/') === 0 && $public_item_trimmed !== '')) {
             $is_public = true;
             break;
@@ -107,27 +107,27 @@ if (isset($_SESSION['user_id'])) {
     
 
     if (!$is_public) {
-        // Jeśli nie jest to publiczna strona i nie jest to żądanie AJAX (które może być kierowane do publicznego skryptu w ajax/)
-        // to przekieruj na index.php (stronę logowania/główną)
+        // If this is not a public page and not an AJAX request (which might target a public ajax script),
+        // redirect to index.php (login/home page)
         if (!(isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
              header("Location: index.php");
              exit();
         }
-         // Jeśli to żądanie AJAX do niepublicznego zasobu, ale użytkownik nie jest zalogowany, również zakończ
-         // (CSRF check powinien to też wychwycić, ale dodatkowe zabezpieczenie)
-         // Można zwrócić błąd JSON lub status 401/403
+         // If this is an AJAX request for a non-public resource and the user is not logged in, end it as well
+         // (CSRF check should also catch this, but this is additional protection)
+         // You can return JSON or 401/403 status
          header('HTTP/1.1 401 Unauthorized');
          header('Content-Type: application/json');
-         echo json_encode(['error' => 'Wymagane logowanie.']);
+         echo json_encode(['error' => 'Login required.']);
          exit();
     }
 }
 
-// Ustawienie aktywnej wioski (jeśli nie ustawiono i użytkownik jest zalogowany)
-// Przeniesiono do game.php lub podobnych, gdzie faktycznie potrzebujemy village_id
+// Setting an active village (if not set and user is logged in)
+// Moved to game.php or similar where we actually need village_id
 /*
 if (isset($user) && !isset($_SESSION['village_id'])) {
-    // Upewnij się, że VillageManager jest załadowany (Autoloader powinien to zrobić)
+    // Ensure VillageManager is loaded (Autoloader should handle it)
     $villageManager = new VillageManager($conn);
     $firstVillageId = $villageManager->getFirstVillage($user['id']);
     if ($firstVillageId) {
@@ -137,15 +137,15 @@ if (isset($user) && !isset($_SESSION['village_id'])) {
 */
 
 // CSRF protection for POST requests
-// Generowanie tokenu per sesja (jeśli jeszcze nie istnieje) - Robione w getCSRFToken w functions.php, wywoływane w header.php
+// Generate token per session (if not created yet) - done in getCSRFToken in functions.php, called in header.php
 // if (empty($_SESSION['csrf_token'])) {
 //     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 // }
 
-// Walidacja CSRF dla żądań POST - Robione przez validateCSRF() z functions.php
-// validateCSRF(); // Ta funkcja jest teraz w functions.php
+// CSRF validation for POST requests - handled by validateCSRF() from functions.php
+// validateCSRF(); // This function is now in functions.php
 
-// Usunięto funkcje obliczeniowe - powinny być w dedykowanych klasach (BuildingManager, ResourceManager)
+// Removed calculation helpers - they should live in dedicated classes (BuildingManager, ResourceManager)
 // function calculateHourlyProduction(...) { ... }
 // function calculateWarehouseCapacity(...) { ... }
 

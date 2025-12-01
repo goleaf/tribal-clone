@@ -1,32 +1,32 @@
 <?php
 /**
- * AJAX - Pobieranie aktualnego statusu budynków
- * Zwraca aktualny stan kolejki budowy i inne informacje o budynkach w formacie JSON
+ * AJAX - Fetch current building status.
+ * Returns the current build queue state and related building details as JSON.
  */
 require_once '../../init.php';
 require_once '../../lib/utils/AjaxResponse.php';
 
-// Sprawdź, czy użytkownik jest zalogowany
+// Ensure the user is logged in
 if (!isset($_SESSION['user_id'])) {
-    AjaxResponse::error('Użytkownik nie jest zalogowany', null, 401);
+    AjaxResponse::error('User is not logged in', null, 401);
 }
 
 try {
-    // Pobierz ID wioski
+    // Get village ID
     $village_id = isset($_GET['village_id']) ? (int)$_GET['village_id'] : null;
     
-    // Jeśli nie podano ID wioski, pobierz pierwszą wioskę użytkownika
+    // If no village ID is provided, fetch the user's first village
     if (!$village_id) {
-        require_once '../../lib/VillageManager.php';
+        require_once '../../lib/managers/VillageManager.php';
         $villageManager = new VillageManager($conn);
         $village_id = $villageManager->getFirstVillage($_SESSION['user_id']);
         
         if (!$village_id) {
-            AjaxResponse::error('Nie znaleziono wioski', null, 404);
+            AjaxResponse::error('Village not found', null, 404);
         }
     }
     
-    // Sprawdź, czy wioska należy do zalogowanego użytkownika
+    // Confirm the village belongs to the logged-in user
     $stmt = $conn->prepare("SELECT user_id FROM villages WHERE id = ?");
     $stmt->bind_param("i", $village_id);
     $stmt->execute();
@@ -35,14 +35,14 @@ try {
     $stmt->close();
     
     if (!$village_owner || $village_owner['user_id'] != $_SESSION['user_id']) {
-        AjaxResponse::error('Brak uprawnień do tej wioski', null, 403);
+        AjaxResponse::error('No permission for this village', null, 403);
     }
     
-    // Pobierz dane o kolejce budowy
+    // Fetch build queue data
     $building_queue = [];
     $completed_count = 0;
     
-    // Sprawdź, czy są zakończone budowy
+    // Check for completed buildings
     $current_time = date('Y-m-d H:i:s');
     $stmt_completed = $conn->prepare("
         SELECT COUNT(*) as count 
@@ -56,10 +56,10 @@ try {
     $completed_count = $completed_row['count'];
     $stmt_completed->close();
     
-    // Pobierz aktywne elementy w kolejce
+    // Fetch active queue items
     $stmt_queue = $conn->prepare("
         SELECT bq.id, bq.building_type_id, bq.level_after, bq.starts_at, bq.ends_at, 
-               bt.name_pl as building_name, bt.internal_name
+               bt.name as building_name, bt.internal_name
         FROM building_queue bq
         JOIN building_types bt ON bq.building_type_id = bt.id
         WHERE bq.village_id = ? AND bq.ends_at > ?
@@ -70,7 +70,7 @@ try {
     $result_queue = $stmt_queue->get_result();
     
     while ($row = $result_queue->fetch_assoc()) {
-        // Oblicz pozostały czas i procent postępu
+        // Calculate remaining time and progress percentage
         $end_time = strtotime($row['ends_at']);
         $start_time = strtotime($row['starts_at']);
         $current_time_stamp = time();
@@ -95,7 +95,7 @@ try {
     }
     $stmt_queue->close();
     
-    // Zwróć dane w formacie JSON
+    // Return data as JSON
     AjaxResponse::success([
         'building_queue' => $building_queue,
         'completed_count' => $completed_count,
@@ -103,6 +103,6 @@ try {
     ]);
     
 } catch (Exception $e) {
-    // Obsłuż wyjątek i zwróć błąd
+    // Handle exception and return error
     AjaxResponse::handleException($e);
-} 
+}

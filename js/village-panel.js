@@ -1,7 +1,7 @@
-// Dynamiczne odświeżanie panelu surowców i budynków w wiosce
+// Dynamic refresh for village resources and building panel
 function showLoader(targetId) {
     const el = document.getElementById(targetId);
-    if (el) el.innerHTML = '<div class="loader">Ładowanie...</div>';
+    if (el) el.innerHTML = '<div class="loader">Loading...</div>';
 }
 function showNotification(message, type = 'info') {
     let notif = document.getElementById('village-notification');
@@ -27,21 +27,21 @@ function fetchVillageResources() {
             document.getElementById('warehouse-capacity').textContent = data.warehouse_capacity;
             document.getElementById('population-count').textContent = data.population;
         })
-        .catch(() => showNotification('Błąd ładowania surowców', 'error'));
+        .catch(() => showNotification('Error loading resources', 'error'));
 }
 function fetchVillageBuildings() {
-    //showLoader('village-buildings-panel'); // Zakomentowano loader
-    // fetch('get_building_details.php') // Zakomentowano fetch
+    //showLoader('village-buildings-panel'); // Loader commented out
+    // fetch('get_building_details.php') // Fetch commented out
     //     .then(r => r.text())
     //     .then(html => {
-    //         document.getElementById('village-buildings-panel').innerHTML = html; // Zakomentowano wstawianie HTML
+    //         document.getElementById('village-buildings-panel').innerHTML = html; // Insert commented out
     //     })
-    //     .catch(() => showNotification('Błąd ładowania budynków', 'error')); // Zakomentowano catch
+    //     .catch(() => showNotification('Error loading buildings', 'error')); // Catch commented out
     
-    // Opcjonalnie: wyczyść panel budynków, jeśli ma pozostać pusty
+    // Optionally clear building panel if it should stay empty
     const buildingPanel = document.getElementById('village-buildings-panel');
     if(buildingPanel) {
-        buildingPanel.innerHTML = ''; // Ustawia panel na pusty
+        buildingPanel.innerHTML = ''; // Clear panel
     }
 }
 function fetchVillageQueue() {
@@ -51,7 +51,7 @@ function fetchVillageQueue() {
         .then(html => {
             document.getElementById('village-queue-panel').innerHTML = html;
         })
-        .catch(() => showNotification('Błąd ładowania kolejki budowy', 'error'));
+        .catch(() => showNotification('Error loading build queue', 'error'));
 }
 function fetchCurrentUnits() {
     showLoader('current-units-panel');
@@ -60,7 +60,7 @@ function fetchCurrentUnits() {
         .then(html => {
             document.getElementById('current-units-panel').innerHTML = html;
         })
-        .catch(() => showNotification('Błąd ładowania jednostek', 'error'));
+        .catch(() => showNotification('Error loading units', 'error'));
 }
 function fetchRecruitmentPanel() {
     showLoader('recruitment-panel');
@@ -69,7 +69,7 @@ function fetchRecruitmentPanel() {
         .then(html => {
             document.getElementById('recruitment-panel').innerHTML = html;
         })
-        .catch(() => showNotification('Błąd ładowania panelu rekrutacji', 'error'));
+        .catch(() => showNotification('Error loading recruitment panel', 'error'));
 }
 function fetchRecruitmentQueue() {
     showLoader('recruitment-queue-panel');
@@ -78,7 +78,7 @@ function fetchRecruitmentQueue() {
         .then(html => {
             document.getElementById('recruitment-queue-panel').innerHTML = html;
         })
-        .catch(() => showNotification('Błąd ładowania kolejki rekrutacji', 'error'));
+        .catch(() => showNotification('Error loading recruitment queue', 'error'));
 }
 function fetchCurrentResearch() {
     showLoader('current-research-panel');
@@ -87,7 +87,7 @@ function fetchCurrentResearch() {
         .then(html => {
             document.getElementById('current-research-panel').innerHTML = html;
         })
-        .catch(() => showNotification('Błąd ładowania badań', 'error'));
+        .catch(() => showNotification('Error loading research', 'error'));
 }
 function fetchResearchQueue() {
     showLoader('research-queue-panel');
@@ -96,11 +96,11 @@ function fetchResearchQueue() {
         .then(html => {
             document.getElementById('research-queue-panel').innerHTML = html;
         })
-        .catch(() => showNotification('Błąd ładowania kolejki badań', 'error'));
+        .catch(() => showNotification('Error loading research queue', 'error'));
 }
 function refreshVillagePanel() {
     fetchVillageResources();
-    // fetchVillageBuildings(); // Zakomentowano to wywołanie, aby usunąć pionową listę budynków
+    // fetchVillageBuildings(); // Call removed to hide vertical building list
     fetchVillageQueue();
     fetchCurrentUnits();
     fetchRecruitmentPanel();
@@ -111,5 +111,5 @@ function refreshVillagePanel() {
 setInterval(refreshVillagePanel, 5000);
 document.addEventListener('DOMContentLoaded', refreshVillagePanel);
 
-// Udostępnij refreshVillagePanel globalnie
+// Expose refreshVillagePanel globally
 window.refreshVillagePanel = refreshVillagePanel; 

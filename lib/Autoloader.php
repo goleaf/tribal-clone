@@ -1,12 +1,12 @@
 <?php
 
 /**
- * Klasa Autoloader - automatyczne ładowanie klas
+ * Autoloader class - loads classes automatically
  */
 class Autoloader 
 {
     /**
-     * Rejestruje autoloader
+     * Registers the autoloader
      */
     public static function register() 
     {
@@ -14,20 +14,20 @@ class Autoloader
     }
     
     /**
-     * Ładuje klasę na podstawie jej nazwy
+     * Loads a class by its name
      *
-     * @param string $className Nazwa klasy do załadowania
+     * @param string $className Class name to load
      * @return void
      */
     public static function loadClass($className) 
     {
-        // Sprawdź czy nazwa klasy zawiera przestrzeń nazw (namespace)
+        // Check whether the class name contains a namespace
         if (strpos($className, '\\') !== false) {
-            // Zamień backslash na directory separator
+            // Replace backslash with directory separator
             $className = str_replace('\\', DIRECTORY_SEPARATOR, $className);
         }
         
-        // Podstawowe ścieżki, gdzie mogą znajdować się klasy
+        // Base paths where classes may live
         $paths = [
             'lib/',
             'lib/managers/',
@@ -35,11 +35,11 @@ class Autoloader
             'lib/utils/',
         ];
         
-        // Sprawdź każdą ścieżkę
+        // Check each path
         foreach ($paths as $path) {
             $file = $path . $className . '.php';
             
-            // Jeśli plik istnieje, załaduj go
+            // Load the file if it exists
             if (file_exists($file)) {
                 require_once $file;
                 return;
@@ -48,5 +48,5 @@ class Autoloader
     }
 }
 
-// Zarejestruj autoloader
+// Register the autoloader
 Autoloader::register(); 

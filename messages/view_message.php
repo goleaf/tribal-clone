@@ -6,15 +6,15 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../lib/managers/MessageManager.php';
 require_once __DIR__ . '/../lib/managers/VillageManager.php';
 
-// Zabezpieczenie dostępu - tylko dla zalogowanych
+// Access control - only for logged-in users
 if (!isset($_SESSION['user_id'])) {
-    // Przekieruj lub zwróć błąd w zależności od żądania
+    // Redirect or return an error depending on the request type
     if (empty($_SERVER['HTTP_X_REQUESTED_WITH']) || strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) !== 'xmlhttprequest') {
         header("Location: ../auth/login.php");
         exit();
     } else {
         header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'Użytkownik niezalogowany.', 'redirect' => 'auth/login.php']);
+        echo json_encode(['success' => false, 'message' => 'User not logged in.', 'redirect' => 'auth/login.php']);
         exit();
     }
 }
@@ -22,59 +22,59 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 
-// Inicjalizacja menedżera wiosek i pobranie zasobów (potrzebne dla header.php)
+// Initialize VillageManager and fetch resources (needed for header.php)
 $villageManager = new VillageManager($conn);
 $village_id = $villageManager->getFirstVillage($user_id);
 $village = $villageManager->getVillageInfo($village_id);
 
-// Inicjalizacja menedżera wiadomości
+// Initialize the message manager
 $messageManager = new MessageManager($conn);
 
-// Sprawdź, czy podano ID wiadomości
+// Ensure a message ID was provided
 if (!isset($_GET['id'])) {
     if (empty($_SERVER['HTTP_X_REQUESTED_WITH']) || strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) !== 'xmlhttprequest') {
         header("Location: messages.php");
         exit();
     } else {
         header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'Brak identyfikatora wiadomości.']);
+        echo json_encode(['success' => false, 'message' => 'Message ID is missing.']);
         exit();
     }
 }
 $msg_id = (int)$_GET['id'];
 
-// Pobierz aktywną zakładkę, jeśli została przekazana (dla celów powrotu)
+// Fetch the active tab if provided (used for back links)
 $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'inbox';
 $validTabs = ['inbox', 'sent', 'archive'];
 if (!in_array($activeTab, $validTabs)) {
     $activeTab = 'inbox';
 }
 
-// --- Obsługa żądania AJAX o dane wiadomości ---
+// --- Handle AJAX requests for message data ---
 $is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
 if ($is_ajax && $_SERVER['REQUEST_METHOD'] === 'GET') {
-    // Pobierz wiadomość za pomocą MessageManager (ta metoda już oznacza jako przeczytane jeśli trzeba)
+    // Retrieve the message via MessageManager (marks as read if needed)
     $msg = $messageManager->getMessageByIdForUser($msg_id, $user_id);
 
     if ($msg === null) {
         header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'Wiadomość nie znaleziona lub brak dostępu.']);
+        echo json_encode(['success' => false, 'message' => 'Message not found or access denied.']);
         exit();
     } else {
-        // Zwróć dane wiadomości w JSON
+        // Return message data as JSON
         header('Content-Type: application/json');
         echo json_encode([
             'success' => true,
-            'messageData' => $msg, // Zwracamy całe dane wiadomości
-            'message' => 'Wiadomość załadowana pomyślnie.'
+            'messageData' => $msg, // Return the full message data
+            'message' => 'Message loaded successfully.'
         ]);
-        exit(); // Zakończ wykonywanie skryptu po zwróceniu JSON dla AJAX GET
+        exit(); // Stop script execution after returning JSON for AJAX GET
     }
 }
 
-// --- Obsługa akcji na wiadomości (POST - Delete, Archive, Unarchive) ---
-// Ta sekcja może obsługiwać zarówno AJAX POST jak i tradycyjne POST
+// --- Handle message actions (POST - Delete, Archive, Unarchive) ---
+// This section handles both AJAX POST and traditional POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $message_id_from_post = (int)($_POST['message_id'] ?? 0);
@@ -86,47 +86,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($success) {
             // Define response based on action
-            $response = ['success' => true, 'message' => 'Operacja wykonana pomyślnie.'];
-            // Przygotuj URL do przekierowania po akcji
+            $response = ['success' => true, 'message' => 'Action completed successfully.'];
+            // Prepare redirect URL after the action
             $redirectUrl = 'messages.php?tab=' . urlencode($activeTab);
             if ($action === 'delete') {
-                 $response['message'] = 'Wiadomość usunięta.';
-                 // Po usunięciu zawsze przekierowujemy do listy
+                 $response['message'] = 'Message deleted.';
+                 // After deletion always redirect to the list
                  $response['redirect'] = $redirectUrl;
             } elseif ($action === 'archive') {
-                 $response['message'] = 'Wiadomość przeniesiona do archiwum.';
-                 // Po archiwizacji można przekierować do archiwum, lub zostać i odświeżyć listę
+                 $response['message'] = 'Message moved to archive.';
+                 // After archiving you can redirect to archive or refresh the list
                  $response['redirect'] = 'messages.php?tab=archive';
             } elseif ($action === 'unarchive') {
-                 $response['message'] = 'Wiadomość przywrócona z archiwum.';
-                 // Po przywróceniu przekierowujemy do odebranych
+                 $response['message'] = 'Message restored from archive.';
+                 // After restoring redirect to inbox
                  $response['redirect'] = 'messages.php?tab=inbox';
             }
 
             if ($is_ajax) {
                  header('Content-Type: application/json');
                  echo json_encode($response);
-                 exit(); // Zakończ skrypt po odpowiedzi AJAX POST
+                 exit(); // Stop the script after responding to AJAX POST
             } else {
-                // Tradycyjne przekierowanie po POST bez AJAX
+                // Traditional redirect after POST without AJAX
                  header("Location: " . $response['redirect']);
                  exit();
             }
 
         } else {
-            $response = ['success' => false, 'message' => 'Wystąpił błąd podczas wykonywania akcji lub brak uprawnień.'];
+            $response = ['success' => false, 'message' => 'An error occurred while performing the action or you lack permission.'];
             if ($is_ajax) {
                  header('Content-Type: application/json');
                  echo json_encode($response);
                  exit();
             } else {
-                 // Tradycyjne przekierowanie z błędem (można dodać parametr błędu w URL)
+                 // Traditional redirect with error (could add an error parameter to the URL)
                  header("Location: messages.php?tab=" . urlencode($activeTab) . "&action_error=1");
                  exit();
             }
         }
     } else {
-         $response = ['success' => false, 'message' => 'Nieprawidłowy identyfikator wiadomości w żądaniu akcji.'];
+         $response = ['success' => false, 'message' => 'Invalid message identifier in the action request.'];
          if ($is_ajax) {
               header('Content-Type: application/json');
               echo json_encode($response);
@@ -138,30 +138,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// --- Normalne wyświetlanie pełnej strony (jeśli nie AJAX) ---
-// Ta część będzie używana, gdy użytkownik wejdzie bezpośrednio na URL view_message.php?id=X
-// Powinna pobrać dane wiadomości i wyrenderować całą stronę.
+// --- Standard full-page rendering (non-AJAX) ---
+// This path is used when a user visits view_message.php?id=X directly.
+// It should fetch the message data and render the whole page.
 
-// Pobierz wiadomość za pomocą MessageManager (ta metoda już oznacza jako przeczytane jeśli trzeba)
-// Ponownie pobieramy dane, bo poprzednie pobranie mogło być tylko na potrzeby AJAX GET
+// Fetch the message via MessageManager (marks as read if needed)
+// Fetch again because previous retrieval may have been only for AJAX GET
 $msg = $messageManager->getMessageByIdForUser($msg_id, $user_id);
 
 if ($msg === null) {
-    // Wiadomość nie znaleziona lub brak dostępu przy wejściu bezpośrednim
+    // Message not found or no access on direct entry
     header("Location: messages.php?tab=" . urlencode($activeTab) . "&error=message_not_found");
     exit();
 }
 
-// Sprawdź, czy użytkownik jest nadawcą czy odbiorcą (na podstawie danych z Managera)
+// Determine whether the user is the sender or receiver
 $is_sender = ($msg['sender_id'] == $user_id);
 $is_receiver = ($msg['receiver_id'] == $user_id);
 
-$pageTitle = 'Wiadomość: ' . htmlspecialchars($msg['subject']);
+$pageTitle = 'Message: ' . htmlspecialchars($msg['subject']);
 require '../header.php';
 ?>
 
 <div id="game-container">
-    <!-- Nagłówek główny strony - włączony przez header.php -->
+    <!-- Main page header injected by header.php -->
 
     <div id="main-content">
         <main>
@@ -169,28 +169,28 @@ require '../header.php';
                 <div class="message-header">
                     <div class="message-nav">
                         <a href="messages.php?tab=<?= htmlspecialchars($activeTab) ?>" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Powrót do <?= $activeTab === 'inbox' ? 'Odebranych' : ($activeTab === 'sent' ? 'Wysłanych' : 'Archiwum') ?>
+                            <i class="fas fa-arrow-left"></i> Back to <?= $activeTab === 'inbox' ? 'Inbox' : ($activeTab === 'sent' ? 'Sent' : 'Archive') ?>
                         </a>
                         
                         <div class="message-actions">
-                            <?php if ($is_receiver): // Tylko odbiorca może odpowiedzieć ?>
+                            <?php if ($is_receiver): // Only the receiver can reply ?>
                                 <a href="send_message.php?reply_to=<?= $msg_id ?>" class="btn btn-primary">
-                                    <i class="fas fa-reply"></i> Odpowiedz
+                                    <i class="fas fa-reply"></i> Reply
                                 </a>
                             <?php endif; ?>
                             
-                            <button class="btn btn-danger action-button" data-action="delete" data-message-id="<?= $msg_id ?>" data-confirm="Czy na pewno chcesz usunąć tę wiadomość?">
-                                <i class="fas fa-trash"></i> Usuń
+                            <button class="btn btn-danger action-button" data-action="delete" data-message-id="<?= $msg_id ?>" data-confirm="Are you sure you want to delete this message?">
+                                <i class="fas fa-trash"></i> Delete
                             </button>
                             
-                            <?php if ($is_receiver): // Tylko odbiorca może archiwizować/przywracać ?>
+                            <?php if ($is_receiver): // Only the receiver can archive/restore ?>
                                 <?php if ($activeTab !== 'archive'): ?>
                                     <button class="btn btn-secondary action-button" data-action="archive" data-message-id="<?= $msg_id ?>">
-                                        <i class="fas fa-archive"></i> Archiwizuj
+                                        <i class="fas fa-archive"></i> Archive
                                     </button>
                                 <?php else: ?>
                                     <button class="btn btn-secondary action-button" data-action="unarchive" data-message-id="<?= $msg_id ?>">
-                                        <i class="fas fa-inbox"></i> Przywróć
+                                        <i class="fas fa-inbox"></i> Restore
                                     </button>
                                 <?php endif; ?>
                             <?php endif; ?>
@@ -203,20 +203,20 @@ require '../header.php';
                 <div class="message-meta">
                     <div class="message-participants">
                         <div class="sender">
-                            <strong>Od:</strong> 
+                            <strong>From:</strong> 
                             <a href="../player/player.php?id=<?= $msg['sender_id'] ?>" class="player-link">
                                 <?= htmlspecialchars($msg['sender_username']) ?>
                             </a>
                         </div>
                         <div class="receiver">
-                            <strong>Do:</strong> 
+                            <strong>To:</strong> 
                             <a href="../player/player.php?id=<?= $msg['receiver_id'] ?>" class="player-link">
                                 <?= htmlspecialchars($msg['receiver_username']) ?>
                             </a>
                         </div>
                     </div>
                     <div class="message-date">
-                        <strong>Data:</strong> <?= date('d.m.Y H:i', strtotime($msg['sent_at'])) ?>
+                        <strong>Date:</strong> <?= date('d.m.Y H:i', strtotime($msg['sent_at'])) ?>
                     </div>
                 </div>
                 
@@ -230,9 +230,9 @@ require '../header.php';
 
 <?php require '../footer.php'; ?>
 
-<script src="js/messages.js"></script>
+<script src="../js/messages.js"></script>
 <script>
-    // Skrypt do obsługi przycisków akcji na pojedynczej wiadomości (można przenieść do js/messages.js)
+    // Script for handling single-message action buttons (could be moved to js/messages.js)
     document.addEventListener('DOMContentLoaded', function() {
         const messageViewContainer = document.querySelector('.message-view-container');
         if (messageViewContainer) {
@@ -244,10 +244,10 @@ require '../header.php';
                     const confirmMessage = target.dataset.confirm;
 
                     if (confirmMessage && !confirm(confirmMessage)) {
-                        return; // Anuluj akcję jeśli użytkownik nie potwierdził
+                        return; // Cancel if the user does not confirm
                     }
 
-                    // Wyślij żądanie AJAX do tego samego pliku (view_message.php)
+                    // Send an AJAX request to this file (view_message.php)
                     fetch('view_message.php?id=' + messageId + '&tab=<?= urlencode($activeTab) ?>', {
                         method: 'POST',
                         headers: {
@@ -267,24 +267,21 @@ require '../header.php';
                             // Handle success
                             alert(data.message);
                             if (data.redirect) {
-                                // Przekieruj na inną stronę, jeśli response zawiera redirect URL
+                                // Redirect if the response includes a redirect URL
                                 window.location.href = data.redirect;
                             } else {
-                                // Jeśli nie ma przekierowania (np. po oznaczeniu jako nieprzeczytane),
-                                // można odświeżyć widok wiadomości (np. załadować go ponownie przez AJAX)
-                                // lub zaktualizować UI lokalnie.
-                                // Na potrzeby prostoty na razie odświeżymy stronę, jeśli nie ma redirectu
-                                // Lepszym rozwiązaniem byłaby aktualizacja UI lub powrót do listy wiadomości
-                                window.location.reload(); // TODO: Zaimplementować lepszą obsługę UI
+                                // If there is no redirect (e.g., mark as unread), refresh the page for now
+                                // Ideally, update the UI or return to the message list without reload
+                                window.location.reload(); // TODO: Improve UI handling
                             }
                         } else {
                             // Handle error
-                            alert('Błąd: ' + data.message);
+                            alert('Error: ' + data.message);
                         }
                     })
                     .catch(error => {
-                        console.error('Błąd:', error);
-                        alert('Wystąpił błąd komunikacji z serwerem.');
+                        console.error('Error:', error);
+                        alert('A communication error occurred with the server.');
                     });
                 }
             });

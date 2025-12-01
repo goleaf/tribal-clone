@@ -1,5 +1,5 @@
 /**
- * Frontend logic for the Mint (Odlewnia Monety) panel
+ * Frontend logic for the Mint panel
  */
 
 // Assume formatDuration and formatNumber are available globally
@@ -14,7 +14,7 @@ async function fetchAndRenderMintPanel(villageId, buildingInternalName) {
     }
 
     // Show loading indicator
-    actionContent.innerHTML = '<p>Ładowanie panelu Odlewni Monety...</p>';
+    actionContent.innerHTML = '<p>Loading mint panel...</p>';
     actionContent.style.display = 'block';
     detailsContent.style.display = 'none'; // Hide details when showing action content
 
@@ -25,24 +25,24 @@ async function fetchAndRenderMintPanel(villageId, buildingInternalName) {
 
         if (data.status === 'success' && data.action_type === 'mint') {
             // Assuming backend provides necessary data for coin minting
-            const buildingName = data.data.building_name_pl;
+            const buildingName = data.data.building_name;
             const buildingLevel = data.data.building_level;
             // TODO: Extract minting-specific data from data.data
 
             // Render the Mint panel HTML
             let html = `
-                <h3>${buildingName} (Poziom ${buildingLevel}) - Odlewnia Monety</h3>
-                <p>Tutaj możesz wybijać monety potrzebne do przejmowania wiosek (wymaga Pałacu).</p>
+                <h3>${buildingName} (Level ${buildingLevel}) - Mint</h3>
+                <p>Here you can mint coins required for conquering villages (Palace required).</p>
 
-                <h4>Wybijanie monet:</h4>
+                <h4>Coin minting:</h4>
                 <div class="coin-minting-form">
-                    <p>TODO: Formularz wybijania monet (koszt, czas).</p>
-                    <button class="btn-primary" disabled>Wybij Monety (TODO)</button>
+                    <p>TODO: Coin minting form (cost, time).</p>
+                    <button class="btn-primary" disabled>Mint coins (TODO)</button>
                 </div>
 
-                <h4>Status wybijania:</h4>
+                <h4>Minting status:</h4>
                  <div class="coin-minting-queue">
-                     <p>TODO: Wyświetl kolejkę wybijania monet.</p>
+                     <p>TODO: Display coin minting queue.</p>
                  </div>
 
                 <!-- Add other minting-related options -->
@@ -55,16 +55,16 @@ async function fetchAndRenderMintPanel(villageId, buildingInternalName) {
             setupMintListeners(villageId, buildingInternalName);
 
         } else if (data.error) {
-            actionContent.innerHTML = '<p>Błąd ładowania panelu Odlewni Monety: ' + data.error + '</p>';
+            actionContent.innerHTML = '<p>Error loading mint panel: ' + data.error + '</p>';
             window.toastManager.showToast(data.error, 'error');
         } else {
-             actionContent.innerHTML = '<p>Nieprawidłowa odpowiedź serwera lub akcja nie dotyczy Odlewni Monety.</p>';
+             actionContent.innerHTML = '<p>Invalid server response or action does not belong to Mint.</p>';
          }
 
     } catch (error) {
-        console.error('Błąd AJAX pobierania panelu Odlewni Monety:', error);
-        actionContent.innerHTML = '<p>Błąd komunikacji z serwera.</p>';
-        window.toastManager.showToast('Błąd komunikacji z serwera podczas pobierania panelu Odlewni Monety.', 'error');
+        console.error('AJAX error fetching Mint panel:', error);
+        actionContent.innerHTML = '<p>Server communication error.</p>';
+        window.toastManager.showToast('Server communication error while fetching Mint panel.', 'error');
     }
 }
 

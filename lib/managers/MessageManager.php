@@ -18,7 +18,7 @@ class MessageManager
      */
     public function getMessageByIdForUser(int $messageId, int $userId): ?array
     {
-        // Pobierz wiadomość wraz z nadawcą i odbiorcą
+        // Fetch the message along with sender and receiver
         $stmt = $this->conn->prepare(
             "SELECT m.id, m.subject, m.body, m.sent_at, m.is_read, m.sender_id, m.receiver_id,
                     u_sender.username AS sender_username,
@@ -34,18 +34,18 @@ class MessageManager
 
         if ($result->num_rows === 0) {
             $stmt->close();
-            return null; // Wiadomość nie znaleziona lub brak dostępu
+            return null; // Message not found or no access
         }
 
         $msg = $result->fetch_assoc();
         $stmt->close();
 
-        // Oznacz jako przeczytane, jeśli to odbiorca i wiadomość jest nieprzeczytana
+        // Mark as read if the user is the receiver and the message is unread
         if ($msg['receiver_id'] === $userId && !$msg['is_read']) {
             $stmt2 = $this->conn->prepare("UPDATE messages SET is_read = 1 WHERE id = ?");
             $stmt2->bind_param("i", $messageId);
             if ($stmt2->execute()) {
-                // Jeśli pomyślnie oznaczono jako przeczytane, zaktualizuj zmienną w zwróconych danych
+                // If successfully marked as read, update the returned data
                 $msg['is_read'] = 1;
             }
             $stmt2->close();
@@ -78,7 +78,7 @@ class MessageManager
                           FROM messages m
                           JOIN users u ON m.sender_id = u.id
                           WHERE m.receiver_id = ? AND m.is_archived = 0
-                          ORDER BY m.sent_at DESC LIMIT ?, ?";
+                          ORDER BY m.sent_at DESC LIMIT ? OFFSET ?";
                 $stmt_count = $this->conn->prepare($countQuery);
                 $stmt_count->bind_param("i", $userId);
                 $stmt = $this->conn->prepare($query);
@@ -91,7 +91,7 @@ class MessageManager
                           FROM messages m
                           JOIN users u ON m.receiver_id = u.id
                           WHERE m.sender_id = ? AND m.is_sender_deleted = 0
-                          ORDER BY m.sent_at DESC LIMIT ?, ?";
+                          ORDER BY m.sent_at DESC LIMIT ? OFFSET ?";
                  $stmt_count = $this->conn->prepare($countQuery);
                  $stmt_count->bind_param("i", $userId);
                  $stmt = $this->conn->prepare($query);
@@ -104,7 +104,7 @@ class MessageManager
                           FROM messages m
                           JOIN users u ON m.sender_id = u.id
                           WHERE m.receiver_id = ? AND m.is_archived = 1
-                          ORDER BY m.sent_at DESC LIMIT ?, ?";
+                          ORDER BY m.sent_at DESC LIMIT ? OFFSET ?";
                  $stmt_count = $this->conn->prepare($countQuery);
                  $stmt_count->bind_param("i", $userId);
                  $stmt = $this->conn->prepare($query);

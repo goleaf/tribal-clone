@@ -1,1 +1,1 @@
-// Ten plik jest pusty, ponieważ cała logika została przeniesiona do dedykowanych plików JS (resources.js, notifications.js, buildings.js, utils.js).
+// This file is empty because all logic lives in dedicated JS files (resources.js, notifications.js, buildings.js, utils.js).

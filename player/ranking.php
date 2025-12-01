@@ -1,9 +1,9 @@
 <?php
 require '../init.php';
-require_once __DIR__ . '/../lib/managers/RankingManager.php'; // Zaktualizowana ścieżka
-require_once __DIR__ . '/../lib/managers/VillageManager.php'; // Zaktualizowana ścieżka
+require_once __DIR__ . '/../lib/managers/RankingManager.php'; // Updated path
+require_once __DIR__ . '/../lib/managers/VillageManager.php'; // Updated path
 
-// Zabezpieczenie dostępu - tylko dla zalogowanych
+// Access control - only for logged-in users
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../auth/login.php");
     exit();
@@ -12,46 +12,46 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 
-// Inicjalizacja menedżera wiosek (potrzebne dla header.php)
+// Initialize the village manager (needed for header.php)
 $villageManager = new VillageManager($conn);
 $village_id = $villageManager->getFirstVillage($user_id);
 $village = $villageManager->getVillageInfo($village_id);
 
-// Typ rankingu (gracze lub plemiona)
+// Ranking type (players or tribes)
 $ranking_type = isset($_GET['type']) ? $_GET['type'] : 'players';
 $valid_ranking_types = ['players', 'tribes']; // Add 'tribes'
 if (!in_array($ranking_type, $valid_ranking_types)) {
     $ranking_type = 'players'; // Default to players if invalid type
 }
 
-// Aktualna strona
+// Current page
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 $per_page = 20;
 $offset = ($page - 1) * $per_page;
 
-// Inicjalizacja RankingManager
+// Initialize RankingManager
 $rankingManager = new RankingManager($conn);
 
 $total_records = 0;
 $ranking_data = [];
 $totalPages = 1;
 
-// Pobierz dane rankingu i całkowitą liczbę rekordów w zależności od typu
+// Fetch ranking data and total record count depending on the type
 if ($ranking_type === 'players') {
     $total_records = $rankingManager->getTotalPlayersCount();
     if ($total_records > 0) {
         $ranking_data = $rankingManager->getPlayersRanking($per_page, $offset);
     }
-    $pageTitle = 'Ranking Graczy';
+    $pageTitle = 'Player Rankings';
 } elseif ($ranking_type === 'tribes') {
     $total_records = $rankingManager->getTotalTribesCount(); // This will currently return 0
     if ($total_records > 0) {
          $ranking_data = $rankingManager->getTribesRanking($per_page, $offset); // This will currently return []
     }
-    $pageTitle = 'Ranking Plemion';
+    $pageTitle = 'Tribe Rankings';
 }
 
-// Oblicz całkowitą liczbę stron po pobraniu total_records
+// Calculate total pages after fetching total_records
 if ($total_records > 0) {
      $totalPages = ceil($total_records / $per_page);
      // Adjust current page and offset if it exceeds total pages (can happen after data changes)
@@ -73,10 +73,10 @@ if ($total_records > 0) {
      $offset = 0;
 }
 
-// Oblicz początkowy numer rangi dla bieżącej strony
+// Calculate the starting rank number for the current page
 $start_rank = $offset + 1;
 
-// Dodaj numer rangi do każdego wiersza danych
+// Add rank number to each row
 if ($ranking_type === 'players') {
     $current_rank = $start_rank;
     foreach ($ranking_data as &$player) {
@@ -93,11 +93,11 @@ require '../header.php';
 <div id="game-container">
     <header id="main-header">
         <div class="header-title">
-            <span class="game-logo">🏆</span>
-            <span>Ranking</span>
+            <span class="game-logo">&#127942;</span>
+            <span>Rankings</span>
         </div>
         <div class="header-user">
-            Gracz: <?= htmlspecialchars($username) ?><br>
+            Player: <?= htmlspecialchars($username) ?><br>
             <?php if (isset($village) && $village): // Check if village data is available ?>
                 <span class="village-name-display" data-village-id="<?= $village['id'] ?>"><?= htmlspecialchars($village['name']) ?> (<?= $village['x_coord'] ?>|<?= $village['y_coord'] ?>)</span>
             <?php endif; ?>
@@ -107,26 +107,26 @@ require '../header.php';
     <div id="main-content">
 
         <main>
-            <h2>Ranking</h2>
+            <h2>Rankings</h2>
 
             <div class="ranking-tabs">
-                <a href="?type=players" class="ranking-tab <?= $ranking_type == 'players' ? 'active' : '' ?>">Gracze</a>
-                <a href="?type=tribes" class="ranking-tab <?= $ranking_type == 'tribes' ? 'active' : '' ?>">Plemiona</a>
+                <a href="?type=players" class="ranking-tab <?= $ranking_type == 'players' ? 'active' : '' ?>">Players</a>
+                <a href="?type=tribes" class="ranking-tab <?= $ranking_type == 'tribes' ? 'active' : '' ?>">Tribes</a>
             </div>
 
             <div class="ranking-container">
                 <?php if ($ranking_type === 'players'): ?>
-                    <h3>Ranking Graczy</h3>
+                    <h3>Player Rankings</h3>
 
                     <?php if (count($ranking_data) > 0): ?>
                         <table class="ranking-table">
                             <thead>
                                 <tr>
-                                    <th class="rank-column">Miejsce</th>
-                                    <th>Gracz</th>
-                                    <th>Liczba wiosek</th>
-                                    <th>Populacja</th>
-                                    <th>Punkty</th>
+                                    <th class="rank-column">Rank</th>
+                                    <th>Player</th>
+                                    <th>Villages</th>
+                                    <th>Population</th>
+                                    <th>Points</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -145,12 +145,12 @@ require '../header.php';
                         <?php if ($totalPages > 1): ?>
                             <div class="pagination">
                                 <?php if ($page > 1): ?>
-                                    <a href="?type=<?= $ranking_type ?>&page=1" class="page-link">«</a>
-                                    <a href="?type=<?= $ranking_type ?>&page=<?= $page - 1 ?>" class="page-link">‹</a>
+                                    <a href="?type=<?= $ranking_type ?>&page=1" class="page-link">&laquo;</a>
+                                    <a href="?type=<?= $ranking_type ?>&page=<?= $page - 1 ?>" class="page-link">&lsaquo;</a>
                                 <?php endif; ?>
 
                                 <?php
-                                // Rangi do wyświetlenia
+                                // Pages to display
                                 $start_page = max(1, $page - 2);
                                 $end_page = min($start_page + 4, $totalPages);
 
@@ -164,28 +164,28 @@ require '../header.php';
                                 <?php endfor; ?>
 
                                 <?php if ($page < $totalPages): ?>
-                                    <a href="?type=<?= $ranking_type ?>&page=<?= $page + 1 ?>" class="page-link">›</a>
-                                    <a href="?type=<?= $ranking_type ?>&page=<?= $totalPages ?>" class="page-link">»</a>
+                                    <a href="?type=<?= $ranking_type ?>&page=<?= $page + 1 ?>" class="page-link">&rsaquo;</a>
+                                    <a href="?type=<?= $ranking_type ?>&page=<?= $totalPages ?>" class="page-link">&raquo;</a>
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
 
                     <?php else: ?>
-                        <div class="no-data">Brak danych graczy do wyświetlenia</div>
+                        <div class="no-data">No player data to display</div>
                     <?php endif; ?>
 
                 <?php elseif ($ranking_type === 'tribes'): ?>
-                    <h3>Ranking Plemion</h3>
+                    <h3>Tribe Rankings</h3>
                     <?php if (count($ranking_data) > 0): ?>
                          <!-- TODO: Add tribes ranking table structure here -->
                          <table class="ranking-table">
                              <thead>
                                  <tr>
-                                     <th class="rank-column">Miejsce</th>
-                                     <th>Nazwa Plemiona</th>
-                                     <th>Liczba członków</th>
-                                     <th>Liczba wiosek</th>
-                                     <th>Punkty</th>
+                                     <th class="rank-column">Rank</th>
+                                     <th>Tribe name</th>
+                                     <th>Members</th>
+                                     <th>Villages</th>
+                                     <th>Points</th>
                                  </tr>
                              </thead>
                              <tbody>
@@ -204,12 +204,12 @@ require '../header.php';
                           <?php if ($totalPages > 1): ?>
                             <div class="pagination">
                                 <?php if ($page > 1): ?>
-                                    <a href="?type=<?= $ranking_type ?>&page=1" class="page-link">«</a>
-                                    <a href="?type=<?= $ranking_type ?>&page=<?= $page - 1 ?>" class="page-link">‹</a>
+                                    <a href="?type=<?= $ranking_type ?>&page=1" class="page-link">&laquo;</a>
+                                    <a href="?type=<?= $ranking_type ?>&page=<?= $page - 1 ?>" class="page-link">&lsaquo;</a>
                                 <?php endif; ?>
 
                                 <?php
-                                // Rangi do wyświetlenia
+                                // Pages to display
                                 $start_page = max(1, $page - 2);
                                 $end_page = min($start_page + 4, $totalPages);
 
@@ -223,15 +223,15 @@ require '../header.php';
                                 <?php endfor; ?>
 
                                 <?php if ($page < $totalPages): ?>
-                                    <a href="?type=<?= $ranking_type ?>&page=<?= $page + 1 ?>" class="page-link">›</a>
-                                    <a href="?type=<?= $ranking_type ?>&page=<?= $totalPages ?>" class="page-link">»</a>
+                                    <a href="?type=<?= $ranking_type ?>&page=<?= $page + 1 ?>" class="page-link">&rsaquo;</a>
+                                    <a href="?type=<?= $ranking_type ?>&page=<?= $totalPages ?>" class="page-link">&raquo;</a>
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
 
                     <?php else: ?>
                          <div class="no-data">
-                             System plemion jest w trakcie implementacji lub brak danych.
+                             The tribes system is under development or no data is available.
                          </div>
                     <?php endif; ?>
 

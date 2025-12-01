@@ -1,23 +1,23 @@
 <?php
 require '../init.php';
-// Walidacja CSRF dla żądań POST jest wykonywana automatycznie w validateCSRF() z functions.php
+// CSRF validation for POST requests is handled automatically in validateCSRF() from functions.php
 
 $message = '';
 
-// Funkcja do generowania unikalnych współrzędnych wioski - Używa Prepared Statement
+// Generate unique village coordinates using prepared statements
 function findUniqueCoordinates($conn, $max_coord = 100) {
     $attempts = 0;
-    $max_attempts = 1000; // Zapobieganie nieskończonej pętli
+    $max_attempts = 1000; // Prevent infinite loop
 
     do {
         $x = rand(1, $max_coord);
         $y = rand(1, $max_coord);
 
         $stmt_check = $conn->prepare("SELECT id FROM villages WHERE x_coord = ? AND y_coord = ?");
-        // Sprawdzenie, czy prepare się powiodło
+        // Ensure prepare succeeded
         if ($stmt_check === false) {
             error_log("Database prepare failed: " . $conn->error);
-            return false; // Błąd bazy danych
+            return false; // Database error
         }
         $stmt_check->bind_param("ii", $x, $y);
         $stmt_check->execute();
@@ -28,72 +28,72 @@ function findUniqueCoordinates($conn, $max_coord = 100) {
     } while ($is_taken && $attempts < $max_attempts);
 
     if ($is_taken) {
-        // Nie udało się znaleźć unikalnych współrzędnych po wielu próbach - logowanie błędu
+        // Could not find unique coordinates after many attempts - log an error
         error_log("Failed to find unique coordinates after {$max_attempts} attempts.");
         return false;
     }
     return ['x' => $x, 'y' => $y];
 }
 
-// --- PRZETWARZANIE DANYCH (REJESTRACJA) ---
+// --- DATA PROCESSING (REGISTRATION) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_once '../lib/managers/VillageManager.php';
-    // validateCSRF(); // Usunięto stąd, bo jest w validateCSRF() wywoływanym globalnie dla POST w init.php (jeśli logika init.php została odpowiednio zmieniona)
+    // validateCSRF(); // Removed here because validateCSRF() is called globally for POST in init.php
 
     $username = $_POST['username'] ?? '';
     $email = $_POST['email'] ?? '';
     $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
 
-    // Walidacja danych wejściowych (bardziej szczegółowa)
+    // Input validation
     if (empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
-        $message = '<p class="error-message">Wszystkie pola są wymagane!</p>';
+        $message = '<p class="error-message">All fields are required!</p>';
     } elseif ($password !== $confirm_password) {
-        $message = '<p class="error-message">Hasła nie pasują do siebie!</p>';
+        $message = '<p class="error-message">Passwords do not match!</p>';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $message = '<p class="error-message">Nieprawidłowy format adresu e-mail!</p>';
-    } elseif (!isValidUsername($username)) { // Dodana walidacja nazwy użytkownika
-         $message = '<p class="error-message">Nazwa użytkownika może zawierać tylko litery, cyfry i podkreślenia (3-20 znaków).</p>';
+        $message = '<p class="error-message">Invalid email format!</p>';
+    } elseif (!isValidUsername($username)) { // Username validation
+         $message = '<p class="error-message">Username can only contain letters, numbers, and underscores (3-20 characters).</p>';
     } else {
-        // Sprawdź, czy użytkownik lub e-mail już istnieje (Prepared Statement)
+        // Check whether the username or email already exists
         $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
          if ($stmt === false) {
             error_log("Database prepare failed: " . $conn->error);
-            $message = '<p class="error-message">Wystąpił błąd bazy danych.</p>';
+            $message = '<p class="error-message">A database error occurred.</p>';
          } else {
             $stmt->bind_param("ss", $username, $email);
             $stmt->execute();
             $stmt->store_result();
 
             if ($stmt->num_rows > 0) {
-                $message = '<p class="error-message">Nazwa użytkownika lub e-mail jest już zajęty!</p>';
+                $message = '<p class="error-message">Username or email is already taken!</p>';
             } else {
-                $stmt->close(); // Zamknij stmt_check_user_exists przed nowymi
+                $stmt->close(); // Close stmt_check_user_exists before new statements
 
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
                 
-                $conn->begin_transaction(); // Rozpocznij transakcję
+                $conn->begin_transaction(); // Begin transaction
 
                 try {
-                    // 1. Dodaj użytkownika (Prepared Statement)
+                    // 1. Add the user
                     $stmt_user = $conn->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
                     if ($stmt_user === false) throw new Exception("Database prepare failed for user insert: " . $conn->error);
                     $stmt_user->bind_param("sss", $username, $email, $hashed_password);
 
                     if (!$stmt_user->execute()) {
-                         throw new Exception("Błąd wykonania zapytania dodania użytkownika: " . $stmt_user->error);
+                         throw new Exception("Failed to execute user insert query: " . $stmt_user->error);
                     }
-                    $user_id = $stmt_user->insert_id; // Pobierz ID nowo utworzonego użytkownika
+                    $user_id = $stmt_user->insert_id; // Get newly created user ID
                     $stmt_user->close(); 
 
-                    // 2. Znajdź unikalne koordynaty i utwórz wioskę (Prepared Statement wewnątrz funkcji findUniqueCoordinates i tutaj)
+                    // 2. Find unique coordinates and create the village
                     $coordinates = findUniqueCoordinates($conn);
                     if ($coordinates === false) {
-                         throw new Exception("Nie udało się znaleźć unikalnych koordynatów dla wioski.");
+                         throw new Exception("Failed to find unique coordinates for the village.");
                     }
                     
-                    $village_name = "Wioska " . htmlspecialchars($username); // Sanityzacja nazwy wioski
-                    // Użycie stałych z config.php dla początkowych wartości
+                    $village_name = "Village " . htmlspecialchars($username); // Sanitize village name
+                    // Use constants from config.php for initial values
                     $initial_wood = INITIAL_WOOD;
                     $initial_clay = INITIAL_CLAY;
                     $initial_iron = INITIAL_IRON;
@@ -115,14 +115,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
 
                     if (!$stmt_village->execute()) {
-                         throw new Exception("Błąd wykonania zapytania dodania wioski: " . $stmt_village->error);
+                         throw new Exception("Failed to execute village insert query: " . $stmt_village->error);
                     }
-                    $village_id = $stmt_village->insert_id; // Pobierz ID nowo utworzonej wioski
+                    $village_id = $stmt_village->insert_id; // Get the new village ID
                     $stmt_village->close(); 
 
-                    // 3. Dodaj podstawowe budynki (Prepared Statements)
+                    // 3. Add basic buildings
                     $initial_buildings = [
-                         'main', 'sawmill', 'clay_pit', 'iron_mine', 'warehouse', 'farm' // Dodano farmę
+                         'main', 'sawmill', 'clay_pit', 'iron_mine', 'warehouse', 'farm' // Include the farm
                     ];
                     $base_level = 1;
 
@@ -149,18 +149,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt_add_building->close();
                     }
                     
-                    // 4. Zaktualizuj populację wioski po dodaniu budynków
+                    // 4. Update village population after adding buildings
                     $villageManager = new VillageManager($conn);
-                    $villageManager->updateVillagePopulation($village_id); // Wywołaj metodę do przeliczenia populacji
+                    $villageManager->updateVillagePopulation($village_id); // Recalculate population
 
-                    $conn->commit(); // Zatwierdź transakcję jeśli wszystko poszło dobrze
-                    $message = '<p class="success-message">Rejestracja zakończona sukcesem! Twoja pierwsza wioska została założona z podstawowymi budynkami. Możesz się teraz <a href="login.php">zalogować</a>.</p>';
+                    $conn->commit(); // Commit transaction if everything went well
+                    $message = '<p class="success-message">Registration completed! Your first village has been created with basic buildings. You can now <a href="login.php">log in</a>.</p>';
 
                 } catch (Exception $e) {
-                    $conn->rollback(); // Wycofaj transakcję w przypadku błędu
+                    $conn->rollback(); // Roll back on error
                     error_log("Registration failed for user {$username}: " . $e->getMessage());
-                    $message = '<p class="error-message">Wystąpił błąd podczas rejestracji lub zakładania wioski. Spróbuj ponownie lub skontaktuj się z administratorem.</p>';
-                    // Dodatkowo, jeśli użytkownik został dodany, ale wioska nie, można go usunąć tutaj
+                    $message = '<p class="error-message">An error occurred while registering or creating the village. Try again or contact an administrator.</p>';
+                    // If the user was added but the village failed, remove the user
                     if (isset($user_id)) {
                          $stmt_delete_user = $conn->prepare("DELETE FROM users WHERE id = ?");
                          if ($stmt_delete_user) {
@@ -169,53 +169,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $stmt_delete_user->close();
                          }
                     }
-                     // Zamknij wszystkie otwarte statementy w przypadku błędu w trakcie transakcji
+                     // Close any open statements on failure
                      if (isset($stmt_user) && $stmt_user) $stmt_user->close();
                      if (isset($stmt_village) && $stmt_village) $stmt_village->close();
                      if (isset($stmt_get_building_type) && $stmt_get_building_type) $stmt_get_building_type->close();
                      if (isset($stmt_add_building) && $stmt_add_building) $stmt_add_building->close();
                 }
             }
-             // Nie zamykaj stmt check user/email exists tutaj, tylko po użyciu lub w catch
+             // Do not close stmt check user/email exists here; handle after use or in catch
         }
          if (isset($stmt) && $stmt) $stmt->close();
     }
 }
 
-// --- PREZENTACJA (HTML) ---
-$pageTitle = 'Rejestracja';
+// --- PRESENTATION (HTML) ---
+$pageTitle = 'Register';
 require '../header.php';
 ?>
 <main>
     <div class="form-container">
-        <h1>Rejestracja</h1>
+        <h1>Register</h1>
         <?= $message ?>
         <form action="register.php" method="POST">
             <?php if (isset($_SESSION['csrf_token'])): ?>
                  <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
             <?php endif; ?>
             
-            <label for="username">Nazwa użytkownika</label>
+            <label for="username">Username</label>
             <input type="text" id="username" name="username" required>
 
             <label for="email">E-mail</label>
             <input type="email" id="email" name="email" required>
 
-            <label for="password">Hasło</label>
+            <label for="password">Password</label>
             <input type="password" id="password" name="password" required>
 
-            <label for="confirm_password">Potwierdź hasło</label>
+            <label for="confirm_password">Confirm password</label>
             <input type="password" id="confirm_password" name="confirm_password" required>
 
-            <input type="submit" value="Zarejestruj" class="btn btn-primary">
+            <input type="submit" value="Register" class="btn btn-primary">
         </form>
-        <p class="mt-2">Masz już konto? <a href="login.php">Zaloguj się</a>.</p>
-        <p><a href="../index.php">Wróć do strony głównej</a>.</p>
+        <p class="mt-2">Already have an account? <a href="login.php">Log in</a>.</p>
+        <p><a href="../index.php">Back to homepage</a>.</p>
     </div>
 </main>
 <?php
 require '../footer.php';
-// Zamknij połączenie z bazą po renderowaniu strony
+// Close the database connection after rendering the page
 if (isset($database)) {
     $database->closeConnection();
 }

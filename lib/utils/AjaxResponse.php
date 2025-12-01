@@ -1,15 +1,15 @@
 <?php
 
 /**
- * Klasa AjaxResponse - obsługa odpowiedzi AJAX
+ * AjaxResponse class - helpers for AJAX responses
  */
 class AjaxResponse 
 {
     /**
-     * Wyślij odpowiedź JSON z sukcesem
+     * Send a success JSON response
      *
-     * @param mixed $data Dane do wysłania
-     * @param string $message Komunikat sukcesu (opcjonalnie)
+     * @param mixed $data Payload to send
+     * @param string $message Optional success message
      * @return void
      */
     public static function success($data = null, $message = '') 
@@ -22,16 +22,16 @@ class AjaxResponse
     }
     
     /**
-     * Wyślij odpowiedź JSON z błędem
+     * Send an error JSON response
      *
-     * @param string $message Komunikat błędu
-     * @param mixed $data Dane dodatkowe (opcjonalnie)
-     * @param int $code Kod błędu (opcjonalnie)
+     * @param string $message Error message
+     * @param mixed $data Optional extra data
+     * @param int $code Optional HTTP status code
      * @return void
      */
     public static function error($message, $data = null, $code = 400) 
     {
-        // Ustaw odpowiedni nagłówek HTTP
+        // Set the HTTP status header
         http_response_code($code);
         
         self::send([
@@ -43,10 +43,10 @@ class AjaxResponse
     }
     
     /**
-     * Wyślij odpowiedź JSON z ostrzeżeniem
+     * Send a warning JSON response
      *
-     * @param string $message Komunikat ostrzeżenia
-     * @param mixed $data Dane dodatkowe (opcjonalnie)
+     * @param string $message Warning message
+     * @param mixed $data Optional extra data
      * @return void
      */
     public static function warning($message, $data = null) 
@@ -59,10 +59,10 @@ class AjaxResponse
     }
     
     /**
-     * Wyślij odpowiedź JSON z informacją
+     * Send an info JSON response
      *
-     * @param string $message Komunikat informacyjny
-     * @param mixed $data Dane dodatkowe (opcjonalnie)
+     * @param string $message Informational message
+     * @param mixed $data Optional extra data
      * @return void
      */
     public static function info($message, $data = null) 
@@ -75,41 +75,41 @@ class AjaxResponse
     }
     
     /**
-     * Wyślij odpowiedź JSON
+     * Send a JSON response
      *
-     * @param array $data Dane do wysłania
+     * @param array $data Payload to send
      * @return void
      */
     private static function send($data) 
     {
-        // Ustaw nagłówek dla JSON
+        // Set JSON headers
         header('Content-Type: application/json; charset=utf-8');
         
-        // Dodaj nagłówki zapobiegające buforowaniu
+        // Add no-cache headers
         header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
         header('Cache-Control: post-check=0, pre-check=0', false);
         header('Pragma: no-cache');
         header('Expires: 0');
         
-        // Dodaj nagłówek zapobiegający CORS problemom
+        // Allow basic CORS
         header('Access-Control-Allow-Origin: *');
         header('Access-Control-Allow-Methods: GET, POST');
         header('Access-Control-Allow-Headers: Content-Type');
         
-        // Dodaj timestamp
+        // Add timestamp
         $data['timestamp'] = time();
         
-        // Konwertuj dane do JSON i wyślij
+        // Encode and output JSON
         echo json_encode($data);
         
-        // Zakończ wykonywanie skryptu
+        // Stop script execution
         exit;
     }
     
     /**
-     * Sprawdź, czy bieżące żądanie jest żądaniem AJAX
+     * Check whether the current request is AJAX
      *
-     * @return bool True, jeśli to żądanie AJAX
+     * @return bool True when it is an AJAX request
      */
     public static function isAjaxRequest() 
     {
@@ -120,21 +120,21 @@ class AjaxResponse
     }
     
     /**
-     * Obsłuż wyjątek i wyślij odpowiedź AJAX z błędem
-     * Użyj tej metody w blokach try-catch dla żądań AJAX
+     * Handle an exception and send an AJAX error response.
+     * Use this inside try-catch blocks for AJAX requests.
      *
-     * @param \Throwable $exception Wyjątek do obsłużenia
-     * @param bool $logException Czy logować wyjątek (domyślnie true)
+     * @param \Throwable $exception Exception instance
+     * @param bool $logException Whether to log the exception (default true)
      * @return void
      */
     public static function handleException($exception, $logException = true) 
     {
-        // Opcjonalnie loguj wyjątek
+        // Optionally log the exception
         if ($logException && class_exists('ErrorHandler')) {
             ErrorHandler::handleException($exception);
         }
         
-        // W trybie debugowania, wyślij więcej informacji o błędzie
+        // Send detailed info when in debug mode
         if (defined('DEBUG_MODE') && DEBUG_MODE) {
             self::error(
                 $exception->getMessage(),
@@ -146,8 +146,8 @@ class AjaxResponse
                 500
             );
         } else {
-            // W trybie produkcyjnym, wyślij tylko ogólny komunikat
-            self::error('Wystąpił błąd podczas przetwarzania żądania.', null, 500);
+            // In production, send only a generic message
+            self::error('An error occurred while processing the request.', null, 500);
         }
     }
 } 

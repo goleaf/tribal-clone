@@ -3,7 +3,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 // Endpoint: map_data.php
-// Zwraca JSON z danymi o wioskach, graczach i sojuszach w wycinku mapy
+// Returns JSON with villages, players, and alliances for a map slice
 require_once '../config/config.php';
 require_once '../lib/Database.php';
 require_once '../lib/functions.php';
@@ -22,7 +22,7 @@ $max_y = $y + floor($size/2);
 $db = new Database(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 $conn = $db->getConnection();
 
-// Pobierz wioski
+// Fetch villages for the requested area
 $stmt = $conn->prepare("SELECT id, x_coord, y_coord, name, user_id, points FROM villages WHERE x_coord >= ? AND x_coord <= ? AND y_coord >= ? AND y_coord <= ?");
 $stmt->bind_param('iiii', $min_x, $max_x, $min_y, $max_y);
 $stmt->execute();
@@ -44,7 +44,7 @@ while ($v = $res->fetch_assoc()) {
 }
 $stmt->close();
 
-// Pobierz graczy
+// Fetch players
 $res = $conn->query('SELECT id, username, points, ally_id FROM users');
 $players = [];
 while ($p = $res->fetch_assoc()) {
@@ -57,7 +57,7 @@ while ($p = $res->fetch_assoc()) {
 }
 $res->close();
 
-// Pobierz sojusze, jeśli tabela istnieje (opcjonalna funkcja)
+// Fetch alliances if the table exists (optional feature)
 $allies = [];
 if (dbTableExists($conn, 'allies')) {
     $res = $conn->query('SELECT id, name, points, short FROM allies');

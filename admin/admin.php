@@ -1,42 +1,46 @@
 <?php
 require '../init.php';
-// --- LOGIKA: obsługa AJAX, POST, GET, usuwanie, edycja, szczegóły ---
+// --- LOGIC: handle AJAX, POST, GET, deletion, edit, details ---
 
-// --- USTAWIENIA ADMINA ---
-$admin_login = 'admin'; // Możesz zmienić na swój login
-$admin_pass = 'admin'; // Możesz zmienić na swoje hasło (w produkcji: hash!)
+// --- ADMIN CREDENTIALS ---
+$admin_login = 'admin'; // Change to your login
+$admin_pass = 'admin'; // Change to your password (use a hash in production!)
+$redirectTarget = isset($_GET['redirect']) ? $_GET['redirect'] : 'admin.php';
 
-// --- LOGOWANIE ADMINA ---
+// --- ADMIN LOGIN ---
 if (!isset($_SESSION['is_admin'])) {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_login'], $_POST['admin_pass'])) {
         if ($_POST['admin_login'] === $admin_login && $_POST['admin_pass'] === $admin_pass) {
             $_SESSION['is_admin'] = true;
-            header('Location: admin.php');
+            $postRedirect = $_POST['redirect'] ?? $redirectTarget;
+            header('Location: ' . $postRedirect);
             exit();
         } else {
-            $error = 'Nieprawidłowy login lub hasło.';
+            $error = 'Invalid login or password.';
         }
     }
-    // Formularz logowania
-    echo '<!DOCTYPE html><html lang="pl"><head><meta charset="UTF-8"><title>Panel administratora - logowanie</title><link rel="stylesheet" href="../css/main.css"></head><body style="background:#f5e9d7;">';
+    // Login form
+    echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Admin panel - login</title><link rel="stylesheet" href="../css/main.css"></head><body style="background:#f5e9d7;">';
     echo '<div style="max-width:400px;margin:80px auto;padding:30px;background:#fff;border-radius:10px;box-shadow:0 2px 8px #ccc;">';
-    echo '<h2>Panel administratora</h2>';
+    echo '<h2>Admin panel</h2>';
     if (isset($error)) echo '<div style="color:#c0392b;margin-bottom:10px;">'.$error.'</div>';
-    echo '<form method="post"><input type="text" name="admin_login" placeholder="Login" required style="width:100%;margin-bottom:10px;padding:8px;">';
-    echo '<input type="password" name="admin_pass" placeholder="Hasło" required style="width:100%;margin-bottom:10px;padding:8px;">';
-    echo '<button type="submit" style="width:100%;padding:10px;background:#8d5c2c;color:#fff;border:none;border-radius:5px;">Zaloguj się</button>';
+    echo '<form method="post">';
+    echo '<input type="hidden" name="redirect" value="'.htmlspecialchars($redirectTarget).'">';
+    echo '<input type="text" name="admin_login" placeholder="Login" required style="width:100%;margin-bottom:10px;padding:8px;">';
+    echo '<input type="password" name="admin_pass" placeholder="Password" required style="width:100%;margin-bottom:10px;padding:8px;">';
+    echo '<button type="submit" style="width:100%;padding:10px;background:#8d5c2c;color:#fff;border:none;border-radius:5px;">Log in</button>';
     echo '</form></div></body></html>';
     exit();
 }
 
-// --- PANEL ADMINA ---
+// --- ADMIN PANEL ---
 $database = new Database(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 $conn = $database->getConnection();
 
-// Upewnij się, że istnieje użytkownik o id = -1 (Barbarzyńcy)
-$conn->query("INSERT IGNORE INTO users (id, username, email, password, is_admin, is_banned, created_at) VALUES (-1, 'Barbarzyńcy', 'barbarians@localhost', '', 0, 0, NOW())");
+// Ensure the barbarian user (id = -1) exists
+$conn->query("INSERT IGNORE INTO users (id, username, email, password, is_admin, is_banned, created_at) VALUES (-1, 'Barbarians', 'barbarians@localhost', '', 0, 0, NOW())");
 
-// Akcje admina
+// Admin actions
 if (isset($_GET['action'], $_GET['id'])) {
     $id = (int)$_GET['id'];
     if ($_GET['action'] === 'ban_user') {
@@ -55,13 +59,13 @@ if (isset($_GET['action'], $_GET['id'])) {
     }
 }
 
-// Pobierz graczy
+// Fetch players
 $users = [];
 $res = $conn->query('SELECT id, username, email, is_banned, created_at FROM users ORDER BY id');
 while ($row = $res->fetch_assoc()) $users[] = $row;
 $res->close();
 
-// Pobierz wioski
+// Fetch villages
 $villages = [];
 $res = $conn->query('SELECT v.id, v.name, v.x_coord, v.y_coord, v.wood, v.clay, v.iron, v.population, u.username as owner FROM villages v JOIN users u ON v.user_id = u.id ORDER BY v.id');
 while ($row = $res->fetch_assoc()) $villages[] = $row;
@@ -69,14 +73,14 @@ $res->close();
 
 $tab = $_GET['tab'] ?? 'users';
 
-// --- obsługa usuwania wszystkich wiosek barbarzyńskich ---
+// --- handle deleting all barbarian villages ---
 if (isset($_GET['action']) && $_GET['action'] === 'delete_all_barbarians') {
     $stmt = $conn->prepare('DELETE FROM villages WHERE user_id = -1');
     $stmt->execute();
     $stmt->close();
     header('Location: admin.php?tab=barbarians'); exit();
 }
-// --- obsługa dodawania nowych wiosek barbarzyńskich ---
+// --- handle adding new barbarian villages ---
 if (isset($_POST['add_barb_villages']) && isset($_POST['barb_count'])) {
     $count = max(1, min(50, (int)$_POST['barb_count']));
     $map_size = 100;
@@ -94,16 +98,16 @@ if (isset($_POST['add_barb_villages']) && isset($_POST['barb_count'])) {
             $key = $x.'_'.$y;
         } while (isset($used_coords[$key]));
         $used_coords[$key] = true;
-        $name = 'Barbarzyńska '.$x.'|'.$y;
+        $name = 'Barbarian '.$x.'|'.$y;
         $stmt = $conn->prepare('INSERT INTO villages (name, user_id, x_coord, y_coord, wood, clay, iron, population) VALUES (?, -1, ?, ?, 500, 500, 500, 0)');
         $stmt->bind_param('sii', $name, $x, $y);
         if ($stmt->execute()) $added++;
         $stmt->close();
     }
-    $barb_add_msg = 'Dodano '.$added.' nowych wiosek barbarzyńskich!';
+    $barb_add_msg = 'Added '.$added.' new barbarian villages!';
     header('Location: admin.php?tab=barbarians'); exit();
 }
-// --- obsługa AJAX podglądu szczegółów wioski barbarzyńskiej ---
+// --- handle AJAX preview of barbarian village details ---
 if (isset($_GET['ajax']) && $_GET['ajax'] === 'barb_details' && isset($_GET['id'])) {
     $id = (int)$_GET['id'];
     $stmt = $conn->prepare('SELECT * FROM villages WHERE id = ? AND user_id = -1');
@@ -111,40 +115,40 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'barb_details' && isset($_GET['id'
     $stmt->execute();
     $v = $stmt->get_result()->fetch_assoc();
     $stmt->close();
-    if (!$v) { echo '<div style="color:#c0392b;">Nie znaleziono wioski.</div>'; exit; }
-    $buildings = ['main'=>'Ratusz','barracks'=>'Koszary','stable'=>'Stajnia','garage'=>'Warsztat','smithy'=>'Kuźnia','market'=>'Targowisko','wood'=>'Tartak','clay'=>'Cegielnia','iron'=>'Huta żelaza','farm'=>'Farma','storage'=>'Magazyn','wall'=>'Mur'];
-    $units = ['spear'=>'Pikinier','sword'=>'Miecznik','axe'=>'Topornik','archer'=>'Łucznik','scout'=>'Zwiadowca','light'=>'Lekka kawaleria','heavy'=>'Ciężka kawaleria','ram'=>'Taran','catapult'=>'Katapulta'];
+    if (!$v) { echo '<div style="color:#c0392b;">Village not found.</div>'; exit; }
+    $buildings = ['main'=>'Town hall','barracks'=>'Barracks','stable'=>'Stable','garage'=>'Workshop','smithy'=>'Smithy','market'=>'Market','wood'=>'Timber camp','clay'=>'Clay pit','iron'=>'Iron mine','farm'=>'Farm','storage'=>'Warehouse','wall'=>'Wall'];
+    $units = ['spear'=>'Spearman','sword'=>'Swordsman','axe'=>'Axeman','archer'=>'Archer','scout'=>'Scout','light'=>'Light cavalry','heavy'=>'Heavy cavalry','ram'=>'Ram','catapult'=>'Catapult'];
     echo '<div style="display:flex;gap:32px;align-items:flex-start;">';
-    echo '<img src="img/ds_graphic/map/village_barb.png" alt="Barbarzyńska" style="width:64px;height:64px;box-shadow:0 2px 8px #ccc;border-radius:8px;">';
+    echo '<img src="img/ds_graphic/map/village_barb.png" alt="Barbarian" style="width:64px;height:64px;box-shadow:0 2px 8px #ccc;border-radius:8px;">';
     echo '<div>';
     echo '<h3 style="margin-top:0;margin-bottom:10px;">'.$v['name'].' <span style="font-size:0.8em;color:#888;">('.$v['x_coord'].'|'.$v['y_coord'].')</span></h3>';
     echo '<form id="barb-edit-form" onsubmit="return saveBarbEdit(this);" style="margin-bottom:8px;">';
     echo '<input type="hidden" name="village_id" value="'.$v['id'].'">';
-    echo '<b>Surowce:</b><br>';
-    echo 'Drewno <input type="number" name="wood" value="'.$v['wood'].'" min="0" max="1000000" style="width:70px;"> ';
-    echo 'Glina <input type="number" name="clay" value="'.$v['clay'].'" min="0" max="1000000" style="width:70px;"> ';
-    echo 'Żelazo <input type="number" name="iron" value="'.$v['iron'].'" min="0" max="1000000" style="width:70px;"><br>';
-    echo '<b>Populacja:</b> <input type="number" name="population" value="'.$v['population'].'" min="0" max="100000" style="width:90px;"><br><br>';
-    echo '<b>Poziomy budynków:</b><br><table style="margin-top:4px;margin-bottom:8px;">';
+    echo '<b>Resources:</b><br>';
+    echo 'Wood <input type="number" name="wood" value="'.$v['wood'].'" min="0" max="1000000" style="width:70px;"> ';
+    echo 'Clay <input type="number" name="clay" value="'.$v['clay'].'" min="0" max="1000000" style="width:70px;"> ';
+    echo 'Iron <input type="number" name="iron" value="'.$v['iron'].'" min="0" max="1000000" style="width:70px;"><br>';
+    echo '<b>Population:</b> <input type="number" name="population" value="'.$v['population'].'" min="0" max="100000" style="width:90px;"><br><br>';
+    echo '<b>Building levels:</b><br><table style="margin-top:4px;margin-bottom:8px;">';
     foreach ($buildings as $col=>$name) {
         $lvl = isset($v[$col]) ? (int)$v[$col] : 0;
         echo '<tr><td style="padding:2px 10px 2px 0;">'.$name.'</td><td style="padding:2px 0;"><input type="number" name="b_'.$col.'" value="'.$lvl.'" min="0" max="30" style="width:60px;"></td></tr>';
     }
     echo '</table>';
-    echo '<b>Jednostki:</b><br><table style="margin-top:4px;">';
+    echo '<b>Units:</b><br><table style="margin-top:4px;">';
     foreach ($units as $col=>$name) {
         $cnt = isset($v[$col]) ? (int)$v[$col] : 0;
         echo '<tr><td style="padding:2px 10px 2px 0;">'.$name.'</td><td style="padding:2px 0;"><input type="number" name="u_'.$col.'" value="'.$cnt.'" min="0" max="100000" style="width:70px;"></td></tr>';
     }
     echo '</table>';
-    echo '<button type="submit" style="margin-top:10px;padding:7px 18px;background:#2980b9;color:#fff;border:none;border-radius:5px;cursor:pointer;">Zapisz zmiany</button>';
+    echo '<button type="submit" style="margin-top:10px;padding:7px 18px;background:#2980b9;color:#fff;border:none;border-radius:5px;cursor:pointer;">Save changes</button>';
     echo '<span id="barb-edit-msg" style="margin-left:16px;font-weight:bold;color:#27ae60;"></span>';
     echo '</form>';
     echo '</div></div>';
-    echo '<script>function saveBarbEdit(form){const fd=new FormData(form);fetch(\'admin.php?ajax=save_barb_edit\',{method:\'POST\',body:fd}).then(r=>r.json()).then(d=>{document.getElementById(\'barb-edit-msg\').innerText=d.msg;if(d.success)setTimeout(()=>location.reload(),900);}).catch(()=>{document.getElementById(\'barb-edit-msg\').innerText=\'Błąd zapisu!\';});return false;}</script>';
+    echo '<script>function saveBarbEdit(form){const fd=new FormData(form);fetch(\'admin.php?ajax=save_barb_edit\',{method:\'POST\',body:fd}).then(r=>r.json()).then(d=>{document.getElementById(\'barb-edit-msg\').innerText=d.msg;if(d.success)setTimeout(()=>location.reload(),900);}).catch(()=>{document.getElementById(\'barb-edit-msg\').innerText=\'Save failed!\';});return false;}</script>';
     exit;
 }
-// --- obsługa AJAX zapisu edycji wioski barbarzyńskiej ---
+// --- handle AJAX saving of barbarian village edits ---
 if (isset($_GET['ajax']) && $_GET['ajax'] === 'save_barb_edit' && $_SERVER['REQUEST_METHOD']==='POST') {
     $id = (int)($_POST['village_id'] ?? 0);
     $stmt = $conn->prepare('SELECT * FROM villages WHERE id = ? AND user_id = -1');
@@ -152,7 +156,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'save_barb_edit' && $_SERVER['REQU
     $stmt->execute();
     $v = $stmt->get_result()->fetch_assoc();
     $stmt->close();
-    if (!$v) { echo json_encode(['success'=>false,'msg'=>'Nie znaleziono wioski.']); exit; }
+    if (!$v) { echo json_encode(['success'=>false,'msg'=>'Village not found.']); exit; }
     $fields = ['wood','clay','iron','population'];
     $buildings = ['main','barracks','stable','garage','smithy','market','wood','clay','iron','farm','storage','wall'];
     $units = ['spear','sword','axe','archer','scout','light','heavy','ram','catapult'];
@@ -171,18 +175,18 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'save_barb_edit' && $_SERVER['REQU
     }
     $sql = 'UPDATE villages SET '.implode(',', $set).' WHERE id = '.$id.' AND user_id = -1';
     if ($conn->query($sql)) {
-        echo json_encode(['success'=>true,'msg'=>'Zapisano zmiany!']);
+        echo json_encode(['success'=>true,'msg'=>'Changes saved!']);
     } else {
-        echo json_encode(['success'=>false,'msg'=>'Błąd zapisu!']);
+        echo json_encode(['success'=>false,'msg'=>'Save failed!']);
     }
     exit;
 }
 ?>
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Panel administratora</title>
+    <title>Admin panel</title>
     <link rel="stylesheet" href="css/main.css">
     <style>
         body { background: #f5e9d7; }
@@ -201,35 +205,35 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'save_barb_edit' && $_SERVER['REQU
 </head>
 <body>
 <div class="admin-container">
-    <h1>Panel administratora</h1>
+    <h1>Admin panel</h1>
     <div class="admin-tabs">
-        <a href="admin.php?tab=users" class="<?php if($tab==='users')echo'active'; ?>">Gracze</a>
-        <a href="admin.php?tab=villages" class="<?php if($tab==='villages')echo'active'; ?>">Wioski</a>
-        <a href="admin.php?tab=barbarians" class="<?php if($tab==='barbarians')echo'active'; ?>">Barbarzyńcy/ProBot</a>
+        <a href="admin.php?tab=users" class="<?php if($tab==='users')echo'active'; ?>">Players</a>
+        <a href="admin.php?tab=villages" class="<?php if($tab==='villages')echo'active'; ?>">Villages</a>
+        <a href="admin.php?tab=barbarians" class="<?php if($tab==='barbarians')echo'active'; ?>">Barbarians/ProBot</a>
     </div>
     <?php if ($tab==='users'): ?>
-        <h2>Gracze</h2>
+        <h2>Players</h2>
         <table>
-            <tr><th>ID</th><th>Login</th><th>Email</th><th>Zarejestrowany</th><th>Status</th><th>Akcje</th></tr>
+            <tr><th>ID</th><th>Login</th><th>Email</th><th>Registered</th><th>Status</th><th>Actions</th></tr>
             <?php foreach ($users as $u): ?>
                 <tr<?php if($u['is_banned'])echo' class="banned"'; ?>>
                     <td><?php echo $u['id']; ?></td>
                     <td><?php echo htmlspecialchars($u['username']); ?></td>
                     <td><?php echo htmlspecialchars($u['email']); ?></td>
                     <td><?php echo $u['created_at']; ?></td>
-                    <td><?php echo $u['is_banned'] ? '<span style="color:#c0392b;">Zbanowany</span>' : '<span style="color:#27ae60;">Aktywny</span>'; ?></td>
+                    <td><?php echo $u['is_banned'] ? '<span style="color:#c0392b;">Banned</span>' : '<span style="color:#27ae60;">Active</span>'; ?></td>
                     <td>
                         <?php if (!$u['is_banned']): ?>
-                            <a href="admin.php?action=ban_user&id=<?php echo $u['id']; ?>" class="admin-action-btn ban" onclick="return confirm('Zbanować tego gracza?');">Banuj</a>
+                            <a href="admin.php?action=ban_user&id=<?php echo $u['id']; ?>" class="admin-action-btn ban" onclick="return confirm('Ban this player?');">Ban</a>
                         <?php endif; ?>
                     </td>
                 </tr>
             <?php endforeach; ?>
         </table>
     <?php elseif ($tab==='villages'): ?>
-        <h2>Wioski</h2>
+        <h2>Villages</h2>
         <table>
-            <tr><th>ID</th><th>Nazwa</th><th>Właściciel</th><th>Koordynaty</th><th>Drewno</th><th>Glina</th><th>Żelazo</th><th>Populacja</th><th>Akcje</th></tr>
+            <tr><th>ID</th><th>Name</th><th>Owner</th><th>Coordinates</th><th>Wood</th><th>Clay</th><th>Iron</th><th>Population</th><th>Actions</th></tr>
             <?php foreach ($villages as $v): ?>
                 <tr>
                     <td><?php echo $v['id']; ?></td>
@@ -241,30 +245,30 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'save_barb_edit' && $_SERVER['REQU
                     <td><?php echo $v['iron']; ?></td>
                     <td><?php echo $v['population']; ?></td>
                     <td>
-                        <a href="village_view.php?id=<?php echo $v['id']; ?>" class="admin-action-btn">Podgląd</a>
-                        <a href="admin.php?action=delete_village&id=<?php echo $v['id']; ?>" class="admin-action-btn delete" onclick="return confirm('Usunąć tę wioskę?');">Usuń</a>
+                        <a href="village_view.php?id=<?php echo $v['id']; ?>" class="admin-action-btn">View</a>
+                        <a href="admin.php?action=delete_village&id=<?php echo $v['id']; ?>" class="admin-action-btn delete" onclick="return confirm('Delete this village?');">Delete</a>
                     </td>
                 </tr>
             <?php endforeach; ?>
         </table>
     <?php elseif ($tab==='barbarians'): ?>
-        <h2>Wioski barbarzyńskie (AI)</h2>
+        <h2>Barbarian villages (AI)</h2>
         <div style="margin-bottom:18px;">
-            <button onclick="runProBot()" style="padding:7px 18px;background:#2980b9;color:#fff;border:none;border-radius:5px;cursor:pointer;">Rozwiń losowo wioski barbarzyńskie (AI)</button>
-            <button onclick="if(confirm('Usunąć wszystkie wioski barbarzyńskie?'))location.href='admin.php?action=delete_all_barbarians';" style="padding:7px 18px;background:#c0392b;color:#fff;border:none;border-radius:5px;cursor:pointer;margin-left:10px;">Usuń wszystkie wioski barbarzyńskie</button>
+            <button onclick="runProBot()" style="padding:7px 18px;background:#2980b9;color:#fff;border:none;border-radius:5px;cursor:pointer;">Randomly upgrade barbarian villages (AI)</button>
+            <button onclick="if(confirm('Delete all barbarian villages?'))location.href='admin.php?action=delete_all_barbarians';" style="padding:7px 18px;background:#c0392b;color:#fff;border:none;border-radius:5px;cursor:pointer;margin-left:10px;">Delete all barbarian villages</button>
         </div>
         <div style="margin-bottom:24px; background:#f5e9d7; padding:18px; border-radius:8px; max-width:500px;">
-            <form method="post" style="display:flex;align-items:center;gap:16px;" onsubmit="return confirm('Na pewno dodać nowe wioski barbarzyńskie?');">
-                <label for="barb_count"><b>Dodaj wioski barbarzyńskie:</b></label>
+            <form method="post" style="display:flex;align-items:center;gap:16px;" onsubmit="return confirm('Add new barbarian villages?');">
+                <label for="barb_count"><b>Add barbarian villages:</b></label>
                 <input type="number" min="1" max="50" name="barb_count" id="barb_count" value="5" style="width:60px;padding:5px;">
-                <button type="submit" name="add_barb_villages" style="padding:7px 18px;background:#27ae60;color:#fff;border:none;border-radius:5px;cursor:pointer;">Dodaj</button>
+                <button type="submit" name="add_barb_villages" style="padding:7px 18px;background:#27ae60;color:#fff;border:none;border-radius:5px;cursor:pointer;">Add</button>
             </form>
-            <div style="font-size:0.95em;color:#888;margin-top:6px;">Wioski pojawią się w losowych miejscach na mapie.</div>
+            <div style="font-size:0.95em;color:#888;margin-top:6px;">Villages will appear in random spots on the map.</div>
             <?php if (isset($barb_add_msg)) echo '<div style="color:#2980b9;font-weight:bold;margin-top:8px;">'.$barb_add_msg.'</div>'; ?>
         </div>
         <div id="probot-result" style="margin-bottom:18px;color:#27ae60;font-weight:bold;"></div>
         <table>
-            <tr><th>ID</th><th>Nazwa</th><th>Koordynaty</th><th>Drewno</th><th>Glina</th><th>Żelazo</th><th>Populacja</th><th>Grafika</th><th>Akcje</th></tr>
+            <tr><th>ID</th><th>Name</th><th>Coordinates</th><th>Wood</th><th>Clay</th><th>Iron</th><th>Population</th><th>Graphic</th><th>Actions</th></tr>
             <?php
             $barb_villages = [];
             $res = $conn->query('SELECT id, name, x_coord, y_coord, wood, clay, iron, population FROM villages WHERE user_id = -1 ORDER BY id');
@@ -279,15 +283,15 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'save_barb_edit' && $_SERVER['REQU
                     <td><?php echo $v['clay']; ?></td>
                     <td><?php echo $v['iron']; ?></td>
                     <td><?php echo $v['population']; ?></td>
-                    <td><img src="img/ds_graphic/map/village_barb.png" alt="Barbarzyńska" style="width:32px;height:32px;"></td>
-                    <td><button onclick="showBarbDetails(<?php echo $v['id']; ?>)" style="padding:4px 12px;background:#8d5c2c;color:#fff;border:none;border-radius:4px;cursor:pointer;">Szczegóły</button></td>
+                    <td><img src="img/ds_graphic/map/village_barb.png" alt="Barbarian" style="width:32px;height:32px;"></td>
+                    <td><button onclick="showBarbDetails(<?php echo $v['id']; ?>)" style="padding:4px 12px;background:#8d5c2c;color:#fff;border:none;border-radius:4px;cursor:pointer;">Details</button></td>
                 </tr>
             <?php endforeach; ?>
         </table>
         <div id="barb-details-popup" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.35);z-index:9999;align-items:center;justify-content:center;">
             <div id="barb-details-content" style="background:#fff;padding:32px 36px 24px 36px;border-radius:12px;min-width:340px;max-width:95vw;box-shadow:0 4px 32px #0002;position:relative;">
                 <button onclick="closeBarbDetails()" style="position:absolute;top:12px;right:12px;background:#c0392b;color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:1.2em;cursor:pointer;">&times;</button>
-                <div id="barb-details-body">Ładowanie...</div>
+                <div id="barb-details-body">Loading...</div>
             </div>
         </div>
         <script>
@@ -301,7 +305,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'save_barb_edit' && $_SERVER['REQU
                     setTimeout(()=>location.reload(), 1200);
                 })
                 .catch(()=>{
-                    document.getElementById('probot-result').innerText = 'Błąd działania AI!';
+                    document.getElementById('probot-result').innerText = 'AI action failed!';
                 })
                 .finally(()=>btns.forEach(btn=>btn.disabled=false));
         }

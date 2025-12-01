@@ -8,12 +8,14 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+$isSqlite = defined('DB_DRIVER') && DB_DRIVER === 'sqlite';
+
 echo "<!DOCTYPE html>
-<html lang='pl'>
+<html lang='en'>
 <head>
     <meta charset='UTF-8'>
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    <title>Test Systemu Budynków</title>
+    <title>Building System Test</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
         h1, h2, h3 { color: #5a3921; }
@@ -27,7 +29,7 @@ echo "<!DOCTYPE html>
     </style>
 </head>
 <body>
-    <h1>Test Systemu Budynków - Diagnostyka</h1>";
+    <h1>Building System Test - Diagnostics</h1>";
 
 $database = new Database(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 $conn = $database->getConnection();
@@ -37,50 +39,61 @@ echo "<section>
     <h2>1. Struktura tabeli village_buildings</h2>";
 
 // Verify table structure
-$result = $conn->query('DESCRIBE village_buildings');
+$result = $isSqlite
+    ? $conn->query("PRAGMA table_info('village_buildings')")
+    : $conn->query('DESCRIBE village_buildings');
 if ($result) {
-    echo "<table>
-        <tr><th>Pole</th><th>Typ</th><th>Null</th><th>Klucz</th><th>Domyślnie</th><th>Extra</th></tr>";
+    echo "<table>";
+    echo $isSqlite
+        ? "<tr><th>Column</th><th>Type</th><th>Null</th><th>Default</th><th>PK</th></tr>"
+        : "<tr><th>Column</th><th>Type</th><th>Null</th><th>Key</th><th>Default</th><th>Extra</th></tr>";
     
+    $fields = [];
     while ($row = $result->fetch_assoc()) {
-        echo "<tr>
-            <td>" . $row['Field'] . "</td>
-            <td>" . $row['Type'] . "</td>
-            <td>" . $row['Null'] . "</td>
-            <td>" . $row['Key'] . "</td>
-            <td>" . $row['Default'] . "</td>
-            <td>" . $row['Extra'] . "</td>
-        </tr>";
+        if ($isSqlite) {
+            $fields[$row['name']] = true;
+            echo "<tr>
+                <td>" . $row['name'] . "</td>
+                <td>" . $row['type'] . "</td>
+                <td>" . $row['notnull'] . "</td>
+                <td>" . $row['dflt_value'] . "</td>
+                <td>" . $row['pk'] . "</td>
+            </tr>";
+        } else {
+            $fields[$row['Field']] = true;
+            echo "<tr>
+                <td>" . $row['Field'] . "</td>
+                <td>" . $row['Type'] . "</td>
+                <td>" . $row['Null'] . "</td>
+                <td>" . $row['Key'] . "</td>
+                <td>" . $row['Default'] . "</td>
+                <td>" . $row['Extra'] . "</td>
+            </tr>";
+        }
     }
     
     echo "</table>";
     
-    // Check if the required columns exist
-    $result->data_seek(0);
-    $fields = [];
-    while ($row = $result->fetch_assoc()) {
-        $fields[$row['Field']] = true;
-    }
-    
-    echo "<p>Wymagane kolumny:</p>
+    echo "<p>Required columns:</p>
     <ul>";
     $required_columns = ['id', 'village_id', 'building_type_id', 'level', 'upgrade_level_to', 'upgrade_ends_at'];
     foreach ($required_columns as $column) {
         if (isset($fields[$column])) {
             echo "<li class='success'>$column - OK</li>";
         } else {
-            echo "<li class='error'>$column - BRAK!</li>";
+            echo "<li class='error'>$column - MISSING!</li>";
         }
     }
     echo "</ul>";
+    
 } else {
-    echo "<p class='error'>Błąd: " . $conn->error . "</p>";
+    echo "<p class='error'>Unable to fetch village_buildings structure: " . ($conn->error ?? 'no details') . "</p>";
 }
 
 echo "</section>";
 
 echo "<section>
-    <h2>2. Typy budynków w bazie danych</h2>";
+    <h2>2. Building types in the database</h2>";
 
 // Check building types
 $result = $conn->query('SELECT * FROM building_types ORDER BY id');
@@ -89,21 +102,21 @@ if ($result) {
         <tr>
             <th>ID</th>
             <th>Internal Name</th>
-            <th>Nazwa (PL)</th>
+            <th>Name (PL)</th>
             <th>Max Level</th>
-            <th>Czas budowy</th>
-            <th>Mnożnik czasu</th>
-            <th>Drewno (bazowo)</th>
-            <th>Glina (bazowo)</th>
-            <th>Żelazo (bazowo)</th>
-            <th>Mnożnik kosztu</th>
+            <th>Build time</th>
+            <th>Time factor</th>
+            <th>Wood (base)</th>
+            <th>Clay (base)</th>
+            <th>Iron (base)</th>
+            <th>Cost factor</th>
         </tr>";
     
     while ($row = $result->fetch_assoc()) {
         echo "<tr>
             <td>" . $row['id'] . "</td>
             <td>" . $row['internal_name'] . "</td>
-            <td>" . $row['name_pl'] . "</td>
+            <td>" . $row['name'] . "</td>
             <td>" . $row['max_level'] . "</td>
             <td>" . $row['base_build_time_initial'] . "</td>
             <td>" . $row['build_time_factor'] . "</td>
@@ -115,28 +128,28 @@ if ($result) {
     }
     
     echo "</table>";
-    echo "<p>Znaleziono " . $result->num_rows . " typów budynków w bazie danych.</p>";
+    echo "<p>Found " . $result->num_rows . " building types in the database.</p>";
 } else {
-    echo "<p class='error'>Błąd: " . $conn->error . "</p>";
+    echo "<p class='error'>Error: " . ($conn->error ?? 'no details') . "</p>";
 }
 
 echo "</section>";
 
 echo "<section>
-    <h2>3. Weryfikacja funkcji BuildingManager</h2>";
+    <h2>3. BuildingManager verification</h2>";
 
 // Test BuildingManager functions
-echo "<h3>3.1. Obliczanie kosztów rozbudowy</h3>";
+echo "<h3>3.1. Calculating upgrade costs</h3>";
 $test_buildings = ['main_building', 'sawmill', 'clay_pit', 'iron_mine', 'warehouse'];
 $test_levels = [1, 2, 3, 5, 10];
 
 echo "<table>
     <tr>
-        <th>Budynek</th>
-        <th>Do poziomu</th>
-        <th>Drewno</th>
-        <th>Glina</th>
-        <th>Żelazo</th>
+        <th>Building</th>
+        <th>To level</th>
+        <th>Wood</th>
+        <th>Clay</th>
+        <th>Iron</th>
     </tr>";
 
 foreach ($test_buildings as $building) {
@@ -154,7 +167,7 @@ foreach ($test_buildings as $building) {
             echo "<tr>
                 <td>" . $building . "</td>
                 <td>" . $level . "</td>
-                <td colspan='3' class='error'>Błąd obliczenia kosztu</td>
+                <td colspan='3' class='error'>Cost calculation error</td>
             </tr>";
         }
     }
@@ -162,16 +175,16 @@ foreach ($test_buildings as $building) {
 
 echo "</table>";
 
-echo "<h3>3.2. Obliczanie czasu rozbudowy (z różnymi poziomami ratusza)</h3>";
+echo "<h3>3.2. Calculating upgrade times (with various town hall levels)</h3>";
 $test_main_building_levels = [1, 5, 10, 20];
 
 echo "<table>
     <tr>
-        <th>Budynek</th>
-        <th>Do poziomu</th>
-        <th>Poziom Ratusza</th>
-        <th>Czas budowy (sekundy)</th>
-        <th>Czas budowy (format)</th>
+        <th>Building</th>
+        <th>To level</th>
+        <th>Town Hall level</th>
+        <th>Build time (seconds)</th>
+        <th>Build time (formatted)</th>
     </tr>";
 
 foreach ($test_buildings as $building) {
@@ -184,14 +197,14 @@ foreach ($test_buildings as $building) {
                     <td>" . $level . "</td>
                     <td>" . $main_level . "</td>
                     <td>" . $time . "</td>
-                    <td>" . gmdate("H:i:s", $time) . "</td>
+                    <td>" . gmdate('H:i:s', $time) . "</td>
                 </tr>";
             } else {
                 echo "<tr>
                     <td>" . $building . "</td>
                     <td>" . $level . "</td>
                     <td>" . $main_level . "</td>
-                    <td colspan='2' class='error'>Błąd obliczenia czasu</td>
+                    <td colspan='2' class='error'>Time calculation error</td>
                 </tr>";
             }
         }
@@ -200,16 +213,16 @@ foreach ($test_buildings as $building) {
 
 echo "</table>";
 
-echo "<h3>3.3. Obliczanie produkcji surowców</h3>";
+echo "<h3>3.3. Calculating resource production</h3>";
 $production_buildings = ['sawmill', 'clay_pit', 'iron_mine'];
 $production_test_levels = [1, 5, 10, 15, 20, 30];
 
 echo "<table>
     <tr>
-        <th>Budynek</th>
-        <th>Poziom</th>
-        <th>Produkcja na godzinę</th>
-        <th>Produkcja na dzień</th>
+        <th>Building</th>
+        <th>Level</th>
+        <th>Per hour</th>
+        <th>Per day</th>
     </tr>";
 
 foreach ($production_buildings as $building) {
@@ -229,13 +242,17 @@ echo "</table>";
 echo "</section>";
 
 echo "<section>
-    <h2>4. Informacje debugowania</h2>";
+    <h2>4. Debug information</h2>";
 echo "<p>PHP Version: " . phpversion() . "</p>";
-echo "<p>MySQL Client Info: " . $conn->client_info . "</p>";
-echo "<p>MySQL Server Info: " . $conn->server_info . "</p>";
+if ($isSqlite) {
+    echo "<p>Database engine: SQLite</p>";
+} else {
+    echo "<p>MySQL Client Info: " . $conn->client_info . "</p>";
+    echo "<p>MySQL Server Info: " . $conn->server_info . "</p>";
+}
 echo "</section>";
 
-echo "<p><a href='../game/game.php'>Powrót do gry</a></p>";
+echo "<p><a href='../game/game.php'>Back to the game</a></p>";
 echo "</body></html>";
 
 $database->closeConnection();

@@ -8,15 +8,15 @@ class NotificationManager {
     }
 
     /**
-     * Dodaje nowe powiadomienie do bazy danych.
-     * @param int $userId ID użytkownika
-     * @param string $message Treść powiadomienia
-     * @param string $type Typ powiadomienia (np. 'success', 'error', 'info')
-     * @return bool True w przypadku sukcesu, false w przypadku błędu.
+     * Add a new notification to the database.
+     * @param int $userId User ID
+     * @param string $message Notification content
+     * @param string $type Notification type (e.g. 'success', 'error', 'info')
+     * @return bool True on success, false on failure.
      */
     public function addNotification($userId, $message, $type = 'info', $link = '', $expiresAt = null) {
         if ($expiresAt === null) {
-            $expiresAt = time() + (7 * 24 * 60 * 60); // Domyślnie 7 dni
+            $expiresAt = time() + (7 * 24 * 60 * 60); // Default 7 days
         }
         $stmt = $this->conn->prepare("INSERT INTO notifications (user_id, message, type, link, is_read, created_at, expires_at) VALUES (?, ?, ?, ?, 0, NOW(), ?)");
         if ($stmt) {
@@ -29,14 +29,14 @@ class NotificationManager {
     }
 
     /**
-     * Pobiera powiadomienia dla danego użytkownika.
-     * @param int $userId ID użytkownika
-     * @param bool $unreadOnly Jeśli true, pobiera tylko nieprzeczytane powiadomienia.
-     * @param int $limit Limit liczby powiadomień.
-     * @return array Tablica powiadomień.
+     * Fetch notifications for a user.
+     * @param int $userId User ID
+     * @param bool $unreadOnly If true, fetch only unread notifications.
+     * @param int $limit Maximum number of notifications.
+     * @return array List of notifications.
      */
     public function getNotifications($userId, $unreadOnly = false, $limit = 10) {
-        // Usuń wygasłe powiadomienia przed pobraniem
+        // Remove expired notifications before fetching
         $this->cleanExpiredNotifications();
 
         $query = "SELECT * FROM notifications WHERE user_id = ?";
@@ -60,12 +60,12 @@ class NotificationManager {
     }
 
     /**
-     * Pobiera liczbę nieprzeczytanych powiadomień dla danego użytkownika.
-     * @param int $userId ID użytkownika
-     * @return int Liczba nieprzeczytanych powiadomień.
+     * Get the unread notification count for a user.
+     * @param int $userId User ID
+     * @return int Number of unread notifications.
      */
     public function getUnreadNotificationCount(int $userId): int {
-        // Usuń wygasłe powiadomienia przed pobraniem (opcjonalnie, można to robić rzadziej)
+        // Optionally clean expired notifications before counting
         // $this->cleanExpiredNotifications();
 
         $query = "SELECT COUNT(*) AS unread_count FROM notifications WHERE user_id = ? AND is_read = 0";
@@ -85,7 +85,7 @@ class NotificationManager {
     }
 
     /**
-     * Usuwa wygasłe powiadomienia z bazy danych.
+     * Remove expired notifications from the database.
      */
     private function cleanExpiredNotifications() {
         $stmt = $this->conn->prepare("DELETE FROM notifications WHERE expires_at < ?");
@@ -98,10 +98,10 @@ class NotificationManager {
     }
 
     /**
-     * Oznacza powiadomienie jako przeczytane.
-     * @param int $notificationId ID powiadomienia.
-     * @param int $userId ID użytkownika (dla bezpieczeństwa, aby użytkownik mógł oznaczyć tylko swoje powiadomienia).
-     * @return bool True w przypadku sukcesu, false w przypadku błędu.
+     * Mark a notification as read.
+     * @param int $notificationId Notification ID.
+     * @param int $userId User ID (safety check so users only mark their own notifications).
+     * @return bool True on success, false on failure.
      */
     public function markAsRead($notificationId, $userId) {
         $stmt = $this->conn->prepare("UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?");
@@ -115,9 +115,9 @@ class NotificationManager {
     }
 
     /**
-     * Oznacza wszystkie powiadomienia użytkownika jako przeczytane.
-     * @param int $userId ID użytkownika.
-     * @return bool True w przypadku sukcesu, false w przypadku błędu.
+     * Mark all notifications for a user as read.
+     * @param int $userId User ID.
+     * @return bool True on success, false on failure.
      */
     public function markAllAsRead($userId) {
         $stmt = $this->conn->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ?");

@@ -2,7 +2,7 @@
 require '../init.php';
 validateCSRF();
 
-// Sprawdź, czy użytkownik jest zalogowany
+// Ensure the user is logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../auth/login.php");
     exit();
@@ -25,7 +25,7 @@ $battleManager = new BattleManager($conn, $villageManager, $buildingManager);
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 
-// Obsługa anulowania ataku
+// Handle attack cancellation
 if (isset($_POST['cancel_attack']) && isset($_POST['attack_id'])) {
     $attack_id = (int)$_POST['attack_id'];
     
@@ -39,11 +39,11 @@ if (isset($_POST['cancel_attack']) && isset($_POST['attack_id'])) {
         $message_type = 'error';
     }
     
-    // Przekierowanie z komunikatem
+    // Redirect with feedback message
     $_SESSION['message'] = $message;
     $_SESSION['message_type'] = $message_type;
     
-    // Jeśli żądanie AJAX, zwróć JSON
+    // If AJAX request, return JSON
     if (isset($_POST['ajax']) && $_POST['ajax'] == 1) {
         echo json_encode($result);
         exit();
@@ -53,16 +53,16 @@ if (isset($_POST['cancel_attack']) && isset($_POST['attack_id'])) {
     exit();
 }
 
-// Sprawdź ID wioski źródłowej
+// Validate source village ID
 if (!isset($_GET['source_village']) && !isset($_POST['source_village'])) {
-    // Pobierz pierwszą wioskę użytkownika jako domyślną
+    // Use the player's first village as default
     $stmt = $conn->prepare("SELECT id FROM villages WHERE user_id = ? LIMIT 1");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $result = $stmt->get_result();
     
     if ($result->num_rows == 0) {
-        $_SESSION['message'] = "Nie masz jeszcze żadnej wioski.";
+        $_SESSION['message'] = "You do not have any villages yet.";
         $_SESSION['message_type'] = "error";
         header("Location: ../game/game.php");
         exit();
@@ -74,13 +74,13 @@ if (!isset($_GET['source_village']) && !isset($_POST['source_village'])) {
 } else {
     $source_village_id = isset($_GET['source_village']) ? (int)$_GET['source_village'] : (int)$_POST['source_village'];
     
-    // Sprawdź, czy wioska należy do użytkownika
+    // Ensure the village belongs to the user
     $stmt = $conn->prepare("SELECT id FROM villages WHERE id = ? AND user_id = ?");
     $stmt->bind_param("ii", $source_village_id, $user_id);
     $stmt->execute();
     
     if ($stmt->get_result()->num_rows == 0) {
-        $_SESSION['message'] = "Nie masz dostępu do tej wioski.";
+        $_SESSION['message'] = "You do not have access to this village.";
         $_SESSION['message_type'] = "error";
         header("Location: ../game/game.php");
         exit();
@@ -88,21 +88,21 @@ if (!isset($_GET['source_village']) && !isset($_POST['source_village'])) {
     $stmt->close();
 }
 
-// Pobierz jednostki dostępne w wiosce źródłowej
+// Fetch units available in the source village
 $units = $unitManager->getVillageUnits($source_village_id);
 
-// Obsługa wysyłania ataku
+// Handle attack submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attack'])) {
     $target_village_id = (int)$_POST['target_village'];
     $attack_type = $_POST['attack_type'];
     $target_building = !empty($_POST['target_building']) ? $_POST['target_building'] : null;
     
-    // Sprawdź, czy wybrano typ ataku
+    // Validate attack type
     if (!in_array($attack_type, ['attack', 'raid', 'support'])) {
-        $message = "Wybierz poprawny typ ataku.";
+        $message = "Select a valid attack type.";
         $message_type = "error";
     } else {
-        // Zbierz dane o wysyłanych jednostkach
+        // Collect units being sent
         $units_sent = [];
         
         foreach ($_POST as $key => $value) {
@@ -112,19 +112,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attack'])) {
             }
         }
         
-        // Sprawdź, czy wysyłane są jakiekolwiek jednostki
+        // Ensure at least one unit is being sent
         if (empty($units_sent)) {
-            $message = "Musisz wysłać co najmniej jedną jednostkę.";
+            $message = "You must send at least one unit.";
             $message_type = "error";
         } else {
-            // Wyślij atak
+            // Send the attack
             $result = $battleManager->sendAttack($source_village_id, $target_village_id, $units_sent, $attack_type, $target_building);
             
             if ($result['success']) {
                 $message = $result['message'];
                 $message_type = "success";
                 
-                // Odśwież listę jednostek
+                // Refresh unit list
                 $units = $unitManager->getVillageUnits($source_village_id);
             } else {
                 $message = $result['error'];
@@ -133,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attack'])) {
         }
     }
     
-    // Jeśli żądanie AJAX, zwróć JSON
+    // If AJAX request, return JSON
     if (isset($_POST['ajax']) && $_POST['ajax'] == 1) {
         echo json_encode([
             'success' => ($message_type == 'success'),
@@ -144,10 +144,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attack'])) {
     }
 }
 
-// Pobierz informacje o wiosce źródłowej
+// Fetch details of the source village
 $source_village = $villageManager->getVillageDetails($source_village_id);
 
-// Pobierz wioski docelowe (wszystkie wioski poza własnymi)
+// Fetch potential target villages (all villages except the player's own)
 $stmt = $conn->prepare("
     SELECT v.id, v.name, v.x_coord, v.y_coord, u.username 
     FROM villages v 
@@ -161,20 +161,20 @@ $stmt->execute();
 $target_villages_result = $stmt->get_result();
 $target_villages = [];
 while ($row = $target_villages_result->fetch_assoc()) {
-    // Oblicz odległość
+    // Calculate distance
     $distance = sqrt(pow($row['x_coord'] - $source_village['x_coord'], 2) + pow($row['y_coord'] - $source_village['y_coord'], 2));
     $row['distance'] = round($distance, 2);
     $target_villages[] = $row;
 }
 $stmt->close();
 
-// Pobierz aktywne ataki wychodzące
+// Get active outgoing attacks
 $outgoing_attacks = $battleManager->getOutgoingAttacks($source_village_id);
 
-// Pobierz aktywne ataki przychodzące
+// Get active incoming attacks
 $incoming_attacks = $battleManager->getIncomingAttacks($source_village_id);
 
-// Pobierz wszystkie wioski użytkownika
+// Fetch all villages belonging to the user
 $stmt = $conn->prepare("SELECT id, name FROM villages WHERE user_id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
@@ -197,11 +197,11 @@ if (!$is_ajax) {
     $database->closeConnection();
 ?>
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wysyłanie ataków - Tribal Wars</title>
+    <title>Send attacks - Tribal Wars</title>
     <link rel="stylesheet" href="../css/main.css?v=<?php echo time(); ?>">
     <style>
         .attack-form {
@@ -327,7 +327,7 @@ if (!$is_ajax) {
             display: block;
         }
         
-        /* Modyfikacje dla responsywności */
+        /* Responsive tweaks */
         @media (max-width: 768px) {
             .attack-form {
                 grid-template-columns: 1fr;
@@ -343,26 +343,26 @@ if (!$is_ajax) {
     <?php if (!$is_ajax): ?>
         <header id="main-header">
             <div class="header-title">
-                <span class="game-logo">⚔️</span>
-                <span>Wysyłanie wojsk</span>
+                <span class="game-logo">Attack</span>
+                <span>Send troops</span>
             </div>
-            <div class="header-user">Witaj, <b><?php echo htmlspecialchars($username); ?></b></div>
+            <div class="header-user">Welcome, <b><?php echo htmlspecialchars($username); ?></b></div>
         </header>
         
         <div id="main-content">
             <div id="sidebar">
                 <ul>
-                    <li><a href="game.php">Przegląd wioski</a></li>
-                    <li><a href="map.php">Mapa</a></li>
-                    <li><a href="attack.php" class="active">Atak</a></li>
-                    <li><a href="reports.php">Raporty</a></li>
-                    <li><a href="player.php">Profil gracza</a></li>
-                    <li><a href="logout.php">Wyloguj</a></li>
+                    <li><a href="game.php">Village overview</a></li>
+                    <li><a href="map.php">Map</a></li>
+                    <li><a href="attack.php" class="active">Attack</a></li>
+                    <li><a href="reports.php">Reports</a></li>
+                    <li><a href="player.php">Player profile</a></li>
+                    <li><a href="logout.php">Log out</a></li>
                 </ul>
             </div>
             
             <main>
-                <h2>Wysyłanie wojsk</h2>
+                <h2>Send troops</h2>
                 
                 <?php if (isset($message)): ?>
                     <p class="<?php echo $message_type; ?>-message"><?php echo $message; ?></p>
@@ -371,10 +371,10 @@ if (!$is_ajax) {
                     <?php unset($_SESSION['message'], $_SESSION['message_type']); ?>
                 <?php endif; ?>
                 
-                <!-- Wybór wioski -->
+                <!-- Village selection -->
                 <div class="village-selector">
                     <form method="get" action="attack.php">
-                        <label for="source_village">Wybierz wioskę:</label>
+                        <label for="source_village">Choose village:</label>
                         <select name="source_village" id="source_village" onchange="this.form.submit()">
                             <?php foreach ($user_villages as $village): ?>
                                 <option value="<?php echo $village['id']; ?>" <?php echo ($village['id'] == $source_village_id) ? 'selected' : ''; ?>>
@@ -385,75 +385,75 @@ if (!$is_ajax) {
                     </form>
                 </div>
                 
-                <!-- Nawigacja zakładek -->
+                <!-- Tab navigation -->
                 <div class="tab-navigation">
-                    <button class="tab-link active" data-tab="send-attack">Wyślij atak</button>
-                    <button class="tab-link" data-tab="outgoing-attacks">Wychodzące (<?php echo count($outgoing_attacks); ?>)</button>
-                    <button class="tab-link" data-tab="incoming-attacks">Przychodzące (<?php echo count($incoming_attacks); ?>)</button>
+                    <button class="tab-link active" data-tab="send-attack">Send attack</button>
+                    <button class="tab-link" data-tab="outgoing-attacks">Outgoing (<?php echo count($outgoing_attacks); ?>)</button>
+                    <button class="tab-link" data-tab="incoming-attacks">Incoming (<?php echo count($incoming_attacks); ?>)</button>
                 </div>
                 
-                <!-- Zakładka wysyłania ataku -->
+                <!-- Send attack tab -->
                 <div id="send-attack" class="tab-content active">
                     <?php if (empty($units)): ?>
-                        <p class="error-message">Nie masz żadnych jednostek w tej wiosce.</p>
+                        <p class="error-message">You have no units in this village.</p>
                     <?php elseif (empty($target_villages)): ?>
-                        <p class="error-message">Brak dostępnych wiosek do ataku.</p>
+                        <p class="error-message">No target villages available.</p>
                     <?php else: ?>
                         <form method="post" action="attack.php" id="attack-form">
                             <input type="hidden" name="source_village" value="<?php echo $source_village_id; ?>">
                             
                             <div class="attack-form">
                                 <div class="available-units">
-                                    <h3>Dostępne jednostki</h3>
+                                    <h3>Available units</h3>
                                     <?php foreach ($units as $unit): ?>
                                         <div class="unit-selector">
-                                            <img src="../img/ds_graphic/unit/<?= $unit['internal_name'] ?>.png" alt="<?= $unit['name_pl'] ?>">
-                                            <span><?= $unit['name_pl'] ?> (Dostępnych: <?= $unit['count'] ?>)</span>
+                                            <img src="../img/ds_graphic/unit/<?= $unit['internal_name'] ?>.png" alt="<?= $unit['name'] ?>">
+                                            <span><?= $unit['name'] ?> (Available: <?= $unit['count'] ?>)</span>
                                             <input type="number" name="unit_<?= $unit['unit_type_id'] ?>" value="0" min="0" max="<?= $unit['count'] ?>" data-internal-name="<?= htmlspecialchars($unit['internal_name']) ?>">
                                         </div>
                                     <?php endforeach; ?>
                                     
                                     <div style="margin-top: 15px;">
-                                        <button type="button" id="select-all" class="btn btn-secondary">Zaznacz wszystkie</button>
-                                        <button type="button" id="select-none" class="btn btn-secondary">Odznacz wszystkie</button>
+                                        <button type="button" id="select-all" class="btn btn-secondary">Select all</button>
+                                        <button type="button" id="select-none" class="btn btn-secondary">Select none</button>
                                     </div>
                                 </div>
                                 
                                 <div class="attack-options">
                                     <div class="attack-type-selector">
-                                        <h3>Typ ataku</h3>
+                                        <h3>Attack type</h3>
                                         <label>
-                                            <input type="radio" name="attack_type" value="attack" checked> Atak (normalne)
+                                            <input type="radio" name="attack_type" value="attack" checked> Attack (normal)
                                         </label><br>
                                         <label>
-                                            <input type="radio" name="attack_type" value="raid"> Grabież (tylko zasoby)
+                                            <input type="radio" name="attack_type" value="raid"> Raid (resources only)
                                         </label><br>
                                         <label>
-                                            <input type="radio" name="attack_type" value="support"> Wsparcie (dla sojusznika)
+                                            <input type="radio" name="attack_type" value="support"> Support (for ally)
                                         </label>
                                     </div>
                                     
                                     <div class="target-selector">
-                                        <h3>Wybierz cel</h3>
+                                        <h3>Select target</h3>
                                         <select name="target_village" required>
-                                            <option value="">-- Wybierz wioskę --</option>
+                                            <option value="">-- Choose village --</option>
                                             <?php foreach ($target_villages as $village): ?>
                                                 <option value="<?php echo $village['id']; ?>" <?php if (isset($target_village_id) && $village['id'] == $target_village_id) echo 'selected'; ?>>
                                                     <?php echo htmlspecialchars($village['name']); ?> (<?php echo $village['x_coord']; ?>|<?php echo $village['y_coord']; ?>) - 
                                                     <?php echo htmlspecialchars($village['username']); ?> - 
-                                                    Odl: <?php echo $village['distance']; ?>
+                                                    Dist: <?php echo $village['distance']; ?>
                                                 </option>
                                             <?php endforeach; ?>
                                         </select>
                                     </div>
 
                                     <div class="target-selector" id="catapult-target-selector" style="display: none;">
-                                        <h3>Cel dla katapult</h3>
+                                        <h3>Catapult target</h3>
                                         <select name="target_building">
-                                            <option value="">-- Losowy --</option>
+                                            <option value="">-- Random --</option>
                                             <?php foreach ($all_buildings as $building): ?>
                                                 <option value="<?php echo htmlspecialchars($building['internal_name']); ?>">
-                                                    <?php echo htmlspecialchars($building['name_pl']); ?>
+                                                    <?php echo htmlspecialchars($building['name']); ?>
                                                 </option>
                                             <?php endforeach; ?>
                                         </select>
@@ -461,19 +461,19 @@ if (!$is_ajax) {
                                 </div>
                                 
                                 <div class="attack-submit">
-                                    <button type="submit" name="attack" class="styled-btn">Wyślij wojska</button>
+                                    <button type="submit" name="attack" class="styled-btn">Send troops</button>
                                 </div>
                             </div>
                         </form>
                     <?php endif; ?>
                 </div>
                 
-                <!-- Zakładka wychodzących ataków -->
+                <!-- Outgoing attacks tab -->
                 <div id="outgoing-attacks" class="tab-content">
-                    <h3>Wychodzące ataki</h3>
+                    <h3>Outgoing attacks</h3>
                     
                     <?php if (empty($outgoing_attacks)): ?>
-                        <p>Brak wychodzących ataków.</p>
+                        <p>No outgoing attacks.</p>
                     <?php else: ?>
                         <div class="attack-list">
                             <?php foreach ($outgoing_attacks as $attack): ?>
@@ -481,26 +481,26 @@ if (!$is_ajax) {
                                     <h4>
                                         <?php 
                                         switch ($attack['attack_type']) {
-                                            case 'attack': echo '⚔️ Atak'; break;
-                                            case 'raid': echo '💰 Grabież'; break;
-                                            case 'support': echo '🛡️ Wsparcie'; break;
+                                            case 'attack': echo 'Attack'; break;
+                                            case 'raid': echo 'Raid'; break;
+                                            case 'support': echo 'Support'; break;
                                         }
                                         ?>
                                     </h4>
                                     <div class="attack-target">
-                                        Cel: <?php echo htmlspecialchars($attack['target_village_name']); ?> (<?php echo $attack['target_x']; ?>|<?php echo $attack['target_y']; ?>)
+                                        Target: <?php echo htmlspecialchars($attack['target_village_name']); ?> (<?php echo $attack['target_x']; ?>|<?php echo $attack['target_y']; ?>)
                                     </div>
                                     <div class="attack-owner">
-                                        Właściciel: <?php echo htmlspecialchars($attack['defender_name']); ?>
+                                        Owner: <?php echo htmlspecialchars($attack['defender_name']); ?>
                                     </div>
                                     <div class="attack-time">
-                                        Dotarcie: <?php echo $attack['formatted_remaining_time']; ?>
+                                        Arrival: <?php echo $attack['formatted_remaining_time']; ?>
                                     </div>
                                     
                                     <div class="attack-units">
                                         <?php foreach ($attack['units'] as $unit): ?>
                                             <span class="unit-count">
-                                                <img src="../img/units/<?php echo htmlspecialchars($unit['internal_name']); ?>.png" alt="<?php echo htmlspecialchars($unit['name_pl']); ?>">
+                                                <img src="../img/units/<?php echo htmlspecialchars($unit['internal_name']); ?>.png" alt="<?php echo htmlspecialchars($unit['name']); ?>">
                                                 <?php echo $unit['count']; ?>
                                             </span>
                                         <?php endforeach; ?>
@@ -509,7 +509,7 @@ if (!$is_ajax) {
                                     <div class="attack-actions">
                                         <form method="post" action="attack.php" class="cancel-attack-form">
                                             <input type="hidden" name="attack_id" value="<?php echo $attack['id']; ?>">
-                                            <button type="submit" name="cancel_attack" class="cancel-button">Anuluj</button>
+                                            <button type="submit" name="cancel_attack" class="cancel-button">Cancel</button>
                                         </form>
                                     </div>
                                 </div>
@@ -518,12 +518,12 @@ if (!$is_ajax) {
                     <?php endif; ?>
                 </div>
                 
-                <!-- Zakładka przychodzących ataków -->
+                <!-- Incoming attacks tab -->
                 <div id="incoming-attacks" class="tab-content">
-                    <h3>Przychodzące ataki</h3>
+                    <h3>Incoming attacks</h3>
                     
                     <?php if (empty($incoming_attacks)): ?>
-                        <p>Brak przychodzących ataków.</p>
+                        <p>No incoming attacks.</p>
                     <?php else: ?>
                         <div class="attack-list">
                             <?php foreach ($incoming_attacks as $attack): ?>
@@ -531,20 +531,20 @@ if (!$is_ajax) {
                                     <h4>
                                         <?php 
                                         switch ($attack['attack_type']) {
-                                            case 'attack': echo '⚔️ Atak'; break;
-                                            case 'raid': echo '💰 Grabież'; break;
-                                            case 'support': echo '🛡️ Wsparcie'; break;
+                                            case 'attack': echo 'Attack'; break;
+                                            case 'raid': echo 'Raid'; break;
+                                            case 'support': echo 'Support'; break;
                                         }
                                         ?>
                                     </h4>
                                     <div class="attack-target">
-                                        Z: <?php echo htmlspecialchars($attack['source_village_name']); ?> (<?php echo $attack['source_x']; ?>|<?php echo $attack['source_y']; ?>)
+                                        From: <?php echo htmlspecialchars($attack['source_village_name']); ?> (<?php echo $attack['source_x']; ?>|<?php echo $attack['source_y']; ?>)
                                     </div>
                                     <div class="attack-owner">
-                                        Atakujący: <?php echo htmlspecialchars($attack['attacker_name']); ?>
+                                        Attacker: <?php echo htmlspecialchars($attack['attacker_name']); ?>
                                     </div>
                                     <div class="attack-time">
-                                        Dotarcie: <?php echo $attack['formatted_remaining_time']; ?>
+                                        Arrival: <?php echo $attack['formatted_remaining_time']; ?>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -559,7 +559,7 @@ if (!$is_ajax) {
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Obsługa zakładek
+            // Tab handling
             const tabLinks = document.querySelectorAll('.tab-link');
             const tabContents = document.querySelectorAll('.tab-content');
             
@@ -567,17 +567,17 @@ if (!$is_ajax) {
                 link.addEventListener('click', function() {
                     const tabId = this.getAttribute('data-tab');
                     
-                    // Deaktywuj wszystkie zakładki
+                    // Deactivate all tabs
                     tabLinks.forEach(el => el.classList.remove('active'));
                     tabContents.forEach(el => el.classList.remove('active'));
                     
-                    // Aktywuj wybraną zakładkę
+                    // Activate the selected tab
                     this.classList.add('active');
                     document.getElementById(tabId).classList.add('active');
                 });
             });
             
-            // Przyciski zaznaczania jednostek
+            // Unit selection buttons
             const selectAllBtn = document.getElementById('select-all');
             const selectNoneBtn = document.getElementById('select-none');
             
@@ -622,7 +622,7 @@ if (!$is_ajax) {
             // Initial check in case the form is pre-filled
             checkCatapultSelection();
             
-            // Obsługa formularza ataku przez AJAX
+            // Attack form via AJAX
             const attackForm = document.getElementById('attack-form');
             
             if (attackForm) {
@@ -647,35 +647,35 @@ if (!$is_ajax) {
                             }
                             // The page will not reload, keeping the user on the map.
                         } else {
-                            // Wyświetl komunikat błędu
+                            // Show error message
                             const errorMessage = document.createElement('p');
                             errorMessage.className = 'error-message';
                             errorMessage.textContent = data.message;
                             
-                            // Dodaj komunikat przed formularzem
+                            // Insert message before the form
                             attackForm.parentNode.insertBefore(errorMessage, attackForm);
                             
-                            // Usuń komunikat po 3 sekundach
+                            // Remove message after 3 seconds
                             setTimeout(() => {
                                 errorMessage.remove();
                             }, 3000);
                         }
                     })
                     .catch(error => {
-                        console.error('Błąd wysyłania ataku:', error);
-                        alert('Wystąpił błąd podczas wysyłania ataku. Spróbuj ponownie później.');
+                        console.error('Error sending attack:', error);
+                        alert('An error occurred while sending the attack. Please try again later.');
                     });
                 });
             }
             
-            // Obsługa anulowania ataku przez AJAX
+            // Attack cancellation via AJAX
             const cancelForms = document.querySelectorAll('.cancel-attack-form');
             
             cancelForms.forEach(form => {
                 form.addEventListener('submit', function(e) {
                     e.preventDefault();
                     
-                    if (!confirm('Czy na pewno chcesz anulować ten atak? Jednostki wrócą do wioski źródłowej.')) {
+                    if (!confirm('Are you sure you want to cancel this attack? Units will return to the source village.')) {
                         return;
                     }
                     
@@ -689,10 +689,10 @@ if (!$is_ajax) {
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            // Ukryj kartę ataku
+                            // Hide the attack card
                             this.closest('.attack-card').style.display = 'none';
                             
-                            // Wyświetl komunikat sukcesu
+                            // Show success message
                             const successMessage = document.createElement('p');
                             successMessage.className = 'success-message';
                             successMessage.textContent = data.message;
@@ -702,18 +702,18 @@ if (!$is_ajax) {
                                 document.querySelector('#outgoing-attacks h3').nextSibling
                             );
                             
-                            // Odśwież stronę po 2 sekundach
+                            // Refresh the page after 2 seconds
                             setTimeout(() => {
                                 window.location.reload();
                             }, 2000);
                         } else {
-                            // Wyświetl komunikat błędu
+                            // Show error message
                             alert(data.error);
                         }
                     })
                     .catch(error => {
-                        console.error('Błąd anulowania ataku:', error);
-                        alert('Wystąpił błąd podczas anulowania ataku. Spróbuj ponownie później.');
+                        console.error('Error cancelling attack:', error);
+                        alert('An error occurred while cancelling the attack. Please try again later.');
                     });
                 });
             });

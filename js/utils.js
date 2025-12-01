@@ -1,18 +1,18 @@
-// Funkcje pomocnicze JavaScript
+// JavaScript helper functions
 
 /**
- * Formatuje liczbę z separatorami tysięcy
- * @param {number} number Liczba do sformatowania
- * @returns {string} Sformatowana liczba
+ * Format a number with thousand separators
+ * @param {number} number Number to format
+ * @returns {string} Formatted number
  */
 function formatNumber(number) {
-    return new Intl.NumberFormat('pl-PL').format(number);
+    return new Intl.NumberFormat('en-US').format(number);
 }
 
 /**
- * Formatuje czas w sekundach do formatu HH:MM:SS
- * @param {number} seconds Czas w sekundach
- * @returns {string} Sformatowany czas
+ * Format seconds into HH:MM:SS
+ * @param {number} seconds Time in seconds
+ * @returns {string} Formatted time
  */
 function formatTime(seconds) {
     const h = Math.floor(seconds / 3600);
@@ -22,9 +22,9 @@ function formatTime(seconds) {
 }
 
 /**
- * Formatuje czas pozostały do zakończenia zadania.
- * @param {number} finishTime Timestamp zakończenia (w sekundach).
- * @returns {string} Sformatowany czas pozostały (np. "1h 30m 15s").
+ * Format remaining time until task finishes.
+ * @param {number} finishTime Finish timestamp (seconds).
+ * @returns {string} Formatted remaining time (e.g., "1h 30m 15s").
  */
 function getRemainingTimeText(finishTime) {
     if (finishTime === null) return '';
@@ -32,7 +32,7 @@ function getRemainingTimeText(finishTime) {
     const currentTimeMillis = new Date().getTime();
     const remainingMillis = finishTimeMillis - currentTimeMillis;
 
-    if (remainingMillis <= 0) return 'Zakończono!';
+    if (remainingMillis <= 0) return 'Completed!';
 
     const seconds = Math.floor((remainingMillis / 1000) % 60);
     const minutes = Math.floor((remainingMillis / (1000 * 60)) % 60);
@@ -47,4 +47,4 @@ function getRemainingTimeText(finishTime) {
     return timeString.trim();
 }
 
-// Tutaj można dodawać kolejne uniwersalne funkcje JS
+// Add more shared JS functions here

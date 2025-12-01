@@ -2,15 +2,15 @@
 
 class BuildingConfigManager {
     private $conn;
-    private $buildingConfigs = []; // Cache na konfiguracje budynków
+    private $buildingConfigs = []; // Cache for building configurations
 
     public function __construct($conn) {
         $this->conn = $conn;
-        // Opcjonalnie: załadować wszystkie konfiguracje przy inicjalizacji dla lepszej wydajności
+        // Optionally load all configs on construct for performance
         // $this->loadAllBuildingConfigs();
     }
 
-    // Metoda do ładowania wszystkich konfiguracji budynków do cache
+    // Load all building configurations into cache
     private function loadAllBuildingConfigs() {
         $sql = "SELECT * FROM building_types";
         $result = $this->conn->query($sql);
@@ -23,8 +23,8 @@ class BuildingConfigManager {
         }
     }
 
-    // Metoda do pobierania konfiguracji pojedynczego typu budynku
-    // Preferuje cache, ale pobierze z bazy jeśli brak w cache
+    // Fetch configuration of a single building type.
+    // Prefers cache but falls back to DB when missing.
     public function getBuildingConfig(string $internalName): ?array {
         if (isset($this->buildingConfigs[$internalName])) {
             return $this->buildingConfigs[$internalName];
@@ -50,9 +50,9 @@ class BuildingConfigManager {
     }
 
     /**
-     * Pobiera wszystkie konfiguracje budynków.
-     * Używa cache, ładuje z bazy jeśli cache jest pusty.
-     * @return array Tablica z konfiguracjami budynków, kluczowana internal_name.
+     * Retrieves all building configurations.
+     * Uses cache, loads from DB if cache is empty.
+     * @return array Config array keyed by internal_name.
      */
     public function getAllBuildingConfigs(): array
     {
@@ -62,7 +62,7 @@ class BuildingConfigManager {
         return $this->buildingConfigs;
     }
 
-    // Metoda do obliczania kosztu budowy/rozbudowy budynku do następnego poziomu
+    // Calculate upgrade/build cost to the next level
     public function calculateUpgradeCost(string $internalName, int $currentLevel): ?array {
         $config = $this->getBuildingConfig($internalName);
 
@@ -70,7 +70,7 @@ class BuildingConfigManager {
             return null; // Building config not found
         }
 
-        // Koszt dla poziomu $currentLevel + 1
+        // Cost for level $currentLevel + 1
         $nextLevel = $currentLevel + 1;
         $costWood = round($config['cost_wood_initial'] * ($config['cost_factor'] ** $currentLevel));
         $costClay = round($config['cost_clay_initial'] * ($config['cost_factor'] ** $currentLevel));
@@ -83,8 +83,8 @@ class BuildingConfigManager {
         ];
     }
 
-    // Metoda do obliczania czasu budowy/rozbudowy budynku do następnego poziomu
-    // Uwzględnia bonus ratusza (Main Building)
+    // Calculate build/upgrade time to the next level
+    // Includes the town hall bonus
     public function calculateUpgradeTime(string $internalName, int $currentLevel, int $mainBuildingLevel = 0): ?int {
         $config = $this->getBuildingConfig($internalName);
 
@@ -92,38 +92,37 @@ class BuildingConfigManager {
             return null; // Building config not found
         }
 
-        // Bazowy czas dla poziomu $currentLevel + 1
+        // Base time for level $currentLevel + 1
         $nextLevel = $currentLevel + 1;
         $baseTime = round($config['base_build_time_initial'] * ($config['build_time_factor'] ** $currentLevel));
 
-        // Oblicz bonus Ratusza
+        // Calculate town hall bonus
         $mainBuildingConfig = $this->getBuildingConfig('main_building');
         $timeReductionFactor = $mainBuildingConfig['bonus_time_reduction_factor'] ?? 1.0;
         
-        // Bonus Ratusza jest zwykle wykładniczy lub procentowy
-        // Przyjmujemy uproszczony model: czas * (współczynnik_redukcji ^ poziom_ratusza)
-        // Jeśli współczynnik to np. 0.95, to na poziomie 1 Ratusza czas * 0.95, na poziomie 2 czas * 0.95^2, itd.
+        // Town hall bonus is typically exponential/percentage:
+        // time * (reduction_factor ^ town_hall_level). Example factor 0.95: level 1 => time*0.95, level 2 => time*0.95^2, etc.
         $reducedTime = $baseTime * ($timeReductionFactor ** $mainBuildingLevel);
 
-        // Minimalny czas budowy (np. 1 sekunda)
+        // Minimal build time (e.g., 1 second)
         return max(1, round($reducedTime));
     }
 
-     // Metoda do obliczania produkcji surowca dla danego typu budynku i poziomu
+     // Calculate resource production for a given building and level
     public function calculateProduction(string $internalName, int $level): ?float {
         $config = $this->getBuildingConfig($internalName);
 
         if (!$config || $config['production_type'] === NULL) {
-            return null; // Nie produkuje zasobów
+            return null; // Does not produce resources
         }
 
-        // Produkcja dla danego poziomu
+        // Production for the given level
         $production = $config['production_initial'] * ($config['production_factor'] ** ($level - 1));
         
         return $production;
     }
     
-    // Metoda do obliczania pojemności magazynu dla danego poziomu
+    // Calculate warehouse capacity for a given level
     public function calculateWarehouseCapacity(int $level): ?int {
          $config = $this->getBuildingConfig('warehouse');
          
@@ -131,14 +130,13 @@ class BuildingConfigManager {
              return null; // Warehouse config not found
          }
          
-         // Pojemność dla danego poziomu (initial + (factor ^ (level - 1))) - może być różnie liczona, dostosuj do gry docelowej
-         // Przyjmuję model jak w Plemionach - initial * (factor ^ level)
+         // Capacity model: initial * (factor ^ level)
          $capacity = $config['production_initial'] * ($config['production_factor'] ** $level);
          
          return round($capacity);
     }
     
-    // Metoda do obliczania maksymalnej populacji dla danego poziomu Farmy
+    // Calculate maximum population for a given farm level
     public function calculateFarmCapacity(int $level): ?int {
         $config = $this->getBuildingConfig('farm');
         
@@ -146,17 +144,17 @@ class BuildingConfigManager {
             return null; // Farm config not found
         }
         
-        // Pojemność Farmy
+        // Farm capacity
         $capacity = $config['production_initial'] * ($config['production_factor'] ** ($level - 1));
         
         return round($capacity);
     }
 
     /**
-     * Oblicza koszt populacji dla rozbudowy budynku do następnego poziomu.
-     * @param string $internalName Wewnętrzna nazwa budynku.
-     * @param int $currentLevel Obecny poziom budynku.
-     * @return int|null Koszt populacji lub null jeśli błąd.
+     * Calculates population cost to upgrade a building to the next level.
+     * @param string $internalName Building internal name.
+     * @param int $currentLevel Current building level.
+     * @return int|null Population cost or null on error.
      */
     public function calculatePopulationCost(string $internalName, int $currentLevel): ?int {
         $config = $this->getBuildingConfig($internalName);
@@ -165,12 +163,12 @@ class BuildingConfigManager {
             return null; // Building config not found or no population_cost defined
         }
 
-        // Koszt populacji dla następnego poziomu (currentLevel + 1)
-        // Zakładamy, że population_cost to koszt na poziom
+        // Population cost for the next level (currentLevel + 1)
+        // Assumes population_cost is per-level cost
         return (int)$config['population_cost'];
     }
 
-     // Metoda do pobierania wymagań dla danego typu budynku
+     // Fetch requirements for a given building type
     public function getBuildingRequirements(string $internalName): array {
         $config = $this->getBuildingConfig($internalName);
         
@@ -200,10 +198,10 @@ class BuildingConfigManager {
     }
 
     /**
-     * Pobiera informacje o produkcji lub pojemności budynku na danym poziomie.
-     * @param string $internalName Wewnętrzna nazwa budynku.
-     * @param int $level Poziom budynku.
-     * @return array|null Tablica z typem ('production' lub 'capacity') i wartością, lub null jeśli brak.
+     * Returns production or capacity info for a building at the given level.
+     * @param string $internalName Building internal name.
+     * @param int $level Building level.
+     * @return array|null Array with type ('production' or 'capacity') and value, or null when missing.
      */
     public function getProductionOrCapacityInfo(string $internalName, int $level): ?array {
         $config = $this->getBuildingConfig($internalName);

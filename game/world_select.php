@@ -1,7 +1,7 @@
 <?php
 require '../init.php';
 
-// Sprawdź czy użytkownik jest zalogowany
+// Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
     header('Location: /auth/login.php');
     exit();
@@ -10,25 +10,25 @@ if (!isset($_SESSION['user_id'])) {
 $redirect = isset($_GET['redirect']) ? $_GET['redirect'] : 'game.php';
 $error = '';
 
-// Obsługa wyboru świata
+// Handle world selection
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Funkcja validateCSRF() już sprawdza token CSRF w żądaniach POST
-    // Sprawdzanie wykonywane jest automatycznie dla każdego żądania POST w funkcji validateCSRF()
+    // validateCSRF() already checks CSRF tokens for POST requests
+    // Validation runs automatically for every POST request in validateCSRF()
     $world_id = isset($_POST['world_id']) ? (int)$_POST['world_id'] : 0;
 
-    // Sprawdź czy świat istnieje
+    // Verify that the world exists
     $stmt = $conn->prepare("SELECT id FROM worlds WHERE id = ?");
     $stmt->bind_param("i", $world_id);
     $stmt->execute();
     $result = $stmt->get_result();
 
     if ($result->num_rows === 0) {
-        $error = 'Wybrany świat nie istnieje.';
+        $error = 'The selected world does not exist.';
     } else {
-        // Ustaw ID świata w sesji
+        // Store the world ID in the session
         $_SESSION['world_id'] = $world_id;
         
-        // AUTOMATYCZNE TWORZENIE WIOSKI, jeśli nie istnieje na tym świecie
+        // Automatically create a village if one does not exist on this world
         $user_id = $_SESSION['user_id'];
         $stmt = $conn->prepare("SELECT id FROM villages WHERE user_id = ? AND world_id = ? LIMIT 1");
         $stmt->bind_param("ii", $user_id, $world_id);
@@ -37,13 +37,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->num_rows === 0) {
             require_once 'lib/VillageManager.php';
             $villageManager = new VillageManager($conn);
-            // Losowe koordynaty w centrum mapy (możesz zmienić zakres)
+            // Random coordinates near the center of the map (adjust range as needed)
             $x = rand(40, 60);
             $y = rand(40, 60);
-            $villageManager->createVillage($user_id, 'Wioska gracza', $x, $y);
+            $villageManager->createVillage($user_id, 'Player village', $x, $y);
         }
         $stmt->close();
-        // Przekieruj do właściwej strony
+        // Redirect to the chosen page
         $final_redirect_url = $redirect;
         if (substr($final_redirect_url, 0, 1) !== '/' && !preg_match('/^[a-zA-Z]+:\/\//', $final_redirect_url)) {
              $final_redirect_url = '/' . $final_redirect_url;
@@ -53,25 +53,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Pobierz listę światów
+// Fetch the list of worlds
 $stmt = $conn->prepare("SELECT id, name, created_at FROM worlds ORDER BY id DESC");
 $stmt->execute();
 $worlds = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-$pageTitle = 'Wybór Świata';
+$pageTitle = 'World Selection';
 require '../header.php';
 ?>
 
 <div class="main-container">
     <div class="world-select-container">
-        <h1>Wybierz Świat</h1>
+        <h1>Choose a World</h1>
         
         <?php if (!empty($error)): ?>
             <div class="error-message"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
         
         <?php if (empty($worlds)): ?>
-            <p>Brak dostępnych światów. Skontaktuj się z administratorem.</p>
+            <p>No worlds are available. Please contact the administrator.</p>
         <?php else: ?>
             <form method="POST" action="world_select.php?redirect=<?= urlencode($_GET['redirect'] ?? 'game.php') ?>">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
@@ -82,14 +82,14 @@ require '../header.php';
                             <input type="radio" name="world_id" id="world_<?= $world['id'] ?>" value="<?= $world['id'] ?>" <?= isset($_SESSION['world_id']) && $_SESSION['world_id'] == $world['id'] ? 'checked' : '' ?>>
                             <label for="world_<?= $world['id'] ?>">
                                 <strong><?= htmlspecialchars($world['name']) ?></strong>
-                                <span class="world-date">Utworzony: <?= date('d.m.Y', strtotime($world['created_at'])) ?></span>
+                                <span class="world-date">Created: <?= date('d.m.Y', strtotime($world['created_at'])) ?></span>
                             </label>
                         </div>
                     <?php endforeach; ?>
                 </div>
                 
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Graj</button>
+                    <button type="submit" class="btn btn-primary">Play</button>
                 </div>
             </form>
         <?php endif; ?>

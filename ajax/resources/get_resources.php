@@ -1,7 +1,7 @@
 <?php
 /**
- * AJAX - Pobieranie aktualnych zasobów wioski
- * Zwraca aktualne wartości zasobów i inne informacje o wiosce w formacie JSON
+ * AJAX - Fetch current village resources.
+ * Returns current resource values and other village details as JSON.
  */
 require_once $_SERVER['DOCUMENT_ROOT'] . '/init.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/lib/utils/AjaxResponse.php';
@@ -11,32 +11,32 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/lib/managers/VillageManager.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/lib/managers/ResourceManager.php';
 
 
-// Sprawdź, czy użytkownik jest zalogowany
+// Ensure the user is logged in
 if (!isset($_SESSION['user_id'])) {
-    AjaxResponse::error('Użytkownik nie jest zalogowany', null, 401);
+    AjaxResponse::error('User is not logged in', null, 401);
 }
 
 try {
-    // Stwórz instancje managerów
+    // Create manager instances
     $buildingConfigManager = new BuildingConfigManager($conn);
     $buildingManager = new BuildingManager($conn, $buildingConfigManager);
     $villageManager = new VillageManager($conn);
     $resourceManager = new ResourceManager($conn, $buildingManager);
 
-    // Pobierz ID wioski
+    // Get village ID
     $village_id = isset($_GET['village_id']) ? (int)$_GET['village_id'] : null;
     
-    // Jeśli nie podano ID wioski, pobierz pierwszą wioskę użytkownika
+    // If no village ID is provided, fetch the user's first village
     if (!$village_id) {
         $village_data = $villageManager->getFirstVillage($_SESSION['user_id']);
         
         if (!$village_data) {
-            AjaxResponse::error('Nie znaleziono wioski', null, 404);
+            AjaxResponse::error('Village not found', null, 404);
         }
         $village_id = $village_data['id'];
     }
     
-    // Sprawdź, czy wioska należy do zalogowanego użytkownika
+    // Confirm that the village belongs to the logged-in user
     $stmt = $conn->prepare("SELECT user_id FROM villages WHERE id = ?");
     $stmt->bind_param("i", $village_id);
     $stmt->execute();
@@ -45,16 +45,16 @@ try {
     $stmt->close();
     
     if (!$village_owner || $village_owner['user_id'] != $_SESSION['user_id']) {
-        AjaxResponse::error('Brak uprawnień do tej wioski', null, 403);
+        AjaxResponse::error('No permission for this village', null, 403);
     }
     
-    // Aktualizuj zasoby wioski
+    // Update village resources
     $villageManager->updateResources($village_id);
     
-    // Pobierz aktualne dane wioski
+    // Fetch current village data
     $village = $villageManager->getVillageInfo($village_id);
     
-    // Pobierz budynki produkcyjne i ich poziomy - optymalizacja zapytania
+    // Fetch production buildings and their levels (optimized query)
     $stmt = $conn->prepare("
         SELECT bt.internal_name, vb.level, bt.production_type, bt.production_initial, bt.production_factor
         FROM village_buildings vb
@@ -75,17 +75,17 @@ try {
         $internal_name = $row['internal_name'];
         $level = $row['level'];
         
-        // Zapisz poziom magazynu
+        // Capture warehouse level
         if ($internal_name === 'warehouse') {
             $warehouse_level = $level;
             continue;
         }
         
-        // Oblicz produkcję dla budynków produkcyjnych
+        // Calculate production for resource buildings
         if ($row['production_type'] && $row['production_initial'] && $row['production_factor']) {
             $production = floor($row['production_initial'] * pow($row['production_factor'], $level - 1));
             
-            // Przypisz do odpowiedniego surowca
+            // Assign to the correct resource
             if ($internal_name === 'sawmill' || $internal_name === 'wood_production') {
                 $wood_production = $production;
             } else if ($internal_name === 'clay_pit' || $internal_name === 'clay_production') {
@@ -97,10 +97,10 @@ try {
     }
     $stmt->close();
     
-    // Oblicz pojemność magazynu
+    // Calculate warehouse capacity
     $warehouse_capacity = $buildingManager->getWarehouseCapacityByLevel($warehouse_level);
     
-    // Sprawdź, czy są budynki w trakcie budowy
+    // Check if buildings are in the construction queue
     $stmt = $conn->prepare("
         SELECT COUNT(*) as count FROM building_queue 
         WHERE village_id = ? AND finish_time > NOW()
@@ -111,7 +111,7 @@ try {
     $building_queue = $result->fetch_assoc();
     $stmt->close();
     
-    // Sprawdź, czy jest rekrutacja jednostek
+    // Check if units are in recruitment
     $stmt = $conn->prepare("
         SELECT COUNT(*) as count FROM unit_queue 
         WHERE village_id = ? AND finish_at > UNIX_TIMESTAMP()
@@ -122,7 +122,7 @@ try {
     $recruitment_queue = $result->fetch_assoc();
     $stmt->close();
     
-    // Przygotuj dane do zwrócenia
+    // Prepare response data
     $resources_data = [
         'wood' => [
             'amount' => round($village['wood']),
@@ -155,13 +155,13 @@ try {
         'current_server_time' => date('Y-m-d H:i:s')
     ];
     
-    // Zwróć dane w formacie JSON
+    // Return data as JSON
     AjaxResponse::success($resources_data);
     
 } catch (Exception $e) {
-    // Obsłuż wyjątek i zwróć błąd z pełnymi szczegółami
+    // Handle exception and return a detailed error
     AjaxResponse::error(
-        'Wystąpił błąd: ' . $e->getMessage(),
+        'An error occurred: ' . $e->getMessage(),
         [
             'file' => $e->getFile(),
             'line' => $e->getLine(),

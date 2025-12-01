@@ -10,11 +10,11 @@ class RankingManager
     }
 
     /**
-     * Pobiera ranking graczy z paginacją.
+     * Fetches the player ranking with pagination.
      *
-     * @param int $limit Liczba graczy na stronę.
-     * @param int $offset Offset dla paginacji.
-     * @return array Lista graczy z danymi rankingowymi.
+     * @param int $limit Players per page.
+     * @param int $offset Pagination offset.
+     * @return array Ranked player rows.
      */
     public function getPlayersRanking(int $limit, int $offset): array
     {
@@ -26,7 +26,7 @@ class RankingManager
                 SUM(v.population) as total_population,
                 SUM(
                     (SELECT COUNT(*) FROM village_units vu WHERE vu.village_id = v.id)
-                ) as total_units -- Ta suma jest niepoprawna, powinna być sumą populacji jednostek
+                ) as total_units -- This sum is incorrect; it should sum unit population
             FROM 
                 users u
             LEFT JOIN 
@@ -35,7 +35,7 @@ class RankingManager
                 u.id
             ORDER BY 
                 total_population DESC, village_count DESC
-            LIMIT ?, ?
+            LIMIT ? OFFSET ?
         ";
 
         $stmt = $this->conn->prepare($query);
@@ -45,7 +45,7 @@ class RankingManager
             return []; // Return empty array on error
         }
 
-        $stmt->bind_param("ii", $offset, $limit); // Note: limit is second parameter in LIMIT clause
+        $stmt->bind_param("ii", $limit, $offset);
         $stmt->execute();
         $result = $stmt->get_result();
 
@@ -63,9 +63,9 @@ class RankingManager
     }
 
     /**
-     * Pobiera całkowitą liczbę graczy dla paginacji rankingu.
+     * Fetches total number of players for ranking pagination.
      *
-     * @return int Całkowita liczba graczy.
+     * @return int Total player count.
      */
     public function getTotalPlayersCount(): int
     {
@@ -84,11 +84,11 @@ class RankingManager
     }
 
     /**
-     * Pobiera ranking plemion z paginacją.
+     * Fetches tribe ranking with pagination.
      *
-     * @param int $limit Liczba plemion na stronę.
-     * @param int $offset Offset dla paginacji.
-     * @return array Lista plemion z danymi rankingowymi.
+     * @param int $limit Tribes per page.
+     * @param int $offset Pagination offset.
+     * @return array Ranked tribe rows.
      */
     public function getTribesRanking(int $limit, int $offset): array
     {
@@ -114,7 +114,7 @@ class RankingManager
                 t.id
             ORDER BY
                 total_population DESC, member_count DESC
-            LIMIT ?, ?
+            LIMIT ? OFFSET ?
         ";
 
         $stmt = $this->conn->prepare($query);
@@ -122,7 +122,7 @@ class RankingManager
             error_log("RankingManager::getTribesRanking prepare failed: " . $this->conn->error);
             return [];
         }
-        $stmt->bind_param("ii", $offset, $limit);
+        $stmt->bind_param("ii", $limit, $offset);
         $stmt->execute();
         $result = $stmt->get_result();
 
@@ -140,9 +140,9 @@ class RankingManager
     }
 
      /**
-     * Pobiera całkowitą liczbę plemion dla paginacji rankingu.
+     * Fetches total number of tribes for ranking pagination.
      *
-     * @return int Całkowita liczba plemion.
+     * @return int Total tribe count.
      */
     public function getTotalTribesCount(): int
     {
@@ -165,7 +165,7 @@ class RankingManager
         return 0; // Return 0 for now
     }
 
-    // Metody do pobierania rankingu plemion zostaną dodane później
+    // Tribe ranking methods will be added later
 
 }
 

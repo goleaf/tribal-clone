@@ -12,44 +12,44 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/../lib/managers/VillageManager.php';
 
-// Sprawdź, czy użytkownik jest zalogowany
+// Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'error' => 'Użytkownik niezalogowany.', 'redirect' => 'auth/login.php']);
+    echo json_encode(['success' => false, 'error' => 'User is not logged in.', 'redirect' => 'auth/login.php']);
     exit();
 }
 
-// Sprawdź, czy zapytanie jest typu POST
+// Ensure the request is POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'error' => 'Nieprawidłowa metoda żądania.']);
+    echo json_encode(['success' => false, 'error' => 'Invalid request method.']);
     exit();
 }
 
-// Sprawdź, czy podano nową nazwę wioski
+// Validate the presence of the new village name
 if (!isset($_POST['new_village_name']) || empty($_POST['new_village_name'])) {
-    echo json_encode(['success' => false, 'error' => 'Nie podano nazwy wioski.']);
+    echo json_encode(['success' => false, 'error' => 'No village name provided.']);
     exit();
 }
 
-// Wyodrębnij dane z żądania
+// Extract request data
 $new_village_name = trim($_POST['new_village_name']);
 $village_id = isset($_POST['village_id']) ? (int)$_POST['village_id'] : 0;
 $user_id = $_SESSION['user_id'];
 
-// Walidacja nowej nazwy wioski (można też dodać do VillageManager)
+// Validate the new village name (consider moving to VillageManager)
 if (strlen($new_village_name) < 3) {
-    echo json_encode(['success' => false, 'error' => 'Nazwa wioski musi zawierać co najmniej 3 znaki.']);
+    echo json_encode(['success' => false, 'error' => 'Village name must be at least 3 characters long.']);
     exit();
 }
 
 if (strlen($new_village_name) > 50) {
-    echo json_encode(['success' => false, 'error' => 'Nazwa wioski może zawierać maksymalnie 50 znaków.']);
+    echo json_encode(['success' => false, 'error' => 'Village name can be at most 50 characters long.']);
     exit();
 }
 
-// Sprawdź, czy nazwa zawiera tylko dozwolone znaki
-// Użyj tej samej regex co w lib/functions.php -> isValidVillageName
-if (!preg_match('/^[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ0-9\s\-\.\_]+$/u', $new_village_name)) { // Added \. to allowed chars based on isValidVillageName
-     echo json_encode(['success' => false, 'error' => 'Nazwa wioski zawiera niedozwolone znaki.']);
+// Ensure the name contains only allowed characters
+// Use the same pattern as lib/functions.php -> isValidVillageName
+if (!preg_match('/^[a-zA-Z0-9\\s\\-\\._]+$/', $new_village_name)) { // Added \. to allowed chars based on isValidVillageName
+     echo json_encode(['success' => false, 'error' => 'Village name contains invalid characters.']);
      exit();
 }
 
@@ -60,25 +60,24 @@ if (!preg_match('/^[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ0-9\s\-\.\_]+$/u',
 try {
     // Use global $conn from init.php
     if (!$conn) {
-        echo json_encode(['success' => false, 'error' => 'Nie udało się połączyć z bazą danych.']);
+        echo json_encode(['success' => false, 'error' => 'Failed to connect to the database.']);
         exit();
     }
 
-    // Jeśli nie podano konkretnego ID wioski, znajdź domyślną wioskę użytkownika
-    // Użyj VillageManager do pobrania pierwszej wioski, jeśli village_id <= 0
+    // If no specific village ID is provided, use the player's first village
+    // Use VillageManager to retrieve the first village when village_id <= 0
     if ($village_id <= 0) {
         $villageManager = new VillageManager($conn);
         $firstVillage = $villageManager->getFirstVillage($user_id);
         if ($firstVillage && isset($firstVillage['id'])) {
             $village_id = $firstVillage['id'];
         } else {
-            echo json_encode(['success' => false, 'error' => 'Nie znaleziono wioski dla użytkownika.']);
+            echo json_encode(['success' => false, 'error' => 'No village found for this user.']);
             exit(); // Exit directly, no manual connection to close
         }
     }
 
-    // Sprawdź, czy wioska należy do zalogowanego użytkownika - VillageManager handles this in renameVillage
-    // No need for this explicit check here
+    // Check ownership in VillageManager::renameVillage, so no explicit check here
     /*
     $stmt = $conn->prepare("SELECT id FROM villages WHERE id = ? AND user_id = ? LIMIT 1");
     $stmt->bind_param("ii", $village_id, $user_id);
@@ -88,7 +87,7 @@ try {
     $stmt->close();
 
     if (!$village) {
-        echo json_encode(['success' => false, 'error' => 'Nie masz uprawnień do zmiany nazwy tej wioski.']);
+        echo json_encode(['success' => false, 'error' => 'You do not have permission to rename this village.']);
         // $database->closeConnection(); // Remove
         exit();
     }
@@ -99,14 +98,14 @@ try {
     $renameResult = $villageManager->renameVillage($village_id, $user_id, $new_village_name);
 
     if ($renameResult['success']) {
-        // Aktualizacja się powiodła
+        // Renaming succeeded
         echo json_encode(['success' => true, 'message' => $renameResult['message']]);
 
-        // Zapisz nową nazwę wioski w sesji, jeśli jest to potrzebne (np. dla wyświetlania w nagłówku)
-        // Ta logika może być lepiej zarządzana gdzie indziej, ale na razie zostawiamy
+        // Save the new village name in the session if needed (e.g., for header display)
+        // This logic can be moved elsewhere later
         $_SESSION['village_name'] = $new_village_name;
     } else {
-        // Aktualizacja się nie powiodła
+        // Renaming failed
         echo json_encode(['success' => false, 'error' => $renameResult['message']]);
     }
 
@@ -114,7 +113,7 @@ try {
     // $database->closeConnection();
 
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'error' => 'Wystąpił błąd: ' . $e->getMessage()]);
+    echo json_encode(['success' => false, 'error' => 'An error occurred: ' . $e->getMessage()]);
 }
 
 // No need for $conn->close(); - handled by init.php if persistent, or closes automatically

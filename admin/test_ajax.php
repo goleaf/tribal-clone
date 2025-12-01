@@ -1,20 +1,20 @@
 <?php
 // test_ajax.php
-// Ten plik ma na celu sprawdzenie, czy get_resources.php jest dostępny z poziomu serwera.
+// This file checks whether get_resources.php is reachable from the server side.
 
 $file_path = $_SERVER['DOCUMENT_ROOT'] . '/ajax/resources/get_resources.php';
 
 if (file_exists($file_path)) {
-    echo "Plik istnieje: " . $file_path . "\n";
-    // Spróbuj załadować zawartość pliku
+    echo "File exists: " . $file_path . "\n";
+    // Try to load the file contents
     $content = file_get_contents($file_path);
     if ($content !== false) {
-        echo "Zawartość pliku:\n";
+        echo "File contents:\n";
         echo $content;
     } else {
-        echo "Błąd odczytu pliku.\n";
+        echo "File read error.\n";
     }
 } else {
-    echo "Plik nie istnieje: " . $file_path . "\n";
+    echo "File does not exist: " . $file_path . "\n";
 }
 ?>

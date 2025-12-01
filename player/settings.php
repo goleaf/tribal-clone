@@ -1,7 +1,7 @@
 <?php
 require '../init.php';
-require_once __DIR__ . '/../lib/managers/VillageManager.php'; // Zaktualizowana ścieżka
-require_once __DIR__ . '/../lib/managers/UserManager.php'; // Zaktualizowana ścieżka
+require_once __DIR__ . '/../lib/managers/VillageManager.php'; // Updated path
+require_once __DIR__ . '/../lib/managers/UserManager.php'; // Updated path
 
 // Redirect if not logged in
 if (!isset($_SESSION['user_id'])) {
@@ -20,7 +20,7 @@ if ($village_id) {
     $village = $villageManager->getVillageInfo($village_id); // Get village details if an ID exists
 }
 
-// Inicjalizacja UserManager
+// Initialize UserManager
 $userManager = new UserManager($conn); // Instantiate UserManager
 
 // Handle email change
@@ -53,11 +53,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
 <div id="game-container">
     <header id="main-header">
         <div class="header-title">
-            <span class="game-logo">⚙️</span>
-            <span>Ustawienia</span>
+            <span class="game-logo">&#9881;</span>
+            <span>Settings</span>
         </div>
         <div class="header-user">
-            Gracz: <?= htmlspecialchars($username) ?><br>
+            Player: <?= htmlspecialchars($username) ?><br>
             <?php if (isset($village) && $village): // Check if village data is available ?>
                 <span class="village-name-display" data-village-id="<?= $village['id'] ?>"><?= htmlspecialchars($village['name']) ?> (<?= $village['x_coord'] ?>|<?= $village['y_coord'] ?>)</span>
             <?php endif; ?>
@@ -66,29 +66,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     <div id="main-content">
 
         <main>
-            <h2>Ustawienia konta</h2>
+            <h2>Account settings</h2>
             <?php echo $message; ?>
             <section class="form-container">
-                <h3>Zmiana adresu e-mail</h3>
+                <h3>Change email address</h3>
                 <form action="settings.php" method="POST">
-                    <label for="new_email">Nowy e-mail</label>
+                    <label for="new_email">New email</label>
                     <input type="email" id="new_email" name="new_email" required>
-                    <input type="submit" name="change_email" value="Zmień e-mail" class="btn btn-primary mt-2">
+                    <input type="submit" name="change_email" value="Change email" class="btn btn-primary mt-2">
                 </form>
             </section>
             <section class="form-container mt-3">
-                <h3>Zmiana hasła</h3>
+                <h3>Change password</h3>
                 <form action="settings.php" method="POST">
-                    <label for="current_password">Obecne hasło</label>
+                    <label for="current_password">Current password</label>
                     <input type="password" id="current_password" name="current_password" required>
 
-                    <label for="new_password">Nowe hasło</label>
+                    <label for="new_password">New password</label>
                     <input type="password" id="new_password" name="new_password" required>
 
-                    <label for="confirm_password">Potwierdź hasło</label>
+                    <label for="confirm_password">Confirm password</label>
                     <input type="password" id="confirm_password" name="confirm_password" required>
 
-                    <input type="submit" name="change_password" value="Zmień hasło" class="btn btn-primary mt-2">
+                    <input type="submit" name="change_password" value="Change password" class="btn btn-primary mt-2">
                 </form>
             </section>
         </main>

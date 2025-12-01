@@ -279,5 +279,10 @@ class SQLiteResult {
         $this->rows = [];
         $this->num_rows = 0;
     }
+
+    public function close() {
+        $this->free();
+        return true;
+    }
 }
 ?>

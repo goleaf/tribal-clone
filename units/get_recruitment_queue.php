@@ -5,37 +5,37 @@ require_once '../lib/utils/AjaxResponse.php';
 require_once '../lib/managers/VillageManager.php';
 
 if (!isset($_SESSION['user_id'])) {
-    AjaxResponse::error('Użytkownik nie jest zalogowany', null, 401);
+    AjaxResponse::error('User is not logged in', null, 401);
 }
 $user_id = $_SESSION['user_id'];
 
 try {
-    // Pobierz wioskę gracza (może być potrzebne do walidacji)
+    // Fetch the player's village (needed for validation)
     $village_id = isset($_GET['village_id']) ? (int)$_GET['village_id'] : null;
 
     if (!$village_id) {
-        // Jeśli nie podano village_id, spróbuj pobrać pierwszą wioskę użytkownika
+        // If village_id is not provided, try to fetch the user's first village
         $villageManager = new VillageManager($conn);
         $village_data = $villageManager->getFirstVillage($user_id);
         if (!$village_data) {
-            AjaxResponse::error('Nie znaleziono wioski dla użytkownika', null, 404);
+            AjaxResponse::error('No village found for the user', null, 404);
         }
         $village_id = $village_data['id'];
     } else {
-        // Jeśli podano village_id, sprawdź czy należy do użytkownika
+        // If village_id is provided, confirm it belongs to the user
         $villageManager = new VillageManager($conn);
         $village_data = $villageManager->getVillageInfo($village_id);
         if (!$village_data || $village_data['user_id'] != $user_id) {
-            AjaxResponse::error('Brak uprawnień do tej wioski', null, 403);
+            AjaxResponse::error('You do not have access to this village', null, 403);
         }
     }
 
     $unitManager = new UnitManager($conn);
-    // Pobierz kolejki rekrutacji (opcjonalnie dla konkretnego typu budynku, np. Koszar)
-    // Na razie pobieramy wszystkie dla wioski, frontend może filtrować lub można dodać parametr building_type do GET
+    // Fetch recruitment queues (optionally for a specific building type, e.g., barracks)
+    // For now we pull all queues for the village; the frontend can filter or we can add a building_type parameter
     $queue = $unitManager->getRecruitmentQueues($village_id);
 
-    // Przygotuj dane do zwrócenia w JSON - dodaj potrzebne pola, np. timestampy
+    // Prepare data for JSON response and include needed fields such as timestamps
     $queue_data = [];
     foreach ($queue as $item) {
         $queue_data[] = [
@@ -46,28 +46,28 @@ try {
             'started_at' => strtotime($item['started_at']), // Timestamp
             'finish_at' => strtotime($item['finish_at']), // Timestamp
             'building_type' => $item['building_type'],
-            'unit_name_pl' => $item['name_pl'],
+            'unit_name' => $item['name'],
             'unit_internal_name' => $item['internal_name']
-            // Można dodać icon_url jeśli UnitManager to zwróci
+            // icon_url can be added if UnitManager returns it
         ];
     }
 
-    // Zwróć dane w formacie JSON
+    // Return JSON data
     AjaxResponse::success([
         'village_id' => $village_id,
         'queue' => $queue_data,
-        'current_server_time' => time() // Dodaj aktualny czas serwera (timestamp)
+        'current_server_time' => time() // Add current server timestamp
     ]);
 
 } catch (Exception $e) {
-    // Obsłuż wyjątek i zwróć błąd w formacie JSON
+    // Handle the exception and return an error JSON
     AjaxResponse::error(
-        'Wystąpił błąd podczas pobierania kolejki rekrutacji: ' . $e->getMessage(),
+        'An error occurred while fetching the recruitment queue: ' . $e->getMessage(),
         ['file' => $e->getFile(), 'line' => $e->getLine(), 'trace' => $e->getTraceAsString()],
         500 // HTTP status code
     );
 }
 
-// Połączenie z bazą danych jest zarządzane przez init.php
-// $conn->close(); // Usunięto
+// Database connection is managed by init.php
+// $conn->close(); // Removed
 ?> 

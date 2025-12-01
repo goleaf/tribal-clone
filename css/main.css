@@ -1,19 +1,19 @@
-/* Nowa, ulepszona wersja stylów dla Tribal Wars */
 
-/* --- Resetowanie i zmienne globalne --- */
+
+
 :root {
-  /* Paleta kolorów - inspirowana Plemionami.pl */
-  --color-primary: #5a3a2b; /* Główny brąz, ciemniejszy */
+  
+  --color-primary: #5a3a2b; 
   --color-primary-rgb: 90, 58, 43;
-  --color-secondary: #7b5a4a; /* Jaśniejszy brąz */
-  --color-accent: #e0b060; /* Złoty/żółty akcent */
-  --color-accent-dark: #c09040; /* Ciemniejszy złoty */
+  --color-secondary: #7b5a4a; 
+  --color-accent: #e0b060; 
+  --color-accent-dark: #c09040; 
   --color-text-dark: #333;
-  --color-text-light: #f0e6c8; /* Jasny beż */
-  --color-background-light: #f8f0e0; /* Bardzo jasny beż */
-  --color-background-medium: #e8dcc0; /* Średni beż */
-  --color-background-dark: #d2b48c; /* Ciemniejszy beż */
-  --color-border: #a08060; /* Kolor ramki */
+  --color-text-light: #f0e6c8; 
+  --color-background-light: #f8f0e0; 
+  --color-background-medium: #e8dcc0; 
+  --color-background-dark: #d2b48c; 
+  --color-border: #a08060; 
   --color-success: #28a745;
   --color-success-bg: #d4edda;
   --color-error: #dc3545;
@@ -21,7 +21,7 @@
   --color-info: #17a2b8;
   --color-info-bg: #d1ecf1;
   
-  /* Zaokrąglenia i cienie */
+  
   --border-radius-small: 4px;
   --border-radius-medium: 8px;
   --border-radius-large: 12px;
@@ -29,28 +29,28 @@
   --box-shadow-hover: 0 6px 20px rgba(0, 0, 0, 0.25);
   --box-shadow-inset: inset 0 1px 4px rgba(0, 0, 0, 0.2);
   
-  /* Odstępy */
+  
   --spacing-xs: 5px;
   --spacing-sm: 10px;
   --spacing-md: 15px;
   --spacing-lg: 20px;
   --spacing-xl: 30px;
   
-  /* Przejścia */
+  
   --transition-fast: 0.2s ease-in-out;
   --transition-medium: 0.3s ease-in-out;
   
-  /* Czcionki - bardziej "średniowieczne" */
-  --font-main: 'Georgia', serif; /* Klasyczna czcionka szeryfowa */
-  --font-heading: 'Palatino Linotype', 'Book Antiqua', Palatino, serif; /* Elegancka czcionka szeryfowa */
+  
+  --font-main: 'Georgia', serif; 
+  --font-heading: 'Palatino Linotype', 'Book Antiqua', Palatino, serif; 
   --font-size-small: 0.85rem;
   --font-size-normal: 1rem;
   --font-size-medium: 1.2rem;
   --font-size-large: 1.5rem;
-  --font-size-xlarge: 2.2rem; /* Nieco większe nagłówki */
+  --font-size-xlarge: 2.2rem; 
 }
 
-/* --- Podstawowe resetowanie --- */
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -68,7 +68,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow-x: hidden; /* Zapobiega poziomemu scrollowaniu */
+  overflow-x: hidden; 
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -87,6 +87,50 @@ a:hover {
   color: var(--color-accent);
 }
 
+.btn,
+.styled-btn,
+button,
+input[type="submit"] {
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.btn:hover,
+.styled-btn:hover,
+button:hover,
+input[type="submit"]:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--box-shadow-hover);
+}
+
+.btn:active,
+.styled-btn:active,
+button:active,
+input[type="submit"]:active {
+  transform: translateY(0);
+  box-shadow: var(--box-shadow-default);
+}
+
+#village-view-graphic .building-placeholder {
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
+}
+
+#village-view-graphic .building-placeholder:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--box-shadow-hover), 0 6px 12px rgba(0, 0, 0, 0.2);
+  filter: brightness(1.05);
+}
+
+.queue-item,
+.building-item {
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.queue-item:hover,
+.building-item:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--box-shadow-hover);
+  background-color: rgba(0,0,0,0.02);
+}
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -117,7 +161,7 @@ select:focus {
   outline: none;
 }
 
-/* --- Kontener gry --- */
+
 #game-container {
   max-width: 1200px;
   margin: 20px auto;
@@ -126,10 +170,10 @@ select:focus {
   box-shadow: var(--box-shadow-default);
   border-radius: var(--border-radius-medium);
   overflow: hidden;
-  flex-grow: 1; /* Pozwala kontenerowi rozciągać się na dostępną wysokość */
+  flex-grow: 1; 
 }
 
-/* --- Nagłówek --- */
+
 #main-header {
   background: linear-gradient(to bottom, var(--color-primary), var(--color-secondary));
   color: var(--color-text-light);
@@ -144,15 +188,15 @@ select:focus {
 .header-title {
   display: flex;
   align-items: center;
-  font-size: var(--font-size-xlarge); /* Zwiększony rozmiar */
+  font-size: var(--font-size-xlarge); 
   font-weight: bold;
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4); /* Lepszy cień */
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4); 
 }
 
 .game-logo {
   margin-right: var(--spacing-sm);
-  font-size: var(--font-size-xlarge); /* Utrzymany rozmiar */
-  color: var(--color-accent); /* Dodany kolor dla logo */
+  font-size: var(--font-size-xlarge); 
+  color: var(--color-accent); 
 }
 
 .header-user {
@@ -176,7 +220,7 @@ select:focus {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
-/* --- Komunikaty --- */
+
 #messages-container {
   width: 100%;
   margin: var(--spacing-md) 0;
@@ -213,11 +257,11 @@ p.info-message, .info {
   box-shadow: var(--box-shadow-default);
 }
 
-/* --- Przyciski --- */
+
 button, input[type="submit"], .btn {
   background: linear-gradient(to bottom, var(--color-accent), var(--color-accent-dark));
-  color: var(--color-text-dark); /* Zmieniono na ciemny tekst dla lepszego kontrastu */
-  border: 1px solid var(--color-accent-dark); /* Dodana ramka */
+  color: var(--color-text-dark); 
+  border: 1px solid var(--color-accent-dark); 
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--border-radius-small);
   cursor: pointer;
@@ -227,7 +271,7 @@ button, input[type="submit"], .btn {
   display: inline-block;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   text-align: center;
-  text-transform: uppercase; /* Ujednolicenie tekstu */
+  text-transform: uppercase; 
   letter-spacing: 0.5px;
 }
 
@@ -271,7 +315,7 @@ button:disabled, input[type="submit"]:disabled {
   color: white;
 }
 
-/* --- Strona główna - hero section --- */
+
 .hero {
   position: relative;
   height: 65vh;
@@ -288,7 +332,7 @@ button:disabled, input[type="submit"]:disabled {
   position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.2)); /* Zmniejszona przezroczystość */
+  background: linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.2)); 
 }
 
 .hero-content {
@@ -331,7 +375,7 @@ button:disabled, input[type="submit"]:disabled {
   min-width: 180px;
 }
 
-/* --- Responsywność --- */
+
 @media (max-width: 900px) {
   .hero-content h2 {
     font-size: 2rem;
@@ -388,7 +432,7 @@ button:disabled, input[type="submit"]:disabled {
   }
 }
 
-/* --- Układ strony --- */
+
 #main-content {
     display: flex;
 }
@@ -429,7 +473,7 @@ main {
   padding: var(--spacing-lg);
 }
 
-/* --- Nagłówki i sekcje --- */
+
 main h2 {
   font-size: 1.5rem;
   color: var(--color-secondary);
@@ -448,7 +492,7 @@ main h3 {
   margin-bottom: var(--spacing-sm);
 }
 
-/* --- Pasek zasobów --- */
+
 #resources-bar {
     display: flex;
   justify-content: space-between;
@@ -478,7 +522,7 @@ main h3 {
     margin-left: 5px;
 }
 
-/* --- Informacje o wiosce --- */
+
 #village-info {
   background-color: rgba(255, 255, 255, 0.5);
   padding: var(--spacing-md);
@@ -505,12 +549,12 @@ main h3 {
   text-align: right;
 }
 
-/* --- Widok wioski --- */
+
 #village-view-graphic {
-  position: relative; /* Dodano, aby placeholdery były pozycjonowane względem tego elementu */
-  width: 800px; /* Ustawiono stałą szerokość */
-  height: 600px; /* Ustawiono stałą wysokość */
-  margin: var(--spacing-lg) auto; /* Wyśrodkowanie */
+  position: relative; 
+  width: 800px; 
+  height: 600px; 
+  margin: var(--spacing-lg) auto; 
   background-color: var(--color-background-medium);
   background-image: url('../img/village_bg.jpg');
   background-size: cover;
@@ -521,7 +565,7 @@ main h3 {
   overflow: hidden;
 }
 
-/* Usunięto #village-map-container, ponieważ #village-view-graphic pełni tę samą rolę */
+
 
 .building-placeholder {
   position: absolute;
@@ -529,21 +573,22 @@ main h3 {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast), filter var(--transition-fast);
   flex-direction: column;
 }
 
 .building-placeholder:hover {
   background-color: rgba(255, 255, 255, 0.9);
-  transform: translateY(-4px);
+  transform: translateY(-2px) scale(1.02);
   box-shadow: var(--box-shadow-hover), 0 6px 12px rgba(0, 0, 0, 0.3);
+  filter: brightness(1.05);
   z-index: 10;
 }
 
 .building-placeholder.building-upgrading {
-    border-color: var(--color-accent); /* Zmień kolor ramki na akcentujący */
-    box-shadow: 0 0 8px var(--color-accent), 0 3px 6px rgba(0, 0, 0, 0.3); /* Dodaj cień/pulsowanie */
-    animation: pulse-accent 1.5s infinite alternate; /* Dodaj prostą animację pulsowania */
+    border-color: var(--color-accent); 
+    box-shadow: 0 0 8px var(--color-accent), 0 3px 6px rgba(0, 0, 0, 0.3); 
+    animation: pulse-accent 1.5s infinite alternate; 
 }
 
 @keyframes pulse-accent {
@@ -552,22 +597,68 @@ main h3 {
 }
 
 .building-icon {
-  max-width: 100%; /* Allow images to fill the placeholder width */
-  max-height: 100%; /* Allow images to fill the placeholder height */
+  max-width: 100%; 
+  max-height: 100%; 
   margin-bottom: 5px;
+  pointer-events: none;
 }
 
 .placeholder-text {
   font-size: 0.8rem;
     font-weight: bold;
-  color: var(--color-text-light); /* Jasny tekst dla poziomu */
-  background-color: rgba(0, 0, 0, 0.5); /* Półprzezroczyste tło dla czytelności */
-  padding: 2px 5px; /* Mniejsze wypełnienie */
-  border-radius: 3px; /* Lekko zaokrąglone rogi */
-  margin-top: 2px; /* Mały odstęp od grafiki */
+  color: var(--color-text-light); 
+  background-color: rgba(0, 0, 0, 0.5); 
+  padding: 2px 5px; 
+  border-radius: 3px; 
+  margin-top: 2px;
+  transition: opacity var(--transition-fast);
+  opacity: 0.9;
 }
 
-/* --- Tabele --- */
+.building-placeholder:hover .placeholder-text {
+  opacity: 1;
+}
+
+.building-item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-small);
+  padding: var(--spacing-md);
+  background: #fff;
+  box-shadow: var(--box-shadow-default);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.building-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--box-shadow-hover);
+  background-color: rgba(0,0,0,0.02);
+}
+
+.building-item h3 {
+  margin-bottom: var(--spacing-xs);
+}
+
+.building-item p {
+  margin-bottom: var(--spacing-xs);
+}
+
+.building-item .upgrade-status {
+  font-weight: bold;
+  color: var(--color-primary);
+}
+
+.building-item .upgrade-timer {
+  font-weight: bold;
+  color: var(--color-accent);
+}
+
+.building-item .resource img {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+}
+
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -598,7 +689,7 @@ tr:hover {
   background-color: rgba(255, 255, 255, 0.8);
 }
 
-/* --- Popup budynków --- */
+
 #building-details-popup {
   display: none;
     position: fixed;
@@ -617,7 +708,7 @@ tr:hover {
   overflow-y: auto;
 }
 
-/* Sekcja listy budynków */
+
 .building-list-section {
     margin-top: var(--spacing-xl);
 }
@@ -705,7 +796,7 @@ tr:hover {
 
 .building-requirements li {
     margin-bottom: var(--spacing-xs);
-    padding-left: 15px; /* Adjust as needed for icon/indicator */
+    padding-left: 15px; 
     position: relative;
 }
 
@@ -717,15 +808,15 @@ tr:hover {
     color: var(--color-error);
 }
 
-/* Optional: Add icons */
+
 .requirement-met::before {
-    content: '✅'; /* Or use a background image icon */
+    content: 'OK'; 
     position: absolute;
     left: 0;
 }
 
 .requirement-not-met::before {
-    content: '❌'; /* Or use a background image icon */
+    content: 'X'; 
     position: absolute;
     left: 0;
 }
@@ -738,7 +829,7 @@ tr:hover {
     border-top: 1px dashed var(--color-border);
 }
 
-/* Większy popup dla ratusza z tabelą budynków */
+
 #building-details-popup.main-building-popup {
   max-width: 800px;
   width: 95%;
@@ -806,7 +897,7 @@ tr:hover {
   z-index: 1000;
 }
 
-/* Style dla tabeli rozbudowy w popupie ratusza */
+
 .main-building-upgrade-table {
   margin-top: var(--spacing-md);
   max-height: 400px;
@@ -855,7 +946,7 @@ tr:hover {
   height: 16px;
 }
 
-/* --- Kolejka budowy --- */
+
 #building-queue {
     background-color: var(--color-background-light);
     border: 1px solid var(--color-background-dark);
@@ -946,7 +1037,7 @@ tr:hover {
 }
 
 .cancel-button:hover {
-    background-color: darken(var(--color-error), 10%); /* Note: darken is a placeholder, replace with actual color calc */
+    background-color: darken(var(--color-error), 10%); 
 }
 
 .item-progress {
@@ -964,7 +1055,7 @@ tr:hover {
 .progress-fill {
     height: 100%;
     background-color: var(--color-success);
-    transition: width 1s linear; /* Smooth progress animation */
+    transition: width 1s linear; 
 }
 
 .progress-time {
@@ -974,7 +1065,7 @@ tr:hover {
     margin-top: 3px;
 }
 
-/* --- Map Section in Sidebar --- */
+
 .map-section {
     background-color: var(--color-background-light);
     border: 1px solid var(--color-background-dark);
@@ -1008,10 +1099,10 @@ tr:hover {
 }
 
 .map-link-btn:hover {
-    background-color: darken(var(--color-secondary), 10%); /* Note: darken is a placeholder */
+    background-color: darken(var(--color-secondary), 10%); 
 }
 
-/* --- Rekrutacja jednostek --- */
+
 .recruitment-queue-container,
 .current-units-container,
 .recruitment-container {
@@ -1089,13 +1180,13 @@ tr:hover {
   margin: var(--spacing-xs) 0;
 }
 
-/* Klasa do oznaczania jednostki w kolejce rekrutacji */
+
 .recruitment-queue .unit-in-progress {
   font-weight: bold;
   color: var(--color-success);
 }
 
-/* Styl dla ikon jednostek */
+
 .unit-icon {
   width: 40px;
   height: 40px;
@@ -1103,7 +1194,7 @@ tr:hover {
   margin-right: var(--spacing-sm);
 }
 
-/* Kontener dla informacji o jednostce */
+
 .unit-info {
   display: flex;
   align-items: center;
@@ -1114,13 +1205,13 @@ tr:hover {
   flex-direction: column;
 }
 
-/* Styl dla komórek z jednostkami w tabeli bieżących jednostek */
+
 .current-units-table .unit-cell {
   display: flex;
   align-items: center;
 }
 
-/* Styl dla przycisków z tłem z grafik starego projektu */
+
 button.styled-btn, input[type="submit"].styled-btn {
   background: url('../img/btn/buttons.png') no-repeat;
   background-size: contain;
@@ -1135,7 +1226,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
   transform: scale(1.05);
 }
 
-/* Zmiany dla czytelności i stylu strony głównej */
+
 .site-header {
     display: flex;
     flex-wrap: wrap;
@@ -1146,14 +1237,14 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     color: var(--color-text-light);
     box-shadow: var(--box-shadow-default);
     position: relative;
-    z-index: 20; /* Upewnij się, że nagłówek jest na wierzchu */
+    z-index: 20; 
 }
 
 .site-header .logo h1 {
     font-family: var(--font-heading);
     font-size: var(--font-size-xlarge);
     margin: 0;
-    color: var(--color-accent); /* Złoty kolor dla logo */
+    color: var(--color-accent); 
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
 }
 
@@ -1198,7 +1289,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     font-size: 1.1rem;
 }
 
-/* Style dla ikon powiadomień */
+
 .notifications-icon {
     position: relative;
     margin-left: var(--spacing-md);
@@ -1230,7 +1321,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-/* Dropdown powiadomień */
+
 #notifications-dropdown {
     display: none;
     position: absolute;
@@ -1352,7 +1443,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     color: var(--color-primary);
 }
 
-/* --- Pasek zasobów --- */
+
 .resource-bar {
     background-color: var(--color-background-dark);
     padding: var(--spacing-sm);
@@ -1391,7 +1482,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     margin-right: 3px;
 }
 
-/* Dodatkowe style dla dynamicznej aktualizacji zasobów */
+
 .resource-wood, .resource-clay, .resource-iron, .resource-population {
     position: relative;
     min-width: 120px;
@@ -1444,7 +1535,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     100% { opacity: 1; }
 }
 
-/* Style dla tooltipów przy zasobach */
+
 .resource-tooltip {
     position: absolute;
     display: none;
@@ -1519,7 +1610,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     transition: width 0.3s ease;
 }
 
-/* --- DS-Topbar --- */
+
 #ds-topbar {
     background-color: var(--color-primary);
     color: var(--color-text-light);
@@ -1554,7 +1645,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     margin-right: 8px;
 }
 
-/* Wybieraj które menu wyświetlić w zależności od strony */
+
 #game-container .main-nav {
     display: none;
 }
@@ -1563,22 +1654,22 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     display: flex;
 }
 
-/* --- Form container styling --- */
+
 .form-container {
     max-width: 400px;
     margin: 60px auto;
     padding: 40px;
-    background-color: var(--color-background-light); /* Użyto zmiennej */
-    border-radius: var(--border-radius-large); /* Użyto zmiennej */
-    box-shadow: var(--box-shadow-hover); /* Użyto zmiennej */
-    border: 1px solid var(--color-border); /* Użyto zmiennej */
+    background-color: var(--color-background-light); 
+    border-radius: var(--border-radius-large); 
+    box-shadow: var(--box-shadow-hover); 
+    border: 1px solid var(--color-border); 
     text-align: center;
 }
 
 .form-container h1 {
-    color: var(--color-primary); /* Użyto zmiennej */
+    color: var(--color-primary); 
     margin-bottom: 30px;
-    font-size: var(--font-size-xlarge); /* Użyto zmiennej */
+    font-size: var(--font-size-xlarge); 
     text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
 }
 
@@ -1586,9 +1677,9 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     display: block;
     text-align: left;
     margin-bottom: 8px;
-    color: var(--color-secondary); /* Użyto zmiennej */
+    color: var(--color-secondary); 
     font-weight: bold;
-    font-size: var(--font-size-normal); /* Użyto zmiennej */
+    font-size: var(--font-size-normal); 
 }
 
 .form-container input[type="text"],
@@ -1597,12 +1688,12 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     width: 100%;
     padding: 12px 15px;
     margin-bottom: 20px;
-    border: 1px solid var(--color-border); /* Użyto zmiennej */
-    border-radius: var(--border-radius-small); /* Użyto zmiennej */
-    background-color: var(--color-background-medium); /* Użyto zmiennej */
-    color: var(--color-text-dark); /* Użyto zmiennej */
-    font-size: var(--font-size-normal); /* Użyto zmiennej */
-    box-shadow: var(--box-shadow-inset); /* Użyto zmiennej */
+    border: 1px solid var(--color-border); 
+    border-radius: var(--border-radius-small); 
+    background-color: var(--color-background-medium); 
+    color: var(--color-text-dark); 
+    font-size: var(--font-size-normal); 
+    box-shadow: var(--box-shadow-inset); 
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
     box-sizing: border-box;
 }
@@ -1610,8 +1701,8 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
 .form-container input[type="text"]:focus,
 .form-container input[type="email"]:focus,
 .form-container input[type="password"]:focus {
-    border-color: var(--color-primary); /* Użyto zmiennej */
-    box-shadow: 0 0 5px rgba(var(--color-primary-rgb), 0.5); /* Użyto zmiennej */
+    border-color: var(--color-primary); 
+    box-shadow: 0 0 5px rgba(var(--color-primary-rgb), 0.5); 
     outline: none;
 }
 
@@ -1619,39 +1710,39 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     display: block;
     width: 100%;
     padding: 12px;
-    font-size: var(--font-size-large); /* Użyto zmiennej */
+    font-size: var(--font-size-large); 
     margin-top: 10px;
     margin-bottom: 20px;
 }
 
 .form-container .error-message {
-    color: var(--color-error); /* Użyto zmiennej */
-    background-color: var(--color-error-bg); /* Użyto zmiennej */
-    border: 1px solid var(--color-error); /* Użyto zmiennej */
+    color: var(--color-error); 
+    background-color: var(--color-error-bg); 
+    border: 1px solid var(--color-error); 
     padding: 10px;
     margin-bottom: 20px;
-    border-radius: var(--border-radius-small); /* Użyto zmiennej */
+    border-radius: var(--border-radius-small); 
     font-weight: bold;
 }
 
 .form-container p {
-    font-size: var(--font-size-normal); /* Użyto zmiennej */
+    font-size: var(--font-size-normal); 
     color: #555;
     margin-bottom: 10px;
 }
 
 .form-container p a {
-    color: var(--color-primary); /* Użyto zmiennej */
+    color: var(--color-primary); 
     text-decoration: none;
     transition: color var(--transition-fast);
 }
 
 .form-container p a:hover {
-    color: var(--color-accent); /* Użyto zmiennej */
+    color: var(--color-accent); 
     text-decoration: underline;
 }
 
-/* Basic responsiveness */
+
 @media (max-width: 500px) {
     .form-container {
         margin: 30px 15px;
@@ -1660,29 +1751,29 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
 }
 
 .features {
-    padding: var(--spacing-xl) var(--spacing-lg); /* Zwiększony padding */
+    padding: var(--spacing-xl) var(--spacing-lg); 
     background-color: var(--color-background-light);
     border-top: 1px solid var(--color-border);
     border-bottom: 1px solid var(--color-border);
 }
 .features h2 {
     text-align: center;
-    margin-bottom: var(--spacing-xl); /* Zwiększony odstęp */
+    margin-bottom: var(--spacing-xl); 
     color: var(--color-primary);
     font-size: var(--font-size-xlarge);
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
 }
 .features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); /* Zwiększono min-width */
+    grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); 
     gap: var(--spacing-xl);
     max-width: 1200px;
     margin: 0 auto;
 }
 .feature-card {
     background-color: #fff;
-    padding: var(--spacing-xl); /* Zwiększony padding */
-    border-radius: var(--border-radius-large); /* Zwiększone zaokrąglenie */
+    padding: var(--spacing-xl); 
+    border-radius: var(--border-radius-large); 
     text-align: center;
     box-shadow: var(--box-shadow-default);
     transition: transform var(--transition-medium), box-shadow var(--transition-medium);
@@ -1702,38 +1793,38 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     pointer-events: none;
 }
 .feature-card:hover {
-    transform: translateY(-8px); /* Większe uniesienie */
+    transform: translateY(-8px); 
     box-shadow: var(--box-shadow-hover);
 }
 .feature-icon {
-    width: 90px; /* Zwiększony rozmiar ikony */
+    width: 90px; 
     height: 90px;
-    margin: 0 auto var(--spacing-lg); /* Centrowanie i odstęp */
+    margin: 0 auto var(--spacing-lg); 
     background-color: var(--color-background-medium);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: var(--box-shadow-inset);
-    border: 2px solid var(--color-accent); /* Dodana ramka */
+    border: 2px solid var(--color-accent); 
 }
 .feature-icon img {
-    max-width: 65%; /* Dopasowanie obrazu do kontenera */
+    max-width: 65%; 
     max-height: 65%;
     margin-bottom: 0;
 }
 .feature-card h3 {
     margin: var(--spacing-md) 0 var(--spacing-sm);
     color: var(--color-primary);
-    font-size: var(--font-size-large); /* Zwiększony rozmiar */
+    font-size: var(--font-size-large); 
     border-bottom: 1px solid var(--color-background-medium);
     padding-bottom: var(--spacing-xs);
 }
 .feature-card p {
     font-size: var(--font-size-normal);
     color: #555;
-    line-height: 1.7; /* Zwiększono line-height */
-    margin-bottom: var(--spacing-lg); /* Zwiększony odstęp */
+    line-height: 1.7; 
+    margin-bottom: var(--spacing-lg); 
 }
 .feature-link {
     display: inline-block;
@@ -1741,7 +1832,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     color: var(--color-text-dark);
     padding: var(--spacing-sm) var(--spacing-md);
     border-radius: var(--border-radius-small);
-    font-size: var(--font-size-normal); /* Zwiększony rozmiar czcionki */
+    font-size: var(--font-size-normal); 
     font-weight: bold;
     transition: all var(--transition-fast);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -1754,7 +1845,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* --- PANEL WIOSKI --- */
+
 .village-main-container {
     max-width: 900px;
     margin: 30px auto;
@@ -1820,7 +1911,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     .village-header h1 { font-size: 1.2em; }
 }
 
-/* --- Sekcje jednostek, rekrutacji i badań w panelu wioski --- */
+
 #units-section, #research-section {
     background: #fff;
     border-radius: 10px;
@@ -1873,7 +1964,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     margin-bottom: 0;
 }
 
-/* --- Loader i powiadomienia AJAX w panelu wioski --- */
+
 .loader {
     display: flex;
     align-items: center;
@@ -1919,7 +2010,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     background: var(--color-info-bg);
 }
 
-/* --- Toasty (uniwersalne powiadomienia) --- */
+
 .game-toast {
     position: fixed;
     top: 30px;
@@ -1960,7 +2051,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     border-color: var(--color-info);
 }
 
-/* Styles from index.php */
+
 .hero-overlay {
     position: absolute;
     top: 0;
@@ -2001,7 +2092,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     display: flex;
     justify-content: space-around;
     background: linear-gradient(to right, var(--color-secondary), var(--color-primary));
-    padding: var(--spacing-lg) var(--spacing-xl); /* Zwiększony padding */
+    padding: var(--spacing-lg) var(--spacing-xl); 
     color: white;
     text-align: center;
     margin-bottom: var(--spacing-xl);
@@ -2014,35 +2105,35 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: var(--spacing-sm); /* Dodany padding dla lepszego wyglądu */
+    padding: var(--spacing-sm); 
 }
 
 .stat-number {
-    font-size: 2.8rem; /* Zwiększony rozmiar */
+    font-size: 2.8rem; 
     font-weight: bold;
     margin-bottom: var(--spacing-xs);
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.4); /* Lepszy cień */
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.4); 
     color: var(--color-accent);
 }
 
 .stat-label {
-    font-size: 1.1rem; /* Zwiększony rozmiar */
+    font-size: 1.1rem; 
     opacity: 0.9;
     text-transform: uppercase;
-    letter-spacing: 1px; /* Zwiększony odstęp między literami */
+    letter-spacing: 1px; 
     font-weight: bold;
 }
 
 @media (max-width: 600px) {
     .stats-bar {
         flex-direction: column;
-        gap: var(--spacing-md); /* Zmniejszony odstęp */
+        gap: var(--spacing-md); 
     }
 }
 
 .game-description {
     background-color: var(--color-background-medium);
-    padding: var(--spacing-xl) var(--spacing-lg); /* Zwiększony padding */
+    padding: var(--spacing-xl) var(--spacing-lg); 
     margin-top: 0;
     border-top: 1px solid var(--color-border);
     border-bottom: 1px solid var(--color-border);
@@ -2052,34 +2143,34 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     max-width: 900px;
     margin: 0 auto;
     background-color: var(--color-background-light);
-    padding: var(--spacing-xl); /* Zwiększony padding */
+    padding: var(--spacing-xl); 
     border-radius: var(--border-radius-medium);
     box-shadow: var(--box-shadow-default);
 }
 
 .description-container h2 {
     color: var(--color-primary);
-    margin-bottom: var(--spacing-lg); /* Zwiększony odstęp */
+    margin-bottom: var(--spacing-lg); 
     text-align: center;
     font-size: var(--font-size-xlarge);
 }
 
 .description-container p {
-    margin-bottom: var(--spacing-lg); /* Zwiększony odstęp */
-    line-height: 1.8; /* Zwiększona wysokość linii */
+    margin-bottom: var(--spacing-lg); 
+    line-height: 1.8; 
     font-size: var(--font-size-normal);
     color: #444;
 }
 
 .feature-list {
-    margin-left: var(--spacing-lg); /* Zwiększony odstęp */
-    margin-bottom: var(--spacing-xl); /* Zwiększony odstęp */
-    list-style: disc; /* Zmieniono na kropki */
+    margin-left: var(--spacing-lg); 
+    margin-bottom: var(--spacing-xl); 
+    list-style: disc; 
     color: #555;
 }
 
 .feature-list li {
-    margin-bottom: var(--spacing-sm); /* Zwiększony odstęp */
+    margin-bottom: var(--spacing-sm); 
     font-size: var(--font-size-normal);
 }
 
@@ -2089,21 +2180,21 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
 
 .cta-box {
     background-color: var(--color-background-dark);
-    padding: var(--spacing-xl); /* Zwiększony padding */
-    border-radius: var(--border-radius-medium); /* Zwiększone zaokrąglenie */
+    padding: var(--spacing-xl); 
+    border-radius: var(--border-radius-medium); 
     text-align: center;
-    margin-top: var(--spacing-xl); /* Zwiększony odstęp */
+    margin-top: var(--spacing-xl); 
     box-shadow: var(--box-shadow-inset);
 }
 
 .cta-box h3 {
-    margin-bottom: var(--spacing-md); /* Zwiększony odstęp */
+    margin-bottom: var(--spacing-md); 
     color: var(--color-primary);
     font-size: var(--font-size-large);
 }
 
 .cta-box .btn {
-    margin-top: var(--spacing-md); /* Zwiększony odstęp */
+    margin-top: var(--spacing-md); 
     padding: var(--spacing-md) var(--spacing-xl);
     font-size: 1.1rem;
 }
@@ -2111,8 +2202,8 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
 .site-footer {
     background-color: var(--color-primary);
     color: var(--color-text-light);
-    padding: var(--spacing-xl) var(--spacing-lg) var(--spacing-md); /* Zwiększony padding */
-    margin-top: var(--spacing-xl); /* Zwiększony odstęp */
+    padding: var(--spacing-xl) var(--spacing-lg) var(--spacing-md); 
+    margin-top: var(--spacing-xl); 
     box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
 }
 
@@ -2122,22 +2213,22 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     justify-content: space-between;
     max-width: 1200px;
     margin: 0 auto;
-    gap: var(--spacing-lg); /* Dodany odstęp między kolumnami */
+    gap: var(--spacing-lg); 
 }
 
 .footer-logo,
 .footer-links,
 .footer-info {
     flex: 1;
-    min-width: 280px; /* Zwiększona minimalna szerokość */
-    margin-bottom: var(--spacing-xl); /* Zwiększony odstęp */
+    min-width: 280px; 
+    margin-bottom: var(--spacing-xl); 
     padding: 0 var(--spacing-md);
 }
 
 .footer-logo h3 {
-    font-size: var(--font-size-large); /* Zwiększony rozmiar */
+    font-size: var(--font-size-large); 
     margin-bottom: var(--spacing-sm);
-    color: var(--color-accent); /* Złoty kolor dla logo */
+    color: var(--color-accent); 
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
@@ -2149,7 +2240,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
 .footer-links h4,
 .footer-info h4 {
     color: var(--color-background-medium);
-    margin-bottom: var(--spacing-md); /* Zwiększony odstęp */
+    margin-bottom: var(--spacing-md); 
     font-size: var(--font-size-medium);
     border-bottom: 1px solid rgba(255,255,255,0.1);
     padding-bottom: var(--spacing-xs);
@@ -2172,7 +2263,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
 }
 
 .footer-links a:hover {
-    color: var(--color-accent); /* Zmieniono kolor hover */
+    color: var(--color-accent); 
     text-decoration: underline;
 }
 
@@ -2183,9 +2274,9 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
 }
 
 .footer-bottom {
-    border-top: 1px solid rgba(255,255,255,0.15); /* Zwiększona widoczność linii */
-    padding-top: var(--spacing-md); /* Zwiększony padding */
-    margin-top: var(--spacing-md); /* Zwiększony odstęp */
+    border-top: 1px solid rgba(255,255,255,0.15); 
+    padding-top: var(--spacing-md); 
+    margin-top: var(--spacing-md); 
     text-align: center;
     font-size: var(--font-size-small);
     max-width: 1200px;
@@ -2223,9 +2314,7 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     }
 }
 
-/*
-Style for notifications dropdown.
-*/
+
 
 .notifications-icon {
     position: relative;
@@ -2245,7 +2334,7 @@ Style for notifications dropdown.
     position: absolute;
     top: -5px;
     right: -5px;
-    background-color: var(--color-error); /* Użyto nowej zmiennej */
+    background-color: var(--color-error); 
     color: white;
     border-radius: 50%;
     width: 18px;
@@ -2261,12 +2350,12 @@ Style for notifications dropdown.
     display: none;
     position: absolute;
     right: 0;
-    background-color: var(--color-background-light); /* Użyto nowej zmiennej */
+    background-color: var(--color-background-light); 
     min-width: 350px;
     box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
     z-index: 1000;
     border-radius: var(--border-radius-small);
-    border: 1px solid var(--color-primary); /* Użyto nowej zmiennej */
+    border: 1px solid var(--color-primary); 
     max-height: 400px;
     overflow-y: auto;
 }
@@ -2274,10 +2363,10 @@ Style for notifications dropdown.
 .dropdown-content h3 {
     margin: 0;
     padding: 12px 15px;
-    background-color: var(--color-primary); /* Użyto nowej zmiennej */
-    color: var(--color-text-light); /* Użyto nowej zmiennej */
+    background-color: var(--color-primary); 
+    color: var(--color-text-light); 
     font-size: 16px;
-    border-bottom: 1px solid var(--color-primary); /* Użyto nowej zmiennej */
+    border-bottom: 1px solid var(--color-primary); 
 }
 
 .notifications-list {
@@ -2289,19 +2378,19 @@ Style for notifications dropdown.
 .notification-item {
     display: flex;
     padding: 12px 15px;
-    border-bottom: 1px solid var(--color-border); /* Użyto nowej zmiennej */
+    border-bottom: 1px solid var(--color-border); 
     transition: background-color 0.2s;
     align-items: flex-start;
 }
 
 .notification-item:hover {
-    background-color: var(--color-background-medium); /* Użyto nowej zmiennej */
+    background-color: var(--color-background-medium); 
 }
 
 .notification-icon {
     margin-right: 12px;
     font-size: 18px;
-    color: var(--color-primary); /* Użyto nowej zmiennej */
+    color: var(--color-primary); 
     padding-top: 2px;
 }
 
@@ -2321,14 +2410,14 @@ Style for notifications dropdown.
 }
 
 .notification-success .notification-icon {
-    color: var(--color-success); /* Użyto nowej zmiennej */
+    color: var(--color-success); 
 }
 
 .notification-error .notification-icon {
-    color: var(--color-error); /* Użyto nowej zmiennej */
+    color: var(--color-error); 
 }
 
-/* --- Recruitment Popup Panel --- */
+
 #popup-action-content h3, #popup-action-content h4 {
     color: var(--color-primary-dark);
     margin-bottom: var(--spacing-sm);
@@ -2375,7 +2464,7 @@ Style for notifications dropdown.
 }
 
 #popup-action-content .recruitment-units .recruit-button {
-    /* Style the button consistent with other buttons */
+    
 }
 
 #popup-action-content .recruitment-units tr.unavailable td {
@@ -2415,7 +2504,7 @@ Style for notifications dropdown.
     font-weight: bold;
 }
 
-/* --- Research Popup Panel --- */
+
 #popup-action-content .research-queue,
 #popup-action-content .research-options {
     width: 100%;
@@ -2470,7 +2559,7 @@ Style for notifications dropdown.
     background-color: var(--color-danger-dark);
 }
 
-/* --- Market Popup Panel --- */
+
 #popup-action-content .market-info {
     margin-bottom: var(--spacing-md);
     padding: var(--spacing-sm);
@@ -2500,7 +2589,7 @@ Style for notifications dropdown.
 
 #popup-action-content #send-resources-form .form-group,
 #popup-action-content #send-resources-form .resource-inputs {
-    display: contents; /* Allows child elements to be direct grid items */
+    display: contents; 
 }
 
 #popup-action-content #send-resources-form label {
@@ -2515,12 +2604,12 @@ Style for notifications dropdown.
     padding: var(--spacing-xs);
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius-small);
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    box-sizing: border-box; 
 }
 
 #popup-action-content #send-resources-form .resource-inputs {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* Three columns for wood, clay, iron */
+    grid-template-columns: repeat(3, 1fr); 
     gap: var(--spacing-sm);
 }
 
@@ -2563,7 +2652,7 @@ Style for notifications dropdown.
      font-weight: normal;
 }
 
-/* --- Paginacja --- */
+
 .pagination {
     margin-top: var(--spacing-md);
     text-align: center;
@@ -2594,27 +2683,27 @@ Style for notifications dropdown.
 
 
 
-/* --- Raporty (reports.php) --- */
+
 .reports-tabs {
      margin-bottom: var(--spacing-md);
      border-bottom: 2px solid var(--color-border);
-     display: flex; /* Użyj flexbox dla zakładek */
-     overflow-x: auto; /* Dodaj scroll jeśli zakładki się nie mieszczą */
-     padding-bottom: 5px; /* Dodatkowy odstęp pod linią */
+     display: flex; 
+     overflow-x: auto; 
+     padding-bottom: 5px; 
 }
 
 .reports-tabs .tab {
-     display: block; /* Zmień na block, żeby padding działał jak na przycisku */
+     display: block; 
      padding: var(--spacing-sm) var(--spacing-md);
-     margin-right: var(--spacing-sm); /* Odstęp między zakładkami */
+     margin-right: var(--spacing-sm); 
      background-color: var(--color-background-medium);
      color: var(--color-text-dark);
      border: 1px solid var(--color-border);
-     border-bottom: none; /* Usuń dolną ramkę, żeby pasowała do linii */
+     border-bottom: none; 
      border-top-left-radius: var(--border-radius-small);
      border-top-right-radius: var(--border-radius-small);
      transition: background-color var(--transition-fast), color var(--transition-fast);
-     white-space: nowrap; /* Zapobiegaj zawijaniu tekstu w zakładce */
+     white-space: nowrap; 
 }
 
 .reports-tabs .tab:hover {
@@ -2623,29 +2712,29 @@ Style for notifications dropdown.
 }
 
 .reports-tabs .tab.active {
-     background-color: var(--color-background-light); /* Aktywna zakładka na tle strony */
+     background-color: var(--color-background-light); 
      color: var(--color-primary);
      border-color: var(--color-border);
-     border-bottom-color: var(--color-background-light); /* Kolor tła, żeby zakryć linię */
-     position: relative; /* Potrzebne do nadpisania linii border-bottom */
-     z-index: 1; /* Upewnij się, że jest nad linią */
+     border-bottom-color: var(--color-background-light); 
+     position: relative; 
+     z-index: 1; 
      font-weight: bold;
 }
 
 
 .reports-container {
     display: flex;
-    gap: var(--spacing-md); /* Odstęp między listą a szczegółami */
-    flex-wrap: wrap; /* Zawijaj na mniejszych ekranach */
+    gap: var(--spacing-md); 
+    flex-wrap: wrap; 
 }
 
 .reports-list {
-    flex: 1; /* Zajmij dostępną przestrzeń */
-    min-width: 300px; /* Minimalna szerokość listy */
-    max-width: 100%; /* Domyślnie 100% na małych ekranach */
-    /* Optional: Add a max-width on larger screens if needed */
-     /* max-height: 600px; */ /* Ogranicz wysokość listy, jeśli chcesz scrollowanie */
-     /* overflow-y: auto; */
+    flex: 1; 
+    min-width: 300px; 
+    max-width: 100%; 
+    
+      
+     
 }
 
 .report-item {
@@ -2665,13 +2754,13 @@ Style for notifications dropdown.
 }
 
 .report-item.unread {
-    background-color: #fff8e1; /* Jasnożółte tło dla nieprzeczytanych */
+    background-color: #fff8e1; 
     border-color: var(--color-accent);
     font-weight: bold;
 }
 
 .report-item.unread:hover {
-     background-color: #ffecb3; /* Jaśniejsze żółte na hover */
+     background-color: #ffecb3; 
 }
 
 .report-title {
@@ -2684,8 +2773,8 @@ Style for notifications dropdown.
 
 .report-icon {
      margin-right: var(--spacing-sm);
-     font-size: 1.2em; /* Większa ikona */
-     /* Kolory ikon można dodać w JS lub osobnych klasach */
+     font-size: 1.2em; 
+     
 }
 
 .report-villages {
@@ -2697,13 +2786,13 @@ Style for notifications dropdown.
 .report-date {
     font-size: var(--font-size-small);
     color: #666;
-    text-align: right; /* Data po prawej stronie */
+    text-align: right; 
 }
 
 .report-details {
-    flex: 2; /* Zajmij więcej przestrzeni niż lista na dużych ekranach */
-    min-width: 400px; /* Minimalna szerokość szczegółów */
-    max-width: 100%; /* Domyślnie 100% na małych ekranach */
+    flex: 2; 
+    min-width: 400px; 
+    max-width: 100%; 
     background-color: var(--color-background-light);
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius-medium);
@@ -2722,12 +2811,12 @@ Style for notifications dropdown.
 .report-details .battle-summary {
     display: flex;
     gap: var(--spacing-md);
-    flex-wrap: wrap; /* Zawijaj na mniejszych ekranach */
+    flex-wrap: wrap; 
 }
 
 .battle-side {
     flex: 1;
-    min-width: 250px; /* Minimalna szerokość strony bitwy */
+    min-width: 250px; 
     padding: var(--spacing-md);
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius-small);
@@ -2762,7 +2851,7 @@ Style for notifications dropdown.
 }
 
 .battle-loot {
-     width: 100%; /* Zajmij całą szerokość pod stronami bitwy */
+     width: 100%; 
      margin-top: var(--spacing-md);
      padding: var(--spacing-md);
      border: 1px solid var(--color-border);
@@ -2780,10 +2869,10 @@ Style for notifications dropdown.
      font-weight: bold;
 }
 
-/* Style dla tabel jednostek w szczegółach raportu */
+
 .report-details .units-table {
      width: 100%;
-     border-collapse: collapse; /* Usuń odstępy między komórkami */
+     border-collapse: collapse; 
      margin-top: var(--spacing-sm);
 }
 
@@ -2807,39 +2896,39 @@ Style for notifications dropdown.
 
 .report-details .units-table td.unit-name img {
      margin-right: var(--spacing-xs);
-     width: 20px; /* Rozmiar ikon jednostek */
+     width: 20px; 
      height: 20px;
 }
 
 .report-details .units-table td.unit-lost {
-     color: var(--color-error); /* Kolor dla strat */
+     color: var(--color-error); 
      font-weight: bold;
 }
 
-/* Responsywność dla raportów */
+
 @media (max-width: 768px) {
      .reports-container {
-         flex-direction: column; /* Stosuj elementy w kolumnie na mniejszych ekranach */
+         flex-direction: column; 
      }
      
      .reports-list,
      .report-details {
-         flex: none; /* Resetuj flex */
-         width: 100%; /* Zajmij całą szerokość */
-         min-width: auto; /* Resetuj minimalną szerokość */
+         flex: none; 
+         width: 100%; 
+         min-width: auto; 
      }
 
       .battle-summary {
-          flex-direction: column; /* Stosuj strony bitwy w kolumnie */
+          flex-direction: column; 
           gap: var(--spacing-sm);
       }
       
       .battle-side {
-          min-width: auto; /* Resetuj minimalną szerokość */
+          min-width: auto; 
       }
 }
 
-/* Styl dla komunikatu 'Brak raportów' */
+
 p.no-reports {
      font-style: italic;
      color: #666;
@@ -2847,7 +2936,7 @@ p.no-reports {
      margin-top: var(--spacing-md);
 }
 
-/* --- Wiadomości (messages.php) --- */
+
 .messages-tabs {
     display: flex;
     margin-bottom: var(--spacing-md);
@@ -2868,7 +2957,7 @@ p.no-reports {
     border-top-right-radius: var(--border-radius-small);
     transition: background-color var(--transition-fast), color var(--transition-fast);
     white-space: nowrap;
-    font-weight: bold; /* Domyślnie pogrubione, nieprzeczytane mogą być jeszcze bardziej */
+    font-weight: bold; 
 }
 
 .messages-tabs .tab:hover {
@@ -2888,14 +2977,14 @@ p.no-reports {
 .badge {
     background-color: var(--color-accent);
     color: var(--color-primary);
-    border-radius: var(--border-radius-small); /* Zmieniono na prostokątne z zaokrąglonymi rogami */
-    padding: 2px 8px; /* Zwiększony padding */
+    border-radius: var(--border-radius-small); 
+    padding: 2px 8px; 
     font-size: var(--font-size-small);
     margin-left: var(--spacing-xs);
     font-weight: bold;
 }
 
-/* Specjalny styl dla badge'a nieprzeczytanych */
+
 .messages-tabs .tab.active .badge {
      background-color: var(--color-primary);
      color: var(--color-text-light);
@@ -2906,39 +2995,39 @@ p.no-reports {
     justify-content: space-between;
     align-items: center;
     margin-bottom: var(--spacing-md);
-    flex-wrap: wrap; /* Zawijaj na mniejszych ekranach */
-    gap: var(--spacing-sm); /* Odstęp między elementami toolbar */
+    flex-wrap: wrap; 
+    gap: var(--spacing-sm); 
 }
 
 .bulk-actions {
     display: flex;
     gap: var(--spacing-sm);
     align-items: center;
-    flex-wrap: wrap; /* Zawijaj wewnątrz toolbar */
+    flex-wrap: wrap; 
 }
 
 .bulk-actions select, .bulk-actions button {
-     /* Dostosuj styl selekta i przycisku akcji masowej do ogólnego wyglądu */
+     
 }
 
 .messages-container {
     display: flex;
     gap: var(--spacing-md);
-    flex-wrap: wrap; /* Zawijaj na mniejszych ekranach */
+    flex-wrap: wrap; 
 }
 
 .messages-list {
-    flex: 1; /* Zajmij dostępną przestrzeń */
-    min-width: 300px; /* Minimalna szerokość listy */
-    max-width: 100%; /* Domyślnie 100% */
+    flex: 1; 
+    min-width: 300px; 
+    max-width: 100%; 
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-sm); /* Odstęp między wiadomościami */
+    gap: var(--spacing-sm); 
 }
 
 .message-item {
     display: flex;
-    align-items: center; /* Wyrównanie w pionie */
+    align-items: center; 
     background-color: var(--color-background-medium);
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius-small);
@@ -2954,69 +3043,69 @@ p.no-reports {
 }
 
 .message-item.unread {
-    background-color: #fff8e1; /* Jasnożółte tło dla nieprzeczytanych */
+    background-color: #fff8e1; 
     border-color: var(--color-accent);
     font-weight: bold;
 }
 
 .message-item.unread:hover {
-     background-color: #ffecb3; /* Jaśniejsze żółte na hover */
+     background-color: #ffecb3; 
 }
 
 .message-checkbox,
 .message-status {
-    flex-shrink: 0; /* Zapobiegaj zmniejszaniu się */
-    width: 30px; /* Ustalona szerokość */
+    flex-shrink: 0; 
+    width: 30px; 
     text-align: center;
 }
 
 .message-checkbox-input {
-     margin: 0; /* Usuń domyślny margines checkboxa */
+     margin: 0; 
 }
 
 .message-sender,
 .message-date {
-    flex-shrink: 0; /* Zapobiegaj zmniejszaniu się */
-    width: 150px; /* Ustalona szerokość */
-    overflow: hidden; /* Ukryj nadmiarowy tekst */
-    text-overflow: ellipsis; /* Pokaż wielokropek dla nadmiarowego tekstu */
-    white-space: nowrap; /* Nie zawijaj tekstu */
-    /* Add margin/padding if needed */
+    flex-shrink: 0; 
+    width: 150px; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    white-space: nowrap; 
+    
 }
 
 .message-subject {
-    flex-grow: 1; /* Zajmij pozostałą przestrzeń */
-    overflow: hidden; /* Ukryj nadmiarowy tekst */
-    text-overflow: ellipsis; /* Pokaż wielokropek dla nadmiarowego tekstu */
-    white-space: nowrap; /* Nie zawijaj tekstu */
-    margin: 0 var(--spacing-sm); /* Odstęp od nadawcy/odbiorcy i daty */
+    flex-grow: 1; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    white-space: nowrap; 
+    margin: 0 var(--spacing-sm); 
 }
 
 .message-subject a {
-    color: inherit; /* Dziedzicz kolor z message-item */
-    text-decoration: none; /* Usuń podkreślenie */
+    color: inherit; 
+    text-decoration: none; 
 }
 
 .message-subject a:hover {
-    text-decoration: underline; /* Podkreślenie na hover */
+    text-decoration: underline; 
 }
 
 .message-actions {
     flex-shrink: 0;
-    width: 100px; /* Ustalona szerokość */
+    width: 100px; 
     text-align: right;
 }
 
 .message-actions .action-btn {
-     /* Dostosuj styl przycisków akcji do nowego wyglądu */
-     background: none; /* Usuń tło przycisków */
-     border: none; /* Usuń ramkę */
-     padding: 0 var(--spacing-xs); /* Zmniejsz padding */
-     color: var(--color-primary); /* Ustaw kolor ikony */
+     
+     background: none; 
+     border: none; 
+     padding: 0 var(--spacing-xs); 
+     color: var(--color-primary); 
      cursor: pointer;
      transition: color var(--transition-fast);
      box-shadow: none;
-     display: inline-block; /* Aby marginesy i paddingi działały poprawnie */
+     display: inline-block; 
      text-transform: none;
      letter-spacing: normal;
      font-weight: normal;
@@ -3024,23 +3113,23 @@ p.no-reports {
 
 .message-actions .action-btn:hover {
      color: var(--color-accent);
-     transform: none; /* Usuń transformację na hover */
-     box-shadow: none; /* Usuń cień na hover */
+     transform: none; 
+     box-shadow: none; 
 }
 
 .message-actions .action-btn:active {
-     transform: none; /* Usuń transformację na active */
-     box-shadow: none; /* Usuń cień na active */
+     transform: none; 
+     box-shadow: none; 
 }
 
 .delete-message-btn {
-     color: var(--color-error); /* Czerwony kolor dla przycisku usuwania */
+     color: var(--color-error); 
 }
 
 .message-details {
-    flex: 2; /* Zajmij więcej przestrzeni niż lista */
-    min-width: 400px; /* Minimalna szerokość */
-    max-width: 100%; /* Domyślnie 100% */
+    flex: 2; 
+    min-width: 400px; 
+    max-width: 100%; 
     background-color: var(--color-background-light);
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius-medium);
@@ -3063,17 +3152,17 @@ p.no-reports {
 }
 
 .message-details .message-body {
-    line-height: 1.8; /* Lepsza czytelność treści wiadomości */
-    white-space: pre-wrap; /* Zachowaj formatowanie białymi znakami i zawijaj */
-    word-wrap: break-word; /* Zapobiegaj wykraczaniu długich słów */
+    line-height: 1.8; 
+    white-space: pre-wrap; 
+    word-wrap: break-word; 
 }
 
 .message-details .message-actions {
     margin-top: var(--spacing-md);
-    text-align: left; /* Akcje pod treścią */
+    text-align: left; 
 }
 
-/* Styl dla komunikatu 'Brak wiadomości' */
+
 .no-messages {
      text-align: center;
      padding: var(--spacing-lg);
@@ -3081,10 +3170,10 @@ p.no-reports {
      color: #666;
 }
 
-/* Responsywność dla wiadomości */
+
 @media (max-width: 768px) {
     .messages-container {
-        flex-direction: column; /* Stosuj elementy w kolumnie */
+        flex-direction: column; 
         gap: var(--spacing-sm);
     }
 
@@ -3098,7 +3187,7 @@ p.no-reports {
     .message-item {
         flex-wrap: wrap;
         padding: var(--spacing-sm);
-        justify-content: space-between; /* Rozłóż elementy na szerokość */
+        justify-content: space-between; 
     }
 
     .message-checkbox,
@@ -3113,27 +3202,27 @@ p.no-reports {
          margin: 0 0 var(--spacing-xs) 0;
          white-space: normal;
          text-overflow: clip;
-         order: -1; /* Przesuń na górę */
+         order: -1; 
     }
 
     .message-date {
         width: 100%;
-        margin: 0 0 var(--spacing-xs) 0; /* Dodaj odstęp */
+        margin: 0 0 var(--spacing-xs) 0; 
         text-align: left;
         font-size: var(--font-size-small);
         color: #999;
-         order: 0; /* Umieść pod nadawcą/tematem */
+         order: 0; 
     }
 
     .message-actions {
         width: 100%;
         text-align: left;
         margin-top: var(--spacing-sm);
-         order: 1; /* Umieść na końcu */
+         order: 1; 
     }
 
      .messages-toolbar {
-         flex-direction: column; /* Stosuj kolumnę */
+         flex-direction: column; 
          gap: var(--spacing-md);
          align-items: flex-start;
      }
@@ -3143,13 +3232,13 @@ p.no-reports {
      }
      
      .bulk-actions select, .bulk-actions button {
-         width: auto; /* Auto szerokość */
+         width: auto; 
      }
 }
 
-/* General styles for layout and components */
 
-/* Player profile styles */
+
+
 .player-profile {
     max-width: 600px;
     margin: 40px auto;
@@ -3199,8 +3288,8 @@ p.no-reports {
 }
 
 .player-profile .villages-list td a.btn {
-     padding: 4px 10px; /* Match inline style */
-     font-size: 0.95em; /* Match inline style */
+     padding: 4px 10px; 
+     font-size: 0.95em; 
      margin: 0;
 }
 
@@ -3210,26 +3299,156 @@ p.no-reports {
     color: var(--brown-dark);
 }
 
-/* Ensure main content area provides padding */
+
 #main-content main {
     padding: var(--spacing-xl);
 }
 
-/* Style for the back button at the bottom */
+
 .player-profile .back-to-ranking-btn {
     margin-top: var(--spacing-lg);
-    /* The button class styles will handle the rest */
+    
 }
 
-/* Add styles for the new header structure in player.php if not already in main.css */
+
 #main-header {
-    /* Existing main-header styles */
+    
 }
 
 #main-header .header-title .game-logo {
-     /* Existing game-logo styles */
+     
 }
 
 #main-header .header-user {
-     /* Existing header-user styles */
+     
+}
+
+/* Map page */
+.map-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    background: var(--beige-light);
+    padding: var(--spacing-md);
+    border: 1px solid var(--beige-dark);
+    border-radius: var(--border-radius-medium);
+    box-shadow: var(--box-shadow-default);
+}
+
+.map-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.map-controls button {
+    padding: 6px 10px;
+}
+
+.map-grid {
+    display: grid;
+    gap: 2px;
+    background: var(--beige-medium);
+    padding: 4px;
+    border: 1px solid var(--beige-dark);
+    border-radius: var(--border-radius-small);
+    max-width: 100%;
+    overflow: auto;
+}
+
+.map-tile {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    background: #e8dfd0;
+    border: 1px solid #d2c2aa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.map-tile img {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+}
+
+.map-tile .coords {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-size: 10px;
+    color: #555;
+    background: rgba(255,255,255,0.7);
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+
+.map-tile.own-village {
+    border-color: #2c7be5;
+}
+
+.map-tile.player {
+    border-color: #8d5c2c;
+}
+
+.map-tile.barbarian {
+    border-color: #7f8c8d;
+}
+
+.map-popup {
+    position: absolute;
+    background: #fff;
+    border: 1px solid var(--beige-dark);
+    border-radius: var(--border-radius-medium);
+    padding: var(--spacing-md);
+    box-shadow: var(--box-shadow-default);
+    z-index: 1000;
+    min-width: 220px;
+}
+
+.map-popup .popup-close-btn {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+/* Game header resource bar (game.php) */
+#resource-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+    background: rgba(255, 255, 255, 0.1);
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius-small);
+}
+
+#resource-bar .resource-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--border-radius-small);
+    box-shadow: var(--box-shadow-inset);
+    color: #fff;
+    font-weight: bold;
+}
+
+#resource-bar .resource-item img {
+    width: 18px;
+    height: 18px;
+}
+
+#resource-bar .resource-item .capacity {
+    font-size: 0.9rem;
+    color: #f0e6c8;
+    opacity: 0.85;
 }

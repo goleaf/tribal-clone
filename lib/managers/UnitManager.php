@@ -1,6 +1,6 @@
 <?php
 /**
- * Klasa UnitManager - zarządzanie jednostkami wojskowymi
+ * UnitManager - handles military units.
  */
 class UnitManager
 {
@@ -8,9 +8,9 @@ class UnitManager
     private $unit_types_cache = [];
 
     /**
-     * Konstruktor
+     * Constructor
      *
-     * @param mysqli $conn Połączenie z bazą danych
+     * @param mysqli $conn Database connection
      */
     public function __construct($conn)
     {
@@ -19,7 +19,7 @@ class UnitManager
     }
 
     /**
-     * Załaduj wszystkie typy jednostek do pamięci podręcznej
+     * Load all unit types into cache.
      */
     private function loadUnitTypes()
     {
@@ -33,9 +33,9 @@ class UnitManager
     }
 
     /**
-     * Pobierz wszystkie typy jednostek
+     * Get all unit types.
      *
-     * @return array Tablica typów jednostek
+     * @return array Unit types
      */
     public function getAllUnitTypes()
     {
@@ -43,11 +43,11 @@ class UnitManager
     }
 
     /**
-     * Pobierz jednostki, które można rekrutować w danym budynku
+     * Get units that can be recruited in a building.
      *
-     * @param string $building_type Typ budynku (barracks, stable, garage)
-     * @param int $building_level Poziom budynku
-     * @return array Tablica jednostek dostępnych do rekrutacji
+     * @param string $building_type Building type (barracks, stable, garage)
+     * @param int $building_level Building level
+     * @return array Units available for recruitment
      */
     public function getAvailableUnitsByBuilding($building_type, $building_level)
     {
@@ -63,11 +63,11 @@ class UnitManager
     }
 
     /**
-     * Oblicz czas rekrutacji jednostki
+     * Calculate recruitment time for a unit.
      *
-     * @param int $unit_type_id ID typu jednostki
-     * @param int $building_level Poziom budynku
-     * @return int Czas rekrutacji w sekundach
+     * @param int $unit_type_id Unit type ID
+     * @param int $building_level Building level
+     * @return int Time in seconds
      */
     public function calculateRecruitmentTime($unit_type_id, $building_level)
     {
@@ -78,16 +78,16 @@ class UnitManager
         $unit = $this->unit_types_cache[$unit_type_id];
         $base_time = $unit['training_time_base'];
 
-        // Im wyższy poziom budynku, tym szybsza rekrutacja (5% szybciej na poziom)
+        // Higher building level -> faster recruitment (5% per level)
         return floor($base_time * pow(0.95, $building_level - 1));
     }
 
     /**
-     * Sprawdź wymagania dla rekrutacji jednostki
+     * Check requirements for recruiting a unit.
      *
-     * @param int $unit_type_id ID typu jednostki
-     * @param int $village_id ID wioski
-     * @return array Status i powód w przypadku niepowodzenia
+     * @param int $unit_type_id Unit type ID
+     * @param int $village_id Village ID
+     * @return array Status and reason on failure
      */
     public function checkRecruitRequirements($unit_type_id, $village_id)
     {
@@ -97,7 +97,7 @@ class UnitManager
 
         $unit = $this->unit_types_cache[$unit_type_id];
 
-        // Sprawdź, czy istnieje budynek odpowiedniego typu
+        // Check required building exists
         $stmt = $this->conn->prepare("
             SELECT vb.level
             FROM village_buildings vb
@@ -118,7 +118,7 @@ class UnitManager
         $building = $result->fetch_assoc();
         $stmt->close();
 
-        // Sprawdź poziom budynku
+        // Check building level
         if ($building['level'] < $unit['required_building_level']) {
             return [
                 'can_recruit' => false,
@@ -128,7 +128,7 @@ class UnitManager
             ];
         }
 
-        // Sprawdź, czy wymagane badania są na odpowiednim poziomie
+        // Check research requirements
         if (!empty($unit['required_tech']) && $unit['required_tech_level'] > 0) {
             $stmt = $this->conn->prepare("
                 SELECT level
@@ -171,12 +171,12 @@ class UnitManager
     }
 
     /**
-     * Sprawdź, czy gracz ma wystarczające zasoby na rekrutację jednostek
+     * Check whether a player has enough resources for recruitment.
      *
-     * @param int $unit_type_id ID typu jednostki
-     * @param int $count Ilość jednostek
-     * @param array $resources Zasoby gracza (wood, clay, iron)
-     * @return array Status i koszty
+     * @param int $unit_type_id Unit type ID
+     * @param int $count Number of units
+     * @param array $resources Player resources (wood, clay, iron)
+     * @return array Status and costs
      */
     public function checkResourcesForRecruitment($unit_type_id, $count, $resources)
     {
@@ -215,35 +215,35 @@ class UnitManager
     }
 
     /**
-     * Rekrutuj jednostki - dodaj do kolejki rekrutacji
+     * Recruit units - add to recruitment queue.
      *
-     * @param int $village_id ID wioski
-     * @param int $unit_type_id ID typu jednostki
-     * @param int $count Ilość jednostek do rekrutacji
-     * @param int $building_level Poziom budynku
-     * @return array Status operacji
+     * @param int $village_id Village ID
+     * @param int $unit_type_id Unit type ID
+     * @param int $count Number of units to recruit
+     * @param int $building_level Building level
+     * @return array Operation status
      */
     public function recruitUnits($village_id, $unit_type_id, $count, $building_level)
     {
         if (!isset($this->unit_types_cache[$unit_type_id])) {
             return [
             'success' => false,
-                'error' => 'Jednostka nie istnieje.'
+                'error' => 'Unit does not exist.'
             ];
         }
 
         $unit = $this->unit_types_cache[$unit_type_id];
         $building_type = $unit['building_type'];
 
-        // Oblicz czas treningu
+        // Calculate training time
         $time_per_unit = $this->calculateRecruitmentTime($unit_type_id, $building_level);
         $total_time = $time_per_unit * $count;
 
-        // Pobierz aktualny czas
+        // Current timestamp
         $current_time = time();
         $finish_time = $current_time + $total_time;
 
-        // Dodaj do kolejki rekrutacji
+        // Insert into recruitment queue
         $stmt = $this->conn->prepare("
             INSERT INTO unit_queue
             (village_id, unit_type_id, count, count_finished, started_at, finish_at, building_type)
@@ -255,7 +255,7 @@ class UnitManager
         if (!$stmt->execute()) {
             return [
                 'success' => false,
-                'error' => 'Błąd bazy danych podczas dodawania do kolejki rekrutacji.'
+                'error' => 'Database error while adding to the recruitment queue.'
             ];
         }
 
@@ -264,20 +264,20 @@ class UnitManager
 
         return [
             'success' => true,
-            'message' => "Rozpoczęto rekrutację $count jednostek. Zakończenie o " . date('H:i:s d.m.Y', $finish_time),
+            'message' => "Started recruiting $count units. Finishes at " . date('H:i:s d.m.Y', $finish_time),
             'queue_id' => $queue_id,
             'finish_time' => $finish_time
         ];
     }
 
     /**
-     * Aktualizuj kolejki rekrutacji - sprawdź zakończone jednostki
+     * Update recruitment queues - process finished units
      */
     public function updateRecruitmentQueues()
     {
         $current_time = time();
 
-        // Pobierz wszystkie aktywne kolejki rekrutacji
+        // Fetch all active recruitment queues
         $stmt = $this->conn->prepare("
             SELECT id, village_id, unit_type_id, count, count_finished, finish_at
             FROM unit_queue
@@ -295,13 +295,13 @@ class UnitManager
             $finished_units = $queue['count_finished'];
             $finish_time = $queue['finish_at'];
 
-            // Sprawdź, czy kolejka jest zakończona
+            // Check whether the queue is completed
             if ($current_time >= $finish_time) {
-                // Zaktualizuj ilość ukończonych jednostek
+                // Update finished units count
                 $remaining_units = $total_units - $finished_units;
                 $new_finished = $total_units;
 
-                // Zaktualizuj kolejkę
+                // Update queue
                 $update_stmt = $this->conn->prepare("
                     UPDATE unit_queue
                     SET count_finished = ?
@@ -312,27 +312,27 @@ class UnitManager
                 $update_stmt->execute();
                 $update_stmt->close();
 
-                // Dodaj ukończone jednostki do wioski
+                // Add completed units to the village
                 $this->addUnitsToVillage($village_id, $unit_type_id, $remaining_units);
             }
         }
 
         $stmt->close();
 
-        // Usuń zakończone kolejki
+        // Remove finished queues
         $this->cleanupFinishedQueues();
     }
 
     /**
-     * Dodaj jednostki do wioski po zakończeniu rekrutacji
+     * Add units to a village after recruitment completes.
      *
-     * @param int $village_id ID wioski
-     * @param int $unit_type_id ID typu jednostki
-     * @param int $count Ilość jednostek do dodania
+     * @param int $village_id Village ID
+     * @param int $unit_type_id Unit type ID
+     * @param int $count Number of units to add
      */
     private function addUnitsToVillage($village_id, $unit_type_id, $count)
     {
-        // Sprawdź, czy jednostki danego typu już istnieją w wiosce
+        // Check if this unit type already exists in the village
         $stmt = $this->conn->prepare("
             SELECT id, count
             FROM village_units
@@ -344,7 +344,7 @@ class UnitManager
         $result = $stmt->get_result();
 
         if ($result->num_rows > 0) {
-            // Zaktualizuj istniejące jednostki
+            // Update existing units
             $unit = $result->fetch_assoc();
             $new_count = $unit['count'] + $count;
 
@@ -358,7 +358,7 @@ class UnitManager
             $update_stmt->execute();
             $update_stmt->close();
         } else {
-            // Dodaj nowe jednostki
+            // Insert new units
             $insert_stmt = $this->conn->prepare("
                 INSERT INTO village_units
                 (village_id, unit_type_id, count)
@@ -374,7 +374,7 @@ class UnitManager
     }
 
     /**
-     * Usuń zakończone kolejki rekrutacji
+     * Remove finished recruitment queues
      */
     private function cleanupFinishedQueues()
     {
@@ -385,17 +385,17 @@ class UnitManager
     }
 
     /**
-     * Pobierz aktualne jednostki w wiosce
+     * Get current units in a village
      *
-     * @param int $village_id ID wioski
-     * @return array Tablica jednostek
+     * @param int $village_id Village ID
+     * @return array Unit array
      */
     public function getVillageUnits($village_id)
     {
         $units = [];
 
         $stmt = $this->conn->prepare("
-            SELECT vu.unit_type_id, vu.count, ut.internal_name, ut.name_pl,
+            SELECT vu.unit_type_id, vu.count, ut.internal_name, ut.name,
                    ut.attack, ut.defense, ut.speed, ut.population
             FROM village_units vu
             JOIN unit_types ut ON vu.unit_type_id = ut.id
@@ -415,11 +415,11 @@ class UnitManager
     }
 
     /**
-     * Pobierz aktualne kolejki rekrutacji dla wioski
+     * Get current recruitment queues for a village
      *
-     * @param int $village_id ID wioski
-     * @param string $building_type Opcjonalnie typ budynku
-     * @return array Tablica kolejek rekrutacji
+     * @param int $village_id Village ID
+     * @param string $building_type Optional building type
+     * @return array Recruitment queues
      */
     public function getRecruitmentQueues($village_id, $building_type = null)
     {
@@ -428,7 +428,7 @@ class UnitManager
         $sql = "
             SELECT uq.id, uq.unit_type_id, uq.count, uq.count_finished,
                    uq.started_at, uq.finish_at, uq.building_type,
-                   ut.name_pl, ut.internal_name
+                   ut.name, ut.internal_name
             FROM unit_queue uq
             JOIN unit_types ut ON uq.unit_type_id = ut.id
             WHERE uq.village_id = ?
@@ -455,10 +455,10 @@ class UnitManager
     }
 
     /**
-     * Przetwórz kolejkę rekrutacji dla konkretnej wioski
+     * Process the recruitment queue for a specific village.
      *
-     * @param int $village_id ID wioski
-     * @return array Informacje o zakończonych i zaktualizowanych kolejkach
+     * @param int $village_id Village ID
+     * @return array Info about completed and updated queues
      */
     public function processRecruitmentQueue($village_id)
     {
@@ -468,7 +468,7 @@ class UnitManager
             'updated_queues' => []
         ];
 
-        // Pobierz wszystkie aktywne kolejki rekrutacji dla wioski
+        // Fetch active recruitment queues for the village
         $stmt = $this->conn->prepare("
             SELECT id, unit_type_id, count, count_finished, finish_at, building_type
             FROM unit_queue
@@ -486,25 +486,25 @@ class UnitManager
             $finished_units = $queue['count_finished'];
             $finish_time = $queue['finish_at'];
 
-            // Pobierz nazwę jednostki
+            // Get the unit name
             $unit_name = "";
             if (isset($this->unit_types_cache[$unit_type_id])) {
-                $unit_name = $this->unit_types_cache[$unit_type_id]['name_pl'];
+                $unit_name = $this->unit_types_cache[$unit_type_id]['name'];
             }
 
-            // Oblicz liczbę jednostek, które powinny być ukończone teraz
+            // Calculate how many units should be finished at this time
             $time_per_unit = ($finish_time - $queue['count_finished']) / ($total_units - $finished_units);
             $elapsed_time = $current_time - $finish_time + ($total_units - $finished_units) * $time_per_unit;
             $units_should_be_finished = min($total_units, $finished_units + floor($elapsed_time / $time_per_unit));
 
             if ($units_should_be_finished > $finished_units) {
-                // Nowe jednostki do dodania
+                // New units to add
                 $new_units = $units_should_be_finished - $finished_units;
 
-                // Dodaj jednostki do wioski
+                // Add units to the village
                 $this->addUnitsToVillage($village_id, $unit_type_id, $new_units);
 
-                // Zaktualizuj stan kolejki
+                // Update queue state
                 $update_stmt = $this->conn->prepare("
                     UPDATE unit_queue
                     SET count_finished = ?
@@ -515,7 +515,7 @@ class UnitManager
                 $update_stmt->execute();
                 $update_stmt->close();
 
-                // Jeśli wszystkie jednostki są ukończone
+                // If all units are finished
                 if ($units_should_be_finished >= $total_units) {
                     $result['completed_queues'][] = [
                         'queue_id' => $queue_id,
@@ -538,24 +538,24 @@ class UnitManager
 
         $stmt->close();
 
-        // Usuń zakończone kolejki
+        // Remove finished queues
         $this->cleanupFinishedQueues();
 
         return $result;
     }
 
     /**
-     * Anuluj rekrutację jednostek z kolejki
+     * Cancel unit recruitment from the queue
      *
-     * @param int $queue_id ID kolejki rekrutacji do anulowania
-     * @param int $user_id ID użytkownika
-     * @return array Status operacji
+     * @param int $queue_id Recruitment queue ID to cancel
+     * @param int $user_id User ID
+     * @return array Operation status
      */
     public function cancelRecruitment($queue_id, $user_id)
     {
-        // Pobierz informacje o kolejce i sprawdź, czy należy do użytkownika
+        // Fetch queue info and ensure it belongs to the user
         $stmt = $this->conn->prepare("
-            SELECT uq.id, uq.village_id, uq.unit_type_id, uq.count, uq.count_finished, ut.name_pl
+            SELECT uq.id, uq.village_id, uq.unit_type_id, uq.count, uq.count_finished, ut.name
             FROM unit_queue uq
             JOIN unit_types ut ON uq.unit_type_id = ut.id
             JOIN villages v ON uq.village_id = v.id
@@ -569,19 +569,19 @@ class UnitManager
         if ($result->num_rows === 0) {
             return [
                 'success' => false,
-                'error' => 'Kolejka rekrutacji nie istnieje lub nie masz do niej dostępu.'
+                'error' => 'The recruitment queue does not exist or you do not have access to it.'
             ];
         }
 
         $queue = $result->fetch_assoc();
         $stmt->close();
 
-        // Dodaj już wytrenowane jednostki do wioski
+        // Add already trained units to the village
         if ($queue['count_finished'] > 0) {
             $this->addUnitsToVillage($queue['village_id'], $queue['unit_type_id'], $queue['count_finished']);
         }
 
-        // Usuń kolejkę rekrutacji
+        // Delete the recruitment queue
         $stmt_delete = $this->conn->prepare("DELETE FROM unit_queue WHERE id = ?");
         $stmt_delete->bind_param("i", $queue_id);
         $success = $stmt_delete->execute();
@@ -590,15 +590,15 @@ class UnitManager
         if (!$success) {
             return [
                 'success' => false,
-                'error' => 'Wystąpił błąd podczas anulowania rekrutacji.'
+                'error' => 'An error occurred while cancelling recruitment.'
             ];
         }
 
         $message = '';
         if ($queue['count_finished'] > 0) {
-            $message = "Anulowano rekrutację jednostek {$queue['name_pl']}. Dodano {$queue['count_finished']} ukończonych jednostek do wioski.";
+            $message = "Cancelled recruitment of {$queue['name']} units. Added {$queue['count_finished']} finished units to the village.";
         } else {
-            $message = "Anulowano rekrutację jednostek {$queue['name_pl']}.";
+            $message = "Cancelled recruitment of {$queue['name']} units.";
         }
 
         return [

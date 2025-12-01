@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instalator Tribal Wars Nowa Edycja</title>
+    <title>Tribal Wars Installer - New Edition</title>
     <link rel="stylesheet" href="css/main.css">
     <style>
         /* Styles for the main installer container */
@@ -200,31 +200,91 @@
 <div id="game-container">
     <header id="main-header">
         <div class="header-title">
-            <span class="game-logo">⚙️</span>
-            <span class="game-name">Instalator</span>
+            <span class="game-logo">&#9881;</span>
+            <span class="game-name">Installer</span>
         </div>
     </header>
     <main class="install-container">
 <?php
-// Obsługa instalacji: GET = wykonaj SQL i pokaż formularz admina, POST = stwórz admina
+// Installation handling: GET runs SQL and shows the admin form, POST creates the admin
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     require_once 'config/config.php';
     require_once 'lib/Database.php';
 
-    // Włącz pełne raportowanie błędów
+    // Enable full error reporting
     ini_set('display_errors', 1);
     ini_set('display_startup_errors', 1);
     error_reporting(E_ALL);
 
-    // Funkcja do wykonania zapytań SQL z pliku
+    // Fast path for SQLite: use the ready schema and skip MySQL-specific steps
+    if (defined('DB_DRIVER') && DB_DRIVER === 'sqlite') {
+        $database = new Database(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+        $conn = $database->getConnection();
+
+        $schemaFile = 'docs/sql/sqlite_schema.sql';
+        $schemaSql = file_get_contents($schemaFile);
+        $errors = [];
+
+        echo "<h2>Installation (SQLite)</h2>";
+        echo "<div class='install-stage'>";
+        echo "<h3>Loading database schema</h3>";
+        if ($schemaSql === false) {
+            echo "<div class='error'>&#10060; Failed to read the schema file.</div>";
+        } else {
+            $queries = array_filter(array_map('trim', explode(';', $schemaSql)));
+            $ok = true;
+            $counter = 0;
+            foreach ($queries as $q) {
+                $counter++;
+                try {
+                    $result = $conn->query($q);
+                    if ($result === false) {
+                        $ok = false;
+                        $errors[] = "Error in query #$counter: " . ($conn->error ?? 'unknown error');
+                    }
+                } catch (Throwable $e) {
+                    $ok = false;
+                    $errors[] = "Exception in query #$counter: " . $e->getMessage();
+                }
+            }
+
+            if ($ok) {
+                echo "<div class='success'>&#9989; SQLite schema loaded.</div>";
+            } else {
+                echo "<div class='error'>&#10060; Errors occurred while loading the schema.</div>";
+                if ($errors) {
+                    echo "<div class='sql-errors'>";
+                    foreach ($errors as $err) {
+                        echo "<div class='error-detail'>" . htmlspecialchars($err) . "</div>";
+                    }
+                    echo "</div>";
+                }
+            }
+        }
+        echo "</div>";
+
+        echo "<div class='success'>&#9989; Database ready. Create an administrator account:</div>";
+        echo '<form method="POST" class="form-container">';
+        echo '<label for="admin_username">Admin username</label>';
+        echo '<input type="text" id="admin_username" name="admin_username" required>';
+        echo '<label for="admin_password">Admin password</label>';
+        echo '<input type="password" id="admin_password" name="admin_password" required>';
+        echo '<label for="admin_password_confirm">Confirm password</label>';
+        echo '<input type="password" id="admin_password_confirm" name="admin_password_confirm" required>';
+        echo '<button type="submit">Create administrator</button>';
+        echo '</form>';
+        exit();
+    }
+
+    // Helper to execute SQL queries from a file
     function executeSqlFile($conn, $filePath, &$errorMessages) {
         $sql = file_get_contents($filePath);
         if ($sql === false) {
-            $errorMessages[] = "Błąd: Nie można odczytać pliku SQL: " . htmlspecialchars($filePath);
+            $errorMessages[] = "Error: Unable to read SQL file: " . htmlspecialchars($filePath);
             return false;
         }
 
-        // Podziel zapytania na pojedyncze instrukcje
+        // Split into individual statements
         $queries = explode(';', $sql);
         $success = true;
         $queryCount = 0;
@@ -235,12 +295,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $queryCount++;
                 try {
                     if ($conn->query($query) !== TRUE) {
-                        $errorMsg = "&nbsp;&nbsp;<strong>Błąd w zapytaniu #$queryCount:</strong> " . $conn->error . "<pre>" . htmlspecialchars($query) . "</pre>";
+                        $errorMsg = "&nbsp;&nbsp;<strong>Error in query #$queryCount:</strong> " . $conn->error . "<pre>" . htmlspecialchars($query) . "</pre>";
                         $errorMessages[] = $errorMsg;
                         $success = false;
                     }
-                } catch (mysqli_sql_exception $e) {
-                    $errorMsg = "&nbsp;&nbsp;<strong>Wyjątek SQL w zapytaniu #$queryCount:</strong> " . $e->getMessage() . "<pre>" . htmlspecialchars($query) . "</pre>";
+                } catch (Throwable $e) {
+                    $errorMsg = "&nbsp;&nbsp;<strong>SQL exception in query #$queryCount:</strong> " . $e->getMessage() . "<pre>" . htmlspecialchars($query) . "</pre>";
                     $errorMessages[] = $errorMsg;
                     $success = false;
                 }
@@ -250,44 +310,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         return $success;
     }
 
-    echo "<h2>Instalacja tabel bazy danych:</h2>";
+    echo "<h2>Database table installation:</h2>";
 
-    // --- Etap 1/4: Łączenie z bazą danych i tworzenie bazy ---
-    echo "<div class='install-stage'>"; // Kontener dla etapu
-    echo "<h3>Etap 1/4: Łączenie z bazą danych i tworzenie bazy...</h3>";
-    $conn_no_db = new mysqli(DB_HOST, DB_USER, DB_PASS);
+    // --- Step 1/4: Connect to the database server and create the database ---
+    echo "<div class='install-stage'>"; // Container for step
+    echo "<h3>Step 1/4: Connecting to the database and creating the schema...</h3>";
+    $databaseNoDb = new Database(DB_HOST, DB_USER, DB_PASS, null);
+    $conn_no_db = $databaseNoDb->getConnection();
 
-    if ($conn_no_db->connect_error) {
-        echo "<div class='error'>❌ Błąd połączenia z serwerem MySQL: " . $conn_no_db->connect_error . "</div>";
-        echo "</div>"; // Zamknięcie kontenera etapu
-        die(); // Przerwij instalację w przypadku błędu połączenia
+    if (!$conn_no_db) {
+        echo "<div class='error'>&#10060; Database connection error.</div>";
+        echo "</div>"; // Close step container
+        die(); // Stop installation on connection failure
     }
 
-    // Utwórz bazę danych
+    // Create the database
     $sql_create_db = "CREATE DATABASE IF NOT EXISTS " . DB_NAME . " CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;";
     if ($conn_no_db->query($sql_create_db) === TRUE) {
-        echo "<div class='success'>✅ Baza danych '" . DB_NAME . "' utworzona pomyślnie lub już istnieje.</div>";
+        echo "<div class='success'>&#9989; Database '" . DB_NAME . "' created successfully or already exists.</div>";
     } else {
-        echo "<div class='error'>❌ Błąd podczas tworzenia bazy danych: " . $conn_no_db->error . "</div>";
+        echo "<div class='error'>&#10060; Error creating database: " . ($conn_no_db->error ?? 'unknown error') . "</div>";
     }
 
-    $conn_no_db->close();
-    echo "</div>"; // Zamknięcie kontenera etapu
-    echo "<hr>"; // Separator etapów
+    $databaseNoDb->closeConnection();
+    echo "</div>"; // Close step container
+    echo "<hr>"; // Step separator
 
-    // Teraz połącz się z nowo utworzoną bazą danych
+    // Connect to the newly created database
     $database = new Database(DB_HOST, DB_USER, DB_PASS, DB_NAME);
     $conn = $database->getConnection();
 
-    // --- Etap 2/4: Usuwanie istniejących tabel ---
-    echo "<div class='install-stage'>"; // Kontener dla etapu
-    echo "<h3>Etap 2/4: Usuwanie istniejących tabel...</h3>";
+    // --- Step 2/4: Remove existing tables ---
+    echo "<div class='install-stage'>"; // Container for step
+    echo "<h3>Step 2/4: Dropping existing tables...</h3>";
     echo "<ul>";
     try {
-        // Wyłącz sprawdzanie kluczy obcych tymczasowo
+        // Temporarily disable foreign key checks
         $conn->query("SET FOREIGN_KEY_CHECKS = 0;");
         
-        // Lista tabel do usunięcia (w odwrotnej kolejności zależności)
+        // Tables to drop (reverse dependency order)
         $tables_to_drop = [
             'ai_logs',
             'battle_report_units',
@@ -313,26 +374,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         foreach ($tables_to_drop as $table) {
             try {
                 $conn->query("DROP TABLE IF EXISTS $table");
-                echo "<li>Tabela <strong>$table</strong> została usunięta (jeśli istniała).</li>";
+                echo "<li>Table <strong>$table</strong> has been dropped (if it existed).</li>";
             } catch (Exception $e) {
-                echo "<li><div class='error'>Błąd podczas usuwania tabeli $table: " . $e->getMessage() . "</div></li>";
+                echo "<li><div class='error'>Error dropping table $table: " . $e->getMessage() . "</div></li>";
             }
         }
         
-        // Włącz sprawdzanie kluczy obcych z powrotem
+        // Re-enable foreign key checks
         $conn->query("SET FOREIGN_KEY_CHECKS = 1;");
         echo "</ul>";
-        echo "<div class='success'>✅ Zakończono usuwanie tabel.</div>";
+        echo "<div class='success'>&#9989; Completed dropping tables.</div>";
     } catch (Exception $e) {
         echo "</ul>";
-        echo "<div class='error'>❌ Błąd podczas usuwania tabel: " . $e->getMessage() . "</div>";
+        echo "<div class='error'>&#10060; Error while dropping tables: " . $e->getMessage() . "</div>";
     }
-    echo "</div>"; // Zamknięcie kontenera etapu 2
-    echo "<hr>"; // Separator etapów
+    echo "</div>"; // Close step 2 container
+    echo "<hr>"; // Step separator
 
-    // Wykonaj skrypty SQL aby utworzyć tabele
-    echo "<div class='install-stage'>"; // Kontener dla etapu
-    echo "<h3>Etap 3/4: Tworzenie tabel i dodawanie danych...</h3>";
+    // Run SQL scripts to create tables
+    echo "<div class='install-stage'>"; // Container for step
+    echo "<h3>Step 3/4: Creating tables and inserting data...</h3>";
     echo "<ul>";
     $sql_files = [
         'docs/sql/sql_create_users_table.sql',
@@ -351,35 +412,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     ];
     
     foreach ($sql_files as $sql_file) {
-        echo "<li>Wykonywanie pliku <strong>$sql_file</strong>: ";
+        echo "<li>Executing file <strong>$sql_file</strong>: ";
         if (file_exists($sql_file)) {
             $errorMessages = [];
             $result = executeSqlFile($conn, $sql_file, $errorMessages);
             if ($result) {
-                echo "<span class='success'>Pomyślnie.</span></li>";
+                echo "<span class='success'>Completed successfully.</span></li>";
             } else {
-                echo "<span class='error clickable'>❌ Wystąpiły błędy. <span class='show-details'>(Pokaż szczegóły)</span></span></li>";
-                echo "<div class='sql-errors'>"; // Kontener na błędy
+                echo "<span class='error clickable'>&#10060; Errors occurred. <span class='show-details'>(Show details)</span></span></li>";
+                echo "<div class='sql-errors'>"; // Container for errors
                 foreach ($errorMessages as $msg) {
                     echo "<div class='error-detail'>$msg</div>";
                 }
-                echo "</div>"; // Zamknięcie kontenera
+                echo "</div>"; // Close container
             }
             
-            // Po wykonaniu skryptu sql_create_buildings_tables.sql, dodaj brakującą kolumnę population_cost
+            // After sql_create_buildings_tables.sql, add the missing population_cost column
             if ($sql_file === 'docs/sql/sql_create_buildings_tables.sql') {
-                echo "<li>Dodawanie kolumny `population_cost` do tabeli `building_types`: ";
-                $alter_sql = "ALTER IGNORE TABLE `building_types` ADD COLUMN `population_cost` INT(11) DEFAULT 0 COMMENT 'Zużycie populacji na poziom';";
+                echo "<li>Adding `population_cost` column to `building_types`: ";
+                $alter_sql = "ALTER IGNORE TABLE `building_types` ADD COLUMN `population_cost` INT(11) DEFAULT 0 COMMENT 'Population cost per level';";
                 if ($conn->query($alter_sql) === TRUE) {
-                    echo "<span class='success'>Pomyślnie lub kolumna już istniała.</span></li>";
+                    echo "<span class='success'>Successful or column already existed.</span></li>";
                 } else {
-                    echo "<span class='error'>❌ Błąd: " . $conn->error . "</span></li>";
+                    echo "<span class='error'>&#10060; Error: " . $conn->error . "</span></li>";
                 }
             }
 
-            // Po wykonaniu skryptu unit_types, sprawdź strukturę tabeli
+            // After unit_types script, verify the unit_types table structure
             if ($sql_file === 'docs/sql/sql_create_unit_types.sql') {
-                echo "<li>Sprawdzanie struktury tabeli `unit_types`: ";
+                echo "<li>Checking `unit_types` table structure: ";
                 $describe_result = $conn->query("DESCRIBE `unit_types`");
                 if ($describe_result) {
                     $fields = [];
@@ -387,55 +448,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                         $fields[] = $row['Field'];
                     }
                     $describe_result->free();
-                    // Sprawdź czy kluczowe kolumny istnieją
+                    // Verify that required columns exist
                     if (in_array('internal_name', $fields) && in_array('wood_cost', $fields) && in_array('clay_cost', $fields) && in_array('iron_cost', $fields)) {
-                         echo "<span class='success'>Struktura poprawna.</span></li>";
+                         echo "<span class='success'>Structure is correct.</span></li>";
                     } else {
-                         echo "<span class='error'>Brakuje kluczowych kolumn!</span></li>";
+                         echo "<span class='error'>Required columns are missing!</span></li>";
                     }
                 } else {
-                    echo "<span class='error'>Błąd podczas pobierania struktury tabeli: " . $conn->error . "</span></li>";
+                    echo "<span class='error'>Error describing table structure: " . $conn->error . "</span></li>";
                 }
             }
         } else {
-            echo "<span class='error'>❌ Plik nie istnieje!</span></li>";
+            echo "<span class='error'>&#10060; File does not exist!</span></li>";
         }
     }
     echo "</ul>";
-    echo "<div class='success'>✅ Zakończono tworzenie tabel i dodawanie danych.</div>";
-    echo "</div>"; // Zamknięcie kontenera etapu 3
-    echo "<hr>"; // Separator etapów
+    echo "<div class='success'>&#9989; Finished creating tables and inserting data.</div>";
+    echo "</div>"; // Close step 3 container
+    echo "<hr>"; // Step separator
 
-    // --- Etap 4/4: Tworzenie domyślnego świata i administratora ---
-    echo "<div class='install-stage'>"; // Kontener dla etapu
-    echo "<h3>Etap 4/4: Tworzenie domyślnego świata i administratora...</h3>";
-    echo "<ul>"; // Lista dla etapu 4
-    echo "<li>Tworzenie domyślnego świata: ";
-    if ($conn->query("INSERT INTO worlds (name) VALUES ('Świat 1')") === TRUE) {
-        echo "<span class='success'>Pomyślnie.</span></li>";
+    // --- Step 4/4: Create the default world and administrator ---
+    echo "<div class='install-stage'>"; // Container for step
+    echo "<h3>Step 4/4: Creating the default world and administrator...</h3>";
+    echo "<ul>"; // List for step 4
+    echo "<li>Creating default world: ";
+    if ($conn->query("INSERT INTO worlds (name) VALUES ('World 1')") === TRUE) {
+        echo "<span class='success'>Successful.</span></li>";
     } else {
-        echo "<span class='error'>❌ Błąd: " . $conn->error . "</span></li>";
+        echo "<span class='error'>&#10060; Error: " . $conn->error . "</span></li>";
     }
 
-    // Po instalacji, nie ma potrzeby czyszczenia tabel, ponieważ są one już świeżo utworzone
+    // No need to clear tables after installation because they were freshly created
     $database->closeConnection();
 
-    // Po instalacji tabel pokaż formularz tworzenia administratora
-    echo "</ul>"; // Zamknięcie listy dla etapu 4
-    echo "<div class='success'>✅ Instalacja bazy danych zakończona. Proszę utworzyć konto administratora poniżej:</div>";
-    echo "</div>"; // Zamknięcie kontenera etapu 4
+    // After the tables are installed show the administrator creation form
+    echo "</ul>"; // Close list for step 4
+    echo "<div class='success'>&#9989; Database installation finished. Please create an administrator account below:</div>";
+    echo "</div>"; // Close step 4 container
     echo '<form method="POST" class="form-container">';
-    echo '<label for="admin_username">Nazwa administratora</label>';
+    echo '<label for="admin_username">Admin username</label>';
     echo '<input type="text" id="admin_username" name="admin_username" required>';
-    echo '<label for="admin_password">Hasło administratora</label>';
+    echo '<label for="admin_password">Admin password</label>';
     echo '<input type="password" id="admin_password" name="admin_password" required>';
-    echo '<label for="admin_password_confirm">Potwierdź hasło</label>';
+    echo '<label for="admin_password_confirm">Confirm password</label>';
     echo '<input type="password" id="admin_password_confirm" name="admin_password_confirm" required>';
-    echo '<button type="submit">Utwórz administratora</button>';
+    echo '<button type="submit">Create administrator</button>';
     echo '</form>';
     exit();
 }
-// POST: tworzenie konta admina
+// POST: administrator account creation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_username'])) {
     require_once 'config/config.php';
     require_once 'lib/Database.php';
@@ -448,11 +509,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_username'])) {
     $confirm  = $_POST['admin_password_confirm'];
     $error = '';
     if (empty($username) || empty($password) || empty($confirm)) {
-        $error = 'Wszystkie pola są wymagane.';
+        $error = 'All fields are required.';
     } elseif ($password !== $confirm) {
-        $error = 'Hasła nie pasują do siebie.';
+        $error = 'Passwords do not match.';
     } elseif (!isValidUsername($username)) {
-        $error = 'Nieprawidłowa nazwa użytkownika.';
+        $error = 'Invalid username.';
     }
     if (!$error) {
         $email = $username . '@localhost';
@@ -464,11 +525,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_username'])) {
             $stmt->close();
             $vm = new VillageManager($conn);
             $coords = generateRandomCoordinates($conn, 100);
-            $vm->createVillage($admin_id, 'Wioska ' . $username, $coords['x'], $coords['y']);
-            echo '<h2>Administrator utworzony pomyślnie!</h2>';
-            echo '<p><a href="admin/admin_login.php">Zaloguj się do panelu administratora</a> | <a href="auth/login.php">Rozpocznij grę</a>.</p>';
+            $vm->createVillage($admin_id, 'Village ' . $username, $coords['x'], $coords['y']);
+            echo '<h2>Administrator created successfully!</h2>';
+            echo '<p><a href="admin/admin_login.php">Log in to the admin panel</a> | <a href="auth/login.php">Start the game</a>.</p>';
         } else {
-            $error = 'Błąd: ' . $stmt->error;
+            $error = 'Error: ' . $stmt->error;
         }
     }
     if ($error) {
@@ -485,27 +546,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_username'])) {
 
         errorSpans.forEach(span => {
             span.addEventListener('click', function() {
-                // Znajdź element <li>, który jest rodzicem klikniętego spana
+                // Find the <li> that contains the clicked span
                 const listItem = this.closest('li');
                 if (!listItem) return;
 
-                // Znajdź kontener z błędami wewnątrz tego elementu listy
+                // Find the error container inside that list item
                 const sqlErrorsDiv = listItem.querySelector('.sql-errors');
                 
                 if (sqlErrorsDiv) {
-                    // Przełącz widoczność kontenera z błędami
+                    // Toggle visibility of the error container
                     if (sqlErrorsDiv.style.display === 'none' || sqlErrorsDiv.style.display === '') {
                         sqlErrorsDiv.style.display = 'block';
-                        this.querySelector('.show-details').textContent = '(Ukryj szczegóły)';
+                        this.querySelector('.show-details').textContent = '(Hide details)';
                     } else {
                         sqlErrorsDiv.style.display = 'none';
-                        this.querySelector('.show-details').textContent = '(Pokaż szczegóły)';
+                        this.querySelector('.show-details').textContent = '(Show details)';
                     }
                 }
             });
         });
 
-        // Ukryj wszystkie kontenery z błędami SQL na początku
+        // Hide all SQL error containers at start
         document.querySelectorAll('.sql-errors').forEach(div => {
             div.style.display = 'none';
         });

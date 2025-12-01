@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS `research_types` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `internal_name` varchar(50) NOT NULL,
-  `name_pl` varchar(100) NOT NULL,
+  `name` varchar(100) NOT NULL,
   `description` text DEFAULT NULL,
   `building_type` varchar(50) NOT NULL,  -- Building where research can be performed (smithy, etc.)
   `required_building_level` int(11) NOT NULL DEFAULT 1,
@@ -50,16 +50,16 @@ CREATE TABLE IF NOT EXISTS `research_queue` (
   CONSTRAINT `research_queue_ibfk_2` FOREIGN KEY (`research_type_id`) REFERENCES `research_types` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Insert some sample research types for smithy
-INSERT INTO `research_types` (`internal_name`, `name_pl`, `description`, `building_type`, `required_building_level`, `cost_wood`, `cost_clay`, `cost_iron`, `research_time_base`, `max_level`) VALUES
-('improved_axe', 'Ulepszona Siekiera', 'Zwiększa atak piechoty o 10% za każdy poziom.', 'smithy', 1, 180, 150, 220, 3600, 3),
-('improved_armor', 'Ulepszona Zbroja', 'Zwiększa obronę piechoty o 10% za każdy poziom.', 'smithy', 2, 200, 180, 240, 4200, 3),
-('improved_sword', 'Ulepszony Miecz', 'Zwiększa atak kawalerii o 10% za każdy poziom.', 'smithy', 3, 220, 200, 260, 4800, 3),
-('horseshoe', 'Podkowy', 'Zwiększa szybkość kawalerii o 10% za każdy poziom.', 'smithy', 4, 240, 220, 280, 5400, 3),
-('improved_catapult', 'Ulepszony Katapult', 'Zwiększa obrażenia katapult o 10% za każdy poziom.', 'smithy', 5, 300, 280, 350, 6000, 3);
+-- Insert sample research types for smithy
+INSERT INTO `research_types` (`internal_name`, `name`, `description`, `building_type`, `required_building_level`, `cost_wood`, `cost_clay`, `cost_iron`, `research_time_base`, `max_level`) VALUES
+('improved_axe', 'Improved Axe', 'Increases infantry attack by 10% per level.', 'smithy', 1, 180, 150, 220, 3600, 3),
+('improved_armor', 'Improved Armor', 'Increases infantry defense by 10% per level.', 'smithy', 2, 200, 180, 240, 4200, 3),
+('improved_sword', 'Improved Sword', 'Increases cavalry attack by 10% per level.', 'smithy', 3, 220, 200, 260, 4800, 3),
+('horseshoe', 'Horseshoes', 'Increases cavalry speed by 10% per level.', 'smithy', 4, 240, 220, 280, 5400, 3),
+('improved_catapult', 'Improved Catapult', 'Increases catapult damage by 10% per level.', 'smithy', 5, 300, 280, 350, 6000, 3);
 
 -- Insert sample advanced research types for academy
-INSERT INTO `research_types` (`internal_name`, `name_pl`, `description`, `building_type`, `required_building_level`, `cost_wood`, `cost_clay`, `cost_iron`, `research_time_base`, `max_level`) VALUES
-('spying', 'Szpiegostwo', 'Pozwala na dokładniejsze raporty zwiadowcze.', 'academy', 1, 400, 600, 500, 7200, 3),
-('improved_maps', 'Ulepszone Mapy', 'Zwiększa zasięg widoczności mapy.', 'academy', 2, 500, 700, 600, 8400, 3),
-('military_tactics', 'Taktyka Wojenna', 'Zwiększa morale wojsk o 5% za każdy poziom.', 'academy', 3, 600, 800, 700, 9600, 3); 
+INSERT INTO `research_types` (`internal_name`, `name`, `description`, `building_type`, `required_building_level`, `cost_wood`, `cost_clay`, `cost_iron`, `research_time_base`, `max_level`) VALUES
+('spying', 'Espionage', 'Enables more detailed scouting reports.', 'academy', 1, 400, 600, 500, 7200, 3),
+('improved_maps', 'Improved Maps', 'Expands visible map range.', 'academy', 2, 500, 700, 600, 8400, 3),
+('military_tactics', 'Military Tactics', 'Raises troop morale by 5% per level.', 'academy', 3, 600, 800, 700, 9600, 3);

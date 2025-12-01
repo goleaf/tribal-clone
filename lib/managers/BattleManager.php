@@ -1,40 +1,38 @@
 <?php
 /**
- * Klasa BattleManager - zarządzanie walkami pomiędzy wioskami
+ * BattleManager handles battles between villages.
  */
 class BattleManager
 {
     private $conn;
     private $villageManager;
-    private $buildingManager; // Dodajemy właściwość dla BuildingManager
+    private $buildingManager; // BuildingManager dependency
 
     /**
-     * Konstruktor
-     *
-     * @param mysqli $conn Połączenie z bazą danych
-     * @param VillageManager $villageManager Instancja VillageManager
-     * @param BuildingManager $buildingManager Instancja BuildingManager
+     * @param mysqli $conn Database connection
+     * @param VillageManager $villageManager Village manager instance
+     * @param BuildingManager $buildingManager Building manager instance
      */
     public function __construct($conn, VillageManager $villageManager, BuildingManager $buildingManager)
     {
         $this->conn = $conn;
         $this->villageManager = $villageManager;
-        $this->buildingManager = $buildingManager; // Przypisujemy instancję
+        $this->buildingManager = $buildingManager;
     }
     
     /**
-     * Wysyła atak z jednej wioski na drugą
+     * Sends an attack from one village to another.
      * 
-     * @param int $source_village_id ID wioski źródłowej (atakującej)
-     * @param int $target_village_id ID wioski docelowej (atakowanej)
-     * @param array $units_sent Tablica z ID typów jednostek i ich liczbą
-     * @param string $attack_type Typ ataku ('attack', 'raid', 'support')
-     * @param string|null $target_building Cel dla katapult
-     * @return array Status operacji
+     * @param int $source_village_id Attacker village ID
+     * @param int $target_village_id Target village ID
+     * @param array $units_sent Map of unit type IDs to counts
+     * @param string $attack_type Attack type ('attack', 'raid', 'support')
+     * @param string|null $target_building Target building for catapults
+     * @return array Operation status
      */
     public function sendAttack($source_village_id, $target_village_id, $units_sent, $attack_type = 'attack', $target_building = null)
     {
-        // Sprawdź, czy wioski istnieją
+        // Ensure both villages exist
         $stmt_check_villages = $this->conn->prepare("
             SELECT 
                 v1.id as source_id, v1.name as source_name, v1.x_coord as source_x, v1.y_coord as source_y, v1.user_id as source_user_id,
@@ -49,22 +47,22 @@ class BattleManager
         if ($result->num_rows === 0) {
             return [
                 'success' => false,
-                'error' => 'Jedna lub obie wioski nie istnieją.'
+                'error' => 'One or both villages do not exist.'
             ];
         }
         
         $villages = $result->fetch_assoc();
         $stmt_check_villages->close();
         
-        // Sprawdź, czy wioski nie należą do tego samego gracza (nie można atakować własnych wiosek)
+        // Prevent attacking your own villages
         if ($villages['source_user_id'] === $villages['target_user_id'] && $attack_type !== 'support') {
             return [
                 'success' => false,
-                'error' => 'Nie możesz atakować własnych wiosek.'
+                'error' => 'You cannot attack your own villages.'
             ];
         }
         
-        // Sprawdź, czy gracz ma wystarczającą liczbę jednostek
+        // Check available units
         $stmt_check_units = $this->conn->prepare("
             SELECT unit_type_id, count 
             FROM village_units 
@@ -80,17 +78,17 @@ class BattleManager
         }
         $stmt_check_units->close();
         
-        // Sprawdź, czy gracz próbuje wysłać więcej jednostek niż posiada
+        // Ensure the player is not sending more units than available
         foreach ($units_sent as $unit_type_id => $count) {
             if (!isset($available_units[$unit_type_id]) || $available_units[$unit_type_id] < $count) {
                 return [
                     'success' => false,
-                    'error' => 'Nie masz wystarczającej liczby jednostek do przeprowadzenia tego ataku.'
+                    'error' => 'You do not have enough units to perform this attack.'
                 ];
             }
         }
         
-        // Sprawdź, czy gracz wysyła jakiekolwiek jednostki
+        // Require at least one unit to be sent
         $total_units = 0;
         foreach ($units_sent as $count) {
             $total_units += $count;
@@ -99,17 +97,17 @@ class BattleManager
         if ($total_units === 0) {
             return [
                 'success' => false,
-                'error' => 'Musisz wysłać co najmniej jedną jednostkę.'
+                'error' => 'You must send at least one unit.'
             ];
         }
         
-        // Oblicz odległość między wioskami i czas podróży
+        // Calculate distance and travel time
         $distance = $this->calculateDistance(
             $villages['source_x'], $villages['source_y'],
             $villages['target_x'], $villages['target_y']
         );
         
-        // Znajdź najwolniejszą jednostkę
+        // Find the slowest unit
         $stmt_get_speed = $this->conn->prepare("
             SELECT unit_type_id, speed 
             FROM unit_types
@@ -125,20 +123,20 @@ class BattleManager
         if (!$slowest_unit) {
             return [
                 'success' => false,
-                'error' => 'Nie można znaleźć informacji o jednostkach.'
+                'error' => 'Unit information could not be found.'
             ];
         }
         
-        // Oblicz czas podróży w sekundach (im wyższa wartość speed, tym wolniejsza jednostka)
-        $travel_time = ceil($distance * $slowest_unit['speed'] * 60); // w sekundach
+        // Calculate travel time in seconds (higher speed value means a slower unit)
+        $travel_time = ceil($distance * $slowest_unit['speed'] * 60); // in seconds
         $start_time = time();
         $arrival_time = $start_time + $travel_time;
         
-        // Rozpocznij transakcję
+        // Begin transaction
         $this->conn->begin_transaction();
         
         try {
-            // Odejmij jednostki z wioski źródłowej
+            // Subtract units from the source village
             foreach ($units_sent as $unit_type_id => $count) {
                 $stmt_update_units = $this->conn->prepare("
                     UPDATE village_units 
@@ -150,7 +148,7 @@ class BattleManager
                 $stmt_update_units->close();
             }
             
-            // Dodaj atak do tabeli attacks
+            // Add the attack to the attacks table
             $stmt_add_attack = $this->conn->prepare("
                 INSERT INTO attacks (
                     source_village_id, target_village_id,
@@ -168,7 +166,7 @@ class BattleManager
             $attack_id = $stmt_add_attack->insert_id;
             $stmt_add_attack->close();
             
-            // Dodaj jednostki do tabeli attack_units
+            // Add unit records to attack_units
             foreach ($units_sent as $unit_type_id => $count) {
                 $stmt_add_units = $this->conn->prepare("
                     INSERT INTO attack_units (
@@ -180,15 +178,15 @@ class BattleManager
                 $stmt_add_units->close();
             }
             
-            // Zatwierdź transakcję
+            // Commit transaction
             $this->conn->commit();
             
-            // Przygotuj odpowiedź
+            // Build response payload
             $arrival_date = date('Y-m-d H:i:s', $arrival_time);
             
             return [
                 'success' => true,
-                'message' => "Pomyślnie wysłano atak. Dotarcie do celu: $arrival_date",
+                'message' => "Attack sent successfully. Arrival time: $arrival_date",
                 'attack_id' => $attack_id,
                 'source_village_id' => $source_village_id,
                 'target_village_id' => $target_village_id,
@@ -200,26 +198,26 @@ class BattleManager
                 'arrival_date' => $arrival_date
             ];
         } catch (Exception $e) {
-            // Wycofaj transakcję w przypadku błędu
+            // Roll back on failure
             $this->conn->rollback();
             
             return [
                 'success' => false,
-                'error' => 'Wystąpił błąd podczas wysyłania ataku: ' . $e->getMessage()
+                'error' => 'An error occurred while sending the attack: ' . $e->getMessage()
             ];
         }
     }
     
     /**
-     * Anuluj atak, jeśli jeszcze nie dotarł do celu
+     * Cancel an attack if it has not arrived yet.
      * 
-     * @param int $attack_id ID ataku
-     * @param int $user_id ID użytkownika (dla sprawdzenia uprawnień)
-     * @return array Status operacji
+     * @param int $attack_id Attack ID
+     * @param int $user_id User ID (permission check)
+     * @return array Operation status
      */
     public function cancelAttack($attack_id, $user_id)
     {
-        // Sprawdź, czy atak istnieje i należy do użytkownika
+        // Ensure the attack exists and belongs to the user
         $stmt_check_attack = $this->conn->prepare("
             SELECT a.id, a.source_village_id, a.target_village_id, a.attack_type, 
                    a.start_time, a.arrival_time, a.is_completed, a.is_canceled
@@ -234,29 +232,29 @@ class BattleManager
         if ($result->num_rows === 0) {
             return [
                 'success' => false,
-                'error' => 'Atak nie istnieje, został już zakończony, anulowany lub nie masz do niego dostępu.'
+                'error' => 'The attack does not exist, is already finished or canceled, or you do not have access to it.'
             ];
         }
         
         $attack = $result->fetch_assoc();
         $stmt_check_attack->close();
         
-        // Sprawdź, czy atak już dotarł do celu
+        // Ensure the attack has not already arrived
         $current_time = time();
         $arrival_time = strtotime($attack['arrival_time']);
         
         if ($current_time >= $arrival_time) {
             return [
                 'success' => false,
-                'error' => 'Nie można anulować ataku, który już dotarł do celu.'
+                'error' => 'Cannot cancel an attack that has already arrived.'
             ];
         }
         
-        // Rozpocznij transakcję
+        // Begin transaction
         $this->conn->begin_transaction();
         
         try {
-            // Oznacz atak jako anulowany
+            // Mark the attack as canceled
             $stmt_cancel_attack = $this->conn->prepare("
                 UPDATE attacks 
                 SET is_canceled = 1 
@@ -266,7 +264,7 @@ class BattleManager
             $stmt_cancel_attack->execute();
             $stmt_cancel_attack->close();
             
-            // Pobierz jednostki z ataku
+            // Fetch units from the attack
             $stmt_get_units = $this->conn->prepare("
                 SELECT unit_type_id, count 
                 FROM attack_units 
@@ -282,7 +280,7 @@ class BattleManager
             }
             $stmt_get_units->close();
             
-            // Zwróć jednostki do wioski źródłowej
+            // Return units to the source village
             foreach ($units_to_return as $unit_type_id => $count) {
                 $stmt_check_existing = $this->conn->prepare("
                     SELECT id, count 
@@ -294,7 +292,7 @@ class BattleManager
                 $existing_result = $stmt_check_existing->get_result();
                 
                 if ($existing_result->num_rows > 0) {
-                    // Aktualizuj istniejące jednostki
+                    // Update existing units
                     $existing = $existing_result->fetch_assoc();
                     $new_count = $existing['count'] + $count;
                     
@@ -307,7 +305,7 @@ class BattleManager
                     $stmt_update->execute();
                     $stmt_update->close();
                 } else {
-                    // Dodaj nowe jednostki
+                    // Insert new unit rows
                     $stmt_insert = $this->conn->prepare("
                         INSERT INTO village_units (
                             village_id, unit_type_id, count
@@ -321,46 +319,46 @@ class BattleManager
                 $stmt_check_existing->close();
             }
             
-            // Zatwierdź transakcję
+            // Commit transaction
             $this->conn->commit();
             
             return [
                 'success' => true,
-                'message' => 'Atak został anulowany, a jednostki powróciły do wioski.',
+                'message' => 'The attack was canceled and the units returned to the village.',
                 'attack_id' => $attack_id,
                 'returned_units' => $units_to_return
             ];
         } catch (Exception $e) {
-            // Wycofaj transakcję w przypadku błędu
+            // Roll back on error
             $this->conn->rollback();
             
             return [
                 'success' => false,
-                'error' => 'Wystąpił błąd podczas anulowania ataku: ' . $e->getMessage()
+                'error' => 'An error occurred while canceling the attack: ' . $e->getMessage()
             ];
         }
     }
     
     /**
-     * Przetwarza zakończone ataki, generując raporty i komunikaty dla użytkownika.
-     * @param int $user_id ID użytkownika, dla którego przetwarzamy ataki.
-     * @return array Tablica komunikatów do wyświetlenia dla użytkownika.
+     * Processes completed attacks and generates user-facing messages.
+     * @param int $user_id User ID for which to process attacks.
+     * @return array Messages to display.
      */
     public function processCompletedAttacks(int $user_id): array
     {
         $messages = [];
         $current_time = date('Y-m-d H:i:s');
         
-        // Pobierz ID wiosek należących do użytkownika
+        // Fetch user village IDs
         $user_village_ids = $this->villageManager->getUserVillageIds($user_id);
         
         if (empty($user_village_ids)) {
-             return []; // Użytkownik nie ma wiosek, brak ataków do przetworzenia
+             return []; // User has no villages; no attacks to process
         }
 
-        // Pobierz wszystkie niezakończone i nieanulowane ataki, które powinny już dotrzeć do celu,
-        // a dotyczą wiosek użytkownika (jako atakujący lub obrońca)
-        // Używamy FIND_IN_SET, ponieważ nie możemy bezpośrednio bindować tablicy do IN z prepare()
+        // Fetch unfinished, uncanceled attacks that should have arrived by now,
+        // that involve the user's villages (attacker or defender)
+        // Using FIND_IN_SET because we cannot bind arrays to IN with prepare()
         $village_ids_string = implode(',', $user_village_ids);
 
         $stmt_get_attacks = $this->conn->prepare("
@@ -373,7 +371,7 @@ class BattleManager
         
          if ($stmt_get_attacks === false) {
              error_log("Prepare failed for getCompletedAttacks (BattleManager): " . $this->conn->error);
-             return ['<p class="error-message">Wystąpił błąd podczas pobierania zakończonych ataków.</p>'];
+             return ['<p class="error-message">An error occurred while fetching completed attacks.</p>'];
          }
 
         $stmt_get_attacks->bind_param("sss", $current_time, $village_ids_string, $village_ids_string);
@@ -381,11 +379,11 @@ class BattleManager
         $attacks_result = $stmt_get_attacks->get_result();
         
         while ($attack = $attacks_result->fetch_assoc()) {
-            // Przetwórz pojedynczą bitwę - ta metoda generuje raport i aktualizuje DB
+            // Process a single battle - this method generates a report and updates the DB
             $battle_result = $this->processBattle($attack['id']);
 
             if ($battle_result && $battle_result['success']) {
-                // Pobierz szczegóły ataku i wiosek dla komunikatu
+                // Fetch attack and village details for messaging
                  $stmt_details = $this->conn->prepare("
                     SELECT
                         a.id, a.source_village_id, a.target_village_id, a.attack_type,
@@ -401,63 +399,61 @@ class BattleManager
                  $stmt_details->close();
 
                  if ($attack_details) {
-                     // Pobierz raport bitwy, aby uzyskać zwycięzcę i łupy (jeśli były)
-                     // processBattle tworzy raport, więc pobierzemy go zaraz po.
-                     $report = $this->getBattleReportForAttack($attack['id']); // Potrzebna metoda
+                     // Fetch the battle report to identify the winner and loot (if any)
+                     // processBattle creates the report, so fetch it immediately after.
+                     $report = $this->getBattleReportForAttack($attack['id']); // Dedicated helper
 
                      if ($report) {
                          $source_name = htmlspecialchars($attack_details['source_name']);
                          $target_name = htmlspecialchars($attack_details['target_name']);
-                         $winner = $report['winner']; // 'attacker' lub 'defender'
+                         $winner = $report['winner']; // 'attacker' or 'defender'
                          $loot = json_decode($report['details_json'], true)['loot'] ?? ['wood' => 0, 'clay' => 0, 'iron' => 0];
 
-                         // Komunikat dla atakującego (jeśli wioska źródłowa należy do użytkownika)
+                         // Message for the attacker (if the source village belongs to the user)
                          if (in_array($attack['source_village_id'], $user_village_ids)) {
                              if ($winner === 'attacker') {
-                                 $messages[] = "<p class='success-message'>Twój atak z wioski <b>{$source_name}</b> na <b>{$target_name}</b> zakończył się zwycięstwem! Złupiono: Drewno: {$loot['wood']}, Glina: {$loot['clay']}, Żelazo: {$loot['iron']}.</p>";
+                                 $messages[] = "<p class='success-message'>Your attack from village <b>{$source_name}</b> on <b>{$target_name}</b> ended in victory! Looted: Wood: {$loot['wood']}, Clay: {$loot['clay']}, Iron: {$loot['iron']}.</p>";
                              } else {
-                                 $messages[] = "<p class='error-message'>Twój atak z wioski <b>{$source_name}</b> na <b>{$target_name}</b> zakończył się porażką.</p>";
+                                 $messages[] = "<p class='error-message'>Your attack from village <b>{$source_name}</b> on <b>{$target_name}</b> ended in defeat.</p>";
                              }
                          }
 
-                         // Komunikat dla obrońcy (jeśli wioska docelowa należy do użytkownika)
+                         // Message for the defender (if the target village belongs to the user)
                          if (in_array($attack['target_village_id'], $user_village_ids)) {
                              if ($winner === 'defender') {
-                                 $messages[] = "<p class='success-message'>Twoja wioska <b>{$target_name}</b> obroniła się przed atakiem z wioski <b>{$source_name}</b>.</p>";
+                                 $messages[] = "<p class='success-message'>Your village <b>{$target_name}</b> defended against an attack from village <b>{$source_name}</b>.</p>";
                              } else {
-                                 $messages[] = "<p class='error-message'>Twoja wioska <b>{$target_name}</b> została pokonana w ataku z wioski <b>{$source_name}</b>. Stracono surowce.</p>";
+                                 $messages[] = "<p class='error-message'>Your village <b>{$target_name}</b> was defeated in an attack from village <b>{$source_name}</b>. Resources were lost.</p>";
                              }
                          }
 
-                         // Można dodać link do pełnego raportu bitwy tutaj, jeśli taki system istnieje
+                         // Add a link to the full battle report here if available
 
                      } else {
-                          error_log("Błąd: Nie znaleziono raportu bitwy dla zakończonego ataku ID: " . $attack['id']);
-                          // Można dodać ogólny komunikat błędu dla użytkownika
-                          $messages[] = "<p class='error-message'>Wystąpił błąd podczas generowania raportu bitwy dla ataku ID: " . $attack['id'] . ".</p>";
+                          error_log("Error: No battle report found for completed attack ID: " . $attack['id']);
+                          $messages[] = "<p class='error-message'>An error occurred while generating the battle report for attack ID: " . $attack['id'] . ".</p>";
                      }
                  } else {
-                     error_log("Błąd: Nie znaleziono szczegółów ataku ID: " . $attack['id'] . " podczas generowania komunikatów.");
-                     $messages[] = "<p class='error-message'>Wystąpił błąd podczas pobierania szczegółów ataku ID: " . $attack['id'] . ".</p>";
+                     error_log("Error: Attack details not found for attack ID: " . $attack['id'] . " while generating messages.");
+                     $messages[] = "<p class='error-message'>An error occurred while fetching attack details for attack ID: " . $attack['id'] . ".</p>";
                  }
 
             } else {
-                 error_log("Błąd przetwarzania bitwy dla ataku ID: " . $attack['id'] . ". Wynik: " . json_encode($battle_result));
-                 $messages[] = "<p class='error-message'>Wystąpił błąd podczas przetwarzania bitwy dla ataku ID: " . $attack['id'] . ".</p>";
+                 error_log("Battle processing error for attack ID: " . $attack['id'] . ". Result: " . json_encode($battle_result));
+                 $messages[] = "<p class='error-message'>An error occurred while processing the battle for attack ID: " . $attack['id'] . ".</p>";
             }
         }
 
-        $attacks_result->free(); // Zwolnij pamięć
+        $attacks_result->free(); // Free memory
         $stmt_get_attacks->close();
 
-        return $messages; // Zwróć zebrane komunikaty
+        return $messages; // Return collected messages
     }
     
     /**
-     * Pobiera raport bitwy na podstawie ID ataku.
-     * Potrzebne do generowania komunikatów po bitwie.
-     * @param int $attack_id ID ataku
-     * @return array|null Dane raportu bitwy lub null jeśli brak.
+     * Fetches a battle report by attack ID for post-battle messaging.
+     * @param int $attack_id Attack ID
+     * @return array|null Battle report data or null if missing.
      */
     public function getBattleReportForAttack(int $attack_id): ?array
     {
@@ -480,13 +476,13 @@ class BattleManager
     }
 
     /**
-     * Przetwarza pojedynczą bitwę - oblicza straty, łupy, aktualizuje DB, tworzy raport.
-     * @param int $attack_id ID ataku do przetworzenia.
-     * @return array Wynik przetwarzania bitwy (success/error).
+     * Processes a single battle: calculates losses/loot, updates DB, creates report.
+     * @param int $attack_id Attack ID to process.
+     * @return array Battle processing result (success/error).
      */
     private function processBattle(int $attack_id): array
     {
-        // Pobierz szczegóły ataku
+        // Fetch attack details
         $stmt_get_attack = $this->conn->prepare("
             SELECT id, source_village_id, target_village_id, attack_type, target_building
             FROM attacks
@@ -497,11 +493,11 @@ class BattleManager
         $attack = $stmt_get_attack->get_result()->fetch_assoc();
         $stmt_get_attack->close();
         if (!$attack) {
-            return [ 'success' => false, 'error' => 'Atak nie istnieje.' ];
+            return [ 'success' => false, 'error' => 'Attack does not exist.' ];
         }
-        // Pobierz jednostki atakujące
+        // Fetch attacking units
         $stmt_get_attack_units = $this->conn->prepare("
-            SELECT au.unit_type_id, au.count, ut.attack, ut.defense, ut.name_pl, ut.carry_capacity, ut.internal_name
+            SELECT au.unit_type_id, au.count, ut.attack, ut.defense, ut.name, ut.carry_capacity, ut.internal_name
             FROM attack_units au
             JOIN unit_types ut ON au.unit_type_id = ut.id
             WHERE au.attack_id = ?
@@ -516,9 +512,9 @@ class BattleManager
             $attack_capacity += $unit['carry_capacity'] * $unit['count'];
         }
         $stmt_get_attack_units->close();
-        // Pobierz jednostki obronne
+        // Fetch defending units
         $stmt_get_defense_units = $this->conn->prepare("
-            SELECT vu.unit_type_id, vu.count, ut.attack, ut.defense, ut.name_pl
+            SELECT vu.unit_type_id, vu.count, ut.attack, ut.defense, ut.name
             FROM village_units vu
             JOIN unit_types ut ON vu.unit_type_id = ut.id
             WHERE vu.village_id = ?
@@ -531,14 +527,14 @@ class BattleManager
             $defending_units[$unit['unit_type_id']] = $unit;
         }
         $stmt_get_defense_units->close();
-        // --- LOSOWOŚĆ: ±10% ---
+        // --- RANDOMNESS: +/-10% ---
         $attack_random = mt_rand(90, 110) / 100;
         $defense_random = mt_rand(90, 110) / 100;
-        // --- MORALE: prosty przelicznik (np. atakujący z mniejszą liczbą punktów ma bonus) ---
+        // --- MORALE: simple factor (e.g., weaker attacker could get bonus) ---
         $morale = 1.0;
-        // Można pobrać punkty graczy i wyliczyć morale, na razie uproszczone:
+        // Placeholder morale calculation:
         // $morale = min(1.5, max(0.5, $attacker_points / max($defender_points,1)));
-        // --- SUMA SIŁ ---
+        // --- TOTAL STRENGTH ---
         $total_attack_strength = 0;
         foreach ($attacking_units as $unit) {
             $total_attack_strength += $unit['attack'] * $unit['count'];
@@ -548,13 +544,13 @@ class BattleManager
             $total_defense_strength += $unit['defense'] * $unit['count'];
         }
 
-        // --- BONUS MURU ---
+        // --- WALL BONUS ---
         $wall_level = $this->buildingManager->getBuildingLevel($attack['target_village_id'], 'wall');
         $wall_bonus = $this->buildingManager->getWallDefenseBonus($wall_level);
 
         $total_attack_strength = round($total_attack_strength * $attack_random * $morale);
         $total_defense_strength = round($total_defense_strength * $wall_bonus * $defense_random);
-        // --- STRATY (ulepszona formuła) ---
+        // --- LOSSES ---
         $attacker_win = $total_attack_strength > $total_defense_strength;
 
         $attacker_losses = [];
@@ -563,14 +559,14 @@ class BattleManager
         $remaining_defending_units = [];
 
         if ($attacker_win) {
-            // Atakujący wygrywa, obrońca traci wszystkie jednostki, atakujący traci proporcjonalnie
+            // Attacker wins: defender loses all, attacker loses proportionally
             $loss_ratio = ($total_defense_strength / max(1, $total_attack_strength)) ** 0.5;
 
             foreach ($attacking_units as $unit_type_id => $unit) {
                 $loss_count = round($unit['count'] * $loss_ratio);
                 $remaining_count = $unit['count'] - $loss_count;
                 $attacker_losses[$unit_type_id] = [
-                    'unit_name' => $unit['name_pl'], 'initial_count' => $unit['count'],
+                    'unit_name' => $unit['name'], 'initial_count' => $unit['count'],
                     'lost_count' => $loss_count, 'remaining_count' => $remaining_count
                 ];
                 if ($remaining_count > 0) {
@@ -580,17 +576,17 @@ class BattleManager
 
             foreach ($defending_units as $unit_type_id => $unit) {
                 $defender_losses[$unit_type_id] = [
-                    'unit_name' => $unit['name_pl'], 'initial_count' => $unit['count'],
+                    'unit_name' => $unit['name'], 'initial_count' => $unit['count'],
                     'lost_count' => $unit['count'], 'remaining_count' => 0
                 ];
             }
         } else {
-            // Obrońca wygrywa lub remis, atakujący traci wszystkie jednostki, obrońca traci proporcjonalnie
+            // Defender wins or draw: attacker loses all units, defender loses proportionally
             $loss_ratio = ($total_attack_strength / max(1, $total_defense_strength)) ** 0.5;
 
             foreach ($attacking_units as $unit_type_id => $unit) {
                 $attacker_losses[$unit_type_id] = [
-                    'unit_name' => $unit['name_pl'], 'initial_count' => $unit['count'],
+                    'unit_name' => $unit['name'], 'initial_count' => $unit['count'],
                     'lost_count' => $unit['count'], 'remaining_count' => 0
                 ];
             }
@@ -599,7 +595,7 @@ class BattleManager
                 $loss_count = round($unit['count'] * $loss_ratio);
                 $remaining_count = $unit['count'] - $loss_count;
                 $defender_losses[$unit_type_id] = [
-                    'unit_name' => $unit['name_pl'], 'initial_count' => $unit['count'],
+                    'unit_name' => $unit['name'], 'initial_count' => $unit['count'],
                     'lost_count' => $loss_count, 'remaining_count' => $remaining_count
                 ];
                 if ($remaining_count > 0) {
@@ -607,31 +603,31 @@ class BattleManager
                 }
             }
         }
-        // --- ŁUPY ---
+        // --- LOOT ---
         $loot = [ 'wood' => 0, 'clay' => 0, 'iron' => 0 ];
         if ($attacker_win && $attack_capacity > 0) {
-            // Pobierz surowce z wioski
+            // Pull resources from the target village
             $stmt_res = $this->conn->prepare("SELECT wood, clay, iron FROM villages WHERE id = ?");
             $stmt_res->bind_param("i", $attack['target_village_id']);
             $stmt_res->execute();
             $res = $stmt_res->get_result()->fetch_assoc();
             $stmt_res->close();
             $total_loot = min($attack_capacity, $res['wood'] + $res['clay'] + $res['iron']);
-            // Proporcjonalnie rozdziel łup
+            // Distribute loot proportionally
             $sum = $res['wood'] + $res['clay'] + $res['iron'];
             if ($sum > 0) {
                 $loot['wood'] = floor($total_loot * ($res['wood'] / $sum));
                 $loot['clay'] = floor($total_loot * ($res['clay'] / $sum));
                 $loot['iron'] = $total_loot - $loot['wood'] - $loot['clay'];
             }
-            // Odejmij surowce z wioski
+            // Subtract resources from the village
             $stmt_update = $this->conn->prepare("UPDATE villages SET wood = wood - ?, clay = clay - ?, iron = iron - ? WHERE id = ?");
             $stmt_update->bind_param("iiii", $loot['wood'], $loot['clay'], $loot['iron'], $attack['target_village_id']);
             $stmt_update->execute();
             $stmt_update->close();
         }
 
-        // --- ZNISZCZENIA MURU (TARANY) ---
+        // --- WALL DAMAGE (RAMS) ---
         $wall_damage_report = ['initial_level' => $wall_level, 'final_level' => $wall_level];
         if ($attacker_win) {
             $surviving_rams = 0;
@@ -652,7 +648,7 @@ class BattleManager
             }
         }
 
-        // --- ZNISZCZENIA BUDYNKÓW (KATAPULTY) ---
+        // --- BUILDING DAMAGE (CATAPULTS) ---
         $building_damage_report = null;
         if ($attacker_win) {
             $surviving_catapults = 0;
@@ -695,10 +691,10 @@ class BattleManager
             }
         }
 
-        // --- TRANSAKCJA ---
+        // --- TRANSACTION ---
         $this->conn->begin_transaction();
         try {
-            // Zaktualizuj poziom muru, jeśli został uszkodzony
+            // Update wall level if damaged
             if ($wall_damage_report['initial_level'] !== $wall_damage_report['final_level']) {
                 $this->buildingManager->setBuildingLevel(
                     $attack['target_village_id'],
@@ -707,7 +703,7 @@ class BattleManager
                 );
             }
 
-            // Zaktualizuj poziom celu katapult, jeśli został uszkodzony
+            // Update catapult target level if damaged
             if ($building_damage_report && $building_damage_report['initial_level'] !== $building_damage_report['final_level']) {
                 $this->buildingManager->setBuildingLevel(
                     $attack['target_village_id'],
@@ -716,7 +712,7 @@ class BattleManager
                 );
             }
 
-            // Oznacz atak jako zakończony
+            // Mark the attack as completed
             $stmt_complete_attack = $this->conn->prepare("
                 UPDATE attacks 
                 SET is_completed = 1 
@@ -725,7 +721,7 @@ class BattleManager
             $stmt_complete_attack->bind_param("i", $attack_id);
             $stmt_complete_attack->execute();
             $stmt_complete_attack->close();
-            // Zaktualizuj jednostki obronne w wiosce
+            // Update defending units in the village
             foreach ($defending_units as $unit_type_id => $unit) {
                 $new_count = isset($remaining_defending_units[$unit_type_id]) ? $remaining_defending_units[$unit_type_id] : 0;
                 if ($new_count > 0) {
@@ -747,7 +743,7 @@ class BattleManager
                     $stmt_delete->close();
                 }
             }
-            // Zwróć pozostałe jednostki atakujące do wioski źródłowej
+            // Return remaining attacking units to the source village
             foreach ($remaining_attacking_units as $unit_type_id => $count) {
                 $stmt_check_existing = $this->conn->prepare("
                     SELECT id, count 
@@ -758,7 +754,7 @@ class BattleManager
                 $stmt_check_existing->execute();
                 $existing_result = $stmt_check_existing->get_result();
                 if ($existing_result->num_rows > 0) {
-                    // Aktualizuj istniejące jednostki
+                    // Update existing units
                     $existing = $existing_result->fetch_assoc();
                     $new_count = $existing['count'] + $count;
                     $stmt_update = $this->conn->prepare("
@@ -770,7 +766,7 @@ class BattleManager
                     $stmt_update->execute();
                     $stmt_update->close();
                 } else {
-                    // Dodaj nowe jednostki
+                    // Insert new unit records
                     $stmt_insert = $this->conn->prepare("
                         INSERT INTO village_units (
                             village_id, unit_type_id, count
@@ -791,7 +787,7 @@ class BattleManager
             $attacker_user_id = $users['attacker_user_id'];
             $defender_user_id = $users['defender_user_id'];
 
-            // Dodaj raport z bitwy (z detalami JSON)
+            // Add battle report (with JSON details)
             $details = [
                 'attacker_losses' => $attacker_losses,
                 'defender_losses' => $defender_losses,
@@ -840,13 +836,13 @@ class BattleManager
     }
     
     /**
-     * Oblicza odległość między dwoma punktami na mapie
+     * Calculates distance between two map points
      * 
-     * @param int $x1 Współrzędna X punktu 1
-     * @param int $y1 Współrzędna Y punktu 1
-     * @param int $x2 Współrzędna X punktu 2
-     * @param int $y2 Współrzędna Y punktu 2
-     * @return float Odległość między punktami
+     * @param int $x1 X coordinate of point 1
+     * @param int $y1 Y coordinate of point 1
+     * @param int $x2 X coordinate of point 2
+     * @param int $y2 Y coordinate of point 2
+     * @return float Distance between points
      */
     private function calculateDistance($x1, $y1, $x2, $y2)
     {
@@ -854,10 +850,10 @@ class BattleManager
     }
     
     /**
-     * Pobiera listę przychodzących ataków na wioskę
+     * Fetch list of incoming attacks for a village
      * 
-     * @param int $village_id ID wioski
-     * @return array Lista przychodzących ataków
+     * @param int $village_id Village ID
+     * @return array Incoming attacks
      */
     public function getIncomingAttacks($village_id)
     {
@@ -877,7 +873,7 @@ class BattleManager
         
         $incoming_attacks = [];
         while ($attack = $result->fetch_assoc()) {
-            // Oblicz pozostały czas
+            // Calculate remaining time
             $arrival_time = strtotime($attack['arrival_time']);
             $current_time = time();
             $remaining_time = max(0, $arrival_time - $current_time);
@@ -893,10 +889,10 @@ class BattleManager
     }
     
     /**
-     * Pobiera listę wychodzących ataków z wioski
+     * Fetch list of outgoing attacks for a village
      * 
-     * @param int $village_id ID wioski
-     * @return array Lista wychodzących ataków
+     * @param int $village_id Village ID
+     * @return array Outgoing attacks
      */
     public function getOutgoingAttacks($village_id)
     {
@@ -916,7 +912,7 @@ class BattleManager
         
         $outgoing_attacks = [];
         while ($attack = $result->fetch_assoc()) {
-            // Oblicz pozostały czas
+            // Calculate remaining time
             $arrival_time = strtotime($attack['arrival_time']);
             $current_time = time();
             $remaining_time = max(0, $arrival_time - $current_time);
@@ -924,7 +920,7 @@ class BattleManager
             $attack['remaining_time'] = $remaining_time;
             $attack['formatted_remaining_time'] = $this->formatTime($remaining_time);
             
-            // Dodaj informacje o wysłanych jednostkach
+            // Add info about sent units
             $attack['units'] = $this->getAttackUnits($attack['id']);
             
             $outgoing_attacks[] = $attack;
@@ -935,15 +931,15 @@ class BattleManager
     }
     
     /**
-     * Pobiera jednostki biorące udział w ataku
+     * Fetch units involved in an attack
      * 
-     * @param int $attack_id ID ataku
-     * @return array Lista jednostek
+     * @param int $attack_id Attack ID
+     * @return array Units list
      */
     public function getAttackUnits($attack_id)
     {
         $stmt = $this->conn->prepare("
-            SELECT au.unit_type_id, au.count, ut.name_pl, ut.internal_name
+            SELECT au.unit_type_id, au.count, ut.name, ut.internal_name
             FROM attack_units au
             JOIN unit_types ut ON au.unit_type_id = ut.id
             WHERE au.attack_id = ?
@@ -962,15 +958,15 @@ class BattleManager
     }
     
     /**
-     * Pobiera raport z bitwy
+     * Fetch a battle report
      * 
-     * @param int $report_id ID raportu
-     * @param int $user_id ID użytkownika (dla sprawdzenia uprawnień)
-     * @return array Raport z bitwy
+     * @param int $report_id Report ID
+     * @param int $user_id User ID (permission check)
+     * @return array Battle report data
      */
     public function getBattleReport($report_id, $user_id)
     {
-        // Sprawdź, czy raport istnieje i czy użytkownik ma do niego dostęp
+        // Ensure the report exists and the user has access
         $stmt = $this->conn->prepare("
             SELECT br.id, br.attack_id, br.source_village_id, br.target_village_id, 
                    br.attack_type, br.winner, br.total_attack_strength, 
@@ -992,18 +988,18 @@ class BattleManager
         if ($result->num_rows === 0) {
             return [
                 'success' => false,
-                'error' => 'Raport nie istnieje lub nie masz do niego dostępu.'
+                'error' => 'Report does not exist or you do not have access.'
             ];
         }
         
         $report = $result->fetch_assoc();
         $stmt->close();
         
-        // Pobierz szczegóły jednostek
+        // Fetch unit details
         $stmt_units = $this->conn->prepare("
             SELECT bru.unit_type_id, bru.side, bru.initial_count, 
                    bru.lost_count, bru.remaining_count,
-                   ut.name_pl, ut.internal_name, ut.attack, ut.defense
+                   ut.name, ut.internal_name, ut.attack, ut.defense
             FROM battle_report_units bru
             JOIN unit_types ut ON bru.unit_type_id = ut.id
             WHERE bru.battle_report_id = ?
@@ -1034,10 +1030,10 @@ class BattleManager
     }
     
     /**
-     * Formatuje czas w sekundach na czytelny format
+     * Format seconds into a readable hh:mm:ss string.
      * 
-     * @param int $seconds Czas w sekundach
-     * @return string Sformatowany czas
+     * @param int $seconds Time in seconds
+     * @return string Formatted time
      */
     private function formatTime($seconds)
     {
@@ -1049,12 +1045,12 @@ class BattleManager
     }
 
     /**
-     * Pobiera listę raportów bitewnych dla użytkownika z paginacją.
+     * Fetch paginated battle reports for a user.
      *
-     * @param int $userId ID użytkownika.
-     * @param int $limit Liczba raportów na stronę.
+     * @param int $userId User ID.
+     * @param int $limit Reports per page.
      * @param int $offset Offset dla paginacji.
-     * @return array Lista raportów bitewnych.
+     * @return array Battle reports.
      */
     public function getBattleReportsForUser(int $userId, int $limit, int $offset): array
     {
@@ -1071,20 +1067,20 @@ class BattleManager
             JOIN villages tv ON br.target_village_id = tv.id
             JOIN users u_attacker ON sv.user_id = u_attacker.id
             JOIN users u_defender ON tv.user_id = u_defender.id
-            JOIN reports r ON br.report_id = r.id AND r.user_id = ? -- Łączymy z tabelą reports
+            JOIN reports r ON br.report_id = r.id AND r.user_id = ? -- Join with reports table
             WHERE sv.user_id = ? OR tv.user_id = ?
             ORDER BY br.battle_time DESC
-            LIMIT ?, ?
+            LIMIT ? OFFSET ?
         ");
-        // Bind parametry w kolejności: r.user_id, sv.user_id, tv.user_id, limit, offset
+        // Bind parameters in order: r.user_id, sv.user_id, tv.user_id, limit, offset
         $stmt->bind_param("iiiii", $userId, $userId, $userId, $limit, $offset);
         $stmt->execute();
         $result = $stmt->get_result();
 
         while ($row = $result->fetch_assoc()) {
-            // Określ, czy użytkownik był atakującym czy broniącym
+            // Determine whether the user was attacker or defender
             $row['is_attacker'] = ($row['source_user_id'] == $userId);
-            // Formatuj datę (można też zrobić w frontendzie)
+            // Format the date (could also be done in the frontend)
             $row['formatted_date'] = date('d.m.Y H:i:s', strtotime($row['created_at']));
             $reports[] = $row;
         }
@@ -1094,10 +1090,10 @@ class BattleManager
     }
 
     /**
-     * Pobiera całkowitą liczbę raportów bitewnych dla użytkownika.
+     * Fetch total number of battle reports for the user.
      *
-     * @param int $userId ID użytkownika.
-     * @return int Całkowita liczba raportów.
+     * @param int $userId User ID.
+     * @return int Total number of reports.
      */
     public function getTotalBattleReportsForUser(int $userId): int
     {

@@ -1,16 +1,16 @@
 <?php
-require 'init.php';
+require '../init.php';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') validateCSRF();
-require_once 'lib/ResearchManager.php';
+require_once '../lib/managers/ResearchManager.php';
 
 // Database connection provided by init.php context
 $researchManager = new ResearchManager($conn);
 
-// Weryfikacja zalogowania
+// Verify that the user is logged in
 if (!isset($_SESSION['user_id'])) {
     $response = [
         'success' => false,
-        'error' => 'Nie jesteś zalogowany.'
+        'error' => 'You are not logged in.'
     ];
     header('Content-Type: application/json');
     echo json_encode($response);
@@ -19,11 +19,11 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// Sprawdź, czy otrzymano ID badania do anulowania
+// Ensure we received the research queue ID to cancel
 if (!isset($_POST['research_queue_id'])) {
     $response = [
         'success' => false,
-        'error' => 'Brak ID badania do anulowania.'
+        'error' => 'Missing research ID to cancel.'
     ];
     header('Content-Type: application/json');
     echo json_encode($response);
@@ -32,9 +32,9 @@ if (!isset($_POST['research_queue_id'])) {
 
 $research_queue_id = (int) $_POST['research_queue_id'];
 
-// Sprawdź, czy badanie istnieje i należy do gracza
+// Confirm the research exists and belongs to the player
 $stmt = $conn->prepare("
-    SELECT rq.id, rq.village_id, v.user_id, rt.name_pl 
+    SELECT rq.id, rq.village_id, v.user_id, rt.name 
     FROM research_queue rq
     JOIN villages v ON rq.village_id = v.id
     JOIN research_types rt ON rq.research_type_id = rt.id
@@ -49,29 +49,29 @@ $stmt->close();
 if (!$queue_item) {
     $response = [
         'success' => false,
-        'error' => 'Nie znaleziono badania o podanym ID.'
+        'error' => 'No research found for the provided ID.'
     ];
     header('Content-Type: application/json');
     echo json_encode($response);
     exit;
 }
 
-// Sprawdź, czy badanie należy do gracza
+// Ensure the research belongs to the current user
 if ($queue_item['user_id'] != $user_id) {
     $response = [
         'success' => false,
-        'error' => 'Nie masz uprawnień do anulowania tego badania.'
+        'error' => 'You do not have permission to cancel this research.'
     ];
     header('Content-Type: application/json');
     echo json_encode($response);
     exit;
 }
 
-// Anuluj badanie i zwróć część zasobów
+// Cancel the research and refund part of the resources
 $cancel_result = $researchManager->cancelResearch($research_queue_id, $user_id);
 
 if ($cancel_result['success']) {
-    // Pobierz zaktualizowane informacje o zasobach
+    // Pull updated resource values
     $stmt = $conn->prepare("SELECT wood, clay, iron FROM villages WHERE id = ?");
     $stmt->bind_param("i", $queue_item['village_id']);
     $stmt->execute();
@@ -80,7 +80,7 @@ if ($cancel_result['success']) {
 
     $response = [
         'success' => true,
-        'message' => 'Badanie "' . $queue_item['name_pl'] . '" zostało anulowane.',
+        'message' => 'Research "' . $queue_item['name'] . '" has been cancelled.',
         'refunded' => $cancel_result['refunded'],
         'updated_resources' => $updated_resources
     ];

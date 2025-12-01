@@ -7,49 +7,49 @@ require_once __DIR__ . '/lib/functions.php';
 // If user is logged in, prepare resource display
 if (isset($_SESSION['user_id'])) {
     require_once __DIR__ . '/lib/managers/VillageManager.php';
-    require_once __DIR__ . '/lib/managers/ResourceManager.php'; // Potrzebujemy ResourceManager do produkcji
-    require_once __DIR__ . '/lib/managers/BuildingManager.php'; // Poprawiona ścieżka
-    require_once __DIR__ . '/lib/managers/BuildingConfigManager.php'; // Ta ścieżka jest poprawna
-    require_once __DIR__ . '/lib/managers/NotificationManager.php'; // Do powiadomień
+    require_once __DIR__ . '/lib/managers/ResourceManager.php'; // Needed for production calculations
+    require_once __DIR__ . '/lib/managers/BuildingManager.php'; // Correct path
+    require_once __DIR__ . '/lib/managers/BuildingConfigManager.php'; // Correct path
+    require_once __DIR__ . '/lib/managers/NotificationManager.php'; // For notifications
 
     $vm = new VillageManager($conn);
     
-    // Utworzenie instancji BuildingConfigManager i BuildingManager
+    // Instantiate building managers
     $bcm = new BuildingConfigManager($conn);
-    $bm = new BuildingManager($conn, $bcm); // BuildingManager potrzebuje połączenia i BuildingConfigManager
+    $bm = new BuildingManager($conn, $bcm); // BuildingManager needs the connection and config manager
 
-    // Utworzenie instancji ResourceManager
-    $rm = new ResourceManager($conn, $bm); // ResourceManager potrzebuje połączenia i BuildingManager
+    // Instantiate ResourceManager
+    $rm = new ResourceManager($conn, $bm); // ResourceManager needs the connection and BuildingManager
 
     // Ensure resources are up to date
     $firstVidData = $vm->getFirstVillage($_SESSION['user_id']);
     if ($firstVidData) {
         $village_id = $firstVidData['id'];
-        $vm->updateResources($village_id); // Aktualizuje surowce w bazie
+        $vm->updateResources($village_id); // Updates resources in the database
         
-        // Pobierz aktualne dane wioski PO aktualizacji surowców
-        $currentRes = $vm->getVillageInfo($village_id); // Pobiera podstawowe info
+        // Fetch the latest village data after resource update
+        $currentRes = $vm->getVillageInfo($village_id); // Basic village info
 
-        // Pobierz godzinową produkcję surowców i dodaj do $currentRes
+        // Get hourly production rates and attach to $currentRes
         if ($currentRes) {
-            $productionRates = $rm->getProductionRates($village_id); // Użyj ResourceManager::getProductionRates
+            $productionRates = $rm->getProductionRates($village_id); // Use ResourceManager::getProductionRates
             $currentRes['wood_production_per_hour'] = $productionRates['wood'] ?? 0;
             $currentRes['clay_production_per_hour'] = $productionRates['clay'] ?? 0;
             $currentRes['iron_production_per_hour'] = $productionRates['iron'] ?? 0;
         }
 
     } else {
-        // User logged in but has no village - should not happen if registration works, 
+        // User logged in but has no village - should not happen if registration works,
         // but handle defensively
         // Maybe redirect to create_village.php if not already there?
          $currentRes = null;
          $firstVidData = null;
     }
 
-    // Pobierz nieprzeczytane powiadomienia dla użytkownika
+    // Fetch unread notifications for the user
     $unread_notifications = [];
     if (isset($_SESSION['user_id'])) {
-        // Upewnij się, że Autoloader działa i klasa NotificationManager jest dostępna
+        // Ensure the autoloader works and NotificationManager is available
         $notificationManager = new NotificationManager($conn);
         $unread_notifications = $notificationManager->getNotifications($_SESSION['user_id'], true, 5);
     }
@@ -64,7 +64,7 @@ if (!isset($pageTitle)) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -79,20 +79,20 @@ if (!isset($pageTitle)) {
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     
-    <!-- Skrypty JS -->
+    <!-- JavaScript files -->
     <?php if (isset($_SESSION['user_id'])): ?>
     <script>
-        // Ustaw globalną zmienną JavaScript z ID wioski
+        // Set a global JavaScript variable with the village ID
         window.currentVillageId = <?= json_encode($firstVidData['id'] ?? null) ?>;
     </script>
     <?php endif; ?>
 
     <?php
-    // Pobierz komunikaty z sesji i przekaż do JavaScript
+    // Get messages from the session and pass them to JavaScript
     $gameMessages = [];
     if (isset($_SESSION['game_messages'])) {
         $gameMessages = $_SESSION['game_messages'];
-        unset($_SESSION['game_messages']); // Usuń komunikaty po pobraniu
+        unset($_SESSION['game_messages']); // Clear after reading
     }
     ?>
     <script>
@@ -113,14 +113,14 @@ if (!isset($pageTitle)) {
         </div>
         <nav class="main-nav">
             <?php if (isset($_SESSION['user_id'])): ?>
-                <!-- Nawigacja dla zalogowanego użytkownika -->
-                <a href="/game/game.php" class="<?= $current_page === 'game.php' ? 'active' : '' ?>"><i class="fas fa-home"></i> Przegląd</a>
-                <a href="/map/map.php" class="<?= $current_page === 'map.php' ? 'active' : '' ?>"><i class="fas fa-map"></i> Mapa</a>
-                <a href="/messages/reports.php" class="<?= $current_page === 'reports.php' ? 'active' : '' ?>"><i class="fas fa-scroll"></i> Raporty</a>
-                <a href="/messages/messages.php" class="<?= $current_page === 'messages.php' ? 'active' : '' ?>"><i class="fas fa-envelope"></i> Wiadomości</a>
-                <a href="/player/ranking.php" class="<?= $current_page === 'ranking.php' ? 'active' : '' ?>"><i class="fas fa-trophy"></i> Ranking</a>
-                <a href="/player/settings.php" class="<?= $current_page === 'settings.php' ? 'active' : '' ?>"><i class="fas fa-cog"></i> Ustawienia</a>
-                <a href="/auth/logout.php"><i class="fas fa-sign-out-alt"></i> Wyloguj</a>
+                <!-- Navigation for logged-in users -->
+                <a href="/game/game.php" class="<?= $current_page === 'game.php' ? 'active' : '' ?>"><i class="fas fa-home"></i> Overview</a>
+                <a href="/map/map.php" class="<?= $current_page === 'map.php' ? 'active' : '' ?>"><i class="fas fa-map"></i> Map</a>
+                <a href="/messages/reports.php" class="<?= $current_page === 'reports.php' ? 'active' : '' ?>"><i class="fas fa-scroll"></i> Reports</a>
+                <a href="/messages/messages.php" class="<?= $current_page === 'messages.php' ? 'active' : '' ?>"><i class="fas fa-envelope"></i> Messages</a>
+                <a href="/player/ranking.php" class="<?= $current_page === 'ranking.php' ? 'active' : '' ?>"><i class="fas fa-trophy"></i> Rankings</a>
+                <a href="/player/settings.php" class="<?= $current_page === 'settings.php' ? 'active' : '' ?>"><i class="fas fa-cog"></i> Settings</a>
+                <a href="/auth/logout.php"><i class="fas fa-sign-out-alt"></i> Log out</a>
                 
                 <div class="notifications-icon">
                     <a href="#" id="notifications-toggle">
@@ -130,10 +130,10 @@ if (!isset($pageTitle)) {
                         <?php endif; ?>
                     </a>
                     <div id="notifications-dropdown" class="dropdown-content">
-                        <h3>Powiadomienia</h3>
+                        <h3>Notifications</h3>
                         <div id="notifications-list">
                         <?php if (empty($unread_notifications)): ?>
-                            <div class="no-notifications">Brak nowych powiadomień</div>
+                            <div class="no-notifications">No new notifications</div>
                         <?php else: ?>
                             <ul class="notifications-list-items">
                                 <?php foreach ($unread_notifications as $notification): ?>
@@ -145,7 +145,7 @@ if (!isset($pageTitle)) {
                                             <div class="notification-message"><?= htmlspecialchars($notification['message']) ?></div>
                                             <div class="notification-time"><?= relativeTime(strtotime($notification['created_at'])) ?></div>
                                         </div>
-                                        <button class="mark-read-btn" data-id="<?= $notification['id'] ?>" title="Oznacz jako przeczytane">
+                                        <button class="mark-read-btn" data-id="<?= $notification['id'] ?>" title="Mark as read">
                                             <i class="fas fa-check"></i>
                                         </button>
                                     </li>
@@ -154,20 +154,20 @@ if (!isset($pageTitle)) {
                         <?php endif; ?>
                         </div>
                         <div class="notifications-footer">
-                            <a href="#" id="mark-all-read">Oznacz wszystkie jako przeczytane</a>
+                            <a href="#" id="mark-all-read">Mark all as read</a>
                         </div>
                     </div>
                 </div>
             <?php else: ?>
-                <!-- Nawigacja dla niezalogowanego użytkownika (strona główna) -->
-                <a href="/index.php" class="<?= $current_page === 'index.php' ? 'active' : '' ?>">Strona główna</a>
-                <a href="/auth/register.php" class="<?= $current_page === 'register.php' ? 'active' : '' ?>">Rejestracja</a>
-                <a href="/auth/login.php" class="<?= $current_page === 'login.php' ? 'active' : '' ?>">Logowanie</a>
+                <!-- Navigation for guests (homepage) -->
+                <a href="/index.php" class="<?= $current_page === 'index.php' ? 'active' : '' ?>">Home</a>
+                <a href="/auth/register.php" class="<?= $current_page === 'register.php' ? 'active' : '' ?>">Register</a>
+                <a href="/auth/login.php" class="<?= $current_page === 'login.php' ? 'active' : '' ?>">Log in</a>
             <?php endif; ?>
         </nav>
         <?php if (isset($_SESSION['user_id'])): ?>
             <div class="header-world">
-                Świat: <?= htmlspecialchars(getCurrentWorldName($conn)) ?>
+                World: <?= htmlspecialchars(getCurrentWorldName($conn)) ?>
             </div>
         <?php endif; ?>
     </header>

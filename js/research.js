@@ -15,7 +15,7 @@ async function fetchAndRenderResearchPanel(villageId, buildingInternalName) {
     }
 
     // Show loading indicator
-    actionContent.innerHTML = '<p>Ładowanie panelu badań...</p>';
+    actionContent.innerHTML = '<p>Loading research panel...</p>';
     actionContent.style.display = 'block';
     detailsContent.style.display = 'none'; // Hide details when showing action content
 
@@ -27,22 +27,22 @@ async function fetchAndRenderResearchPanel(villageId, buildingInternalName) {
         if (data.status === 'success' && (data.action_type === 'research' || data.action_type === 'research_advanced')) {
             const researchOptions = data.data.available_research;
             const researchQueue = data.data.research_queue;
-            const buildingName = data.data.building_name_pl;
+            const buildingName = data.data.building_name;
             const buildingLevel = data.data.building_level;
             const villageResources = data.data.current_village_resources; // Assuming this is sent
 
             // Render the research panel HTML
             let html = `
-                <h3>${buildingName} (Poziom ${buildingLevel}) - Badania</h3>
-                <p>Tutaj możesz badać nowe technologie.</p>
+                <h3>${buildingName} (Level ${buildingLevel}) - Research</h3>
+                <p>Research new technologies here.</p>
             `;
 
             // Render research queue
-            html += '<h4>Aktualne badanie:</h4>';
+            html += '<h4>Current research:</h4>';
             html += '<div id="research-queue-popup-list" class="queue-content">'
             if (researchQueue.length > 0) {
                  html += '<table class="research-queue">';
-                 html += '<tr><th>Badanie</th><th>Docelowy poziom</th><th>Pozostały czas</th><th>Akcja</th></tr>';
+                 html += '<tr><th>Research</th><th>Target level</th><th>Time remaining</th><th>Action</th></tr>';
 
                  researchQueue.forEach(item => {
                      // Assuming item includes: id, research_name, level_after, ends_at, time_remaining
@@ -50,23 +50,23 @@ async function fetchAndRenderResearchPanel(villageId, buildingInternalName) {
                          <tr data-queue-id="${item.id}">
                              <td>${item.research_name}</td>
                              <td>${item.level_after}</td>
-                             <td class="research-timer" data-ends-at="${item.finish_at}" data-start-time="${item.started_at}">${formatDuration(item.time_remaining)}</td>
-                             <td><button class="cancel-research-button" data-queue-id="${item.id}">Anuluj</button></td>
+	                             <td class="research-timer" data-ends-at="${item.finish_at}" data-start-time="${item.started_at}">${formatDuration(item.time_remaining)}</td>
+	                             <td><button class="cancel-research-button" data-queue-id="${item.id}">Cancel</button></td>
                          </tr>
                      `;
                  });
 
                  html += '</table>';
             } else {
-                html += '<p class="queue-empty">Brak badań w kolejce.</p>';
+                html += '<p class="queue-empty">No research in queue.</p>';
             }
             html += '</div>';
 
             // Render available research options
-            html += '<h4>Dostępne badania:</h4>';
+            html += '<h4>Available research:</h4>';
             if (researchOptions.length > 0) {
                 html += '<table class="research-options">';
-                html += '<tr><th>Technologia</th><th>Poziom</th><th colspan="3">Koszt</th><th>Czas</th><th>Akcja</th></tr>';
+	                html += '<tr><th>Technology</th><th>Level</th><th colspan="3">Cost</th><th>Time</th><th>Action</th></tr>';
 
                 researchOptions.forEach(research => {
                     const currentLevel = research.current_level;
@@ -76,21 +76,21 @@ async function fetchAndRenderResearchPanel(villageId, buildingInternalName) {
                     const isAtMaxLevel = currentLevel >= research.max_level;
 
                     html += `<tr data-research-id="${research.id}" class="${isAvailable && !isInProgress && !isAtMaxLevel ? '' : 'unavailable'}">`;
-                    html += `<td><strong>${research.name_pl}</strong><br><small>${research.description}</small></td>`;
+	                    html += `<td><strong>${research.name}</strong><br><small>${research.description}</small></td>`;
                     html += `<td>${currentLevel}/${research.max_level}</td>`;
 
                     if (isAtMaxLevel) {
-                        html += '<td colspan="4">Maksymalny poziom osiągnięty</td>';
-                        html += '<td>-</td>';
-                        html += '<td><button disabled>Max poziom</button></td>';
+	                        html += '<td colspan="4">Maximum level reached</td>';
+	                        html += '<td>-</td>';
+	                        html += '<td><button disabled>Max level</button></td>';
                     } else if (isInProgress) {
-                         html += '<td colspan="4">W trakcie badania</td>';
-                         html += '<td>-</td>';
-                         html += '<td><button disabled>W trakcie</button></td>';
+	                         html += '<td colspan="4">Research in progress</td>';
+	                         html += '<td>-</td>';
+	                         html += '<td><button disabled>In progress</button></td>';
                     } else if (!isAvailable) {
-                         let reason = research.disable_reason || 'Niedostępne'; // Use reason from backend
-                         html += `<td colspan="5">${reason}</td>`;
-                         html += `<td><button disabled title="${reason}">Niedostępne</button></td>`;
+	                         let reason = research.disable_reason || 'Unavailable'; // Use reason from backend
+	                         html += `<td colspan="5">${reason}</td>`;
+	                         html += `<td><button disabled title="${reason}">Unavailable</button></td>`;
                     } else { // Available to research
                          const cost = research.cost;
                          const time = research.time_seconds;
@@ -101,18 +101,18 @@ async function fetchAndRenderResearchPanel(villageId, buildingInternalName) {
                                            villageResources.clay >= cost.clay &&
                                            villageResources.iron >= cost.iron;
 
-                         html += `<td><img src="img/wood.png" title="Drewno" alt="Drewno"> ${formatNumber(cost.wood)}</td>`;
-                         html += `<td><img src="img/stone.png" title="Glina" alt="Glina"> ${formatNumber(cost.clay)}</td>`;
-                         html += `<td><img src="img/iron.png" title="Żelazo" alt="Żelazo"> ${formatNumber(cost.iron)}</td>`;
-                         html += `<td>${formatDuration(time)}</td>`;
-                         html += `<td>
-                            <form action="start_research.php" method="post" class="research-form">
-                                <input type="hidden" name="village_id" value="${villageId}">
-                                <input type="hidden" name="research_type_id" value="${research.id}">
-                                <input type="hidden" name="target_level" value="${nextLevel}">
-                                <button type="submit" class="start-research-button btn-primary" ${canAfford ? '' : 'disabled'} title="${canAfford ? '' : 'Brak surowców'}">Badaj</button>
-                            </form>
-                         </td>`;
+	                         html += `<td><img src="img/wood.png" title="Wood" alt="Wood"> ${formatNumber(cost.wood)}</td>`;
+	                         html += `<td><img src="img/stone.png" title="Clay" alt="Clay"> ${formatNumber(cost.clay)}</td>`;
+	                         html += `<td><img src="img/iron.png" title="Iron" alt="Iron"> ${formatNumber(cost.iron)}</td>`;
+	                         html += `<td>${formatDuration(time)}</td>`;
+	                         html += `<td>
+	                            <form action="start_research.php" method="post" class="research-form">
+	                                <input type="hidden" name="village_id" value="${villageId}">
+	                                <input type="hidden" name="research_type_id" value="${research.id}">
+	                                <input type="hidden" name="target_level" value="${nextLevel}">
+	                                <button type="submit" class="start-research-button btn-primary" ${canAfford ? '' : 'disabled'} title="${canAfford ? '' : 'Not enough resources'}">Research</button>
+	                            </form>
+	                         </td>`;
                     }
 
                     html += '</tr>';
@@ -120,7 +120,7 @@ async function fetchAndRenderResearchPanel(villageId, buildingInternalName) {
 
                 html += '</table>';
             } else {
-                html += '<p>Brak dostępnych badań w tym budynku.</p>';
+                html += '<p>No available research in this building.</p>';
             }
 
             actionContent.innerHTML = html;
@@ -128,16 +128,16 @@ async function fetchAndRenderResearchPanel(villageId, buildingInternalName) {
             updateResearchTimersPopup(); // Start timers for the popup queue
 
         } else if (data.error) {
-             actionContent.innerHTML = '<p>Błąd ładowania panelu badań: ' + data.error + '</p>';
-             window.toastManager.showToast(data.error, 'error');
-         } else {
-              actionContent.innerHTML = '<p>Nieprawidłowa odpowiedź serwera lub akcja nie dotyczy badań.</p>';
+            actionContent.innerHTML = '<p>Error loading research panel: ' + data.error + '</p>';
+            window.toastManager.showToast(data.error, 'error');
+        } else {
+             actionContent.innerHTML = '<p>Invalid server response or action not applicable to research.</p>';
          }
 
     } catch (error) {
-        console.error('Błąd AJAX pobierania panelu badań:', error);
-        actionContent.innerHTML = '<p>Błąd komunikacji z serwera.</p>';
-        window.toastManager.showToast('Błąd komunikacji z serwera podczas pobierania panelu badań.', 'error');
+        console.error('Research panel AJAX error:', error);
+        actionContent.innerHTML = '<p>Server communication error.</p>';
+        window.toastManager.showToast('Server communication error while fetching research panel.', 'error');
     }
 }
 
@@ -153,7 +153,7 @@ function updateResearchTimersPopup() {
         if (remainingTime > 0) {
             timerElement.textContent = formatDuration(remainingTime);
         } else {
-            timerElement.textContent = 'Zakończono!';
+            timerElement.textContent = 'Completed!';
             timerElement.classList.add('timer-finished');
             timerElement.removeAttribute('data-ends-at'); // Stop refreshing this timer
 
@@ -207,7 +207,7 @@ function setupResearchListeners(villageId, buildingInternalName) {
              const startButton = form.querySelector('.start-research-button');
              if (startButton) {
                   startButton.disabled = true;
-                  startButton.textContent = 'Badanie...'; // Show loading state
+                  startButton.textContent = 'Researching...'; // Show loading state
              }
 
             try {
@@ -236,19 +236,19 @@ function setupResearchListeners(villageId, buildingInternalName) {
                      }
 
                 } else {
-                    window.toastManager.showToast(data.message || 'Błąd rozpoczęcia badania.', 'error');
+                    window.toastManager.showToast(data.message || 'Failed to start research.', 'error');
                      if (startButton) {
                          startButton.disabled = false;
-                         startButton.textContent = 'Badaj'; // Restore button text
+                         startButton.textContent = 'Research'; // Restore button text
                     }
                 }
 
             } catch (error) {
-                console.error('Błąd AJAX rozpoczęcia badania:', error);
-                window.toastManager.showToast('Błąd komunikacji z serwera podczas rozpoczynania badania.', 'error');
+                console.error('Start research AJAX error:', error);
+                window.toastManager.showToast('Server communication error while starting research.', 'error');
                  if (startButton) {
                      startButton.disabled = false;
-                     startButton.textContent = 'Badaj'; // Restore button text
+                     startButton.textContent = 'Research'; // Restore button text
                 }
             }
         });
@@ -267,7 +267,7 @@ function setupResearchListeners(villageId, buildingInternalName) {
                 return;
             }
 
-            if (!confirm('Czy na pewno chcesz anulować to badanie? Odzyskasz 90% surowców.')) {
+            if (!confirm('Are you sure you want to cancel this research? You will recover 90% of the resources.')) {
                 return;
             }
 
@@ -300,17 +300,17 @@ function setupResearchListeners(villageId, buildingInternalName) {
                      }
 
                 } else {
-                    window.toastManager.showToast(data.error || data.message || 'Błąd anulowania badania.', 'error');
+                    window.toastManager.showToast(data.error || data.message || 'Failed to cancel research.', 'error');
                 }
 
             } catch (error) {
-                console.error('Błąd AJAX anulowania badania:', error);
-                window.toastManager.showToast('Błąd komunikacji z serwera podczas anulowania badania.', 'error');
+                console.error('Cancel research AJAX error:', error);
+                window.toastManager.showToast('Server communication error while canceling research.', 'error');
             } finally {
                  // Re-enable button regardless of success or failure
                  if (cancelButton && cancelButton.parentNode) {
                       cancelButton.disabled = false;
-                      cancelButton.textContent = 'Anuluj'; // Restore original text
+                      cancelButton.textContent = 'Cancel'; // Restore original text
                  }
             }
         });
