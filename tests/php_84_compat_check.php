@@ -48,3 +48,7 @@ $report = [
 ];
 
 echo json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL;
+
+if (!$report['meets_minimum']) {
+    exit(1);
+}

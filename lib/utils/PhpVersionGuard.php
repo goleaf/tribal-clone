@@ -8,12 +8,14 @@ declare(strict_types=1);
 final class PhpVersionGuard
 {
     private const MIN_VERSION_ID = 80400; // PHP 8.4.0
+    private const MIN_VERSION_STRING = '8.4.0';
 
     public static function assertCompatible(): void
     {
         if (PHP_VERSION_ID < self::MIN_VERSION_ID) {
             $message = sprintf(
-                'PHP 8.4+ required. Current: %s',
+                'PHP %s+ required. Current: %s',
+                self::MIN_VERSION_STRING,
                 PHP_VERSION
             );
             error_log($message);
@@ -23,5 +25,10 @@ final class PhpVersionGuard
             echo $message;
             exit;
         }
+    }
+
+    public static function isCompatible(): bool
+    {
+        return PHP_VERSION_ID >= self::MIN_VERSION_ID;
     }
 }

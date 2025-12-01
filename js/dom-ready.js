@@ -17,3 +17,10 @@ export function onDomReady(callback) {
 export function $all(selector, scope = document) {
     return Array.prototype.slice.call(scope.querySelectorAll(selector));
 }
+
+/**
+ * Legacy-friendly ready helper without modules.
+ */
+export function ready(callback) {
+    onDomReady(callback);
+}
