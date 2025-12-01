@@ -193,26 +193,41 @@ class DeltaCalculator
      */
     private function getAddedVillages(int $worldId, int $lastTimestamp, array $currentVillages): array
     {
-        $query = "SELECT v.id, v.x, v.y, v.name, v.user_id, v.points, 
-                         CASE WHEN v.user_id IS NULL THEN 1 ELSE 0 END as is_barbarian,
-                         u.tribe_id
-                  FROM villages v
-                  LEFT JOIN users u ON v.user_id = u.id
-                  WHERE v.world_id = ? AND v.created_at > ?";
-        
-        $results = $this->db->fetchAll($query, [$worldId, $lastTimestamp]);
-        
-        return array_map(function($row) {
-            return [
-                'id' => (int)$row['id'],
-                'coords' => ['x' => (int)$row['x'], 'y' => (int)$row['y']],
-                'name' => $row['name'],
-                'playerId' => $row['user_id'] ? (int)$row['user_id'] : null,
-                'tribeId' => $row['tribe_id'] ? (int)$row['tribe_id'] : null,
-                'points' => (int)$row['points'],
-                'isBarbarian' => (bool)$row['is_barbarian']
-            ];
-        }, $results);
+        try {
+            $query = "SELECT v.id, v.x, v.y, v.name, v.user_id, v.points, 
+                             CASE WHEN v.user_id IS NULL THEN 1 ELSE 0 END as is_barbarian,
+                             u.tribe_id
+                      FROM villages v
+                      LEFT JOIN users u ON v.user_id = u.id
+                      WHERE v.world_id = ? AND v.created_at > ?";
+            
+            $stmt = $this->db->prepare($query);
+            if (!$stmt) {
+                return [];
+            }
+            
+            $stmt->bind_param("ii", $worldId, $lastTimestamp);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            $results = [];
+            while ($row = $result->fetch_assoc()) {
+                $results[] = [
+                    'id' => (int)$row['id'],
+                    'coords' => ['x' => (int)$row['x'], 'y' => (int)$row['y']],
+                    'name' => $row['name'],
+                    'playerId' => $row['user_id'] ? (int)$row['user_id'] : null,
+                    'tribeId' => $row['tribe_id'] ? (int)$row['tribe_id'] : null,
+                    'points' => (int)$row['points'],
+                    'isBarbarian' => (bool)$row['is_barbarian']
+                ];
+            }
+            
+            $stmt->close();
+            return $results;
+        } catch (Exception $e) {
+            return [];
+        }
     }
     
     /**
