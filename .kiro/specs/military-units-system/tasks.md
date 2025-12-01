@@ -12,7 +12,7 @@
   - Add healer_recovery_cap column
   - _Requirements: 11.1, 11.2, 15.5_
 
-- [-] 1.3 Create database migration for unit_types table extensions
+- [x] 1.3 Create database migration for unit_types table extensions
   - Add category column for unit classification
   - Add rps_bonuses JSON column for combat modifiers
   - Add special_abilities JSON column for unit abilities
