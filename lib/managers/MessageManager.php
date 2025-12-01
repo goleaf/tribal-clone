@@ -307,6 +307,49 @@ class MessageManager
         return $success;
     }
 
+    /**
+     * Send a message from one user to another.
+     *
+     * @param int $senderId The ID of the sender.
+     * @param int $receiverId The ID of the receiver.
+     * @param string $subject The message subject.
+     * @param string $body The message body.
+     * @return array Result array with 'success' and 'message_id' or error message.
+     */
+    public function sendMessage(int $senderId, int $receiverId, string $subject, string $body): array
+    {
+        // Validate inputs
+        if (empty($subject) || empty($body)) {
+            return ['success' => false, 'message' => 'Subject and body are required.'];
+        }
+
+        if ($senderId === $receiverId) {
+            return ['success' => false, 'message' => 'Cannot send message to yourself.'];
+        }
+
+        // Insert message
+        $stmt = $this->conn->prepare(
+            "INSERT INTO messages (sender_id, receiver_id, subject, body, sent_at, is_read, is_archived, is_sender_deleted) 
+             VALUES (?, ?, ?, ?, NOW(), 0, 0, 0)"
+        );
+
+        if (!$stmt) {
+            return ['success' => false, 'message' => 'Database error: ' . $this->conn->error];
+        }
+
+        $stmt->bind_param("iiss", $senderId, $receiverId, $subject, $body);
+        
+        if ($stmt->execute()) {
+            $messageId = $this->conn->insert_id;
+            $stmt->close();
+            return ['success' => true, 'message_id' => $messageId];
+        } else {
+            $error = $stmt->error;
+            $stmt->close();
+            return ['success' => false, 'message' => 'Failed to send message: ' . $error];
+        }
+    }
+
     // Methods for actions (delete, archive, unarchive) will be added here later
 
 }

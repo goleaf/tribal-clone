@@ -1,0 +1,5 @@
+{"village_id":1,"user_id":1,"building":"clay_pit","level":2,"hq_level":1,"queue_count":1,"slot_limit":1,"status":"active","build_time":695,"metric":"enqueue","ts":1764583323,"date":"2025-12-01T10:02:03+00:00"}
+{"village_id":1,"user_id":1,"building":"farm","level":2,"hq_level":1,"queue_count":1,"slot_limit":1,"status":"active","build_time":1157,"metric":"enqueue","ts":1764583326,"date":"2025-12-01T10:02:06+00:00"}
+{"village_id":1,"user_id":1,"building":"main_building","level":2,"hq_level":1,"queue_count":1,"slot_limit":1,"status":"active","build_time":1042,"metric":"enqueue","ts":1764583570,"date":"2025-12-01T10:06:10+00:00"}
+{"village_id":1,"user_id":1,"building":"rally_point","level":1,"hq_level":1,"queue_count":1,"slot_limit":1,"status":"active","build_time":589,"metric":"enqueue","ts":1764583723,"date":"2025-12-01T10:08:43+00:00"}
+{"village_id":1,"user_id":1,"building":"hiding_place","level":1,"hq_level":1,"queue_count":1,"slot_limit":1,"status":"active","build_time":589,"metric":"enqueue","ts":1764583727,"date":"2025-12-01T10:08:47+00:00"}

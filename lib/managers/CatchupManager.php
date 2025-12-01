@@ -12,6 +12,9 @@ class CatchupManager
     public function __construct($conn)
     {
         $this->conn = $conn;
+        if (!class_exists('WorldManager')) {
+            require_once __DIR__ . '/WorldManager.php';
+        }
         $this->worldManager = new WorldManager($conn);
         $this->ensureColumns();
     }

@@ -190,7 +190,7 @@ if ($is_ajax) {
 } else {
     // If it's a standard page request (not AJAX)
     $pageTitle = 'Write a message';
-    require 'header.php';
+    require '../header.php';
     ?>
     <div id="game-container">
         <?php // Add header ?>
@@ -200,7 +200,10 @@ if ($is_ajax) {
                  <span>New message</span>
              </div>
              <?php // User section will be included by header.php if logic is there ?>
-             <?php if (isset($_SESSION['user_id']) && ($currentUserVillage = $villageManager->getFirstVillage($_SESSION['user_id']))): ?>
+             <?php 
+             require_once __DIR__ . '/../lib/managers/VillageManager.php';
+             $villageManager = new VillageManager($conn);
+             if (isset($_SESSION['user_id']) && ($currentUserVillage = $villageManager->getFirstVillage($_SESSION['user_id']))): ?>
               <div class="header-user">
                   Player: <?= htmlspecialchars($_SESSION['username']) ?><br>
                   <span class="village-name-display" data-village-id="<?= $currentUserVillage['id'] ?>"><?= htmlspecialchars($currentUserVillage['name']) ?> (<?= $currentUserVillage['x_coord'] ?>|<?= $currentUserVillage['y_coord'] ?>)</span>
@@ -214,7 +217,7 @@ if ($is_ajax) {
         </div>
     </div>
     <?php
-    require 'footer.php';
+    require '../footer.php';
 }
 
 ?>

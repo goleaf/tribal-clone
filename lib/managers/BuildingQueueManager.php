@@ -240,29 +240,55 @@ class BuildingQueueManager
             $stmt->close();
             
             if (!$item) {
+                $this->conn->rollback();
                 throw new Exception("Queue item not found.");
             }
 
-            // Idempotent guard
-            if ($item['status'] !== 'active' || strtotime($item['finish_time']) > time()) {
+            // Idempotent guard - check status and time
+            $currentStatus = $item['status'] ?? 'active';
+            if ($currentStatus === 'completed') {
+                $this->conn->rollback();
+                $this->logQueueEvent('complete_skipped', [
+                    'queue_item_id' => $queueItemId,
+                    'reason' => 'already_completed'
+                ]);
+                return ['success' => true, 'message' => 'Build already completed.', 'skipped' => true];
+            }
+            
+            if ($currentStatus !== 'active') {
                 $this->conn->rollback();
                 $this->logQueueEvent('complete_failed', [
                     'queue_item_id' => $queueItemId,
-                    'reason' => 'not_ready'
+                    'reason' => 'not_active',
+                    'status' => $currentStatus
                 ]);
-                return ['success' => false, 'message' => 'Build not ready or already completed.'];
+                return ['success' => false, 'message' => "Build is not active (status: {$currentStatus})."];
+            }
+            
+            if (strtotime($item['finish_time']) > time()) {
+                $this->conn->rollback();
+                $this->logQueueEvent('complete_failed', [
+                    'queue_item_id' => $queueItemId,
+                    'reason' => 'not_ready',
+                    'finish_time' => $item['finish_time']
+                ]);
+                return ['success' => false, 'message' => 'Build not ready yet.'];
             }
 
-            // Apply effect: increment building level
-            $stmt = $this->conn->prepare("UPDATE village_buildings SET level = level + 1 WHERE id = ? AND village_id = ?");
-            $stmt->bind_param("ii", $item['village_building_id'], $item['village_id']);
+            // Apply effect: set building level to the target level
+            $stmt = $this->conn->prepare("UPDATE village_buildings SET level = ? WHERE id = ? AND village_id = ?");
+            $stmt->bind_param("iii", $item['level'], $item['village_building_id'], $item['village_id']);
             $stmt->execute();
+            $affected = $stmt->affected_rows;
             $stmt->close();
+            
+            if ($affected === 0) {
+                throw new Exception("Failed to update building level - building not found.");
+            }
 
             // Mark as completed
-            $stmt = $this->conn->prepare("UPDATE building_queue SET status = ? WHERE id = ?");
-            $status = 'completed';
-            $stmt->bind_param("si", $status, $queueItemId);
+            $stmt = $this->conn->prepare("UPDATE building_queue SET status = 'completed' WHERE id = ?");
+            $stmt->bind_param("i", $queueItemId);
             $stmt->execute();
             $stmt->close();
 

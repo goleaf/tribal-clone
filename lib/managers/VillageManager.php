@@ -671,72 +671,98 @@ class VillageManager
 
     /**
      * Processes the building_queue, updating levels and clearing entries.
+     * Uses BuildingQueueManager for proper queue management.
      * Returns a list of completed build tasks.
      */
     public function processBuildingQueue(int $village_id): array
     {
+        require_once __DIR__ . '/BuildingQueueManager.php';
+        require_once __DIR__ . '/BuildingConfigManager.php';
+        
+        $buildingConfigManager = new BuildingConfigManager($this->conn);
+        $queueManager = new BuildingQueueManager($this->conn, $buildingConfigManager);
+        
         $completed_queue_items = [];
         
-        // Fetch completed builds from the queue
-        $stmt_check_finished = $this->conn->prepare("SELECT bq.id, bq.village_building_id, bq.level, bq.is_demolition, bq.refund_wood, bq.refund_clay, bq.refund_iron, bt.name, bt.internal_name FROM building_queue bq JOIN building_types bt ON bq.building_type_id = bt.id WHERE bq.village_id = ? AND bq.finish_time <= NOW()");
+        // Fetch completed builds from the queue (only active items that are finished)
+        $stmt_check_finished = $this->conn->prepare("
+            SELECT bq.id, bq.village_building_id, bq.level, bq.is_demolition, 
+                   bq.refund_wood, bq.refund_clay, bq.refund_iron, 
+                   bt.name, bt.internal_name 
+            FROM building_queue bq 
+            JOIN building_types bt ON bq.building_type_id = bt.id 
+            WHERE bq.village_id = ? 
+              AND bq.status = 'active' 
+              AND bq.finish_time <= NOW()
+        ");
+        
+        if (!$stmt_check_finished) {
+            error_log("Failed to prepare statement in processBuildingQueue: " . $this->conn->error);
+            return $completed_queue_items;
+        }
+        
         $stmt_check_finished->bind_param("i", $village_id);
         $stmt_check_finished->execute();
         $result_finished = $stmt_check_finished->get_result();
         
-        // Begin transaction for processing completed builds
-        $this->conn->begin_transaction();
-
-        try {
-            while ($finished_building_queue_item = $result_finished->fetch_assoc()) {
-                // Update building level in village_buildings
-                $stmt_update_vb_level = $this->conn->prepare("UPDATE village_buildings SET level = ? WHERE id = ?");
-                $stmt_update_vb_level->bind_param("ii", $finished_building_queue_item['level'], $finished_building_queue_item['village_building_id']);
-                if (!$stmt_update_vb_level->execute()) {
-                    throw new Exception("Failed to update building level after completion for village_building_id " . $finished_building_queue_item['village_building_id'] . ".");
-                }
-                $stmt_update_vb_level->close();
-
-                // Apply demolition refunds (if any)
-                if (!empty($finished_building_queue_item['is_demolition'])) {
-                    $refundWood = (int)$finished_building_queue_item['refund_wood'];
-                    $refundClay = (int)$finished_building_queue_item['refund_clay'];
-                    $refundIron = (int)$finished_building_queue_item['refund_iron'];
+        // Collect items to process
+        $itemsToProcess = [];
+        while ($row = $result_finished->fetch_assoc()) {
+            $itemsToProcess[] = $row;
+        }
+        $result_finished->free();
+        $stmt_check_finished->close();
+        
+        // Process each completed item
+        foreach ($itemsToProcess as $item) {
+            $queueItemId = (int)$item['id'];
+            
+            // Handle demolition separately (legacy support)
+            if (!empty($item['is_demolition'])) {
+                $this->conn->begin_transaction();
+                try {
+                    // Update building level
+                    $stmt_update = $this->conn->prepare("UPDATE village_buildings SET level = ? WHERE id = ?");
+                    $stmt_update->bind_param("ii", $item['level'], $item['village_building_id']);
+                    $stmt_update->execute();
+                    $stmt_update->close();
+                    
+                    // Apply refund
+                    $refundWood = (int)($item['refund_wood'] ?? 0);
+                    $refundClay = (int)($item['refund_clay'] ?? 0);
+                    $refundIron = (int)($item['refund_iron'] ?? 0);
                     if ($refundWood || $refundClay || $refundIron) {
                         $stmt_refund = $this->conn->prepare("
-                            UPDATE villages
-                            SET wood = wood + ?, clay = clay + ?, iron = iron + ?
+                            UPDATE villages 
+                            SET wood = wood + ?, clay = clay + ?, iron = iron + ? 
                             WHERE id = ?
                         ");
-                        if ($stmt_refund) {
-                            $stmt_refund->bind_param("iiii", $refundWood, $refundClay, $refundIron, $village_id);
-                            $stmt_refund->execute();
-                            $stmt_refund->close();
-                        }
+                        $stmt_refund->bind_param("iiii", $refundWood, $refundClay, $refundIron, $village_id);
+                        $stmt_refund->execute();
+                        $stmt_refund->close();
                     }
+                    
+                    // Mark as completed
+                    $stmt_complete = $this->conn->prepare("UPDATE building_queue SET status = 'completed' WHERE id = ?");
+                    $stmt_complete->bind_param("i", $queueItemId);
+                    $stmt_complete->execute();
+                    $stmt_complete->close();
+                    
+                    $this->conn->commit();
+                    $completed_queue_items[] = $item;
+                } catch (Exception $e) {
+                    $this->conn->rollback();
+                    error_log("Error processing demolition for queue item {$queueItemId}: " . $e->getMessage());
                 }
-
-                // Remove task from build queue
-                $stmt_delete_queue_item = $this->conn->prepare("DELETE FROM building_queue WHERE id = ?");
-                $stmt_delete_queue_item->bind_param("i", $finished_building_queue_item['id']);
-                if (!$stmt_delete_queue_item->execute()) {
-                     throw new Exception("Failed to remove queue task after build completion for id " . $finished_building_queue_item['id'] . ".");
+            } else {
+                // Use BuildingQueueManager for regular upgrades
+                $result = $queueManager->onBuildComplete($queueItemId);
+                if ($result['success']) {
+                    $completed_queue_items[] = $item;
+                } else {
+                    error_log("Failed to complete building queue item {$queueItemId}: " . ($result['message'] ?? 'Unknown error'));
                 }
-                $stmt_delete_queue_item->close();
-                
-                $completed_queue_items[] = $finished_building_queue_item; // Add to completed list
             }
-
-            // Commit transaction
-            $this->conn->commit();
-
-        } catch (Exception $e) {
-            // Roll back transaction on error
-            $this->conn->rollback();
-             error_log("Error in processBuildingQueue for village {$village_id}: " . $e->getMessage());
-            throw $e; // Re-throw
-        } finally {
-             $result_finished->free();
-            $stmt_check_finished->close();
         }
 
         return $completed_queue_items;
