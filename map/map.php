@@ -1466,7 +1466,9 @@ function maybeSendMapTelemetry(renderMs, droppedFramesSample = null) {
             payload_bytes: lastMapPayloadBytes || null,
             cache_hit_pct: null,
             request_rate: null,
-            dropped_frames: drops
+            dropped_frames: drops,
+            cache_status: mapCacheStatus || null,
+            fetch_ms: lastMapFetchMs ? Math.round(lastMapFetchMs) : null
         })
     }).catch(() => {
         // ignore telemetry failures
