@@ -5,6 +5,8 @@ require_once __DIR__ . '/../functions.php';
 
 class TribeManager
 {
+    private const ALLOWED_ROLES = ['leader', 'baron', 'diplomat', 'recruiter', 'member'];
+
     private $conn;
 
     public function __construct($conn)
@@ -211,6 +213,30 @@ class TribeManager
         return $invites;
     }
 
+    public function getInvitationsForTribe(int $tribeId): array
+    {
+        $stmt = $this->conn->prepare("
+            SELECT ti.*, u.username AS invited_username
+            FROM tribe_invitations ti
+            JOIN users u ON u.id = ti.invited_user_id
+            WHERE ti.tribe_id = ? AND ti.status = 'pending'
+            ORDER BY ti.created_at ASC
+        ");
+        if ($stmt === false) {
+            error_log("TribeManager::getInvitationsForTribe prepare failed: " . $this->conn->error);
+            return [];
+        }
+        $stmt->bind_param("i", $tribeId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $invites = [];
+        while ($row = $result->fetch_assoc()) {
+            $invites[] = $row;
+        }
+        $stmt->close();
+        return $invites;
+    }
+
     public function inviteUser(int $tribeId, int $inviterId, string $targetUsername): array
     {
         $targetUsername = trim($targetUsername);
@@ -284,6 +310,30 @@ class TribeManager
         }
 
         return ['success' => true, 'message' => 'Invitation sent to ' . $targetUsername];
+    }
+
+    public function cancelInvitation(int $tribeId, int $actorUserId, int $inviteId): array
+    {
+        $membership = $this->getMembership($actorUserId);
+        if (!$membership || $membership['tribe_id'] !== $tribeId || $membership['role'] !== 'leader') {
+            return ['success' => false, 'message' => 'Only the tribe leader can cancel invitations.'];
+        }
+
+        $stmt = $this->conn->prepare("UPDATE tribe_invitations SET status = 'cancelled', responded_at = CURRENT_TIMESTAMP WHERE id = ? AND tribe_id = ? AND status = 'pending'");
+        if ($stmt === false) {
+            error_log("TribeManager::cancelInvitation prepare failed: " . $this->conn->error);
+            return ['success' => false, 'message' => 'Unable to cancel invitation.'];
+        }
+        $stmt->bind_param("ii", $inviteId, $tribeId);
+        $stmt->execute();
+        $affected = $stmt->affected_rows;
+        $stmt->close();
+
+        if ($affected <= 0) {
+            return ['success' => false, 'message' => 'Invitation not found or already handled.'];
+        }
+
+        return ['success' => true, 'message' => 'Invitation cancelled.'];
     }
 
     public function respondToInvitation(int $inviteId, int $userId, string $decision): array
@@ -505,7 +555,7 @@ class TribeManager
 
     private function addMember(int $tribeId, int $userId, string $role = 'member'): array
     {
-        $role = $role === 'leader' ? 'leader' : 'member';
+        $role = $this->sanitizeRole($role);
 
         $stmt = $this->conn->prepare("INSERT INTO tribe_members (tribe_id, user_id, role) VALUES (?, ?, ?)");
         if ($stmt === false) {
@@ -536,5 +586,84 @@ class TribeManager
         $stmt->close();
 
         return (int)($row['cnt'] ?? 0);
+    }
+
+    private function sanitizeRole(string $role): string
+    {
+        $role = strtolower(trim($role));
+        return in_array($role, self::ALLOWED_ROLES, true) ? $role : 'member';
+    }
+
+    public function changeMemberRole(int $tribeId, int $actorUserId, int $targetUserId, string $newRole): array
+    {
+        $membership = $this->getMembership($actorUserId);
+        if (!$membership || $membership['tribe_id'] !== $tribeId || $membership['role'] !== 'leader') {
+            return ['success' => false, 'message' => 'Only the tribe leader can change roles.'];
+        }
+
+        $newRole = $this->sanitizeRole($newRole);
+        if ($newRole === 'leader') {
+            return ['success' => false, 'message' => 'There can be only one leader.'];
+        }
+
+        $target = $this->getMembership($targetUserId);
+        if (!$target || $target['tribe_id'] !== $tribeId) {
+            return ['success' => false, 'message' => 'Target is not in your tribe.'];
+        }
+        if ($target['role'] === 'leader') {
+            return ['success' => false, 'message' => 'You cannot change the leader role.'];
+        }
+
+        $stmt = $this->conn->prepare("UPDATE tribe_members SET role = ? WHERE tribe_id = ? AND user_id = ?");
+        if ($stmt === false) {
+            error_log("TribeManager::changeMemberRole prepare failed: " . $this->conn->error);
+            return ['success' => false, 'message' => 'Unable to update role.'];
+        }
+        $stmt->bind_param("sii", $newRole, $tribeId, $targetUserId);
+        $ok = $stmt->execute();
+        $stmt->close();
+
+        if (!$ok) {
+            return ['success' => false, 'message' => 'Unable to update role.'];
+        }
+
+        return ['success' => true, 'message' => 'Role updated to ' . ucfirst($newRole) . '.'];
+    }
+
+    public function kickMember(int $tribeId, int $actorUserId, int $targetUserId): array
+    {
+        if ($actorUserId === $targetUserId) {
+            return ['success' => false, 'message' => 'Use leave tribe instead.'];
+        }
+
+        $membership = $this->getMembership($actorUserId);
+        if (!$membership || $membership['tribe_id'] !== $tribeId || $membership['role'] !== 'leader') {
+            return ['success' => false, 'message' => 'Only the tribe leader can remove members.'];
+        }
+
+        $target = $this->getMembership($targetUserId);
+        if (!$target || $target['tribe_id'] !== $tribeId) {
+            return ['success' => false, 'message' => 'Target is not in your tribe.'];
+        }
+        if ($target['role'] === 'leader') {
+            return ['success' => false, 'message' => 'Cannot remove the leader.'];
+        }
+
+        $stmt = $this->conn->prepare("DELETE FROM tribe_members WHERE tribe_id = ? AND user_id = ?");
+        if ($stmt === false) {
+            error_log("TribeManager::kickMember prepare failed: " . $this->conn->error);
+            return ['success' => false, 'message' => 'Unable to remove member.'];
+        }
+        $stmt->bind_param("ii", $tribeId, $targetUserId);
+        $ok = $stmt->execute();
+        $stmt->close();
+
+        if (!$ok) {
+            return ['success' => false, 'message' => 'Unable to remove member.'];
+        }
+
+        $this->clearUserTribe($targetUserId);
+        $this->recalculateTribePoints($tribeId);
+        return ['success' => true, 'message' => 'Member removed from tribe.'];
     }
 }

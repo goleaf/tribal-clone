@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS tribe_members (
     id INT AUTO_INCREMENT PRIMARY KEY,
     tribe_id INT NOT NULL,
     user_id INT NOT NULL UNIQUE,
-    role ENUM('leader','member') NOT NULL DEFAULT 'member',
+    role ENUM('leader','baron','diplomat','recruiter','member') NOT NULL DEFAULT 'member',
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (tribe_id) REFERENCES tribes(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

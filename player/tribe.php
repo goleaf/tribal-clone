@@ -48,6 +48,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $decision = $_POST['decision'] ?? 'decline';
             $result = $tribeManager->respondToInvitation($inviteId, $user_id, $decision);
             break;
+        case 'update_role':
+            $tribeId = (int)($_POST['tribe_id'] ?? 0);
+            $targetUserId = (int)($_POST['target_user_id'] ?? 0);
+            $role = $_POST['role'] ?? 'member';
+            $result = $tribeManager->changeMemberRole($tribeId, $user_id, $targetUserId, $role);
+            break;
+        case 'kick_member':
+            $tribeId = (int)($_POST['tribe_id'] ?? 0);
+            $targetUserId = (int)($_POST['target_user_id'] ?? 0);
+            $result = $tribeManager->kickMember($tribeId, $user_id, $targetUserId);
+            break;
+        case 'cancel_invite':
+            $tribeId = (int)($_POST['tribe_id'] ?? 0);
+            $inviteId = (int)($_POST['invite_id'] ?? 0);
+            $result = $tribeManager->cancelInvitation($tribeId, $user_id, $inviteId);
+            break;
     }
 
     setGameMessage($result['message'] ?? 'Action processed.', $result['success'] ? 'success' : 'error');
@@ -59,6 +75,8 @@ $currentTribe = $tribeManager->getTribeForUser($user_id);
 $tribeMembers = $currentTribe ? $tribeManager->getTribeMembers((int)$currentTribe['id']) : [];
 $tribeStats = $currentTribe ? $tribeManager->getTribeStats((int)$currentTribe['id']) : ['member_count' => 0, 'village_count' => 0, 'points' => 0];
 $invitations = $tribeManager->getInvitationsForUser($user_id);
+$tribeInvites = $currentTribe ? $tribeManager->getInvitationsForTribe((int)$currentTribe['id']) : [];
+$allowedRoles = ['baron' => 'Baron (co-leader)', 'diplomat' => 'Diplomat', 'recruiter' => 'Recruiter', 'member' => 'Member'];
 
 $pageTitle = 'Tribe';
 require '../header.php';
@@ -133,6 +151,9 @@ require '../header.php';
                                 <th>Player</th>
                                 <th>Role</th>
                                 <th>Joined</th>
+                                <?php if ($currentTribe['role'] === 'leader'): ?>
+                                    <th>Actions</th>
+                                <?php endif; ?>
                             </tr>
                         </thead>
                         <tbody>
@@ -141,6 +162,33 @@ require '../header.php';
                                     <td><?= htmlspecialchars($member['username']) ?></td>
                                     <td><?= htmlspecialchars(ucfirst($member['role'])) ?></td>
                                     <td><?= htmlspecialchars(date('Y-m-d', strtotime($member['joined_at']))) ?></td>
+                                    <?php if ($currentTribe['role'] === 'leader'): ?>
+                                        <td>
+                                            <?php if ($member['role'] !== 'leader' && $member['user_id'] !== $user_id): ?>
+                                                <form method="POST" action="tribe.php" style="display:flex;gap:6px;align-items:center;">
+                                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                                                    <input type="hidden" name="action" value="update_role">
+                                                    <input type="hidden" name="tribe_id" value="<?= (int)$currentTribe['id'] ?>">
+                                                    <input type="hidden" name="target_user_id" value="<?= (int)$member['user_id'] ?>">
+                                                    <select name="role">
+                                                        <?php foreach ($allowedRoles as $key => $label): ?>
+                                                            <option value="<?= $key ?>" <?= $member['role'] === $key ? 'selected' : '' ?>><?= $label ?></option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                    <button type="submit" class="btn btn-secondary" title="Update role">Save</button>
+                                                </form>
+                                                <form method="POST" action="tribe.php" onsubmit="return confirm('Remove this member from the tribe?');" style="margin-top:4px;">
+                                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                                                    <input type="hidden" name="action" value="kick_member">
+                                                    <input type="hidden" name="tribe_id" value="<?= (int)$currentTribe['id'] ?>">
+                                                    <input type="hidden" name="target_user_id" value="<?= (int)$member['user_id'] ?>">
+                                                    <button type="submit" class="btn btn-secondary" style="background:#b23b3b;border-color:#a53030;color:#fff;">Remove</button>
+                                                </form>
+                                            <?php else: ?>
+                                                <span class="muted">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    <?php endif; ?>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -158,6 +206,40 @@ require '../header.php';
                             <input type="text" id="target_player" name="target_player" placeholder="Enter player name" required>
                             <button type="submit" class="btn btn-primary mt-2">Send invitation</button>
                         </form>
+                    </section>
+
+                    <section class="tribe-invitations" style="background:#fff;border:1px solid #e0c9a6;border-radius:10px;padding:16px;margin-top:16px;">
+                        <h3 style="margin-top:0;">Pending invitations</h3>
+                        <?php if (empty($tribeInvites)): ?>
+                            <div style="color:#7a6347;">No pending invitations.</div>
+                        <?php else: ?>
+                            <table class="ranking-table">
+                                <thead>
+                                    <tr>
+                                        <th>Player</th>
+                                        <th>Invited</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($tribeInvites as $invite): ?>
+                                        <tr>
+                                            <td><?= htmlspecialchars($invite['invited_username']) ?></td>
+                                            <td><?= htmlspecialchars(date('Y-m-d', strtotime($invite['created_at']))) ?></td>
+                                            <td>
+                                                <form method="POST" action="tribe.php">
+                                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                                                    <input type="hidden" name="action" value="cancel_invite">
+                                                    <input type="hidden" name="tribe_id" value="<?= (int)$currentTribe['id'] ?>">
+                                                    <input type="hidden" name="invite_id" value="<?= (int)$invite['id'] ?>">
+                                                    <button type="submit" class="btn btn-secondary">Cancel</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php endif; ?>
                     </section>
                 <?php endif; ?>
 

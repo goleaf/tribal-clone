@@ -220,18 +220,18 @@ require '../header.php';
                              </thead>
                              <tbody>
                                   <?php // Example loop for tribes (currently $ranking_data is empty) ?>
-                                  <?php foreach ($ranking_data as $tribe): ?>
-                                      <tr>
-                                           <td class="rank-column"><?= $tribe['rank'] ?? '-' ?></td>
-                                           <td>
-                                               <span class="tribe-tag">[<?= htmlspecialchars($tribe['tag'] ?? '') ?>]</span>
-                                               <?= htmlspecialchars($tribe['name']) ?>
-                                           </td>
-                                           <td><?= $tribe['member_count'] ?? 0 ?></td>
-                                           <td><?= $tribe['village_count'] ?? 0 ?></td>
-                                           <td><?= formatNumber($tribe['points'] ?? 0) ?></td>
-                                      </tr>
-                                  <?php endforeach; ?>
+<?php foreach ($ranking_data as $tribe): ?>
+    <tr>
+         <td class="rank-column"><?= $tribe['rank'] ?? '-' ?></td>
+         <td>
+             <span class="tribe-tag">[<?= htmlspecialchars($tribe['tag'] ?? '') ?>]</span>
+             <?= htmlspecialchars($tribe['name']) ?>
+         </td>
+         <td><?= $tribe['member_count'] ?? 0 ?></td>
+         <td><?= $tribe['village_count'] ?? 0 ?></td>
+         <td><?= formatNumber($tribe['points'] ?? 0) ?></td>
+    </tr>
+<?php endforeach; ?>
                              </tbody>
                          </table>
                           <?php if ($totalPages > 1): ?>
