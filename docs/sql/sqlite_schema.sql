@@ -103,6 +103,7 @@ CREATE TABLE IF NOT EXISTS villages (
     warehouse_capacity INTEGER DEFAULT 1000,
     population INTEGER DEFAULT 100,
     farm_capacity INTEGER DEFAULT 0,
+    loyalty INTEGER NOT NULL DEFAULT 100,
     points INTEGER DEFAULT 0,
     last_resource_update TEXT DEFAULT CURRENT_TIMESTAMP,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,

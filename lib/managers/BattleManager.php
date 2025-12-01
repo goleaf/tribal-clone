@@ -1600,6 +1600,63 @@ class BattleManager
         return 'infantry';
     }
 
+    private function villageHasLoyalty(): bool
+    {
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
+        if (function_exists('dbColumnExists')) {
+            $cached = dbColumnExists($this->conn, 'villages', 'loyalty');
+        } else {
+            $cached = false;
+        }
+        return $cached;
+    }
+
+    private function getVillageLoyalty(int $villageId): int
+    {
+        if (!$this->villageHasLoyalty()) {
+            return 100;
+        }
+        $stmt = $this->conn->prepare("SELECT loyalty FROM villages WHERE id = ? LIMIT 1");
+        if ($stmt === false) {
+            return 100;
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $res = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return isset($res['loyalty']) ? (int)$res['loyalty'] : 100;
+    }
+
+    private function updateVillageLoyalty(int $villageId, int $loyalty): void
+    {
+        if (!$this->villageHasLoyalty()) {
+            return;
+        }
+        $stmt = $this->conn->prepare("UPDATE villages SET loyalty = ? WHERE id = ?");
+        if ($stmt === false) {
+            return;
+        }
+        $stmt->bind_param("ii", $loyalty, $villageId);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    private function countUnitsByInternalName(array $remaining, array $meta, array $names): int
+    {
+        $names = array_map('strtolower', $names);
+        $count = 0;
+        foreach ($remaining as $unitTypeId => $qty) {
+            $internal = strtolower($meta[$unitTypeId]['internal_name'] ?? '');
+            if (in_array($internal, $names, true)) {
+                $count += $qty;
+            }
+        }
+        return $count;
+    }
+
     /**
      * Defense power with wall bonus and luck already baked in.
      */

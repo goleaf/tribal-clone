@@ -150,9 +150,13 @@ require '../header.php';
                                 <tr>
                                     <th class="rank-column">Rank</th>
                                     <th>Player</th>
-                                    <th>Villages</th>
-                                    <th>Population</th>
                                     <th>Points</th>
+                                    <th>24h Δ</th>
+                                    <th>7d Δ</th>
+                                    <th>30d Δ</th>
+                                    <th>Opponents defeated</th>
+                                    <th>Conquests</th>
+                                    <th>Villages</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -160,9 +164,13 @@ require '../header.php';
                                     <tr class="<?= $player['id'] == $user_id ? 'current-user' : '' ?>">
                                         <td class="rank-column"><?= $player['rank'] ?></td>
                                         <td><?= htmlspecialchars($player['username']) ?></td>
-                                        <td><?= $player['village_count'] ?></td>
-                                        <td><?= formatNumber($player['total_population']) ?></td>
                                         <td><?= formatNumber($player['points']) ?></td>
+                                        <td class="delta"><?= formatNumber($player['growth_day']) ?></td>
+                                        <td class="delta"><?= formatNumber($player['growth_week']) ?></td>
+                                        <td class="delta"><?= formatNumber($player['growth_month']) ?></td>
+                                        <td><?= formatNumber($player['opponents_defeated']) ?></td>
+                                        <td><?= formatNumber($player['conquests']) ?></td>
+                                        <td><?= $player['village_count'] ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
