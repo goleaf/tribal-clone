@@ -50,6 +50,12 @@ try {
         'train_multiplier_rng' => "REAL NOT NULL DEFAULT 1.0",
         'train_multiplier_siege' => "REAL NOT NULL DEFAULT 1.0",
         
+        // Cost multipliers by archetype
+        'cost_multiplier_inf' => "REAL NOT NULL DEFAULT 1.0",
+        'cost_multiplier_cav' => "REAL NOT NULL DEFAULT 1.0",
+        'cost_multiplier_rng' => "REAL NOT NULL DEFAULT 1.0",
+        'cost_multiplier_siege' => "REAL NOT NULL DEFAULT 1.0",
+        
         // Healer recovery cap
         'healer_recovery_cap' => "REAL NOT NULL DEFAULT 0.15",
     ];
@@ -80,6 +86,11 @@ try {
     echo "    - train_multiplier_cav (default: 1.0)\n";
     echo "    - train_multiplier_rng (default: 1.0)\n";
     echo "    - train_multiplier_siege (default: 1.0)\n";
+    echo "  Cost multipliers:\n";
+    echo "    - cost_multiplier_inf (default: 1.0)\n";
+    echo "    - cost_multiplier_cav (default: 1.0)\n";
+    echo "    - cost_multiplier_rng (default: 1.0)\n";
+    echo "    - cost_multiplier_siege (default: 1.0)\n";
     echo "  Healer settings:\n";
     echo "    - healer_recovery_cap (default: 0.15)\n";
     
