@@ -187,6 +187,7 @@
 - Track wave spacing violations and multi-wave train outcomes; alert on spikes in ERR_PROTECTED/ERR_COOLDOWN/ERR_HANDOVER_OFF.
 - Log minting/training attempts vs caps; monitor cap-hit rate and queue failures; alert on unusual cap bypass attempts.
 - Dashboard per world showing conquest attempts, captures, blocks by reason, and p95 resolver latency.
+- Control-meter worlds: log control gain/decay ticks, uptime start/completion/fail events, defender-dominance decay triggers, and resistance deltas; alert on abnormal decay rates or uptime failures.
 
 ### Conquest State Machine Prereqs (Reason Codes)
 - **Combat Win Required:** If attacker loses or draws, no allegiance drop. Reason `ERR_COMBAT_LOSS`.

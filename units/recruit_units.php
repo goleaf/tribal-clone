@@ -68,12 +68,30 @@ if (!$conn) {
 
 $unitManager = new UnitManager($conn);
 $villageManager = new VillageManager($conn);
+$buildingConfigManager = new BuildingConfigManager($conn);
+$buildingManager = new BuildingManager($conn, $buildingConfigManager);
 $seasonalEnabled = defined('FEATURE_SEASONAL_UNITS') ? (bool)FEATURE_SEASONAL_UNITS : true;
 $healerEnabled = defined('FEATURE_HEALER_ENABLED') ? (bool)FEATURE_HEALER_ENABLED : true;
 $conquestEnabled = defined('FEATURE_CONQUEST_UNIT_ENABLED') ? (bool)FEATURE_CONQUEST_UNIT_ENABLED : true;
 $seasonalUnits = ['tempest_knight', 'event_knight'];
 $healerUnits = ['war_healer', 'healer'];
 $conquestUnits = ['standard_bearer', 'envoy'];
+function getBuildingLevelByInternal(mysqli $conn, int $villageId, string $internal): int
+{
+    $stmt = $conn->prepare("
+        SELECT vb.level 
+        FROM village_buildings vb
+        JOIN building_types bt ON vb.building_type_id = bt.id
+        WHERE vb.village_id = ? AND bt.internal_name = ?
+        LIMIT 1
+    ");
+    if (!$stmt) return 0;
+    $stmt->bind_param('is', $villageId, $internal);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return (int)($row['level'] ?? 0);
+}
 
 try {
     $conn->begin_transaction();
@@ -167,6 +185,8 @@ $stmt_check_queue->execute();
     $total_clay = 0;
     $total_iron = 0;
     $units_to_recruit = [];
+    $requiredCoins = 0;
+    $requiresConquestGate = false;
     
     foreach ($recruit_data as $unit_type_id => $count) {
         $count = (int)$count;
@@ -202,6 +222,10 @@ $stmt_check_queue->execute();
         }
         if (!$conquestEnabled && in_array($internalName, $conquestUnits, true)) {
             throw new RecruitmentException('Conquest units are disabled on this world.', 'CONQUEST_DISABLED');
+        }
+        if (in_array($internalName, $conquestUnits, true)) {
+            $requiresConquestGate = true;
+            $requiredCoins += $count; // treat coins as standards/crests sink
         }
         
         // Ensure the building level is high enough

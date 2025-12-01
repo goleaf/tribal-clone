@@ -55,9 +55,20 @@ class BuildingManager {
         $inactiveHours = defined('WALL_DECAY_INACTIVE_HOURS') ? (int)WALL_DECAY_INACTIVE_HOURS : 72;
         $intervalHours = defined('WALL_DECAY_INTERVAL_HOURS') ? (int)WALL_DECAY_INTERVAL_HOURS : 24;
         $now = time();
-        $lastDecayTs = isset($village['last_wall_decay_at']) && $village['last_wall_decay_at']
-            ? strtotime($village['last_wall_decay_at'])
-            : null;
+        $lastDecayVal = $village['last_wall_decay_at'] ?? null;
+        if ($lastDecayVal === null) {
+            $stmtDecay = $this->conn->prepare("SELECT last_wall_decay_at FROM villages WHERE id = ? LIMIT 1");
+            if ($stmtDecay) {
+                $stmtDecay->bind_param("i", $villageId);
+                $stmtDecay->execute();
+                $rowDecay = $stmtDecay->get_result()->fetch_assoc();
+                $stmtDecay->close();
+                if ($rowDecay && !empty($rowDecay['last_wall_decay_at'])) {
+                    $lastDecayVal = $rowDecay['last_wall_decay_at'];
+                }
+            }
+        }
+        $lastDecayTs = $lastDecayVal ? strtotime($lastDecayVal) : null;
         if ($lastDecayTs && ($now - $lastDecayTs) < ($intervalHours * 3600)) {
             return null;
         }

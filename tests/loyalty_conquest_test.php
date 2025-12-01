@@ -11,6 +11,7 @@ define('DB_DRIVER', 'sqlite');
 require_once __DIR__ . '/../lib/Database.php';
 require_once __DIR__ . '/../lib/functions.php';
 require_once __DIR__ . '/../lib/managers/VillageManager.php';
+require_once __DIR__ . '/../lib/services/AllegianceService.php';
 
 $db = new Database(null, null, null, ':memory:');
 $conn = $db->getConnection();
@@ -114,6 +115,7 @@ foreach ($times as $i => $ts) {
 }
 
 $vm = new VillageManager($conn);
+$as = new AllegianceService();
 
 // Test 1: Capital cap with bonuses (HQ20, Wall10, garrison 200, church)
 $capCapital = $vm->getEffectiveLoyaltyCap(1);
@@ -135,3 +137,13 @@ ok($after > $before, 'Regen increases loyalty', "before={$before}, after={$after
 
 // Test 5: Regen does not exceed cap
 ok($after <= ceil($capOutpost), 'Regen clamped to cap', "after={$after}, cap={$capOutpost}");
+
+// Test 6: Anti-snipe floor prevents drop below floor when active
+[$newAlleg, $captured, $drop, $floorApplied] = $as->applyWave(15, 1, 5, true, null, true);
+ok($newAlleg === $as->getAntiSnipeSettings()['floor'], 'Anti-snipe floor enforced', "new={$newAlleg}, floor=" . $as->getAntiSnipeSettings()['floor']);
+
+// Test 7: Regen pauses during anti-snipe and clamps to 100
+$regenPaused = $as->regen(50, 3600, true);
+$regenApplied = $as->regen(95, 3600, false);
+ok($regenPaused === 50, 'Regen paused during anti-snipe', "regenPaused={$regenPaused}");
+ok($regenApplied <= 100, 'Regen clamped to 100', "regenApplied={$regenApplied}");

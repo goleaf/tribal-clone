@@ -134,7 +134,7 @@
 - [x] Watchtower/intel integration: detection radius by level, noble-bearing command flagging, and warning timers; feed into map overlays. _(spec below)_
 - [x] Hospital/wounded system (if enabled): post-battle recovery %, speed by level; consumes resources; integrates into reports. _(wounded pool + recovery scaffold added)_
 - [ ] Outpost/encampment mechanics: temporary build slots with expiry and limited training; block if hostile commands inbound; clean up on expiry.
-- [ ] Wall damage/repair: apply siege damage to wall; repair queue; optional decay if world enables wear.
+- [ ] Wall damage/repair: apply siege damage to wall; repair queue; optional decay if world enables wear. _(passive decay implemented: inactive villages tick wall level down when world flag `wall_decay_enabled` is on; repair/HP queue still TODO)_
 - [ ] UI/API: building list/grid endpoints with costs, ETA, missing resources, prerequisites; reorder if allowed; tooltips for next-level benefits.
 
 ### Wall Damage & Repair — Implementation Notes

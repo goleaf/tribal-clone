@@ -335,4 +335,27 @@ $runner->add('TradeManager blocks power-delta pushes to protected/low-point targ
     assertEquals('power_delta', $result['details']['reason'] ?? null, 'Block reason should note power_delta');
 });
 
+$runner->add('TradeManager load shedding blocks new sends when routes/offers exceed soft limit', function () {
+    $conn = new SQLiteAdapter(':memory:');
+    createEconomySchema($conn);
+    $buildingTypeMap = seedBuildingTypesForEconomy($conn);
+
+    $conn->query("INSERT INTO users (id, username, points) VALUES (1, 'sender', 2000)");
+    $conn->query("INSERT INTO users (id, username, points) VALUES (2, 'receiver', 1500)");
+    $conn->query("INSERT INTO worlds (id, name) VALUES (1, 'TradeWorld')");
+    seedVillageWithWorld($conn, 1, 1, $buildingTypeMap, ['wood' => 5000, 'clay' => 5000, 'iron' => 5000], ['market' => 3], 1, '-10 minutes');
+    seedVillageWithWorld($conn, 2, 2, $buildingTypeMap, ['wood' => 500, 'clay' => 500, 'iron' => 500], ['market' => 1], 1, '-5 minutes');
+
+    $tm = new TradeManager($conn);
+    // Insert two active routes to exceed the soft limit of 1.
+    $future = date('Y-m-d H:i:s', strtotime('+1 hour'));
+    $conn->query("INSERT INTO trade_routes (source_village_id, target_village_id, wood, clay, iron, traders_count, arrival_time) VALUES (1, 2, 100, 0, 0, 1, '{$future}')");
+    $conn->query("INSERT INTO trade_routes (source_village_id, target_village_id, wood, clay, iron, traders_count, arrival_time) VALUES (1, 2, 200, 0, 0, 1, '{$future}')");
+
+    $result = $tm->sendResources(1, 1, '500|505', ['wood' => 100]);
+    assertFalse($result['success'] ?? true, 'Overloaded trade system should reject send');
+    assertEquals(EconomyError::ERR_RATE_LIMIT, $result['code'] ?? null, 'Should return ERR_RATE_LIMIT when overloaded');
+    assertTrue(isset($result['details']['retry_after_sec']), 'Should include retry_after_sec hint');
+});
+
 $runner->run();
