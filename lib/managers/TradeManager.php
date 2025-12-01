@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 class TradeManager {
     private $conn;
+    private bool $tradeTablesEnsured = false;
+    private ?bool $tradeOffersTableExists = null;
 
     public function __construct($db_connection) {
         $this->conn = $db_connection;
+        $this->ensureTradeTables();
     }
 
     /**
@@ -71,6 +74,8 @@ class TradeManager {
      */
     public function getTraderAvailability(int $villageId): array
     {
+        $this->ensureTradeTables();
+
         $marketLevel = $this->getMarketLevel($villageId);
         $totalTraders = $this->getTraderSlots($marketLevel);
         $carryCapacity = $this->getTraderCarryCapacity();
@@ -564,6 +569,9 @@ class TradeManager {
         if ((int)$acceptingVillage['id'] === (int)$offer['source_village_id']) {
             return ['success' => false, 'message' => 'You cannot accept your own offer.'];
         }
+        if ((int)$offer['source_user_id'] === $userId) {
+            return ['success' => false, 'message' => 'You cannot accept your own offer from another village.'];
+        }
 
         // Market level check for the accepting village
         $marketLevel = $this->getMarketLevel($acceptingVillageId);
@@ -684,25 +692,34 @@ class TradeManager {
      */
     private function hasTradeOffersTable(): bool
     {
-        try {
-            if ($this->conn instanceof SQLiteAdapter) {
-                $stmt = $this->conn->prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='trade_offers'");
-                $stmt->execute();
-                $res = $stmt->get_result();
-                $exists = (bool)$res->fetch_assoc();
-                $stmt->close();
-                return $exists;
-            }
+        $this->ensureTradeTables();
 
-            $stmt = $this->conn->prepare("SHOW TABLES LIKE 'trade_offers'");
-            $stmt->execute();
-            $res = $stmt->get_result();
-            $exists = $res && $res->num_rows > 0;
-            $stmt->close();
-            return $exists;
+        if ($this->tradeOffersTableExists !== null) {
+            return $this->tradeOffersTableExists;
+        }
+
+        try {
+            if ($this->isSqlite()) {
+                $stmt = $this->conn->prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='trade_offers'");
+            } else {
+                $stmt = $this->conn->prepare("SHOW TABLES LIKE 'trade_offers'");
+            }
         } catch (Throwable $e) {
+            error_log("TradeManager::hasTradeOffersTable prepare failed: " . $e->getMessage());
             return false;
         }
+
+        if ($stmt === false) {
+            return false;
+        }
+
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $exists = $res && $res->num_rows > 0;
+        $stmt->close();
+
+        $this->tradeOffersTableExists = $exists;
+        return $exists;
     }
 
     private function getVillageByCoords(int $x, int $y): ?array
