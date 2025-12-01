@@ -243,12 +243,26 @@ class MapCacheManager
      */
     private function getUserTribeId(int $userId): ?int
     {
-        $result = $this->db->fetchOne(
-            "SELECT tribe_id FROM tribe_members WHERE user_id = ?",
-            [$userId]
-        );
-        
-        return $result ? (int)$result['tribe_id'] : null;
+        try {
+            // Check if tribe_members table exists
+            $tableExists = $this->db->fetchOne(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='tribe_members'"
+            );
+            
+            if (!$tableExists) {
+                return null;
+            }
+            
+            $result = $this->db->fetchOne(
+                "SELECT tribe_id FROM tribe_members WHERE user_id = ?",
+                [$userId]
+            );
+            
+            return $result ? (int)$result['tribe_id'] : null;
+        } catch (Exception $e) {
+            // If there's any error, return null (no tribe)
+            return null;
+        }
     }
     
     /**

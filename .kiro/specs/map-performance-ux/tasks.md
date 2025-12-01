@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Set up server-side caching infrastructure
+- [x] 1. Set up server-side caching infrastructure
   - Create cache key generation utilities for map data
   - Implement ETag generation based on data version and viewport
   - Add cache invalidation logic for command/village/diplomacy changes
