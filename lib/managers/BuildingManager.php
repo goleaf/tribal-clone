@@ -5,6 +5,7 @@ class BuildingManager {
     private $conn;
     private $buildingConfigManager;
     private $populationManager;
+    private string $wallDecayLog;
 
     public function __construct($db_connection, BuildingConfigManager $buildingConfigManager) {
         $this->conn = $db_connection;
@@ -12,6 +13,11 @@ class BuildingManager {
         
         // Lazy-load PopulationManager when needed
         $this->populationManager = null;
+        $logDir = __DIR__ . '/../../logs';
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0777, true);
+        }
+        $this->wallDecayLog = $logDir . '/wall_decay.log';
     }
     
     /**
@@ -24,6 +30,93 @@ class BuildingManager {
             $this->populationManager = new PopulationManager($this->conn);
         }
         return $this->populationManager;
+    }
+
+    /**
+     * Apply passive wall decay for inactive villages when world flag is enabled.
+     * Returns decay info array on decay, or null when no decay applied.
+     */
+    public function applyWallDecayIfNeeded(array $village, ?array $worldConfig = null): ?array
+    {
+        $villageId = (int)($village['id'] ?? 0);
+        if ($villageId <= 0) {
+            return null;
+        }
+        if (!class_exists('WorldManager')) {
+            require_once __DIR__ . '/WorldManager.php';
+        }
+        $wm = class_exists('WorldManager') ? new WorldManager($this->conn) : null;
+        $worldId = isset($village['world_id']) ? (int)$village['world_id'] : (defined('CURRENT_WORLD_ID') ? (int)CURRENT_WORLD_ID : 1);
+        $settings = $worldConfig ?? ($wm ? $wm->getSettings($worldId) : []);
+        if (empty($settings['wall_decay_enabled'])) {
+            return null;
+        }
+
+        $inactiveHours = defined('WALL_DECAY_INACTIVE_HOURS') ? (int)WALL_DECAY_INACTIVE_HOURS : 72;
+        $intervalHours = defined('WALL_DECAY_INTERVAL_HOURS') ? (int)WALL_DECAY_INTERVAL_HOURS : 24;
+        $now = time();
+        $lastDecayTs = isset($village['last_wall_decay_at']) && $village['last_wall_decay_at']
+            ? strtotime($village['last_wall_decay_at'])
+            : null;
+        if ($lastDecayTs && ($now - $lastDecayTs) < ($intervalHours * 3600)) {
+            return null;
+        }
+
+        $userId = isset($village['user_id']) ? (int)$village['user_id'] : 0;
+        $lastActivityTs = null;
+        if ($userId > 0) {
+            $stmt = $this->conn->prepare("SELECT last_activity_at FROM users WHERE id = ? LIMIT 1");
+            if ($stmt) {
+                $stmt->bind_param("i", $userId);
+                $stmt->execute();
+                $row = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+                if (!empty($row['last_activity_at'])) {
+                    $lastActivityTs = strtotime($row['last_activity_at']);
+                }
+            }
+        }
+        if ($lastActivityTs === null) {
+            $lastActivityTs = $now;
+        }
+        if (($now - $lastActivityTs) < ($inactiveHours * 3600)) {
+            return null;
+        }
+
+        $wallLevel = $this->getBuildingLevel($villageId, 'wall');
+        if ($wallLevel <= 0) {
+            return null;
+        }
+
+        $wallTypeId = $this->getBuildingTypeIdByInternal('wall');
+        if (!$wallTypeId) {
+            return null;
+        }
+
+        $newLevel = max(0, $wallLevel - 1);
+        $stmtUpdate = $this->conn->prepare("UPDATE village_buildings SET level = ? WHERE village_id = ? AND building_type_id = ?");
+        if ($stmtUpdate) {
+            $stmtUpdate->bind_param("iii", $newLevel, $villageId, $wallTypeId);
+            $stmtUpdate->execute();
+            $stmtUpdate->close();
+        }
+
+        $nowSql = date('Y-m-d H:i:s', $now);
+        $stmtVillage = $this->conn->prepare("UPDATE villages SET last_wall_decay_at = ? WHERE id = ?");
+        if ($stmtVillage) {
+            $stmtVillage->bind_param("si", $nowSql, $villageId);
+            $stmtVillage->execute();
+            $stmtVillage->close();
+        }
+
+        $this->logWallDecay($villageId, $userId, $wallLevel, $newLevel);
+
+        return [
+            'decayed' => true,
+            'from_level' => $wallLevel,
+            'to_level' => $newLevel,
+            'at' => $now
+        ];
     }
 
     /**

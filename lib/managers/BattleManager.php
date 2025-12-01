@@ -12,6 +12,7 @@ class BattleManager
     private $tribeWarManager; // Tribe war tracking
     private $intelManager; // Scouting/intel logging
     private string $conquestLogFile;
+    private string $commandAnomalyLogFile;
     private ?array $worldSettings = null;
 
     private const RANDOM_VARIANCE = 0.25; // +/- 25% luck
@@ -70,6 +71,9 @@ class BattleManager
     private const LOW_POWER_ATTACKS_PER_TRIBE_PER_DAY = 20;
     private const MIN_ATTACK_POP = 5;
     private const CONQUEST_MIN_DEFENDER_POINTS = 500; // block conquest against very low-point targets
+    private const MIN_COMMAND_INTERVAL_MS = 100; // anti-cheat: sub-100ms spam guard
+    private const DUPLICATE_COMMAND_WINDOW_SEC = 120;
+    private const MAX_COMMAND_ID_LENGTH = 64;
     private const DUP_GUARD_WINDOW_SECONDS = 10; // duplicate command replays within this window are blocked
 
     /**
