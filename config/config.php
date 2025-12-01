@@ -57,6 +57,9 @@ define('TRADER_CAPACITY', 1000); // Resources one trader can carry
 define('TRADE_POWER_DELTA_BLOCK_RATIO', 8); // Block aid when power gap exceeds this multiple for protected players
 define('TRADE_POWER_DELTA_PROTECTED_POINTS', 500); // Players below this score are protected from lopsided aid
 define('TRADE_ALT_IP_BLOCK_ENABLED', true); // If identity fingerprints match (e.g., IP hash), block trades as potential alts
+define('FEATURE_MIN_PAYLOAD_ENABLED', true); // Enforce minimum pop payload for commands
+define('MIN_ATTACK_POP', 5); // Minimum population required to send a command (unless siege is present)
+define('FEATURE_WEATHER_COMBAT_ENABLED', false); // Enable weather multipliers in combat resolution
 define('INACTIVE_TO_BARBARIAN_DAYS', 30); // Days of inactivity before a player village becomes barbarian (cron-driven)
 define('PALADIN_WEAPON', 'none'); // Options: 'none', 'bonfire', 'vascos_scepter'
 define('PALADIN_WEAPON_BONFIRE_MULTIPLIER', 1.5); // Attack/defense multiplier for catapults when Bonfire is equipped

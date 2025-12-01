@@ -118,6 +118,9 @@ Players manage villages to grow resources, build and upgrade structures, train a
 
 ## Monitoring Plan
 - Track notification dispatch latency, drop rates, and queue depth; alert on spikes post-release.
+- Monitor nudge trigger counts, snoozes, and dismiss rates; adjust cadence if spam detected.
+- Track task claims/rerolls and catch-up buff grants/expiry; alert on anomaly spikes.
+- Monitor protection/ERR_PROTECTED hits and duplicate/ERR_DUP_COMMAND rates; alert on regressions.
 - Monitor nudge trigger volume, snooze/dismiss rates, and error codes; alert on abnormal spike or spam patterns.
 - Dashboard task/challenge starts/completions/rerolls and error rates; alert on reset failures or claim anomalies.
 - Catch-up buffs: log grants/expiries and block hits; alert on double-grant attempts or expiry misses.
