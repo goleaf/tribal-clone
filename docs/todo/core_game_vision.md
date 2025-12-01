@@ -146,7 +146,7 @@
 
 ## Rollout Checklist
 - [ ] Feature flags for preset application and KPI dashboards per world type; gradual enablement.
-- [ ] CI string linting for banned terms (ip-glossary) with reports to owners; block releases on critical violations.
+- [x] CI string linting for banned terms (ip-glossary) with reports to owners; block releases on critical violations. _(workflow `.github/workflows/ip-glossary-lint.yml` now scans tracked code/docs for glossary-banned terms and fails on matches)_
 - [ ] Config/migration tests for preset defaults and KPI collection with rollback; safe defaults when absent.
 - [ ] Backward compatibility: older clients handle missing manifesto/links gracefully; new links gated by version checks.
 - [ ] Release comms: publish manifesto/pillars and preset defaults; reiterate anti-P2W stance in help/marketing.

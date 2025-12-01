@@ -1,0 +1,55 @@
+name: IP Glossary Lint
+
+on:
+  push:
+    paths:
+      - '**/*.php'
+      - '**/*.js'
+      - '**/*.ts'
+      - '**/*.tsx'
+      - '**/*.jsx'
+      - '**/*.css'
+      - '**/*.html'
+      - 'docs/**/*.md'
+      - 'docs/ip-glossary.md'
+  pull_request:
+    paths:
+      - '**/*.php'
+      - '**/*.js'
+      - '**/*.ts'
+      - '**/*.tsx'
+      - '**/*.jsx'
+      - '**/*.css'
+      - '**/*.html'
+      - 'docs/**/*.md'
+      - 'docs/ip-glossary.md'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Load glossary
+        id: glossary
+        run: |
+          if [ ! -f docs/ip-glossary.md ]; then
+            echo "::error ::docs/ip-glossary.md missing" && exit 1
+          fi
+          banned=$(grep '^-' docs/ip-glossary.md | sed 's/^- *//' | tr '\n' '|')
+          echo "banned=$banned" >> $GITHUB_OUTPUT
+
+      - name: Scan strings
+        run: |
+          banned="${{ steps.glossary.outputs.banned }}"
+          if [ -z "$banned" ]; then
+            echo "No banned terms found; skipping" && exit 0
+          fi
+          # Find banned terms in tracked files
+          matches=$(git ls-files | grep -E '\.(php|js|ts|tsx|jsx|css|html|md)$' | xargs -I{} grep -HnE "$banned" {} | grep -v 'docs/ip-glossary.md' || true)
+          if [ -n "$matches" ]; then
+            echo "$matches"
+            echo "::error ::Banned terms found. See log above." && exit 1
+          fi
+          echo "No banned terms found."

@@ -137,6 +137,7 @@
 - Event tokens expire on schedule; shop caps enforced per player/global; purchases reject with clear errors when expired/capped; event modifiers apply and surface in UI.
 - Catch-up buffs apply once per eligible player, do not stack with beginner protection, auto-expire, and rebuild packs are rate-limited; abuse blocked by thresholds.
 - Economy tests cover vault math, tax, decay/DR triggers, trade/aid caps, fair-market bounds, power-delta taxes, and event expiry/shop caps in integration scenarios.
+- Pricing guardrails clamp out-of-range cost scalers/event modifiers/conquest surcharges, emit logs/metrics, and surface applied scalers in admin UI/reports.
 
 ### Catch-Up Buffs Spec
 - **Eligibility:** Players whose account age or points are below configured thresholds relative to world age (e.g., joined >7 days after world start or below 50% of median points).

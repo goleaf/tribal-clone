@@ -81,3 +81,4 @@
 - Watch clustering/pagination adoption and error rates; alert if clustering toggles fail or payload caps hit unexpectedly.
 - Detect stale ETag/conditional responses (miss rate); alert if caching breaks or 304 rate drops sharply.
 - Canary worlds: tighter thresholds on latency/payload and fallback triggers to catch issues early.
+- Offline conflicts: track conflict count/merge outcomes after reconnect; alert if conflicts spike or client retries fail.

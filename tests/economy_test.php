@@ -22,6 +22,7 @@ require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingManager.php';
 require_once __DIR__ . '/../lib/managers/ResourceManager.php';
 require_once __DIR__ . '/../lib/managers/TradeManager.php';
+require_once __DIR__ . '/../lib/managers/BattleManager.php';
 require_once __DIR__ . '/../lib/utils/EconomyError.php';
 
 class TinyTestRunner

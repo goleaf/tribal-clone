@@ -620,7 +620,7 @@ class WorldManager
             return;
         }
 
-        $stmtInsert = $this->conn->prepare("INSERT INTO worlds (name, world_speed, troop_speed, build_speed, train_speed, research_speed, night_bonus_enabled, night_start_hour, night_end_hour, resource_production_multiplier, vault_protection_percent, resource_decay_enabled, enable_archer, enable_paladin, enable_paladin_weapons, tech_mode, tribe_member_limit, victory_type, victory_value, archetype, plunder_dr_enabled, parallel_queues_enabled, watchtower_enabled, hospital_enabled, outpost_enabled, wall_decay_enabled) VALUES ('World 1', 1.0, 1.0, 1.0, 1.0, 1.0, 0, 22, 6, 1.0, 0.0, 0, 1, 1, 1, 'normal', NULL, NULL, NULL, NULL, 1, 0, 1, 1, 0, 0)");
+        $stmtInsert = $this->conn->prepare("INSERT INTO worlds (name, world_speed, troop_speed, build_speed, train_speed, research_speed, night_bonus_enabled, night_start_hour, night_end_hour, resource_production_multiplier, vault_protection_percent, resource_decay_enabled, enable_archer, enable_paladin, enable_paladin_weapons, tech_mode, tribe_member_limit, victory_type, victory_value, archetype, plunder_dr_enabled, parallel_queues_enabled, watchtower_enabled, hospital_enabled, outpost_enabled, wall_decay_enabled, map_batching_enabled, map_clustering_enabled, map_delta_enabled, map_fallback_enabled, map_pagination_enabled, enable_nudges, enable_notifications, enable_tasks, enable_catchup_buffs) VALUES ('World 1', 1.0, 1.0, 1.0, 1.0, 1.0, 0, 22, 6, 1.0, 0.0, 0, 1, 1, 1, 'normal', NULL, NULL, NULL, NULL, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1)");
         if ($stmtInsert) {
             $stmtInsert->execute();
             $stmtInsert->close();

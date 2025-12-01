@@ -2717,6 +2717,34 @@ class BattleManager
     }
 
     /**
+     * Compute lootable resources after hiding place and vault protection are applied.
+     *
+     * @param array $resources         Raw village resources (wood/clay/iron).
+     * @param int   $hiddenPerResource Amount hidden per resource type (from hiding place).
+     * @param float $vaultPercent      Vault protection percentage (0-100).
+     * @return array{available: array<string,int>, protected: array<string,int>}
+     */
+    public static function computeLootableResources(array $resources, int $hiddenPerResource, float $vaultPercent): array
+    {
+        $vaultFactor = max(0.0, min(100.0, $vaultPercent)) / 100.0;
+        $protected = [
+            'wood' => (int)ceil(($resources['wood'] ?? 0) * $vaultFactor),
+            'clay' => (int)ceil(($resources['clay'] ?? 0) * $vaultFactor),
+            'iron' => (int)ceil(($resources['iron'] ?? 0) * $vaultFactor),
+        ];
+        $available = [
+            'wood' => max(0, ($resources['wood'] ?? 0) - max($hiddenPerResource, $protected['wood'])),
+            'clay' => max(0, ($resources['clay'] ?? 0) - max($hiddenPerResource, $protected['clay'])),
+            'iron' => max(0, ($resources['iron'] ?? 0) - max($hiddenPerResource, $protected['iron'])),
+        ];
+
+        return [
+            'available' => $available,
+            'protected' => $protected,
+        ];
+    }
+
+    /**
      * Track soft abuse flags (throttles, caps) and derive penalty multipliers.
      */
     private function logAbuseFlag(int $userId, string $code, array $meta = []): void
