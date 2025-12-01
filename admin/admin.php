@@ -210,6 +210,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'save_barb_edit' && $_SERVER['REQU
         <a href="admin.php?tab=users" class="<?php if($tab==='users')echo'active'; ?>">Players</a>
         <a href="admin.php?tab=villages" class="<?php if($tab==='villages')echo'active'; ?>">Villages</a>
         <a href="admin.php?tab=barbarians" class="<?php if($tab==='barbarians')echo'active'; ?>">Barbarians/ProBot</a>
+        <a href="achievements.php" class="">Achievements</a>
+        <a href="recalc_points.php" class="">Recalc Points</a>
     </div>
     <?php if ($tab==='users'): ?>
         <h2>Players</h2>

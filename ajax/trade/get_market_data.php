@@ -177,7 +177,15 @@ function renderMarketHtml(array $village, array $availability, array $activeTrad
                         </tr>
                         <?php foreach ($activeTrades as $trade): ?>
                             <tr>
-                                <td><?= $trade['direction'] === 'outgoing' ? 'Outgoing' : 'Incoming' ?></td>
+                                <td>
+                                    <?php
+                                    if ($trade['direction'] === 'returning') {
+                                        echo 'Returning';
+                                    } else {
+                                        echo $trade['direction'] === 'outgoing' ? 'Outgoing' : 'Incoming';
+                                    }
+                                    ?>
+                                </td>
                                 <td>W: <?= (int)$trade['wood'] ?> / C: <?= (int)$trade['clay'] ?> / I: <?= (int)$trade['iron'] ?></td>
                                 <td><?= htmlspecialchars($trade['other_village'] ?? 'Unknown') ?> (<?= htmlspecialchars($trade['other_coords'] ?? '?|?') ?>)<br><small><?= htmlspecialchars($trade['other_player'] ?? 'Unknown') ?></small></td>
                                 <td><?= (int)$trade['traders_count'] ?></td>

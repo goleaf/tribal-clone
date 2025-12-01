@@ -144,12 +144,33 @@ require '../header.php';
             </div>
             <div class="hero-actions">
                 <a class="action-chip" href="/map/map.php"><i class="fas fa-map"></i> Map</a>
-                <button class="action-chip building-action-button" data-building-internal-name="main_building" data-village-id="<?= $village_id ?>"><i class="fas fa-city"></i> Town hall</button>
+                <button
+                    class="action-chip building-action-button"
+                    data-building-internal-name="main_building"
+                    data-village-id="<?= $village_id ?>"
+                    data-building-name="<?= htmlspecialchars($buildings_data['main_building']['name'] ?? 'Town hall', ENT_QUOTES) ?>"
+                    data-building-level="<?= (int)($buildings_data['main_building']['level'] ?? 0) ?>"
+                    data-building-description="<?= htmlspecialchars($buildings_data['main_building']['description'] ?? '', ENT_QUOTES) ?>"
+                ><i class="fas fa-city"></i> Town hall</button>
                 <?php if (($buildings_data['barracks']['level'] ?? 0) > 0): ?>
-                    <button class="action-chip building-action-button" data-building-internal-name="barracks" data-village-id="<?= $village_id ?>"><i class="fas fa-shield-alt"></i> Barracks</button>
+                    <button
+                        class="action-chip building-action-button"
+                        data-building-internal-name="barracks"
+                        data-village-id="<?= $village_id ?>"
+                        data-building-name="<?= htmlspecialchars($buildings_data['barracks']['name'] ?? 'Barracks', ENT_QUOTES) ?>"
+                        data-building-level="<?= (int)($buildings_data['barracks']['level'] ?? 0) ?>"
+                        data-building-description="<?= htmlspecialchars($buildings_data['barracks']['description'] ?? '', ENT_QUOTES) ?>"
+                    ><i class="fas fa-shield-alt"></i> Barracks</button>
                 <?php endif; ?>
                 <?php if (($buildings_data['market']['level'] ?? 0) > 0): ?>
-                    <button class="action-chip building-action-button" data-building-internal-name="market" data-village-id="<?= $village_id ?>"><i class="fas fa-coins"></i> Market</button>
+                    <button
+                        class="action-chip building-action-button"
+                        data-building-internal-name="market"
+                        data-village-id="<?= $village_id ?>"
+                        data-building-name="<?= htmlspecialchars($buildings_data['market']['name'] ?? 'Market', ENT_QUOTES) ?>"
+                        data-building-level="<?= (int)($buildings_data['market']['level'] ?? 0) ?>"
+                        data-building-description="<?= htmlspecialchars($buildings_data['market']['description'] ?? '', ENT_QUOTES) ?>"
+                    ><i class="fas fa-coins"></i> Market</button>
                 <?php endif; ?>
             </div>
         </div>
@@ -418,7 +439,14 @@ require '../header.php';
                 if (in_array($building['internal_name'], $buildings_with_panels, true) && $building['level'] > 0):
                     $actionText = getBuildingActionText($building['internal_name']);
                 ?>
-                    <button class="btn btn-secondary building-action-button" data-building-internal-name="<?= htmlspecialchars($building['internal_name']) ?>" data-village-id="<?= $village_id ?>"><?= htmlspecialchars($actionText) ?></button>
+                    <button
+                        class="btn btn-secondary building-action-button"
+                        data-building-internal-name="<?= htmlspecialchars($building['internal_name']) ?>"
+                        data-village-id="<?= $village_id ?>"
+                        data-building-name="<?= htmlspecialchars($building['name'], ENT_QUOTES) ?>"
+                        data-building-level="<?= (int)$current_level ?>"
+                        data-building-description="<?= htmlspecialchars($building['description'], ENT_QUOTES) ?>"
+                    ><?= htmlspecialchars($actionText) ?></button>
                 <?php endif; ?>
             </div>
             <?php
@@ -428,7 +456,14 @@ require '../header.php';
             <div class="panel queue-card" id="building-queue">
                 <div class="panel-header">
                     <h3>Construction queue</h3>
-                    <button class="text-button building-action-button" data-building-internal-name="main_building" data-village-id="<?= $village_id ?>">Open town hall</button>
+                    <button
+                        class="text-button building-action-button"
+                        data-building-internal-name="main_building"
+                        data-village-id="<?= $village_id ?>"
+                        data-building-name="<?= htmlspecialchars($buildings_data['main_building']['name'] ?? 'Town hall', ENT_QUOTES) ?>"
+                        data-building-level="<?= (int)($buildings_data['main_building']['level'] ?? 0) ?>"
+                        data-building-description="<?= htmlspecialchars($buildings_data['main_building']['description'] ?? '', ENT_QUOTES) ?>"
+                    >Open town hall</button>
                 </div>
                 <div id="building-queue-list" class="queue-list">
                     <?php if (!empty($active_upgrades)): ?>
@@ -551,6 +586,7 @@ require '../header.php';
 <script src="/js/units.js" defer></script>
 <script src="/js/research.js" defer></script>
 <script src="/js/market.js" defer></script>
+<script src="/js/rally_point.js" defer></script>
 <script src="/js/main_building.js" defer></script>
 <script src="/js/noble.js" defer></script>
 <script src="/js/mint.js" defer></script>

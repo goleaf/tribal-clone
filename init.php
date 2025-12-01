@@ -90,6 +90,19 @@ if (isset($_SESSION['user_id'])) {
         }
     }
 
+    // Handle sitter sessions: ensure validity and auto-restore when expired
+    if (isset($_SESSION['sitter_original_user_id'], $_SESSION['sitter_expires_at'], $_SESSION['sitter_owner_id'])) {
+        require_once __DIR__ . '/lib/managers/SittingManager.php';
+        $sittingManager = new SittingManager($conn);
+        $isActive = $sittingManager->isActive((int)$_SESSION['sitter_owner_id'], (int)$_SESSION['sitter_original_user_id']);
+        $now = time();
+        if (!$isActive || $now > (int)$_SESSION['sitter_expires_at']) {
+            // Restore original user
+            $_SESSION['user_id'] = $_SESSION['sitter_original_user_id'];
+            unset($_SESSION['sitter_original_user_id'], $_SESSION['sitter_expires_at'], $_SESSION['sitter_owner_id']);
+        }
+    }
+
     // Check and process completed tasks for the user's active village
     if (isset($_SESSION['village_id'])) {
         // Ensure VillageManager is loaded (Autoloader should handle it)

@@ -1430,6 +1430,15 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
     box-shadow: var(--box-shadow-inset);
 }
 
+.world-pill {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius-small);
+    color: var(--color-text-light);
+}
+
 .mobile-nav-toggle {
     display: none;
     align-items: center;
@@ -2484,6 +2493,11 @@ button.styled-btn:hover, input[type="submit"].styled-btn:hover {
 .legend-dot.upgrading {
   box-shadow: 0 0 10px rgba(224, 176, 96, 0.8);
 }
+
+.legend-dot.relation-own { background: #2c7be5; }
+.legend-dot.relation-ally { background: #4caf50; }
+.legend-dot.relation-enemy { background: #c0392b; }
+.legend-dot.relation-barb { background: #7f8c8d; }
 
 .side-panels {
   display: flex;
@@ -4191,6 +4205,57 @@ p.no-reports {
     margin-top: var(--spacing-md);
     font-style: italic;
     color: var(--brown-dark);
+}
+
+.player-profile .plaques-section {
+    margin-top: var(--spacing-lg);
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-medium);
+    padding: var(--spacing-md);
+    box-shadow: var(--box-shadow-default);
+}
+
+.player-profile .plaques-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+.player-profile .plaque-card {
+    background: linear-gradient(135deg, #f8f1df, #f2e1c0);
+    border: 1px solid #c7a669;
+    border-radius: var(--border-radius-medium);
+    padding: var(--spacing-sm);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+}
+
+.player-profile .plaque-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #6b4a1b;
+    margin-bottom: 4px;
+}
+
+.player-profile .plaque-card h4 {
+    margin: 2px 0 4px;
+    color: #5a3a2b;
+    font-size: 1rem;
+}
+
+.player-profile .plaque-desc {
+    margin: 0;
+    color: #4a3317;
+    font-size: 0.9rem;
+}
+
+.player-profile .no-plaques,
+.player-profile .more-plaques {
+    color: #6b4a1b;
+    margin-top: var(--spacing-sm);
 }
 
 

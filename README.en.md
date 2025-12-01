@@ -154,6 +154,8 @@ The old version of the engine (VeryOldTemplate) was used as inspiration for the 
 
 Detailed documentation of the code and database can be found in the `docs/` directory (if it exists). It may contain files such as `database.md`, `api.md`, etc.
 
+- Resource & Economy Design: `docs/resource-economy-design.md`
+
 ## Further Development
 
 The project can be further developed by implementing and expanding planned functionalities, such as:

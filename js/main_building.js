@@ -11,10 +11,24 @@
 async function fetchAndRenderMainBuildingPanel(villageId, buildingInternalName) {
     const actionContent = document.getElementById('popup-action-content');
     const detailsContent = document.getElementById('building-details-content');
+    const popupOverlay = document.getElementById('popup-overlay');
+    const popupContainer = document.getElementById('building-action-popup');
+    const popupBuildingName = document.getElementById('popup-building-name');
+    const popupCurrentLevel = document.getElementById('popup-current-level');
+    const popupBuildingDescription = document.getElementById('popup-building-description');
     if (!actionContent || !detailsContent || !villageId || buildingInternalName !== 'main_building') {
         console.error('Missing elements or parameters for Main Building panel or wrong building type.');
         return;
     }
+
+    if (popupOverlay) popupOverlay.style.display = 'block';
+    if (popupContainer) {
+        popupContainer.style.display = 'flex';
+        popupContainer.classList.add('main-building-popup');
+    }
+    if (popupBuildingName) popupBuildingName.textContent = 'Town Hall';
+    if (popupCurrentLevel) popupCurrentLevel.textContent = '';
+    if (popupBuildingDescription) popupBuildingDescription.textContent = 'Manage your village construction.';
 
     // Show loading indicator
     actionContent.innerHTML = '<p>Loading Main Building panel...</p>';
@@ -93,6 +107,9 @@ async function fetchAndRenderMainBuildingPanel(villageId, buildingInternalName) 
             html += '<div class="village-management-options" style="margin-top: 20px;"><h4>Other management options:</h4><ul><li><button class="btn-secondary" id="rename-village-button">Rename village</button></li></ul></div>';
 
             actionContent.innerHTML = html;
+            if (popupBuildingName) popupBuildingName.textContent = `${villageName} — Town Hall`;
+            if (popupCurrentLevel) popupCurrentLevel.textContent = mainBuildingLevel;
+            if (popupBuildingDescription) popupBuildingDescription.textContent = 'Manage your village from the town hall.';
 
             // Setup event listeners for any buttons/forms within the panel
             setupMainBuildingListeners(villageId, buildingInternalName);

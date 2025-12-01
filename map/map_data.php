@@ -12,16 +12,32 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 $user_id = (int)$_SESSION['user_id'];
+$userTribeId = null;
+if ($user_id) {
+    $stmtUser = $conn->prepare("SELECT ally_id FROM users WHERE id = ? LIMIT 1");
+    if ($stmtUser) {
+        $stmtUser->bind_param("i", $user_id);
+        $stmtUser->execute();
+        $rowUser = $stmtUser->get_result()->fetch_assoc();
+        $stmtUser->close();
+        $userTribeId = isset($rowUser['ally_id']) ? (int)$rowUser['ally_id'] : null;
+    }
+}
+
+$worldSize = defined('WORLD_SIZE') ? (int)WORLD_SIZE : 1000;
 
 $centerX = isset($_GET['x']) ? (int)$_GET['x'] : 0;
 $centerY = isset($_GET['y']) ? (int)$_GET['y'] : 0;
 $size = isset($_GET['size']) ? max(7, min(31, (int)$_GET['size'])) : 15;
 
 $radius = (int)floor(($size - 1) / 2);
-$minX = $centerX - $radius;
-$maxX = $centerX + $radius;
-$minY = $centerY - $radius;
-$maxY = $centerY + $radius;
+$centerX = max(0, min($worldSize - 1, $centerX));
+$centerY = max(0, min($worldSize - 1, $centerY));
+
+$minX = max(0, $centerX - $radius);
+$maxX = min($worldSize - 1, $centerX + $radius);
+$minY = max(0, $centerY - $radius);
+$maxY = min($worldSize - 1, $centerY + $radius);
 $worldId = CURRENT_WORLD_ID;
 
 function isUnderBeginnerProtection(array $userRow): bool
@@ -215,5 +231,24 @@ echo json_encode([
     'players' => array_values($players),
     'allies' => $allies,
     'tribes' => $allies,
-    'world_bounds' => $worldBounds
+    'world_bounds' => $worldBounds,
+    'my_tribe_id' => $userTribeId,
+    'diplomacy' => fetchTribeDiplomacy($conn, $userTribeId)
 ]);
+
+function fetchTribeDiplomacy($conn, ?int $tribeId): array
+{
+    if (!$tribeId) return [];
+    $relations = [];
+    $stmt = $conn->prepare("SELECT target_tribe_id, status FROM tribe_diplomacy WHERE tribe_id = ?");
+    if ($stmt) {
+        $stmt->bind_param("i", $tribeId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $relations[(int)$row['target_tribe_id']] = $row['status'];
+        }
+        $stmt->close();
+    }
+    return $relations;
+}

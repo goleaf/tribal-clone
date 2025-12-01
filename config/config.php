@@ -33,6 +33,7 @@ define('UNIT_SPEED_MULTIPLIER', 1.0);       // Multiplies unit travel speed (low
 define('BUILD_SPEED_MULTIPLIER', 1.0);      // Additional multiplier applied to building times
 define('UNIT_TRAINING_MULTIPLIER', 1.0);    // Multiplier for recruitment times
 define('RESEARCH_SPEED_MULTIPLIER', 1.0);   // Multiplier for research times
+define('BUILDING_QUEUE_MAX_ITEMS', 10);     // Max active+pending items per village build queue
 
 // World configuration
 define('WORLD_SIZE', 1000);               // Square world size (e.g., 500, 1000)
@@ -54,6 +55,14 @@ define('BASE_URL', 'http://localhost:8000/'); // Change to the appropriate URL i
 define('TRADER_SPEED', 100); // Trader speed in fields per hour
 define('TRADER_CAPACITY', 1000); // Resources one trader can carry
 define('INACTIVE_TO_BARBARIAN_DAYS', 30); // Days of inactivity before a player village becomes barbarian (cron-driven)
+define('PALADIN_WEAPON', 'none'); // Options: 'none', 'bonfire', 'vascos_scepter'
+define('PALADIN_WEAPON_BONFIRE_MULTIPLIER', 1.5); // Attack/defense multiplier for catapults when Bonfire is equipped
+define('WORLD_UNIT_SPEED', 1.0); // Baseline unit speed in fields/hour
+define('COIN_COST_WOOD', 20000);
+define('COIN_COST_CLAY', 20000);
+define('COIN_COST_IRON', 20000);
+define('NOBLE_MIN_DROP', 20);
+define('NOBLE_MAX_DROP', 35);
 
 // Default world ID
 define('INITIAL_WORLD_ID', 1);

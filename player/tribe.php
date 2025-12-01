@@ -92,6 +92,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $result = $tribeProgression->upgradeSkill((int)$currentTribeForAction['id'], $skillKey, $user_id);
             break;
+        case 'set_diplomacy':
+            if (!$currentTribeForAction || !$tribeManager->roleHasPermission($currentTribeForAction['role'], 'diplomacy')) {
+                $result = ['success' => false, 'message' => 'You do not have permission to manage diplomacy.'];
+                break;
+            }
+            $status = $_POST['status'] ?? '';
+            $targetTag = $_POST['target_tag'] ?? '';
+            $targetTribe = $tribeManager->getTribeByTag($targetTag);
+            if (!$targetTribe) {
+                $result = ['success' => false, 'message' => 'Target tribe not found.'];
+                break;
+            }
+            $result = $tribeManager->setDiplomacyStatus((int)$currentTribeForAction['id'], $user_id, (int)$targetTribe['id'], $status);
+            break;
+        case 'create_thread':
+            if (!$currentTribeForAction || !$tribeManager->roleHasPermission($currentTribeForAction['role'], 'forum')) {
+                $result = ['success' => false, 'message' => 'You do not have permission to post in tribe forum.'];
+                break;
+            }
+            $title = $_POST['title'] ?? '';
+            $body = $_POST['body'] ?? '';
+            $result = $tribeManager->createThread((int)$currentTribeForAction['id'], $user_id, $title, $body);
+            break;
+        case 'add_post':
+            if (!$currentTribeForAction || !$tribeManager->roleHasPermission($currentTribeForAction['role'], 'forum')) {
+                $result = ['success' => false, 'message' => 'You do not have permission to post in tribe forum.'];
+                break;
+            }
+            $threadId = (int)($_POST['thread_id'] ?? 0);
+            $body = $_POST['body'] ?? '';
+            $result = $tribeManager->addPost((int)$currentTribeForAction['id'], $threadId, $user_id, $body);
+            break;
     }
 
     setGameMessage($result['message'] ?? 'Action processed.', $result['success'] ? 'success' : 'error');
@@ -108,6 +140,22 @@ $tribeSkills = $currentTribe ? $tribeProgression->getTribeSkills((int)$currentTr
 $tribeQuests = $currentTribe ? $tribeProgression->getTribeQuests((int)$currentTribe['id']) : [];
 $availableSkillPoints = $currentTribe ? $tribeProgression->getAvailableSkillPoints((int)$currentTribe['id']) : 0;
 $canManageRoles = $currentTribe ? $tribeManager->roleHasPermission($currentTribe['role'], 'manage_roles') : false;
+$canManageDiplomacy = $currentTribe ? $tribeManager->roleHasPermission($currentTribe['role'], 'diplomacy') : false;
+$canUseForum = $currentTribe ? $tribeManager->roleHasPermission($currentTribe['role'], 'forum') : false;
+$diplomacyRelations = $currentTribe ? $tribeManager->getDiplomacyRelations((int)$currentTribe['id']) : [];
+$threads = $currentTribe ? $tribeManager->getThreads((int)$currentTribe['id']) : [];
+$currentThreadId = null;
+$posts = [];
+if (!empty($threads)) {
+    $requestedThread = isset($_GET['thread_id']) ? (int)$_GET['thread_id'] : null;
+    $threadIds = array_column($threads, 'id');
+    if ($requestedThread && in_array($requestedThread, $threadIds, true)) {
+        $currentThreadId = $requestedThread;
+    } else {
+        $currentThreadId = $threads[0]['id'];
+    }
+    $posts = $tribeManager->getPosts($currentThreadId, (int)$currentTribe['id']);
+}
 $allowedRoles = [
     'co_leader' => 'Co-leader',
     'officer' => 'Officer',
@@ -175,6 +223,47 @@ require '../header.php';
                 <section class="tribe-description" style="background:#fff;border:1px solid #e0c9a6;border-radius:10px;padding:16px;margin-bottom:16px;">
                     <h3 style="margin-top:0;margin-bottom:8px;">Tribe description</h3>
                     <p style="margin:0;color:#4a3c30;"><?= nl2br(htmlspecialchars($currentTribe['description'] ?? 'No description set.')) ?></p>
+                </section>
+
+                <section class="tribe-diplomacy" style="background:#fff;border:1px solid #e0c9a6;border-radius:10px;padding:16px;margin-bottom:16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <h3 style="margin:0;">Diplomacy</h3>
+                        <?php if ($canManageDiplomacy): ?>
+                            <form method="POST" action="tribe.php" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                                <input type="hidden" name="action" value="set_diplomacy">
+                                <input type="text" name="target_tag" placeholder="TAG" maxlength="12" style="width:80px;text-transform:uppercase;" required>
+                                <select name="status">
+                                    <option value="ally">Ally</option>
+                                    <option value="nap">NAP</option>
+                                    <option value="enemy">Enemy</option>
+                                </select>
+                                <button type="submit" class="btn btn-secondary">Set</button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                    <?php if (!empty($diplomacyRelations)): ?>
+                        <table class="ranking-table">
+                            <thead>
+                                <tr>
+                                    <th>Tribe</th>
+                                    <th>Status</th>
+                                    <th>Since</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($diplomacyRelations as $rel): ?>
+                                    <tr>
+                                        <td>[<?= htmlspecialchars($rel['tag'] ?? '?') ?>] <?= htmlspecialchars($rel['name'] ?? 'Unknown') ?></td>
+                                        <td><?= htmlspecialchars(ucfirst($rel['status'])) ?></td>
+                                        <td><?= htmlspecialchars(date('Y-m-d', strtotime($rel['created_at']))) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php else: ?>
+                        <p style="margin:0;color:#7a6347;">No diplomacy set.</p>
+                    <?php endif; ?>
                 </section>
 
                 <section class="tribe-progression" style="background:#fff;border:1px solid #e0c9a6;border-radius:10px;padding:16px;margin-bottom:16px;">
@@ -331,6 +420,66 @@ require '../header.php';
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                </section>
+
+                <section class="tribe-forum" style="background:#fff;border:1px solid #e0c9a6;border-radius:10px;padding:16px;margin-bottom:16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
+                        <h3 style="margin:0;">Tribe forum</h3>
+                        <?php if ($canUseForum): ?>
+                            <form method="POST" action="tribe.php" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                                <input type="hidden" name="action" value="create_thread">
+                                <input type="text" name="title" placeholder="Thread title" required>
+                                <input type="text" name="body" placeholder="First post" required>
+                                <button type="submit" class="btn btn-secondary">Create</button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                    <div style="display:grid;grid-template-columns:280px 1fr;gap:12px;">
+                        <div style="border:1px solid #e0c9a6;border-radius:10px;padding:10px;background:#fff9f1;">
+                            <div style="font-weight:700;color:#4a3c30;margin-bottom:8px;">Threads</div>
+                            <?php if (empty($threads)): ?>
+                                <p style="margin:0;color:#7a6347;">No threads yet.</p>
+                            <?php else: ?>
+                                <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;">
+                                    <?php foreach ($threads as $thread): ?>
+                                        <li>
+                                            <a href="tribe.php?thread_id=<?= (int)$thread['id'] ?>" style="color:#8d5c2c;text-decoration:none;<?= $currentThreadId === $thread['id'] ? 'font-weight:700;' : '' ?>">
+                                                <?= htmlspecialchars($thread['title']) ?> <span style="font-size:12px;color:#7a6347;">by <?= htmlspecialchars($thread['author_username'] ?? 'Unknown') ?></span>
+                                            </a>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php endif; ?>
+                        </div>
+                        <div style="border:1px solid #e0c9a6;border-radius:10px;padding:10px;background:#fff;">
+                            <?php if ($currentThreadId && !empty($posts)): ?>
+                                <div style="font-weight:700;color:#4a3c30;margin-bottom:8px;">Posts</div>
+                                <div style="display:flex;flex-direction:column;gap:10px;">
+                                    <?php foreach ($posts as $post): ?>
+                                        <div style="border:1px solid #f1e4cd;border-radius:8px;padding:8px;background:#fff9f1;">
+                                            <div style="font-size:12px;color:#7a6347;"><?= htmlspecialchars($post['author_username'] ?? 'Unknown') ?> · <?= htmlspecialchars(date('Y-m-d H:i', strtotime($post['created_at']))) ?></div>
+                                            <div style="color:#4a3c30;"><?= nl2br(htmlspecialchars($post['body'])) ?></div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php elseif ($currentThreadId): ?>
+                                <p style="margin:0;color:#7a6347;">No posts yet.</p>
+                            <?php else: ?>
+                                <p style="margin:0;color:#7a6347;">Select a thread to view posts.</p>
+                            <?php endif; ?>
+
+                            <?php if ($canUseForum && $currentThreadId): ?>
+                                <form method="POST" action="tribe.php" style="margin-top:12px;display:flex;gap:8px;flex-direction:column;">
+                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                                    <input type="hidden" name="action" value="add_post">
+                                    <input type="hidden" name="thread_id" value="<?= (int)$currentThreadId ?>">
+                                    <textarea name="body" rows="3" placeholder="Write a reply..." required></textarea>
+                                    <button type="submit" class="btn btn-secondary">Post reply</button>
+                                </form>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                 </section>
 
                 <?php if ($currentTribe['role'] === 'leader'): ?>

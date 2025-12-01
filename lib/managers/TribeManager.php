@@ -13,6 +13,7 @@ class TribeManager
         'baron' => 'co_leader',
         'diplomat' => 'officer',
         'recruiter' => 'officer',
+        'moderator' => 'officer',
     ];
     // Values persisted to legacy DB enum columns.
     private const ROLE_DB_MAP = [
@@ -26,6 +27,7 @@ class TribeManager
         'invite' => ['leader', 'co_leader', 'officer'],
         'diplomacy' => ['leader', 'co_leader'],
         'forum' => ['leader', 'co_leader', 'officer', 'member'],
+        'forum_admin' => ['leader', 'co_leader'],
         'manage_roles' => ['leader', 'co_leader'],
     ];
 
@@ -51,11 +53,106 @@ class TribeManager
         return self::ROLE_DB_MAP[$canonical] ?? 'member';
     }
 
+    private function ensureExtrasTables(): void
+    {
+        // Best-effort creation; errors are logged by SQLiteAdapter if any.
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS tribe_diplomacy (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tribe_id INTEGER NOT NULL,
+                target_tribe_id INTEGER NOT NULL,
+                status TEXT NOT NULL,
+                created_by INTEGER NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(tribe_id, target_tribe_id)
+            )
+        ");
+
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS tribe_forum_threads (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tribe_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                author_id INTEGER NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        ");
+
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS tribe_forum_posts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                thread_id INTEGER NOT NULL,
+                author_id INTEGER NOT NULL,
+                body TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        ");
+
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS tribe_applications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tribe_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                message TEXT DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'pending',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                responded_at TEXT DEFAULT NULL,
+                UNIQUE(tribe_id, user_id)
+            )
+        ");
+
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS tribe_activity_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tribe_id INTEGER NOT NULL,
+                actor_user_id INTEGER NOT NULL,
+                action TEXT NOT NULL,
+                meta TEXT DEFAULT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        ");
+    }
+
     public function roleHasPermission(string $role, string $permission): bool
     {
         $role = $this->canonicalizeRole($role);
         $allowed = self::PERMISSIONS[$permission] ?? [];
         return in_array($role, $allowed, true);
+    }
+
+    private function upsertDiplomacy(int $tribeId, int $targetTribeId, string $status, int $actorUserId): bool
+    {
+        $this->ensureExtrasTables();
+
+        $check = $this->conn->prepare("SELECT id FROM tribe_diplomacy WHERE tribe_id = ? AND target_tribe_id = ? LIMIT 1");
+        if ($check === false) {
+            return false;
+        }
+        $check->bind_param("ii", $tribeId, $targetTribeId);
+        $check->execute();
+        $res = $check->get_result();
+        $row = $res ? $res->fetch_assoc() : null;
+        $check->close();
+
+        if ($row) {
+            $stmt = $this->conn->prepare("UPDATE tribe_diplomacy SET status = ?, created_by = ?, created_at = CURRENT_TIMESTAMP WHERE tribe_id = ? AND target_tribe_id = ?");
+            if ($stmt === false) {
+                return false;
+            }
+            $stmt->bind_param("siii", $status, $actorUserId, $tribeId, $targetTribeId);
+            $ok = $stmt->execute();
+            $stmt->close();
+            return $ok;
+        }
+
+        $stmt = $this->conn->prepare("INSERT INTO tribe_diplomacy (tribe_id, target_tribe_id, status, created_by) VALUES (?, ?, ?, ?)");
+        if ($stmt === false) {
+            return false;
+        }
+        $stmt->bind_param("iisi", $tribeId, $targetTribeId, $status, $actorUserId);
+        $ok = $stmt->execute();
+        $stmt->close();
+        return $ok;
     }
 
     public function createTribe(int $founderId, string $name, string $tag, string $description = '', string $internalText = ''): array
@@ -173,6 +270,24 @@ class TribeManager
         $stmt->close();
 
         return $tribe ?: null;
+    }
+
+    public function getTribeByTag(string $tag): ?array
+    {
+        $tag = strtoupper(trim($tag));
+        if ($tag === '') {
+            return null;
+        }
+        $stmt = $this->conn->prepare("SELECT * FROM tribes WHERE tag = ? LIMIT 1");
+        if ($stmt === false) {
+            return null;
+        }
+        $stmt->bind_param("s", $tag);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = $res ? $res->fetch_assoc() : null;
+        $stmt->close();
+        return $row ?: null;
     }
 
     public function getTribeMembers(int $tribeId): array
@@ -352,6 +467,7 @@ class TribeManager
             $insert->close();
         }
 
+        $this->logActivity($tribeId, $inviterId, 'invite_sent', ['target_username' => $targetUsername]);
         return ['success' => true, 'message' => 'Invitation sent to ' . $targetUsername];
     }
 
@@ -416,6 +532,7 @@ class TribeManager
             $update->bind_param("i", $inviteId);
             $update->execute();
             $update->close();
+            $this->logActivity((int)$invite['tribe_id'], $userId, 'invite_declined', ['invite_id' => $inviteId]);
             return ['success' => true, 'message' => 'Invitation declined.'];
         }
 
@@ -448,6 +565,7 @@ class TribeManager
 
         $this->recalculateTribePoints((int)$invite['tribe_id']);
 
+        $this->logActivity((int)$invite['tribe_id'], $userId, 'invite_accepted', ['invite_id' => $inviteId]);
         return ['success' => true, 'message' => 'You have joined ' . $invite['tribe_name'] . '.'];
     }
 
@@ -666,7 +784,13 @@ class TribeManager
 
     private function getMembership(int $userId): ?array
     {
-        $stmt = $this->conn->prepare("SELECT tribe_id, role FROM tribe_members WHERE user_id = ? LIMIT 1");
+        $stmt = $this->conn->prepare("
+            SELECT tm.tribe_id, tm.role, t.world_id 
+            FROM tribe_members tm 
+            JOIN tribes t ON tm.tribe_id = t.id
+            WHERE tm.user_id = ?
+            LIMIT 1
+        ");
         if ($stmt === false) {
             error_log("TribeManager::getMembership prepare failed: " . $this->conn->error);
             return null;
@@ -684,10 +808,17 @@ class TribeManager
         return $row ?: null;
     }
 
+    public function getMembershipPublic(int $userId): ?array
+    {
+        return $this->getMembership($userId);
+    }
+
     private function addMemberInternal(int $tribeId, int $userId, string $role): array
     {
-        $limit = defined('TRIBE_MEMBER_LIMIT') ? (int)TRIBE_MEMBER_LIMIT : 0;
-        if ($limit > 0) {
+        // Enforce per-world member limit if set
+        $worldManager = class_exists('WorldManager') ? new WorldManager($this->conn) : null;
+        $limit = $worldManager ? $worldManager->getTribeLimit() : null;
+        if ($limit !== null && $limit > 0) {
             $stmtCount = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM tribe_members WHERE tribe_id = ?");
             if ($stmtCount) {
                 $stmtCount->bind_param("i", $tribeId);
@@ -695,7 +826,7 @@ class TribeManager
                 $row = $stmtCount->get_result()->fetch_assoc();
                 $stmtCount->close();
                 if (($row['cnt'] ?? 0) >= $limit) {
-                    return ['success' => false, 'message' => 'Tribe member limit reached.'];
+                    return ['success' => false, 'message' => 'Tribe member limit reached for this world.'];
                 }
             }
         }
@@ -709,7 +840,19 @@ class TribeManager
         }
 
         $dbRole = $this->encodeRoleForDb($role);
-        $stmt = $this->conn->prepare("INSERT INTO tribe_members (tribe_id, user_id, role, joined_at) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE role = VALUES(role)");
+        // Try update first
+        $stmtUpdate = $this->conn->prepare("UPDATE tribe_members SET role = ? WHERE tribe_id = ? AND user_id = ?");
+        if ($stmtUpdate) {
+            $stmtUpdate->bind_param("sii", $dbRole, $tribeId, $userId);
+            $stmtUpdate->execute();
+            $affected = $stmtUpdate->affected_rows;
+            $stmtUpdate->close();
+            if ($affected > 0) {
+                return ['success' => true];
+            }
+        }
+
+        $stmt = $this->conn->prepare("INSERT INTO tribe_members (tribe_id, user_id, role, joined_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)");
         if (!$stmt) {
             return ['success' => false, 'message' => 'Unable to add member.'];
         }
@@ -762,38 +905,21 @@ class TribeManager
             return ['success' => false, 'message' => 'You do not have permission to manage diplomacy.'];
         }
 
-        // Upsert symmetric relation
-        $stmt = $this->conn->prepare("
-            INSERT INTO tribe_diplomacy (tribe_id, target_tribe_id, status, created_by) 
-            VALUES (?, ?, ?, ?) 
-            ON DUPLICATE KEY UPDATE status = VALUES(status), created_by = VALUES(created_by), created_at = CURRENT_TIMESTAMP
-        ");
-        if ($stmt === false) {
-            error_log("TribeManager::setDiplomacyStatus upsert failed: " . $this->conn->error);
-            return ['success' => false, 'message' => 'Unable to update diplomacy.'];
-        }
-        $stmt->bind_param("iisi", $tribeId, $targetTribeId, $status, $actorUserId);
-        $ok1 = $stmt->execute();
-        $stmt->close();
+        $ok1 = $this->upsertDiplomacy($tribeId, $targetTribeId, $status, $actorUserId);
+        $ok2 = $this->upsertDiplomacy($targetTribeId, $tribeId, $status, $actorUserId);
 
-        // Mirror relation
-        $stmt2 = $this->conn->prepare("
-            INSERT INTO tribe_diplomacy (tribe_id, target_tribe_id, status, created_by) 
-            VALUES (?, ?, ?, ?) 
-            ON DUPLICATE KEY UPDATE status = VALUES(status), created_by = VALUES(created_by), created_at = CURRENT_TIMESTAMP
-        ");
-        if ($stmt2 !== false) {
-            $stmt2->bind_param("iisi", $targetTribeId, $tribeId, $status, $actorUserId);
-            $stmt2->execute();
-            $stmt2->close();
-        }
-
-        return $ok1 ? ['success' => true, 'message' => 'Diplomacy updated.'] : ['success' => false, 'message' => 'Unable to update diplomacy.'];
+        return ($ok1 && $ok2) ? ['success' => true, 'message' => 'Diplomacy updated.'] : ['success' => false, 'message' => 'Unable to update diplomacy.'];
     }
 
     public function getDiplomacyRelations(int $tribeId): array
     {
-        $stmt = $this->conn->prepare("SELECT target_tribe_id, status, created_at FROM tribe_diplomacy WHERE tribe_id = ?");
+        $this->ensureExtrasTables();
+        $stmt = $this->conn->prepare("
+            SELECT td.target_tribe_id, td.status, td.created_at, t.name, t.tag
+            FROM tribe_diplomacy td
+            LEFT JOIN tribes t ON t.id = td.target_tribe_id
+            WHERE td.tribe_id = ?
+        ");
         if ($stmt === false) {
             return [];
         }
@@ -811,6 +937,7 @@ class TribeManager
     // Tribe forum (simple private board)
     public function createThread(int $tribeId, int $authorId, string $title, string $body): array
     {
+        $this->ensureExtrasTables();
         $title = trim($title);
         $body = trim($body);
         if ($title === '' || $body === '') {
@@ -845,6 +972,7 @@ class TribeManager
 
     public function addPost(int $tribeId, int $threadId, int $authorId, string $body): array
     {
+        $this->ensureExtrasTables();
         $body = trim($body);
         if ($body === '') {
             return ['success' => false, 'message' => 'Post body is required.'];
@@ -876,13 +1004,15 @@ class TribeManager
         }
         $stmt->bind_param("iis", $threadId, $authorId, $body);
         $ok = $stmt->execute();
+        $postId = $stmt->insert_id;
         $stmt->close();
 
-        return $ok ? ['success' => true] : ['success' => false, 'message' => 'Unable to add post.'];
+        return $ok ? ['success' => true, 'post_id' => $postId] : ['success' => false, 'message' => 'Unable to add post.'];
     }
 
     public function getThreads(int $tribeId): array
     {
+        $this->ensureExtrasTables();
         $stmt = $this->conn->prepare("
             SELECT t.id, t.title, t.author_id, u.username as author_username, t.created_at
             FROM tribe_forum_threads t
@@ -903,6 +1033,7 @@ class TribeManager
 
     public function getPosts(int $threadId, int $tribeId): array
     {
+        $this->ensureExtrasTables();
         $stmt = $this->conn->prepare("
             SELECT p.id, p.author_id, u.username as author_username, p.body, p.created_at
             FROM tribe_forum_posts p
@@ -920,5 +1051,143 @@ class TribeManager
         $posts = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
         $stmt->close();
         return $posts;
+    }
+
+    // Applications
+    public function submitApplication(int $userId, int $tribeId, string $message = ''): array
+    {
+        $this->ensureExtrasTables();
+        if ($this->getTribeForUser($userId)) {
+            return ['success' => false, 'message' => 'You are already in a tribe.'];
+        }
+        $message = trim($message);
+        $stmt = $this->conn->prepare("
+            INSERT INTO tribe_applications (tribe_id, user_id, message, status)
+            VALUES (?, ?, ?, 'pending')
+            ON CONFLICT(tribe_id, user_id) DO UPDATE SET message=excluded.message, status='pending', created_at=CURRENT_TIMESTAMP, responded_at=NULL
+        ");
+        if ($stmt === false) {
+            return ['success' => false, 'message' => 'Unable to apply.'];
+        }
+        $stmt->bind_param("iis", $tribeId, $userId, $message);
+        $ok = $stmt->execute();
+        $stmt->close();
+        if ($ok) {
+            $this->logActivity($tribeId, $userId, 'application_submitted', ['message' => $message]);
+            return ['success' => true, 'message' => 'Application submitted.'];
+        }
+        return ['success' => false, 'message' => 'Unable to apply.'];
+    }
+
+    public function getApplications(int $tribeId): array
+    {
+        $this->ensureExtrasTables();
+        $stmt = $this->conn->prepare("
+            SELECT ta.*, u.username
+            FROM tribe_applications ta
+            JOIN users u ON u.id = ta.user_id
+            WHERE ta.tribe_id = ? AND ta.status = 'pending'
+            ORDER BY ta.created_at ASC
+        ");
+        if ($stmt === false) return [];
+        $stmt->bind_param("i", $tribeId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $rows = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+        $stmt->close();
+        return $rows;
+    }
+
+    public function respondToApplication(int $tribeId, int $actorUserId, int $applicationId, string $decision): array
+    {
+        $this->ensureExtrasTables();
+        $decision = strtolower($decision);
+        if (!in_array($decision, ['accept', 'decline'], true)) {
+            return ['success' => false, 'message' => 'Invalid decision.'];
+        }
+        $membership = $this->getMembership($actorUserId);
+        if (!$membership || $membership['tribe_id'] !== $tribeId || !$this->roleHasPermission($membership['role'], 'invite')) {
+            return ['success' => false, 'message' => 'No permission to manage applications.'];
+        }
+
+        $stmt = $this->conn->prepare("
+            SELECT ta.*, u.username
+            FROM tribe_applications ta
+            JOIN users u ON u.id = ta.user_id
+            WHERE ta.id = ? AND ta.tribe_id = ? AND ta.status = 'pending'
+            LIMIT 1
+        ");
+        if ($stmt === false) {
+            return ['success' => false, 'message' => 'Application not found.'];
+        }
+        $stmt->bind_param("ii", $applicationId, $tribeId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$row) {
+            return ['success' => false, 'message' => 'Application not found or already handled.'];
+        }
+
+        if ($decision === 'decline') {
+            $up = $this->conn->prepare("UPDATE tribe_applications SET status='declined', responded_at=CURRENT_TIMESTAMP WHERE id=?");
+            if ($up) {
+                $up->bind_param("i", $applicationId);
+                $up->execute();
+                $up->close();
+            }
+            $this->logActivity($tribeId, $actorUserId, 'application_declined', ['app_id' => $applicationId, 'user_id' => $row['user_id']]);
+            return ['success' => true, 'message' => 'Application declined.'];
+        }
+
+        // accept
+        if ($this->getTribeForUser((int)$row['user_id'])) {
+            return ['success' => false, 'message' => 'Player already in a tribe.'];
+        }
+        $add = $this->addMember($tribeId, (int)$row['user_id'], 'member');
+        if (!$add['success']) {
+            return $add;
+        }
+        $this->setUserTribe((int)$row['user_id'], $tribeId);
+        $up = $this->conn->prepare("UPDATE tribe_applications SET status='accepted', responded_at=CURRENT_TIMESTAMP WHERE id=?");
+        if ($up) {
+            $up->bind_param("i", $applicationId);
+            $up->execute();
+            $up->close();
+        }
+        $this->logActivity($tribeId, $actorUserId, 'application_accepted', ['app_id' => $applicationId, 'user_id' => $row['user_id']]);
+        $this->recalculateTribePoints($tribeId);
+        return ['success' => true, 'message' => 'Application accepted.'];
+    }
+
+    public function getActivityLog(int $tribeId, int $limit = 50): array
+    {
+        $this->ensureExtrasTables();
+        $stmt = $this->conn->prepare("
+            SELECT tal.id, tal.actor_user_id, u.username, tal.action, tal.meta, tal.created_at
+            FROM tribe_activity_log tal
+            LEFT JOIN users u ON u.id = tal.actor_user_id
+            WHERE tal.tribe_id = ?
+            ORDER BY tal.created_at DESC
+            LIMIT ?
+        ");
+        if ($stmt === false) return [];
+        $stmt->bind_param("ii", $tribeId, $limit);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $rows = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+        $stmt->close();
+        return $rows;
+    }
+
+    private function logActivity(int $tribeId, int $actorId, string $action, array $meta = []): void
+    {
+        $this->ensureExtrasTables();
+        $json = $meta ? json_encode($meta) : null;
+        $stmt = $this->conn->prepare("INSERT INTO tribe_activity_log (tribe_id, actor_user_id, action, meta) VALUES (?, ?, ?, ?)");
+        if ($stmt) {
+            $stmt->bind_param("iiss", $tribeId, $actorId, $action, $json);
+            $stmt->execute();
+            $stmt->close();
+        }
     }
 }

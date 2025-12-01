@@ -1,0 +1,173 @@
+{
+  "spear": {
+    "cost": {
+      "wood": 50,
+      "clay": 30,
+      "iron": 10
+    },
+    "pop": 1,
+    "off": 10,
+    "def": {
+      "gen": 15,
+      "cav": 45,
+      "arc": 20
+    },
+    "carry": 25,
+    "speedMinPerField": 18,
+    "buildTimeSec": 1080
+  },
+  "sword": {
+    "cost": {
+      "wood": 30,
+      "clay": 30,
+      "iron": 70
+    },
+    "pop": 1,
+    "off": 25,
+    "def": {
+      "gen": 50,
+      "cav": 15,
+      "arc": 40
+    },
+    "carry": 15,
+    "speedMinPerField": 22,
+    "buildTimeSec": 1500
+  },
+  "axe": {
+    "cost": {
+      "wood": 60,
+      "clay": 30,
+      "iron": 40
+    },
+    "pop": 1,
+    "off": 40,
+    "def": {
+      "gen": 10,
+      "cav": 5,
+      "arc": 10
+    },
+    "carry": 10,
+    "speedMinPerField": 18,
+    "buildTimeSec": 1260
+  },
+  "archer": {
+    "cost": {
+      "wood": 100,
+      "clay": 30,
+      "iron": 60
+    },
+    "pop": 1,
+    "off": 15,
+    "def": {
+      "gen": 50,
+      "cav": 40,
+      "arc": 5
+    },
+    "carry": 10,
+    "speedMinPerField": 18,
+    "buildTimeSec": 1500
+  },
+  "scout": {
+    "cost": {
+      "wood": 50,
+      "clay": 50,
+      "iron": 20
+    },
+    "pop": 2,
+    "off": 0,
+    "def": {
+      "gen": 2,
+      "cav": 1,
+      "arc": 2
+    },
+    "carry": 0,
+    "speedMinPerField": 9,
+    "buildTimeSec": 900
+  },
+  "light": {
+    "cost": {
+      "wood": 125,
+      "clay": 100,
+      "iron": 250
+    },
+    "pop": 4,
+    "off": 130,
+    "def": {
+      "gen": 40,
+      "cav": 30,
+      "arc": 30
+    },
+    "carry": 80,
+    "speedMinPerField": 10,
+    "buildTimeSec": 600
+  },
+  "heavy": {
+    "cost": {
+      "wood": 200,
+      "clay": 150,
+      "iron": 600
+    },
+    "pop": 6,
+    "off": 150,
+    "def": {
+      "gen": 200,
+      "cav": 80,
+      "arc": 180
+    },
+    "carry": 50,
+    "speedMinPerField": 11,
+    "buildTimeSec": 1200
+  },
+  "ram": {
+    "cost": {
+      "wood": 300,
+      "clay": 200,
+      "iron": 200
+    },
+    "pop": 5,
+    "off": 2,
+    "def": {
+      "gen": 20,
+      "cav": 50,
+      "arc": 20
+    },
+    "carry": 0,
+    "speedMinPerField": 30,
+    "buildTimeSec": 1800
+  },
+  "catapult": {
+    "cost": {
+      "wood": 320,
+      "clay": 400,
+      "iron": 100
+    },
+    "pop": 8,
+    "off": 100,
+    "def": {
+      "gen": 100,
+      "cav": 50,
+      "arc": 100
+    },
+    "carry": 0,
+    "speedMinPerField": 30,
+    "buildTimeSec": 2400
+  },
+  "noble": {
+    "cost": {
+      "wood": 40000,
+      "clay": 50000,
+      "iron": 50000,
+      "coins": 4
+    },
+    "pop": 100,
+    "off": 30,
+    "def": {
+      "gen": 100,
+      "cav": 50,
+      "arc": 100
+    },
+    "carry": 0,
+    "speedMinPerField": 35,
+    "buildTimeSec": 54000
+  }
+}

@@ -7,6 +7,9 @@ ini_set('display_errors', '1');
 // Avoid touching deprecated session INI to silence startup/shutdown notices.
 ini_set('session.use_cookies', '0');
 ini_set('session.use_trans_sid', '0');
+if (!defined('CURRENT_WORLD_ID')) {
+    define('CURRENT_WORLD_ID', 1);
+}
 
 require_once __DIR__ . '/../lib/Database.php';
 require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php';

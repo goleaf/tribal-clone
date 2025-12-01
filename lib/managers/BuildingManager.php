@@ -4,10 +4,26 @@ declare(strict_types=1);
 class BuildingManager {
     private $conn;
     private $buildingConfigManager;
+    private $populationManager;
 
     public function __construct($db_connection, BuildingConfigManager $buildingConfigManager) {
         $this->conn = $db_connection;
         $this->buildingConfigManager = $buildingConfigManager;
+        
+        // Lazy-load PopulationManager when needed
+        $this->populationManager = null;
+    }
+    
+    /**
+     * Get or create PopulationManager instance.
+     */
+    private function getPopulationManager(): PopulationManager
+    {
+        if ($this->populationManager === null) {
+            require_once __DIR__ . '/PopulationManager.php';
+            $this->populationManager = new PopulationManager($this->conn);
+        }
+        return $this->populationManager;
     }
 
     /**
@@ -408,6 +424,13 @@ class BuildingManager {
         $requirementsCheck = $this->checkBuildingRequirements($internalName, $villageId);
         if (!$requirementsCheck['success']) {
             return $requirementsCheck;
+        }
+        
+        // Check population availability (apply on completion, so check future state)
+        $popManager = $this->getPopulationManager();
+        $popCheck = $popManager->canAffordBuildingPopulation($villageId, $internalName, $nextLevel);
+        if (!$popCheck['success']) {
+            return $popCheck;
         }
         
         return ['success' => true, 'message' => 'Upgrade possible.'];

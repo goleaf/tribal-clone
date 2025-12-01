@@ -31,9 +31,12 @@ if ($allyStmt) {
 $defaultX = $village['x_coord'] ?? 0;
 $defaultY = $village['y_coord'] ?? 0;
 
+$worldSize = defined('WORLD_SIZE') ? (int)WORLD_SIZE : 1000;
 $center_x = isset($_GET['x']) ? (int)$_GET['x'] : $defaultX;
 $center_y = isset($_GET['y']) ? (int)$_GET['y'] : $defaultY;
 $size = isset($_GET['size']) ? max(7, min(31, (int)$_GET['size'])) : 15;
+$center_x = max(0, min($worldSize - 1, $center_x));
+$center_y = max(0, min($worldSize - 1, $center_y));
 
 $pageTitle = 'World Map';
 require '../header.php';
@@ -120,6 +123,9 @@ require '../header.php';
                 <div class="legend-row"><img src="../img/tw_map/map_v6.png" alt="Own"> <span>Your village</span></div>
                 <div class="legend-row"><img src="../img/tw_map/map_v4.png" alt="Player"> <span>Player village</span></div>
                 <div class="legend-row"><img src="../img/tw_map/map_v2.png" alt="Barbarian"> <span>Barbarian village</span></div>
+                <div class="legend-row"><span class="legend-dot relation-own"></span> <span>Your tribe</span></div>
+                <div class="legend-row"><span class="legend-dot relation-ally"></span> <span>Ally</span></div>
+                <div class="legend-row"><span class="legend-dot relation-enemy"></span> <span>Enemy</span></div>
                 <div class="legend-row"><img src="../img/tw_map/reserved_player.png" alt="Reserved"> <span>Reserved (self)</span></div>
                 <div class="legend-row"><img src="../img/tw_map/reserved_team.png" alt="Team reservation"> <span>Reserved (tribe)</span></div>
                 <div class="legend-row"><img src="../img/tw_map/incoming_attack.png" alt="Incoming"> <span>Incoming attack</span></div>
@@ -211,6 +217,7 @@ const pointBrackets = [0, 300, 1000, 3000, 9000, 12000];
 
 const currentUserId = <?php echo (int)$user_id; ?>;
 const currentUserAllyId = <?php echo $userAllyId !== null ? (int)$userAllyId : 'null'; ?>;
+const currentTribeId = <?php echo $userAllyId !== null ? (int)$userAllyId : 'null'; ?>;
 const currentVillageId = <?php echo $village_id ?? 'null'; ?>;
 const homeVillage = <?php echo $village ? json_encode([
     'id' => $village['id'],
@@ -238,7 +245,9 @@ const filters = {
     players: true,
     tribe: true,
     own: true,
-    markedOnly: false
+    markedOnly: false,
+    allies: true,
+    enemies: true
 };
 
 function loadAnnotations() {
@@ -377,6 +386,10 @@ document.addEventListener('DOMContentLoaded', () => {
             filters.tribe = document.getElementById('filter-tribe').checked;
             filters.own = document.getElementById('filter-own').checked;
             filters.markedOnly = document.getElementById('filter-marked').checked;
+            const allyBox = document.getElementById('filter-allies');
+            const enemyBox = document.getElementById('filter-enemies');
+            if (allyBox) filters.allies = allyBox.checked;
+            if (enemyBox) filters.enemies = enemyBox.checked;
             renderMap();
         });
     });
@@ -476,6 +489,7 @@ function shouldRenderVillage(village, annotation = {}) {
     const isOwn = village.user_id === currentUserId;
     const player = village.user_id ? mapState.players[village.user_id] : null;
     const sameTribe = currentUserAllyId && player && player.ally_id === currentUserAllyId;
+    const dipStatus = player && player.ally_id && mapState.tribeDiplomacy ? mapState.tribeDiplomacy[player.ally_id] : null;
 
     if (filters.markedOnly && !annotation.note && !annotation.reserved) {
         return false;
@@ -484,7 +498,13 @@ function shouldRenderVillage(village, annotation = {}) {
     if (isOwn && !filters.own) return false;
     if (!isBarb && !isOwn) {
         if (sameTribe && !filters.tribe) return false;
-        if (!sameTribe && !filters.players) return false;
+        if (dipStatus === 'ally' || dipStatus === 'nap') {
+            if (!filters.allies) return false;
+        } else if (dipStatus === 'enemy') {
+            if (!filters.enemies) return false;
+        } else if (!filters.players) {
+            return false;
+        }
     }
     return true;
 }
@@ -498,6 +518,9 @@ function getVillageRelationClass(village) {
     if (isOwn) return 'relation-own';
     if (isBarb) return 'relation-barb';
     if (sameTribe) return 'relation-ally';
+    const dipStatus = player && player.ally_id && mapState.tribeDiplomacy ? mapState.tribeDiplomacy[player.ally_id] : null;
+    if (dipStatus === 'ally' || dipStatus === 'nap') return 'relation-ally';
+    if (dipStatus === 'enemy') return 'relation-enemy';
     return 'relation-enemy';
 }
 

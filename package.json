@@ -5,9 +5,29 @@
   "description": "Utility scripts for the Tribal Wars PHP remake; no Node build is required for the static assets.",
   "license": "MIT",
   "scripts": {
-    "build": "node -e \"console.log('Nothing to build; PHP/JS assets are served as-is.')\""
+    "build": "tsc",
+    "worker": "node dist/workers/index.js",
+    "worker:dev": "tsx watch src/workers/index.ts",
+    "sweeper": "node dist/workers/sweeper.js",
+    "sweeper:dev": "tsx watch src/workers/sweeper.ts",
+    "gateway": "node dist/gateway/index.js",
+    "gateway:dev": "tsx watch src/gateway/index.ts"
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "bullmq": "^5.15.0",
+    "ioredis": "^5.4.1",
+    "pg": "^8.13.1",
+    "ws": "^8.18.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@types/pg": "^8.11.10",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
   }
 }

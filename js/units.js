@@ -1,7 +1,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     const mainContent = document.getElementById('main-content');
     const popup = document.getElementById('building-action-popup');
-    const popupDetails = document.getElementById('popup-details');
+    const popupActionContent = document.getElementById('popup-action-content');
+    const popupOverlay = document.getElementById('popup-overlay');
+    const detailsContent = document.getElementById('building-details-content');
     const closeButton = popup.querySelector('.close-button');
 
     // Use event delegation for building action buttons
@@ -20,63 +22,71 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to open the recruitment panel
     function openRecruitPanel(villageId, buildingName) {
+        if (!popup || !popupActionContent) return;
+        if (popupOverlay) popupOverlay.style.display = 'block';
+        popup.style.display = 'flex';
+        popup.classList.remove('main-building-popup');
+        if (detailsContent) detailsContent.style.display = 'none';
+        popupActionContent.style.display = 'block';
+        popupActionContent.innerHTML = '<p>Loading recruitment panel...</p>';
+
         fetch(`/ajax/units/recruit.php?village_id=${villageId}&building=${buildingName}`)
             .then(response => response.text())
             .then(html => {
-                popupDetails.innerHTML = html;
-                popup.style.display = 'block';
+                popupActionContent.innerHTML = html;
                 updateRecruitmentTimers();
             })
             .catch(error => {
                 console.error('Error loading recruitment panel:', error);
-                popupDetails.innerHTML = '<p class="error-message">Failed to load recruitment panel.</p>';
-                popup.style.display = 'block';
+                popupActionContent.innerHTML = '<p class="error-message">Failed to load recruitment panel.</p>';
             });
     }
 
     // Handle form submission for recruitment
-    popupDetails.addEventListener('submit', function(event) {
-        if (event.target.classList.contains('recruit-form')) {
-            event.preventDefault();
-            const form = event.target;
-            const unitId = form.dataset.unitId;
-            const villageId = form.dataset.villageId;
-            const buildingName = form.dataset.buildingName;
-            const count = form.querySelector('input[name="count"]').value;
+    if (popupActionContent) {
+        popupActionContent.addEventListener('submit', function(event) {
+            if (event.target.classList.contains('recruit-form')) {
+                event.preventDefault();
+                const form = event.target;
+                const unitId = form.dataset.unitId;
+                const villageId = form.dataset.villageId;
+                const buildingName = form.dataset.buildingName;
+                const count = form.querySelector('input[name="count"]').value;
 
-            if (!count || count <= 0) {
-                alert('Please enter a valid number of units to recruit.');
-                return;
-            }
-
-            const data = {
-                unit_id: unitId,
-                count: parseInt(count, 10)
-            };
-
-            fetch(`/ajax/units/recruit.php?village_id=${villageId}&building=${buildingName}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    alert(result.message);
-                    // Refresh the panel to show the updated queue
-                    openRecruitPanel(villageId, buildingName);
-                } else {
-                    alert('Error: ' + result.error);
+                if (!count || count <= 0) {
+                    alert('Please enter a valid number of units to recruit.');
+                    return;
                 }
-            })
-            .catch(error => {
-                console.error('Error recruiting units:', error);
-                alert('An error occurred while trying to recruit units.');
-            });
-        }
-    });
+
+                const data = {
+                    unit_id: unitId,
+                    count: parseInt(count, 10)
+                };
+
+                fetch(`/ajax/units/recruit.php?village_id=${villageId}&building=${buildingName}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        alert(result.message);
+                        // Refresh the panel to show the updated queue
+                        openRecruitPanel(villageId, buildingName);
+                    } else {
+                        alert('Error: ' + result.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error recruiting units:', error);
+                    alert('An error occurred while trying to recruit units.');
+                });
+            }
+        });
+    }
 
     // Close popup
     if (closeButton) {
@@ -94,7 +104,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to update recruitment timers
     function updateRecruitmentTimers() {
-        const timers = popupDetails.querySelectorAll('.timer[data-finish-time]');
+        if (!popupActionContent) return;
+        const timers = popupActionContent.querySelectorAll('.timer[data-finish-time]');
         timers.forEach(timer => {
             const finishTime = parseInt(timer.dataset.finishTime, 10);
             const interval = setInterval(() => {
@@ -106,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     clearInterval(interval);
                     // Optionally, refresh the panel after a short delay
                     setTimeout(() => {
-                        const form = popupDetails.querySelector('.recruit-form');
+                        const form = popupActionContent.querySelector('.recruit-form');
                         if(form) {
                            const villageId = form.dataset.villageId;
                            const buildingName = form.dataset.buildingName;

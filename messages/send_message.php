@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      // Add notification for the recipient
                      $notification_message = "You received a new message from {$username}";
                      $notification_link = "view_message.php?id=" . $sendMessageResult['message_id'];
-                     $notificationManager->addNotification($receiver_id, 'info', $notification_message, $notification_link);
+                     $notificationManager->addNotification($receiver_id, $notification_message, 'info', $notification_link);
 
                 } else {
                     $response['message'] = 'Error while sending the message.';

@@ -72,6 +72,19 @@ class UserManager
         return ['success' => true, 'user_id' => (int)$row['id']];
     }
 
+    public function getUserByUsername(string $username): ?array
+    {
+        $stmt = $this->conn->prepare("SELECT id, username, email FROM users WHERE username = ? LIMIT 1");
+        if (!$stmt) {
+            return null;
+        }
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: null;
+    }
+
     public function getUserById(int $userId): ?array
     {
         $stmt = $this->conn->prepare("SELECT id, username, email, is_admin, is_banned, ally_id, points FROM users WHERE id = ? LIMIT 1");

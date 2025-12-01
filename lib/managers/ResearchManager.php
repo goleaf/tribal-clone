@@ -282,7 +282,7 @@ class ResearchManager {
         require_once __DIR__ . '/WorldManager.php';
         $wm = new WorldManager($this->conn);
         $worldSpeed = $wm->getWorldSpeed();
-        $researchMultiplier = defined('RESEARCH_SPEED_MULTIPLIER') ? max(0.1, (float)RESEARCH_SPEED_MULTIPLIER) : 1.0;
+        $researchMultiplier = $wm->getResearchSpeed();
         $time_with_building = (int)floor($time_with_building / ($worldSpeed * $researchMultiplier));
         
         return max(10, $time_with_building); // Minimum research time is 10 seconds

@@ -95,6 +95,7 @@ class BuildingConfigManager {
         }
 
         // Base time for level $currentLevel + 1
+        $targetLevel = $currentLevel + 1;
         $levelFactor = defined('BUILD_TIME_LEVEL_FACTOR') ? BUILD_TIME_LEVEL_FACTOR : 1.18;
         $baseTime = round($config['base_build_time_initial'] * ($levelFactor ** $currentLevel));
 
@@ -102,17 +103,39 @@ class BuildingConfigManager {
         require_once __DIR__ . '/WorldManager.php';
         $wm = new WorldManager($this->conn);
         $worldSpeed = $wm->getWorldSpeed();
-        $buildSpeed = defined('BUILD_SPEED_MULTIPLIER') ? max(0.1, BUILD_SPEED_MULTIPLIER) : 1.0;
+        $buildSpeed = $wm->getBuildSpeed();
 
         // Headquarters (main_building) reduces build time by 2% per level: divide by (1 + 0.02 * level)
         $hqBonus = 1 + (max(0, $mainBuildingLevel) * (defined('MAIN_BUILDING_TIME_REDUCTION_PER_LEVEL') ? MAIN_BUILDING_TIME_REDUCTION_PER_LEVEL : 0.02));
         $effectiveTime = $baseTime / max(0.1, $worldSpeed * $buildSpeed * $hqBonus);
 
+        // Enforce gentle floors so mid-tier builds sit in the 30–90 min range
+        // and higher tiers give 2–4h “anchor” builds for overnight queuing.
+        $tierFloors = [
+            ['min' => 5,  'max' => 8,  'seconds' => 1800],  // 30m+
+            ['min' => 9,  'max' => 12, 'seconds' => 3600],  // 1h+
+            ['min' => 13, 'max' => 20, 'seconds' => 7200],  // 2h+
+        ];
+        foreach ($tierFloors as $tier) {
+            if ($targetLevel >= $tier['min'] && $targetLevel <= $tier['max']) {
+                $effectiveTime = max($effectiveTime, $tier['seconds']);
+                break;
+            }
+        }
+
         // Minimal build time (e.g., 1 second)
         return (int)max(1, (int)ceil($effectiveTime));
     }
 
-     // Calculate resource production for a given building and level
+     /**
+     * Calculate resource production per hour for a given building and level.
+     * Formula: prod(l) = base * growth^(l-1) for level l (1–30)
+     * Applies world speed and building speed multipliers.
+     * 
+     * @param string $internalName Building internal name (sawmill, clay_pit, iron_mine)
+     * @param int $level Building level (1-30)
+     * @return float|null Production per hour, or null if building doesn't produce
+     */
     public function calculateProduction(string $internalName, int $level): ?float {
         if ($level <= 0) {
             return 0.0;
@@ -124,16 +147,26 @@ class BuildingConfigManager {
             return null; // Does not produce resources
         }
 
-        // Resource production is standardized for the three mines:
-        // base 30 per hour * 1.163 ^ level
+        // Get world speed multipliers (uses CURRENT_WORLD_ID by default)
+        require_once __DIR__ . '/WorldManager.php';
+        $wm = new WorldManager($this->conn);
+        $worldSpeed = $wm->getWorldSpeed();
+        $buildSpeed = $wm->getBuildSpeed();
+
+        // Resource production formula: base * growth^(level-1) * world_speed * building_speed
+        // Timber base=30, Clay base=30, Iron base=25; growth=1.163
         if (in_array($internalName, ['sawmill', 'clay_pit', 'iron_mine'], true)) {
-            $base = 30;
-            $factor = 1.163;
-            return $base * pow($factor, $level);
+            $base = ($internalName === 'iron_mine') ? 25 : 30;
+            $growth = 1.163;
+            
+            // prod(l) = base * growth^(l-1) * world_speed * building_speed
+            $baseProduction = $base * pow($growth, max($level, 1) - 1);
+            return $baseProduction * $worldSpeed * $buildSpeed;
         }
 
         // Fallback to config for any other producing building types
-        return $config['production_initial'] * ($config['production_factor'] ** ($level - 1));
+        $baseProduction = $config['production_initial'] * ($config['production_factor'] ** ($level - 1));
+        return $baseProduction * $worldSpeed * $buildSpeed;
     }
     
     // Calculate warehouse capacity for a given level

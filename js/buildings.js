@@ -182,6 +182,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentVillageId = window.currentVillageId; // Village ID from global
 
+    function formatBuildingLabel(internalName) {
+        if (!internalName) return 'Building';
+        return internalName
+            .split('_')
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(' ');
+    }
+
+    function openActionPopupShell(internalName, options = {}) {
+        if (!popupActionContent || !buildingDetailsContent) return;
+
+        const {
+            name,
+            level,
+            description,
+            loadingMessage = '<p>Loading action...</p>'
+        } = options;
+
+        if (popupOverlay) popupOverlay.style.display = 'block';
+        if (buildingDetailsPopup) {
+            buildingDetailsPopup.style.display = 'flex';
+            if (internalName === 'main_building') {
+                buildingDetailsPopup.classList.add('main-building-popup');
+            } else {
+                buildingDetailsPopup.classList.remove('main-building-popup');
+            }
+        }
+
+        popupActionContent.style.display = 'block';
+        popupActionContent.innerHTML = loadingMessage;
+        buildingDetailsContent.style.display = 'none';
+
+        if (popupBuildingName) popupBuildingName.textContent = name || formatBuildingLabel(internalName);
+        if (popupCurrentLevel) {
+            const resolvedLevel = (level !== undefined && level !== null && level !== '') ? level : '-';
+            popupCurrentLevel.textContent = resolvedLevel;
+        }
+        if (popupBuildingDescription && description) popupBuildingDescription.textContent = description;
+    }
+
     // Opens the building details popup
     async function openBuildingDetailsPopup(villageId, internalName) {
         if (!villageId || !internalName) {
@@ -462,121 +502,110 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (button) {
             event.preventDefault();
-             // Prefer village_id from global variable if available, otherwise from button data
             const villageId = window.currentVillageId || button.dataset.villageId;
             const buildingInternalName = button.dataset.buildingInternalName;
-             const actionContent = document.getElementById('popup-action-content'); // Ensure this is the container ID in the popup
-             const detailsContent = document.getElementById('building-details-content'); // Ensure this is the container ID in the popup
 
+            const recruitmentBuildings = ['barracks', 'stable', 'workshop'];
+            if (recruitmentBuildings.includes(buildingInternalName)) {
+                return;
+            }
 
-            if (!actionContent || !detailsContent || !villageId || !buildingInternalName) {
-                 console.error('Missing elements or data for building action.');
-                 if (window.toastManager) window.toastManager.showToast('Error: missing data to perform the action.', 'error');
-                 return;
-             }
+            if (!popupActionContent || !buildingDetailsContent || !villageId || !buildingInternalName) {
+                console.error('Missing elements or data for building action.');
+                if (window.toastManager) window.toastManager.showToast('Error: missing data to perform the action.', 'error');
+                return;
+            }
 
-             // Let recruitment buildings use the dedicated units.js handler
-             const recruitmentBuildings = ['barracks', 'stable', 'workshop'];
-             if (recruitmentBuildings.includes(buildingInternalName)) {
-                 return;
-             }
+            openActionPopupShell(buildingInternalName, {
+                name: button.dataset.buildingName,
+                level: button.dataset.buildingLevel,
+                description: button.dataset.buildingDescription
+            });
 
-             // Route to specialised action panels when available
-             const specialPanelHandlers = {
-                 main_building: typeof fetchAndRenderMainBuildingPanel === 'function' ? fetchAndRenderMainBuildingPanel : null,
-                 smithy: typeof fetchAndRenderResearchPanel === 'function' ? fetchAndRenderResearchPanel : null,
-                 academy: typeof fetchAndRenderResearchPanel === 'function' ? fetchAndRenderResearchPanel : null,
-                 market: typeof fetchAndRenderMarketPanel === 'function' ? fetchAndRenderMarketPanel : null,
-                 statue: typeof fetchAndRenderNoblePanel === 'function' ? fetchAndRenderNoblePanel : null,
-                 mint: typeof fetchAndRenderMintPanel === 'function' ? fetchAndRenderMintPanel : null,
-                 warehouse: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null,
-                 sawmill: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null,
-                 wood_production: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null,
-                 clay_pit: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null,
-                 iron_mine: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null,
-                 wall: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null
-             };
+            const specialPanelHandlers = {
+                main_building: typeof fetchAndRenderMainBuildingPanel === 'function' ? fetchAndRenderMainBuildingPanel : null,
+                smithy: typeof fetchAndRenderResearchPanel === 'function' ? fetchAndRenderResearchPanel : null,
+                academy: typeof fetchAndRenderResearchPanel === 'function' ? fetchAndRenderResearchPanel : null,
+                market: typeof fetchAndRenderMarketPanel === 'function' ? fetchAndRenderMarketPanel : null,
+                rally_point: typeof fetchAndRenderRallyPanel === 'function' ? fetchAndRenderRallyPanel : null,
+                statue: typeof fetchAndRenderNoblePanel === 'function' ? fetchAndRenderNoblePanel : null,
+                mint: typeof fetchAndRenderMintPanel === 'function' ? fetchAndRenderMintPanel : null,
+                warehouse: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null,
+                sawmill: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null,
+                wood_production: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null,
+                clay_pit: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null,
+                iron_mine: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null,
+                wall: typeof fetchAndRenderInfoPanel === 'function' ? fetchAndRenderInfoPanel : null
+            };
 
-             const handler = specialPanelHandlers[buildingInternalName];
-             if (handler) {
-                 handler(villageId, buildingInternalName);
-                 return;
-             }
+            const handler = specialPanelHandlers[buildingInternalName];
+            if (handler) {
+                handler(villageId, buildingInternalName);
+                return;
+            }
 
-             // Show loading state and disable button
-             button.disabled = true;
-             button.textContent = 'Loading...'; // Or add a spinner
-             actionContent.innerHTML = '<p>Loading action content...</p>';
-             actionContent.style.display = 'block';
-             detailsContent.style.display = 'none'; // Hide details when showing action content
+            const originalActionButtonContent = button.innerHTML;
+            button.disabled = true;
+            button.textContent = 'Loading...'; // Or add a spinner
+            popupActionContent.innerHTML = '<p>Loading action content...</p>';
+            popupActionContent.style.display = 'block';
+            buildingDetailsContent.style.display = 'none'; // Hide details when showing action content
 
             try {
-                 // Fetch and render content based on building internal name
-                 // This uses the get_building_action.php endpoint
-                 // Pass village_id and internal_name
-                 const response = await fetch(`${buildingEndpoints.action}?village_id=${villageId}&building_internal_name=${buildingInternalName}`);
-                 const data = await response.json();
+                const response = await fetch(`${buildingEndpoints.action}?village_id=${villageId}&building_internal_name=${buildingInternalName}`);
+                const data = await response.json();
 
-                 if (data.status === 'success' && actionContent) {
-                     // Insert action content into the container
-                     actionContent.innerHTML = data.html; // Assume the response includes HTML in 'html'
-                     actionContent.style.display = 'block';
-                     detailsContent.style.display = 'none'; // Ensure details are hidden
+                if (data.status === 'success' && popupActionContent) {
+                    popupActionContent.innerHTML = data.html; // Assume the response includes HTML in 'html'
+                    popupActionContent.style.display = 'block';
+                    buildingDetailsContent.style.display = 'none'; // Ensure details are hidden
 
-                     // After injecting action content, start any timers inside that HTML if present
-                     updateTimers(); // Restart timers for the new content
+                    updateTimers(); // Restart timers for the new content
 
-                     // TODO: Add JS initialization for specific panels (e.g., recruitment panel)
-                     // Call specific initializers based on data.action_type
-                     switch(data.action_type) {
-                          case 'recruit_barracks':
-                          case 'recruit_stable':
-                          case 'recruit_workshop': // Corrected from siege to workshop to match naming
-                              // Initialize recruitment panel if needed (e.g., add event listeners)
-                               // Assume rendering/listeners are handled in fetchAndRenderRecruitmentPanel or similar
-                               // If the recruitment panel has its own timers, updateTimers() will find them.
-                              break;
-                          case 'research':
-                              // Initialize research panel
-                              break;
-                          case 'trade':
-                              // Initialize trade panel
-                              break;
-                          case 'main_building':
-                              // Initialize main building panel
-                              break;
-                           case 'noble':
-                              // Initialize noble panel
-                              break;
-                           case 'mint':
-                              // Initialize mint panel
-                              break;
-                           // Add cases for other building panels as they are implemented
-                     }
+                    switch(data.action_type) {
+                        case 'recruit_barracks':
+                        case 'recruit_stable':
+                        case 'recruit_workshop':
+                            break;
+                        case 'research':
+                            break;
+                        case 'trade':
+                            break;
+                        case 'main_building':
+                            break;
+                        case 'noble':
+                            break;
+                        case 'mint':
+                            break;
+                    }
 
 
-                 } else if (actionContent) {
-                     // Handle server-side errors
-                     actionContent.innerHTML = '<p>Error loading action: ' + (data.message || data.error || 'Unknown error') + '</p>';
-                     if (window.toastManager) window.toastManager.showToast(data.message || data.error || 'Server error.', 'error');
-                     actionContent.style.display = 'block'; // Show error message in action section
-                     detailsContent.style.display = 'none';
-                 }
+                } else if (popupActionContent) {
+                    popupActionContent.innerHTML = '<p>Error loading action: ' + (data.message || data.error || 'Unknown error') + '</p>';
+                    if (window.toastManager) window.toastManager.showToast(data.message || data.error || 'Server error.', 'error');
+                    popupActionContent.style.display = 'block'; // Show error message in action section
+                    buildingDetailsContent.style.display = 'none';
+                }
 
             } catch (error) {
                 console.error('Building action AJAX error:', error);
-                 if (actionContent) {
-                    actionContent.innerHTML = '<p>A communication error occurred.</p>';
-                    actionContent.style.display = 'block';
-                 }
+                if (popupActionContent) {
+                    popupActionContent.innerHTML = '<p>A communication error occurred.</p>';
+                    popupActionContent.style.display = 'block';
+                }
                 if (window.toastManager) window.toastManager.showToast('A communication error occurred while fetching the action.', 'error');
-                 if (detailsContent) detailsContent.style.display = 'none';
+                if (buildingDetailsContent) buildingDetailsContent.style.display = 'none';
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML = originalActionButtonContent || button.textContent;
+                }
             }
-            } else if (event.target.classList.contains('upgrade-building-button')) { // Handle clicks on the 'Upgrade' button in the building list
-                 // This logic is already implemented in the popupUpgradeButton click listener.
-                 // If list buttons should also work, move the popup handler logic here and adjust data fetching.
-                 // For now, upgrades are handled via the popup button only.
-            }
+        } else if (event.target.classList.contains('upgrade-building-button')) { // Handle clicks on the 'Upgrade' button in the building list
+             // This logic is already implemented in the popupUpgradeButton click listener.
+             // If list buttons should also work, move the popup handler logic here and adjust data fetching.
+             // For now, upgrades are handled via the popup button only.
+        }
         });
 
      // Helper to get building action text (keep in sync with PHP getBuildingActionText)

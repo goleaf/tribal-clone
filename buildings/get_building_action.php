@@ -26,7 +26,7 @@ function sendJsonError(string $message): void
 /**
  * Build payload for the Main Building action panel.
  */
-function buildMainBuildingPayload(mysqli $conn, int $villageId, int $userId, int $mainBuildingLevel, array $villageData): array
+function buildMainBuildingPayload(mysqli|SQLiteAdapter $conn, int $villageId, int $userId, int $mainBuildingLevel, array $villageData): array
 {
     // Village basics
     $population = (int)($villageData['population'] ?? 0);
@@ -89,7 +89,7 @@ function buildMainBuildingPayload(mysqli $conn, int $villageId, int $userId, int
  * Build payload for research buildings (smithy / academy).
  */
 function buildResearchPayload(
-    mysqli $conn,
+    mysqli|SQLiteAdapter $conn,
     ResearchManager $researchManager,
     string $buildingInternalName,
     array $buildingDetails,
@@ -196,7 +196,7 @@ function buildResearchPayload(
 /**
  * Build payload for the market panel (trade).
  */
-function buildMarketPayload(mysqli $conn, array $buildingDetails, int $villageId, array $villageData): array
+function buildMarketPayload(mysqli|SQLiteAdapter $conn, array $buildingDetails, int $villageId, array $villageData): array
 {
     $buildingLevel = (int)($buildingDetails['level'] ?? 0);
     $tradersCapacity = 3 + (int)floor($buildingLevel * 0.7);

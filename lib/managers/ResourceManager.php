@@ -77,25 +77,49 @@ class ResourceManager {
 
     /**
      * Updates village resources in the database and returns the refreshed village data.
+     * Implements offline gain calculation with production formula:
+     * prod(l) = base * growth^(l-1) * world_speed * building_speed
+     * 
+     * Warehouse cap with optional 2% buffer for overflow tolerance.
      */
     public function updateVillageResources(array $village): array {
         $village_id = (int)$village['id'];
-        $rates = $this->getProductionRates($village_id);
         $now = time();
         $last_update = strtotime($village['last_resource_update']);
-        $elapsed = max(0, $now - $last_update);
+        
+        // Calculate elapsed time in hours
+        $dt_hours = max(0, ($now - $last_update) / 3600.0);
+        
+        if ($dt_hours <= 0) {
+            return $village; // No time elapsed, no update needed
+        }
 
-        $produced_wood = ($rates['wood'] / 3600) * $elapsed;
-        $produced_clay = ($rates['clay'] / 3600) * $elapsed;
-        $produced_iron = ($rates['iron'] / 3600) * $elapsed;
+        // Get production rates (already includes world_speed and building_speed multipliers)
+        $rates = $this->getProductionRates($village_id);
+        
+        // Calculate gained resources: prod_eff * dt_hours
+        $gained_wood = $rates['wood'] * $dt_hours;
+        $gained_clay = $rates['clay'] * $dt_hours;
+        $gained_iron = $rates['iron'] * $dt_hours;
 
         // Warehouse capacity based on the current warehouse level
         $warehouse_level = $this->buildingManager->getBuildingLevel($village_id, 'warehouse');
         $warehouse_capacity = $this->buildingManager->getWarehouseCapacityByLevel($warehouse_level);
+        
+        // Apply 2% buffer for overflow tolerance before clamping to display
+        $warehouse_cap_with_buffer = $warehouse_capacity * 1.02;
 
-        $village['wood'] = min($village['wood'] + $produced_wood, $warehouse_capacity);
-        $village['clay'] = min($village['clay'] + $produced_clay, $warehouse_capacity);
-        $village['iron'] = min($village['iron'] + $produced_iron, $warehouse_capacity);
+        // Track if we hit cap this tick (before buffer)
+        $hitCap = [
+            'wood' => ($village['wood'] < $warehouse_capacity) && ($village['wood'] + $gained_wood >= $warehouse_capacity),
+            'clay' => ($village['clay'] < $warehouse_capacity) && ($village['clay'] + $gained_clay >= $warehouse_capacity),
+            'iron' => ($village['iron'] < $warehouse_capacity) && ($village['iron'] + $gained_iron >= $warehouse_capacity),
+        ];
+
+        // Apply gains with buffer, then round down for display
+        $village['wood'] = min($village['wood'] + $gained_wood, $warehouse_cap_with_buffer);
+        $village['clay'] = min($village['clay'] + $gained_clay, $warehouse_cap_with_buffer);
+        $village['iron'] = min($village['iron'] + $gained_iron, $warehouse_cap_with_buffer);
 
         $nowSql = date('Y-m-d H:i:s', $now);
 
@@ -111,6 +135,36 @@ class ResourceManager {
 
         $village['warehouse_capacity'] = $warehouse_capacity;
         $village['last_resource_update'] = $nowSql;
+
+        // Notify if any resource hit capacity
+        if (in_array(true, $hitCap, true)) {
+            if (!class_exists('NotificationManager')) {
+                require_once __DIR__ . '/NotificationManager.php';
+            }
+            $notificationManager = new NotificationManager($this->conn);
+            // Fetch owner to target notification
+            $ownerStmt = $this->conn->prepare("SELECT user_id, name FROM villages WHERE id = ?");
+            if ($ownerStmt) {
+                $ownerStmt->bind_param("i", $village_id);
+                $ownerStmt->execute();
+                $ownerData = $ownerStmt->get_result()->fetch_assoc();
+                $ownerStmt->close();
+                if ($ownerData && !empty($ownerData['user_id'])) {
+                    $resourceList = [];
+                    foreach (['wood','clay','iron'] as $res) {
+                        if ($hitCap[$res]) {
+                            $resourceList[] = ucfirst($res);
+                        }
+                    }
+                    $msg = sprintf(
+                        'Warehouse full for %s in %s.',
+                        implode(', ', $resourceList),
+                        $ownerData['name'] ?? 'village'
+                    );
+                    $notificationManager->addNotification((int)$ownerData['user_id'], $msg, 'warning', '/game/game.php');
+                }
+            }
+        }
         
         // Return the updated village array
         return $village;

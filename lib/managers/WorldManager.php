@@ -10,6 +10,22 @@ class WorldManager
     private $conn;
     private array $columnCache = [];
     private array $settingsCache = [];
+    private array $knownColumns = [
+        'world_speed' => "REAL NOT NULL DEFAULT 1.0",
+        'troop_speed' => "REAL NOT NULL DEFAULT 1.0",
+        'build_speed' => "REAL NOT NULL DEFAULT 1.0",
+        'train_speed' => "REAL NOT NULL DEFAULT 1.0",
+        'research_speed' => "REAL NOT NULL DEFAULT 1.0",
+        'enable_archer' => "INTEGER NOT NULL DEFAULT 1",
+        'enable_paladin' => "INTEGER NOT NULL DEFAULT 1",
+        'enable_paladin_weapons' => "INTEGER NOT NULL DEFAULT 1",
+        'tech_mode' => "TEXT NOT NULL DEFAULT 'normal'",
+        'tribe_member_limit' => "INTEGER DEFAULT NULL",
+        'victory_type' => "TEXT DEFAULT NULL",
+        'victory_value' => "INTEGER DEFAULT NULL",
+        'winner_tribe_id' => "INTEGER DEFAULT NULL",
+        'victory_at' => "TEXT DEFAULT NULL"
+    ];
 
     public function __construct($conn)
     {
@@ -25,9 +41,15 @@ class WorldManager
             return $this->settingsCache[$worldId];
         }
 
+        $this->ensureSchema();
+        $this->ensureDefaultWorld();
+
         $defaults = [
             'world_speed' => defined('WORLD_SPEED') ? (float)WORLD_SPEED : 1.0,
             'troop_speed' => defined('UNIT_SPEED_MULTIPLIER') ? (float)UNIT_SPEED_MULTIPLIER : 1.0,
+            'build_speed' => 1.0,
+            'train_speed' => 1.0,
+            'research_speed' => 1.0,
             'enable_archer' => true,
             'enable_paladin' => true,
             'enable_paladin_weapons' => true,
@@ -51,7 +73,7 @@ class WorldManager
                         foreach ($selectable as $key) {
                             if (array_key_exists($key, $row) && $row[$key] !== null) {
                                 $val = $row[$key];
-                                if (in_array($key, ['world_speed', 'troop_speed'], true)) {
+                                if (in_array($key, ['world_speed', 'troop_speed', 'build_speed', 'train_speed', 'research_speed'], true)) {
                                     $defaults[$key] = (float)$val;
                                 } elseif ($key === 'tribe_member_limit' || $key === 'victory_value') {
                                     $defaults[$key] = $val === null ? null : (int)$val;
@@ -82,6 +104,24 @@ class WorldManager
     {
         $settings = $this->getSettings($worldId);
         return max(0.1, (float)($settings['troop_speed'] ?? 1.0));
+    }
+
+    public function getBuildSpeed(int $worldId = CURRENT_WORLD_ID): float
+    {
+        $settings = $this->getSettings($worldId);
+        return max(0.1, (float)($settings['build_speed'] ?? 1.0));
+    }
+
+    public function getTrainSpeed(int $worldId = CURRENT_WORLD_ID): float
+    {
+        $settings = $this->getSettings($worldId);
+        return max(0.1, (float)($settings['train_speed'] ?? 1.0));
+    }
+
+    public function getResearchSpeed(int $worldId = CURRENT_WORLD_ID): float
+    {
+        $settings = $this->getSettings($worldId);
+        return max(0.1, (float)($settings['research_speed'] ?? 1.0));
     }
 
     public function isArcherEnabled(int $worldId = CURRENT_WORLD_ID): bool
@@ -134,5 +174,168 @@ class WorldManager
         }
         $this->columnCache = $cols;
         return $cols;
+    }
+
+    /**
+     * Adds missing world columns so per-world settings can be stored.
+     */
+    private function ensureSchema(): void
+    {
+        $existing = $this->getWorldColumns();
+        $missing = array_diff(array_keys($this->knownColumns), $existing);
+        if (empty($missing)) {
+            return;
+        }
+
+        foreach ($missing as $col) {
+            $definition = $this->knownColumns[$col] ?? null;
+            if (!$definition) {
+                continue;
+            }
+            $sql = "ALTER TABLE worlds ADD COLUMN {$col} {$definition}";
+            $this->conn->query($sql);
+        }
+        // Reset cache so subsequent calls see new columns
+        $this->columnCache = [];
+
+        // Backfill defaults for existing rows where new columns are NULL
+        $defaults = [
+            'world_speed' => 1.0,
+            'troop_speed' => 1.0,
+            'build_speed' => 1.0,
+            'train_speed' => 1.0,
+            'research_speed' => 1.0,
+            'enable_archer' => 1,
+            'enable_paladin' => 1,
+            'enable_paladin_weapons' => 1,
+            'tech_mode' => 'normal'
+        ];
+        foreach ($defaults as $col => $val) {
+            $quotedVal = is_numeric($val) ? $val : ("'" . $this->conn->real_escape_string((string)$val) . "'");
+            $this->conn->query("UPDATE worlds SET {$col} = {$quotedVal} WHERE {$col} IS NULL");
+        }
+    }
+
+    /**
+     * Ensures at least one world exists (id=1) so selection and defaults work.
+     */
+    private function ensureDefaultWorld(): void
+    {
+        $stmt = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM worlds");
+        if (!$stmt) {
+            return;
+        }
+        $stmt->execute();
+        $countRow = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (isset($countRow['cnt']) && (int)$countRow['cnt'] > 0) {
+            return;
+        }
+
+        $stmtInsert = $this->conn->prepare("INSERT INTO worlds (name, world_speed, troop_speed, build_speed, train_speed, research_speed, enable_archer, enable_paladin, enable_paladin_weapons, tech_mode, tribe_member_limit, victory_type, victory_value) VALUES ('World 1', 1.0, 1.0, 1.0, 1.0, 1.0, 1, 1, 1, 'normal', NULL, NULL, NULL)");
+        if ($stmtInsert) {
+            $stmtInsert->execute();
+            $stmtInsert->close();
+        }
+    }
+
+    /**
+     * Checks if a world meets its victory condition; records winner if achieved.
+     * Supports domination (victory_type = 'domination', victory_value = required % of villages).
+     */
+    public function checkVictory(int $worldId = CURRENT_WORLD_ID): array
+    {
+        $settings = $this->getSettings($worldId);
+        $type = $settings['victory_type'] ?? null;
+        $value = isset($settings['victory_value']) ? (int)$settings['victory_value'] : null;
+
+        // Already finished?
+        $existingWinner = $this->getWinner($worldId);
+        if ($existingWinner !== null) {
+            return ['achieved' => true, 'tribe_id' => $existingWinner['tribe_id'], 'victory_at' => $existingWinner['victory_at'], 'type' => $type];
+        }
+
+        $isTribeDomination = in_array($type, ['domination', 'tribe_domination', 'tribe_village_percent'], true);
+        if (!$isTribeDomination || !$value || $value <= 0) {
+            return ['achieved' => false, 'reason' => 'unsupported_or_unconfigured'];
+        }
+
+        // Total villages in world (includes barbarians/untribed)
+        $total = 0;
+        $stmtTotal = $this->conn->prepare("SELECT COUNT(*) AS cnt FROM villages WHERE world_id = ?");
+        if ($stmtTotal) {
+            $stmtTotal->bind_param("i", $worldId);
+            $stmtTotal->execute();
+            $rowTotal = $stmtTotal->get_result()->fetch_assoc();
+            $stmtTotal->close();
+            $total = (int)($rowTotal['cnt'] ?? 0);
+        }
+
+        $tribeCounts = [];
+        $stmt = $this->conn->prepare("
+            SELECT tm.tribe_id, COUNT(*) AS villages
+            FROM villages v
+            JOIN users u ON u.id = v.user_id
+            JOIN tribe_members tm ON tm.user_id = u.id
+            WHERE v.world_id = ?
+            GROUP BY tm.tribe_id
+        ");
+        if ($stmt) {
+            $stmt->bind_param("i", $worldId);
+            $stmt->execute();
+            $res = $stmt->get_result();
+
+            while ($row = $res->fetch_assoc()) {
+                $tribeId = (int)$row['tribe_id'];
+                $count = (int)$row['villages'];
+                $tribeCounts[$tribeId] = $count;
+            }
+            $stmt->close();
+        } else {
+            return ['achieved' => false, 'reason' => 'query_failed'];
+        }
+
+        if ($total <= 0 || empty($tribeCounts)) {
+            return ['achieved' => false, 'reason' => 'no_tribes'];
+        }
+
+        arsort($tribeCounts);
+        $topTribeId = array_key_first($tribeCounts);
+        $topCount = $tribeCounts[$topTribeId];
+        $share = ($topCount / $total) * 100.0;
+
+        if ($share >= $value) {
+            $this->recordVictory($worldId, $topTribeId);
+            return ['achieved' => true, 'tribe_id' => $topTribeId, 'share' => $share, 'type' => $type];
+        }
+
+        return ['achieved' => false, 'share' => $share, 'required' => $value];
+    }
+
+    public function recordVictory(int $worldId, int $tribeId): void
+    {
+        $stmt = $this->conn->prepare("UPDATE worlds SET winner_tribe_id = ?, victory_at = CURRENT_TIMESTAMP WHERE id = ?");
+        if ($stmt) {
+            $stmt->bind_param("ii", $tribeId, $worldId);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+
+    public function getWinner(int $worldId = CURRENT_WORLD_ID): ?array
+    {
+        $stmt = $this->conn->prepare("SELECT winner_tribe_id, victory_at FROM worlds WHERE id = ? LIMIT 1");
+        if (!$stmt) {
+            return null;
+        }
+        $stmt->bind_param("i", $worldId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$row || empty($row['winner_tribe_id'])) {
+            return null;
+        }
+        return ['tribe_id' => (int)$row['winner_tribe_id'], 'victory_at' => $row['victory_at'] ?? null];
     }
 }

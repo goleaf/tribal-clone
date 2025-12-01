@@ -57,6 +57,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $stmt = $conn->prepare("SELECT id, name, created_at FROM worlds ORDER BY id DESC");
 $stmt->execute();
 $worlds = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+require_once __DIR__ . '/../lib/managers/WorldManager.php';
+$worldManager = new WorldManager($conn);
+$worldSummaries = [];
+foreach ($worlds as $worldRow) {
+    $worldSummaries[$worldRow['id']] = $worldManager->getSettings((int)$worldRow['id']);
+}
 
 $pageTitle = 'World Selection';
 require '../header.php';
@@ -83,6 +91,23 @@ require '../header.php';
                             <label for="world_<?= $world['id'] ?>">
                                 <strong><?= htmlspecialchars($world['name']) ?></strong>
                                 <span class="world-date">Created: <?= date('d.m.Y', strtotime($world['created_at'])) ?></span>
+                                <?php $settings = $worldSummaries[$world['id']] ?? []; ?>
+                                <span class="world-meta">
+                                    Speed: x<?= htmlspecialchars(number_format((float)($settings['world_speed'] ?? 1), 2)) ?> |
+                                    Troops: x<?= htmlspecialchars(number_format((float)($settings['troop_speed'] ?? 1), 2)) ?> |
+                                    Build: x<?= htmlspecialchars(number_format((float)($settings['build_speed'] ?? 1), 2)) ?> |
+                                    Train: x<?= htmlspecialchars(number_format((float)($settings['train_speed'] ?? 1), 2)) ?> |
+                                    Research: x<?= htmlspecialchars(number_format((float)($settings['research_speed'] ?? 1), 2)) ?>
+                                </span>
+                                <span class="world-meta">
+                                    Units: <?= (($settings['enable_archer'] ?? true) ? 'Archers' : 'No Archers') ?>, <?= (($settings['enable_paladin'] ?? true) ? 'Paladin' : 'No Paladin') ?>
+                                </span>
+                                <?php if (!empty($settings['victory_type'])): ?>
+                                    <span class="world-meta">Victory: <?= htmlspecialchars($settings['victory_type']) ?> <?= $settings['victory_value'] ? '(' . htmlspecialchars($settings['victory_value']) . ')' : '' ?></span>
+                                    <?php if (!empty($settings['winner_tribe_id'])): ?>
+                                        <span class="world-meta victory">Won by tribe #<?= htmlspecialchars($settings['winner_tribe_id']) ?> <?= !empty($settings['victory_at']) ? 'at ' . htmlspecialchars($settings['victory_at']) : '' ?></span>
+                                    <?php endif; ?>
+                                <?php endif; ?>
                             </label>
                         </div>
                     <?php endforeach; ?>
@@ -162,6 +187,15 @@ require '../header.php';
         font-size: var(--font-size-small); /* Smaller date font */
         color: #666; /* Muted color for date */
         margin-top: 0;
+    }
+    .world-meta {
+        display: block;
+        font-size: var(--font-size-small);
+        color: #444;
+    }
+    .world-meta.victory {
+        color: #145214;
+        font-weight: bold;
     }
     .form-actions {
         display: flex;

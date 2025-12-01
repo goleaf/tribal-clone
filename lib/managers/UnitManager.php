@@ -99,9 +99,25 @@ class UnitManager
         require_once __DIR__ . '/WorldManager.php';
         $wm = new WorldManager($this->conn);
         $worldSpeed = $wm->getWorldSpeed();
-        $trainMultiplier = defined('UNIT_TRAINING_MULTIPLIER') ? max(0.1, (float)UNIT_TRAINING_MULTIPLIER) : 1.0;
+        $trainMultiplier = $wm->getTrainSpeed();
 
-        return (int)floor($time / ($worldSpeed * $trainMultiplier));
+        $time = $time / ($worldSpeed * $trainMultiplier);
+
+        // Encourage meaningful batch times; set per-unit minimums by training building.
+        $minPerUnit = 0;
+        $buildingType = $unit['building_type'] ?? '';
+        if ($buildingType === 'barracks') {
+            $minPerUnit = 30; // 30s floor for infantry
+        } elseif ($buildingType === 'stable') {
+            $minPerUnit = 60; // 60s floor for cavalry
+        } elseif (in_array($buildingType, ['garage', 'workshop'], true)) {
+            $minPerUnit = 120; // 2m floor for siege
+        }
+        if ($minPerUnit > 0) {
+            $time = max($time, $minPerUnit);
+        }
+
+        return (int)floor($time);
     }
 
     /**

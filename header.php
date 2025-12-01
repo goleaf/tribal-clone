@@ -64,6 +64,10 @@ if (!isset($pageTitle)) {
     $pageTitle = 'Tribal Wars';
 }
 
+require_once __DIR__ . '/lib/managers/WorldManager.php';
+$worldManager = new WorldManager($conn);
+$currentWorldSettings = $worldManager->getSettings(CURRENT_WORLD_ID);
+
 // Set a permissive-but-explicit Content Security Policy and allow eval for legacy scripts
 $csp = [
     "default-src 'self'",
@@ -193,6 +197,7 @@ header('Content-Security-Policy: ' . implode('; ', $csp));
         <?php if (isset($_SESSION['user_id'])): ?>
             <div class="header-world">
                 World: <?= htmlspecialchars(getCurrentWorldName($conn)) ?>
+                <span class="world-pill">x<?= number_format((float)($currentWorldSettings['world_speed'] ?? 1), 2) ?> / troops x<?= number_format((float)($currentWorldSettings['troop_speed'] ?? 1), 2) ?></span>
             </div>
         <?php endif; ?>
     </header>

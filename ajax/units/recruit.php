@@ -80,12 +80,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $count = intval($count);
     $building_level = $buildingManager->getBuildingLevel($village_id, $building_internal_name);
 
+    $unitMeta = $unitManager->getUnitById($unit_id);
+    $unitInternal = $unitMeta['internal_name'] ?? '';
+
     // Check requirements
     $requirements = $unitManager->checkRecruitRequirements($unit_id, $village_id);
     if (!$requirements['can_recruit']) {
         http_response_code(400);
         echo json_encode(['error' => "Cannot recruit unit: " . $requirements['reason']]);
         exit();
+    }
+
+    // Extra nobleman requirements
+    if (in_array($unitInternal, ['noble', 'nobleman', 'nobleman_unit'], true)) {
+        $statueLevel = $buildingManager->getBuildingLevel($village_id, 'statue');
+        $academyLevel = $buildingManager->getBuildingLevel($village_id, 'academy');
+        $smithyLevel = $buildingManager->getBuildingLevel($village_id, 'smithy');
+        $marketLevel = $buildingManager->getBuildingLevel($village_id, 'market');
+        if ($statueLevel <= 0 || $academyLevel < 1 || $smithyLevel < 20 || $marketLevel < 10) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Noble requirements not met (statue, academy 1, smithy 20, market 10).']);
+            exit();
+        }
+        $userNobles = $unitManager->countUserNobles($user_id);
+        $maxNobles = $unitManager->getMaxNoblesForUser($user_id);
+        if ($userNobles + $count > $maxNobles) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Noble cap reached', 'max_nobles' => $maxNobles, 'current_nobles' => $userNobles]);
+            exit();
+        }
+        // Coin check
+        $stmtCoins = $conn->prepare("SELECT coins FROM villages WHERE id = ?");
+        $stmtCoins->bind_param("i", $village_id);
+        $stmtCoins->execute();
+        $rowCoins = $stmtCoins->get_result()->fetch_assoc();
+        $stmtCoins->close();
+        $coinsAvailable = (int)($rowCoins['coins'] ?? 0);
+        if ($coinsAvailable < $count) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Not enough coins', 'coins' => $coinsAvailable]);
+            exit();
+        }
     }
 
     // Check resources
@@ -104,6 +139,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $spend = $resourceManager->spendResources($village_id, $costs);
         if (!$spend['success']) {
             throw new Exception($spend['message']);
+        }
+
+        if (in_array($unitInternal, ['noble', 'nobleman', 'nobleman_unit'], true)) {
+            $stmtDeductCoin = $conn->prepare("UPDATE villages SET coins = coins - ? WHERE id = ? AND coins >= ?");
+            $stmtDeductCoin->bind_param("iii", $count, $village_id, $count);
+            $stmtDeductCoin->execute();
+            if ($stmtDeductCoin->affected_rows === 0) {
+                throw new Exception('Not enough coins to recruit noble.');
+            }
+            $stmtDeductCoin->close();
         }
 
         // Add to recruitment queue

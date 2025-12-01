@@ -3,6 +3,9 @@ CREATE TABLE IF NOT EXISTS worlds (
     name VARCHAR(100) NOT NULL UNIQUE,
     world_speed FLOAT NOT NULL DEFAULT 1.0,
     troop_speed FLOAT NOT NULL DEFAULT 1.0,
+    build_speed FLOAT NOT NULL DEFAULT 1.0,
+    train_speed FLOAT NOT NULL DEFAULT 1.0,
+    research_speed FLOAT NOT NULL DEFAULT 1.0,
     enable_archer TINYINT(1) NOT NULL DEFAULT 1,
     enable_paladin TINYINT(1) NOT NULL DEFAULT 1,
     enable_paladin_weapons TINYINT(1) NOT NULL DEFAULT 1,
@@ -10,5 +13,7 @@ CREATE TABLE IF NOT EXISTS worlds (
     tribe_member_limit INT DEFAULT NULL,
     victory_type VARCHAR(64) DEFAULT NULL,
     victory_value INT DEFAULT NULL,
+    winner_tribe_id INT DEFAULT NULL,
+    victory_at DATETIME DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ); 

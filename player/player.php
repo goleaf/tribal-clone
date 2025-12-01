@@ -6,6 +6,7 @@ require '../init.php';
 require_once __DIR__ . '/../lib/managers/UserManager.php'; // Include UserManager
 require_once __DIR__ . '/../lib/managers/VillageManager.php'; // Include VillageManager
 require_once __DIR__ . '/../lib/managers/RankingManager.php'; // Include RankingManager
+require_once __DIR__ . '/../lib/managers/AchievementManager.php'; // Achievements/plaques
 require_once __DIR__ . '/../lib/functions.php'; // For formatNumber
 
 // Check whether a user ID or username was provided in the URL
@@ -29,6 +30,7 @@ if (!$conn) {
 $userManager = new UserManager($conn);
 $villageManager = new VillageManager($conn);
 $rankingManager = new RankingManager($conn);
+$achievementManager = new AchievementManager($conn);
 
 $user = null;
 
@@ -69,6 +71,11 @@ $res = $conn->query("SELECT COUNT(*) as total FROM users");
 $total_users = $res ? $res->fetch_assoc()['total'] : 0;
 $res = $conn->query("SELECT COUNT(*) as total FROM villages");
 $total_villages = $res ? $res->fetch_assoc()['total'] : 0;
+
+// Plaques (unlocked achievements)
+$plaques = $achievementManager->getUserAchievementsWithProgress($user_id);
+$plaquesUnlocked = array_values(array_filter($plaques, fn($a) => !empty($a['unlocked'])));
+$topPlaques = array_slice($plaquesUnlocked, 0, 9);
 
 // $database->closeConnection(); // Remove manual DB close
 
@@ -119,6 +126,33 @@ require '../header.php';
                         </tr>
                     <?php endforeach; ?>
                 </table>
+                <?php endif; ?>
+            </div>
+
+            <div class="plaques-section">
+                <h3>Player plaques</h3>
+                <?php if (empty($plaquesUnlocked)): ?>
+                    <p class="no-plaques">No plaques earned yet.</p>
+                <?php else: ?>
+                    <div class="plaques-grid">
+                        <?php foreach ($topPlaques as $plaque):
+                            $unlockedAt = $plaque['unlocked_at'] ? date('Y-m-d', strtotime($plaque['unlocked_at'])) : null;
+                        ?>
+                        <article class="plaque-card" data-category="<?= htmlspecialchars($plaque['category']) ?>">
+                            <div class="plaque-head">
+                                <span class="plaque-cat"><?= htmlspecialchars(ucfirst($plaque['category'])) ?></span>
+                                <?php if ($unlockedAt): ?>
+                                    <span class="plaque-date"><?= htmlspecialchars($unlockedAt) ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <h4><?= htmlspecialchars($plaque['name']) ?></h4>
+                            <p class="plaque-desc"><?= htmlspecialchars($plaque['description']) ?></p>
+                        </article>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if (count($plaquesUnlocked) > count($topPlaques)): ?>
+                        <p class="more-plaques">…and <?= count($plaquesUnlocked) - count($topPlaques) ?> more plaques.</p>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
             <a href="ranking.php?type=players" class="btn btn-secondary mt-3">Back to rankings</a>
