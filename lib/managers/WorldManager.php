@@ -283,6 +283,42 @@ class WorldManager
         return max(0.1, (float)($settings['build_speed'] ?? 1.0));
     }
 
+    public function areNudgesEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        $settings = $this->getSettings($worldId);
+        if (array_key_exists('enable_nudges', $settings)) {
+            return (bool)$settings['enable_nudges'];
+        }
+        return defined('FEATURE_NUDGES_ENABLED') ? (bool)FEATURE_NUDGES_ENABLED : true;
+    }
+
+    public function areNotificationsEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        $settings = $this->getSettings($worldId);
+        if (array_key_exists('enable_notifications', $settings)) {
+            return (bool)$settings['enable_notifications'];
+        }
+        return defined('FEATURE_NOTIFICATIONS_ENABLED') ? (bool)FEATURE_NOTIFICATIONS_ENABLED : true;
+    }
+
+    public function areTasksEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        $settings = $this->getSettings($worldId);
+        if (array_key_exists('enable_tasks', $settings)) {
+            return (bool)$settings['enable_tasks'];
+        }
+        return defined('FEATURE_TASKS_ENABLED') ? (bool)FEATURE_TASKS_ENABLED : true;
+    }
+
+    public function areCatchupBuffsEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        $settings = $this->getSettings($worldId);
+        if (array_key_exists('enable_catchup_buffs', $settings)) {
+            return (bool)$settings['enable_catchup_buffs'];
+        }
+        return defined('FEATURE_CATCHUP_BUFFS_ENABLED') ? (bool)FEATURE_CATCHUP_BUFFS_ENABLED : true;
+    }
+
     public function getTrainSpeed(int $worldId = CURRENT_WORLD_ID): float
     {
         $settings = $this->getSettings($worldId);

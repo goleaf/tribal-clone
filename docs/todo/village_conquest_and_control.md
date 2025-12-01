@@ -179,6 +179,7 @@
 - [ ] Load test allegiance resolver under 1k waves/tick; p95 within target; no race conditions on concurrent waves to same village.
 - [ ] Reports display morale/luck, allegiance drop, regen applied, anti-snipe status, surviving SBs, and block reasons when applicable.
 - [ ] Handover UI: verify opt-in/opt-out flows, cooldowns to prevent abuse, and clear messaging when conquest blocked due to handover settings.
+- [ ] Capture aftermath: post-capture start value applied, anti-snipe/grace honored, optional building-loss variant fires at configured odds, allied support handling obeys world flag, and reports show grace duration/fired building-loss if any.
 
 ## Telemetry & Monitoring
 - Emit metrics for allegiance drops applied/blocked (reason codes), capture success rate, average drops per wave, anti-snipe floor hits, and handover blocks.
@@ -195,6 +196,13 @@
 - **Power Delta/Abuse:** Optional power gap check; if attacker too strong vs protected target → `ERR_POWER_DELTA`.
 - **Handover Mode:** If tribe handover opt-in required and not set, conquest blocked; if allowed, still requires combat win + bearer survival.
 - **Audit:** Log attempt with reason code, timestamps, world, attacker/defender ids, and allegiance before/after (if applied).
+
+### Feature Flags & World Config
+- `CONQUEST_MODE` (`allegiance_drop` | `control_uptime`), `FEATURE_CONQUEST_UNIT_ENABLED`, `FEATURE_CONTROL_UPTIME_ENABLED`.
+- `ALLEG_REGEN_PER_HOUR`, `ALLEG_WALL_REDUCTION_PER_LEVEL`, `ANTI_SNIPE_FLOOR`, `ANTI_SNIPE_SECONDS` per world.
+- `CONQUEST_MIN_DEFENDER_POINTS`, `WAVE_SPACING_MS`, `MAX_LOYALTY_UNITS_PER_COMMAND`, `CONQUEST_DAILY_MINT_CAP`, `CONQUEST_DAILY_TRAIN_CAP` configurable per world.
+- `ALLEG_DISTANCE_MODIFIER`, `ALLEG_WALL_MODIFIER` toggles for distance/wall-based adjustments.
+- Defaults: classic allegiance drop; control/uptime worlds override resolver; flags read via WorldManager/config with safe fallbacks.
 
 ## Open Questions
 - For control/uptime worlds vs allegiance-drop worlds, can the same resolver be parameterized, or do we maintain two distinct code paths?

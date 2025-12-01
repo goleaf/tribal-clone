@@ -426,7 +426,8 @@ document.addEventListener('DOMContentLoaded', () => {
         villageViewGraphic.addEventListener('click', function(event) {
             const placeholder = event.target.closest('.building-placeholder');
             if (placeholder) {
-                const internalName = placeholder.dataset.buildingInternalName;
+                const internalNameRaw = placeholder.dataset.buildingInternalName;
+                const internalName = internalNameRaw === 'main_building_flag' ? 'main_building' : internalNameRaw;
                  if (window.currentVillageId) { // Check that villageId is available
                       openBuildingDetailsPopup(window.currentVillageId, internalName);
                  } else {
