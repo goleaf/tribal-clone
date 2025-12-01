@@ -408,6 +408,7 @@ class ResourceManager {
                 'resource_decay_threshold_pct' => $wm->getResourceDecayThresholdPct($worldId),
                 'resource_decay_rate_per_hour' => $wm->getResourceDecayRatePerHour($worldId),
                 'catchup_enabled' => $wm->areCatchupBuffsEnabled($worldId),
+                'wall_decay_enabled' => method_exists($wm, 'isWallDecayEnabled') ? $wm->isWallDecayEnabled($worldId) : false,
             ];
             return $this->worldEconomyCache[$worldId];
         }

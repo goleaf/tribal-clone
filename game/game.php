@@ -11,6 +11,7 @@ require_once __DIR__ . '/../lib/managers/NotificationManager.php';
 require_once __DIR__ . '/../lib/managers/EndgameManager.php';
 require_once __DIR__ . '/../lib/managers/WorldManager.php';
 require_once __DIR__ . '/../lib/managers/IntelManager.php';
+require_once __DIR__ . '/../lib/managers/TaskManager.php';
 require_once __DIR__ . '/../lib/functions.php';
 
 // Instantiate managers
@@ -25,6 +26,7 @@ $notificationManager = new NotificationManager($conn);
 $endgameManager = new EndgameManager($conn);
 $worldManager = new WorldManager($conn);
 $intelManager = new IntelManager($conn);
+$taskManager = new TaskManager($conn);
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: /auth/login.php");

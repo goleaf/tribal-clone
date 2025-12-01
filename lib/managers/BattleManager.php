@@ -1959,6 +1959,7 @@ class BattleManager
                 'vault_protection_percent' => $vaultPct,
                 'vault_protected' => $vaultProtected,
                 'available_after_protection' => $availableAfterProtection,
+                'capture_aftermath' => $captureAftermath ?? null,
                 'report_version' => self::REPORT_VERSION,
                 'correlation_id' => $correlationId,
                 'modifiers' => [
