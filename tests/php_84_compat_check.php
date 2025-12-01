@@ -18,6 +18,11 @@ function checkExtensions(array $extensions): array
 $minimum = 80400; // PHP 8.4.0
 $current = PHP_VERSION_ID;
 
+$deprecatedIni = [];
+foreach (['session.sid_length', 'session.sid_bits_per_character'] as $iniKey) {
+    $deprecatedIni[$iniKey] = ini_get($iniKey);
+}
+
 $report = [
     'php_version' => PHP_VERSION,
     'php_version_id' => $current,
@@ -35,8 +40,8 @@ $report = [
         'display_errors' => ini_get('display_errors'),
         'error_reporting' => ini_get('error_reporting'),
         'memory_limit' => ini_get('memory_limit'),
+        'deprecated_session_ini' => $deprecatedIni,
     ],
 ];
 
 echo json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL;
-

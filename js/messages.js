@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!target) return;
 
         const max = parseInt(target.getAttribute('maxlength') || '0', 10);
+        counter.setAttribute('aria-live', 'polite');
         const update = () => {
             const remaining = max ? (max - target.value.length) : target.value.length;
             counter.textContent = max ? `${remaining} chars left` : `${remaining} chars`;
@@ -31,4 +32,3 @@ document.addEventListener('DOMContentLoaded', () => {
         update();
     });
 });
-

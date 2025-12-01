@@ -18,6 +18,8 @@ button {
   border-radius: 6px;
   border: 1px solid var(--form-border);
   background: var(--form-bg);
+  padding: 8px 10px;
+  font-size: 1rem;
 }
 
 input:focus-visible,
@@ -25,6 +27,12 @@ select:focus-visible,
 textarea:focus-visible,
 button:focus-visible {
   box-shadow: 0 0 0 2px rgba(224, 176, 96, 0.25);
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .form-help {
@@ -44,4 +52,3 @@ button:focus-visible {
   border-style: solid;
   background: rgba(224, 176, 96, 0.1);
 }
-
