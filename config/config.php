@@ -65,6 +65,8 @@ define('FEATURE_PARALLEL_QUEUES_ENABLED', false); // Allow resource + military b
 define('FEATURE_HOSPITAL_ENABLED', true); // Toggle hospital/wounded recovery systems
 define('FEATURE_OUTPOST_ENABLED', false); // Toggle temporary outpost/encampment building
 define('WALL_DECAY_ENABLED', false); // Optional passive wall decay when inactive
+define('WALL_DECAY_INACTIVE_HOURS', 72); // Require this many inactive hours before decay can tick
+define('WALL_DECAY_INTERVAL_HOURS', 24); // Minimum hours between decay ticks
 define('INACTIVE_TO_BARBARIAN_DAYS', 30); // Days of inactivity before a player village becomes barbarian (cron-driven)
 define('PALADIN_WEAPON', 'none'); // Options: 'none', 'bonfire', 'vascos_scepter'
 define('PALADIN_WEAPON_BONFIRE_MULTIPLIER', 1.5); // Attack/defense multiplier for catapults when Bonfire is equipped

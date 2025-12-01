@@ -70,6 +70,7 @@ class BattleManager
     private const LOW_POWER_ATTACKS_PER_TRIBE_PER_DAY = 20;
     private const MIN_ATTACK_POP = 5;
     private const CONQUEST_MIN_DEFENDER_POINTS = 500; // block conquest against very low-point targets
+    private const DUP_GUARD_WINDOW_SECONDS = 10; // duplicate command replays within this window are blocked
 
     /**
      * @param mysqli $conn Database connection

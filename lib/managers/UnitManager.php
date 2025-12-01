@@ -9,6 +9,7 @@ class UnitManager
     private WorldManager $worldManager;
     private const SIEGE_CAP_PER_VILLAGE = 200;
     private const SIEGE_INTERNALS = ['ram', 'battering_ram', 'catapult', 'stone_hurler'];
+    private ?array $unitConfigVersion = null;
 
     /**
      * Constructor
