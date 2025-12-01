@@ -209,6 +209,7 @@
 - Should anti-snipe floors block control gain entirely or just floor the minimum (e.g., cannot drop below 10 but can still gain)? Clarify to avoid exploits.
 - What are default distance/wall modifiers for allegiance drop, and are they world-specific? Need documented defaults for UI.
 - How should tribe handover mode be exposed in UI (opt-in toggle per target vs tribe policy), and what cooldowns prevent abuse?
+- Are building-loss variants and allied support behavior after capture unified across worlds or archetype-specific? Document defaults for casual vs hardcore and expose flags in world config/docs.
 
 ## Acceptance Criteria
 - Allegiance resolver applies drops, regen, and floors correctly across configs; clamps [0,100]; captures only on win + bearer survival.
