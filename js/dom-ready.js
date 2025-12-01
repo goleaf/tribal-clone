@@ -24,3 +24,14 @@ export function $all(selector, scope = document) {
 export function ready(callback) {
     onDomReady(callback);
 }
+
+/**
+ * Add an event listener that auto-removes after first call.
+ */
+export function once(target, eventName, handler, options = {}) {
+    const wrapped = (evt) => {
+        target.removeEventListener(eventName, wrapped, options);
+        handler(evt);
+    };
+    target.addEventListener(eventName, wrapped, options);
+}

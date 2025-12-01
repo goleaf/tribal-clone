@@ -35,6 +35,16 @@
   border: 0;
 }
 
+.visually-hidden-focusable:active,
+.visually-hidden-focusable:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
