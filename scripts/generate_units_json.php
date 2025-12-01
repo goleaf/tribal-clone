@@ -198,3 +198,203 @@ $units = array_merge($units, [
 
 // Continue with remaining unit categories...
 echo json_encode($units, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+
+// Add Scout Units
+$units = array_merge($units, [
+    'pathfinder' => [
+        'name' => 'Pathfinder',
+        'internal_name' => 'pathfinder',
+        'category' => 'scout',
+        'building_type' => 'barracks',
+        'required_building_level' => 1,
+        'required_tech' => null,
+        'required_tech_level' => 0,
+        'cost' => ['wood' => 50, 'clay' => 30, 'iron' => 20],
+        'population' => 1,
+        'attack' => 0,
+        'defense' => ['infantry' => 2, 'cavalry' => 2, 'ranged' => 2],
+        'speed_min_per_field' => 5,
+        'carry_capacity' => 0,
+        'training_time_base' => 1080,
+        'rps_bonuses' => [],
+        'special_abilities' => ['scout_basic'],
+        'description' => 'Basic scout. Reveals troop counts and resources if survives. Very fast movement.'
+    ],
+    
+    'shadow_rider' => [
+        'name' => 'Shadow Rider',
+        'internal_name' => 'shadow_rider',
+        'category' => 'scout',
+        'building_type' => 'stable',
+        'required_building_level' => 5,
+        'required_tech' => 'mounted_archery',
+        'required_tech_level' => 4,
+        'cost' => ['wood' => 120, 'clay' => 100, 'iron' => 150],
+        'population' => 3,
+        'attack' => 10,
+        'defense' => ['infantry' => 10, 'cavalry' => 10, 'ranged' => 10],
+        'speed_min_per_field' => 6,
+        'carry_capacity' => 0,
+        'training_time_base' => 4800,
+        'rps_bonuses' => [],
+        'special_abilities' => ['scout_advanced'],
+        'description' => 'Advanced scout. Reveals building levels and queues if survives. Fast mounted reconnaissance.'
+    ],
+]);
+
+// Add Siege Units
+$units = array_merge($units, [
+    'battering_ram' => [
+        'name' => 'Battering Ram',
+        'internal_name' => 'battering_ram',
+        'category' => 'siege',
+        'building_type' => 'workshop',
+        'required_building_level' => 1,
+        'required_tech' => null,
+        'required_tech_level' => 0,
+        'cost' => ['wood' => 300, 'clay' => 200, 'iron' => 200],
+        'population' => 5,
+        'attack' => 2,
+        'defense' => ['infantry' => 20, 'cavalry' => 50, 'ranged' => 20],
+        'speed_min_per_field' => 30,
+        'carry_capacity' => 0,
+        'training_time_base' => 14400,
+        'rps_bonuses' => [],
+        'special_abilities' => ['wall_breaker'],
+        'description' => 'Wall breaching siege unit. Reduces wall level on successful attack. Vulnerable to ranged.'
+    ],
+    
+    'stone_hurler' => [
+        'name' => 'Stone Hurler',
+        'internal_name' => 'stone_hurler',
+        'category' => 'siege',
+        'building_type' => 'workshop',
+        'required_building_level' => 3,
+        'required_tech' => 'artillery',
+        'required_tech_level' => 3,
+        'cost' => ['wood' => 320, 'clay' => 400, 'iron' => 150],
+        'population' => 8,
+        'attack' => 100,
+        'defense' => ['infantry' => 100, 'cavalry' => 100, 'ranged' => 100],
+        'speed_min_per_field' => 35,
+        'carry_capacity' => 0,
+        'training_time_base' => 18000,
+        'rps_bonuses' => [],
+        'special_abilities' => ['building_damage'],
+        'description' => 'Catapult for destroying buildings. Damages targeted or random building on successful attack.'
+    ],
+    
+    'mantlet_crew' => [
+        'name' => 'Mantlet Crew',
+        'internal_name' => 'mantlet_crew',
+        'category' => 'siege',
+        'building_type' => 'workshop',
+        'required_building_level' => 2,
+        'required_tech' => 'siege_warfare',
+        'required_tech_level' => 3,
+        'cost' => ['wood' => 200, 'clay' => 250, 'iron' => 120],
+        'population' => 2,
+        'attack' => 5,
+        'defense' => ['infantry' => 80, 'cavalry' => 60, 'ranged' => 200],
+        'speed_min_per_field' => 28,
+        'carry_capacity' => 0,
+        'training_time_base' => 10800,
+        'rps_bonuses' => [],
+        'special_abilities' => ['siege_cover'],
+        'description' => 'Protective siege cover. Reduces ranged damage to escorted siege units by 40%.'
+    ],
+]);
+
+// Add Support Units
+$units = array_merge($units, [
+    'banner_guard' => [
+        'name' => 'Banner Guard',
+        'internal_name' => 'banner_guard',
+        'category' => 'support',
+        'building_type' => 'barracks',
+        'required_building_level' => 5,
+        'required_tech' => 'banner_tactics',
+        'required_tech_level' => 4,
+        'cost' => ['wood' => 150, 'clay' => 120, 'iron' => 80],
+        'population' => 2,
+        'attack' => 25,
+        'defense' => ['infantry' => 45, 'cavalry' => 45, 'ranged' => 45],
+        'speed_min_per_field' => 24,
+        'carry_capacity' => 10,
+        'training_time_base' => 9600,
+        'rps_bonuses' => [],
+        'special_abilities' => ['aura_defense_tier_1'],
+        'aura_config' => [
+            'def_multiplier' => 1.15,
+            'resolve_bonus' => 5,
+            'tier' => 1
+        ],
+        'description' => 'Support unit with defensive aura. Provides +15% defense to all defending troops. Does not stack.'
+    ],
+    
+    'war_healer' => [
+        'name' => 'War Healer',
+        'internal_name' => 'war_healer',
+        'category' => 'support',
+        'building_type' => 'church',
+        'required_building_level' => 1,
+        'required_tech' => 'divine_blessing',
+        'required_tech_level' => 1,
+        'cost' => ['wood' => 180, 'clay' => 150, 'iron' => 200],
+        'population' => 3,
+        'attack' => 0,
+        'defense' => ['infantry' => 30, 'cavalry' => 30, 'ranged' => 30],
+        'speed_min_per_field' => 20,
+        'carry_capacity' => 0,
+        'training_time_base' => 10800,
+        'rps_bonuses' => [],
+        'special_abilities' => ['healer'],
+        'description' => 'Mystical healer. Recovers percentage of lost troops after battle. Requires world healer_enabled flag.'
+    ],
+]);
+
+// Add Conquest Units
+$units = array_merge($units, [
+    'noble' => [
+        'name' => 'Noble',
+        'internal_name' => 'noble',
+        'category' => 'conquest',
+        'building_type' => 'academy',
+        'required_building_level' => 3,
+        'required_tech' => null,
+        'required_tech_level' => 0,
+        'cost' => ['wood' => 40000, 'clay' => 50000, 'iron' => 50000, 'coins' => 1],
+        'population' => 100,
+        'attack' => 30,
+        'defense' => ['infantry' => 100, 'cavalry' => 50, 'ranged' => 100],
+        'speed_min_per_field' => 35,
+        'carry_capacity' => 0,
+        'training_time_base' => 32400,
+        'rps_bonuses' => [],
+        'special_abilities' => ['conquest'],
+        'description' => 'Conquest unit. Reduces village allegiance on successful attack. Requires minted coins. Very expensive.'
+    ],
+    
+    'standard_bearer' => [
+        'name' => 'Standard Bearer',
+        'internal_name' => 'standard_bearer',
+        'category' => 'conquest',
+        'building_type' => 'rally_point',
+        'required_building_level' => 10,
+        'required_tech' => 'leadership',
+        'required_tech_level' => 5,
+        'cost' => ['wood' => 30000, 'clay' => 40000, 'iron' => 40000, 'standards' => 1],
+        'population' => 80,
+        'attack' => 40,
+        'defense' => ['infantry' => 80, 'cavalry' => 60, 'ranged' => 80],
+        'speed_min_per_field' => 30,
+        'carry_capacity' => 0,
+        'training_time_base' => 28800,
+        'rps_bonuses' => [],
+        'special_abilities' => ['conquest'],
+        'description' => 'Alternative conquest unit. Reduces village allegiance on successful attack. Requires crafted standards.'
+    ],
+]);
+
+echo json_encode($units, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);

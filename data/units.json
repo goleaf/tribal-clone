@@ -1,480 +1,809 @@
 {
-  "archer": {
-    "buildTimeSec": 1500,
-    "carry": 10,
-    "cost": {
-      "clay": 30,
-      "iron": 60,
-      "wood": 100
+    "_comment": "Military Units System - Complete 16+ Unit Roster",
+    "_version": "2.0.0",
+    "_requirements": "1.1, 1.2, 1.3, 2.1, 2.2, 3.1, 3.2, 4.1, 4.2, 5.1, 5.2, 6.1, 6.2, 7.1, 7.2, 8.1, 8.2, 14.1",
+    "pikeneer": {
+        "name": "Pikeneer",
+        "internal_name": "pikeneer",
+        "category": "infantry",
+        "building_type": "barracks",
+        "required_building_level": 1,
+        "required_tech": null,
+        "required_tech_level": 0,
+        "cost": {
+            "wood": 50,
+            "clay": 30,
+            "iron": 10
+        },
+        "population": 1,
+        "attack": 25,
+        "defense": {
+            "infantry": 65,
+            "cavalry": 20,
+            "ranged": 15
+        },
+        "speed_min_per_field": 18,
+        "carry_capacity": 10,
+        "training_time_base": 2700,
+        "rps_bonuses": {
+            "vs_cavalry": 1.4
+        },
+        "special_abilities": [],
+        "description": "Anti-cavalry specialist with pike formation. Strong against cavalry, weak against ranged."
     },
-    "def": {
-      "arc": 5,
-      "cav": 40,
-      "gen": 50
+    "shieldbearer": {
+        "name": "Shieldbearer",
+        "internal_name": "shieldbearer",
+        "category": "infantry",
+        "building_type": "barracks",
+        "required_building_level": 2,
+        "required_tech": null,
+        "required_tech_level": 0,
+        "cost": {
+            "wood": 60,
+            "clay": 50,
+            "iron": 40
+        },
+        "population": 1,
+        "attack": 30,
+        "defense": {
+            "infantry": 70,
+            "cavalry": 65,
+            "ranged": 60
+        },
+        "speed_min_per_field": 20,
+        "carry_capacity": 15,
+        "training_time_base": 3000,
+        "rps_bonuses": [],
+        "special_abilities": [],
+        "description": "Balanced defensive infantry with shield wall formation. Reliable all-around defender."
     },
-    "off": 15,
-    "pop": 1,
-    "speedMinPerField": 18
-  },
-  "axe": {
-    "buildTimeSec": 1260,
-    "carry": 10,
-    "cost": {
-      "clay": 30,
-      "iron": 40,
-      "wood": 60
+    "raider": {
+        "name": "Raider",
+        "internal_name": "raider",
+        "category": "infantry",
+        "building_type": "barracks",
+        "required_building_level": 1,
+        "required_tech": null,
+        "required_tech_level": 0,
+        "cost": {
+            "wood": 70,
+            "clay": 40,
+            "iron": 60
+        },
+        "population": 1,
+        "attack": 60,
+        "defense": {
+            "infantry": 20,
+            "cavalry": 15,
+            "ranged": 10
+        },
+        "speed_min_per_field": 18,
+        "carry_capacity": 35,
+        "training_time_base": 2400,
+        "rps_bonuses": [],
+        "special_abilities": [],
+        "description": "Offensive infantry raider. High attack, low defense, good carry capacity for plundering."
     },
-    "def": {
-      "arc": 10,
-      "cav": 5,
-      "gen": 10
+    "warden": {
+        "name": "Warden",
+        "internal_name": "warden",
+        "category": "infantry",
+        "building_type": "barracks",
+        "required_building_level": 10,
+        "required_tech": "elite_training",
+        "required_tech_level": 8,
+        "cost": {
+            "wood": 200,
+            "clay": 180,
+            "iron": 220
+        },
+        "population": 2,
+        "attack": 80,
+        "defense": {
+            "infantry": 240,
+            "cavalry": 230,
+            "ranged": 220
+        },
+        "speed_min_per_field": 20,
+        "carry_capacity": 25,
+        "training_time_base": 7200,
+        "rps_bonuses": [],
+        "special_abilities": [
+            "elite"
+        ],
+        "description": "Elite defensive infantry. Very high defense across all types. Subject to per-account caps."
     },
-    "off": 40,
-    "pop": 1,
-    "speedMinPerField": 18
-  },
-  "axe_warrior": {
-    "buildTimeSec": 480,
-    "carry": 35,
-    "cost": {
-      "clay": 40,
-      "iron": 60,
-      "wood": 70
+    "militia_bowman": {
+        "name": "Militia Bowman",
+        "internal_name": "militia_bowman",
+        "category": "ranged",
+        "building_type": "barracks",
+        "required_building_level": 1,
+        "required_tech": null,
+        "required_tech_level": 0,
+        "cost": {
+            "wood": 60,
+            "clay": 30,
+            "iron": 40
+        },
+        "population": 1,
+        "attack": 25,
+        "defense": {
+            "infantry": 10,
+            "cavalry": 20,
+            "ranged": 5
+        },
+        "speed_min_per_field": 18,
+        "carry_capacity": 20,
+        "training_time_base": 3600,
+        "rps_bonuses": {
+            "wall_bonus_vs_infantry": 1.5
+        },
+        "special_abilities": [
+            "wall_bonus"
+        ],
+        "description": "Basic ranged unit. Gains significant defense bonus against infantry when behind walls."
     },
-    "def": {
-      "arc": 10,
-      "cav": 15,
-      "gen": 20
+    "longbow_scout": {
+        "name": "Longbow Scout",
+        "internal_name": "longbow_scout",
+        "category": "ranged",
+        "building_type": "barracks",
+        "required_building_level": 3,
+        "required_tech": "archery",
+        "required_tech_level": 2,
+        "cost": {
+            "wood": 80,
+            "clay": 50,
+            "iron": 60
+        },
+        "population": 1,
+        "attack": 45,
+        "defense": {
+            "infantry": 15,
+            "cavalry": 30,
+            "ranged": 10
+        },
+        "speed_min_per_field": 16,
+        "carry_capacity": 25,
+        "training_time_base": 4200,
+        "rps_bonuses": {
+            "wall_bonus_vs_infantry": 1.6
+        },
+        "special_abilities": [
+            "wall_bonus"
+        ],
+        "description": "Improved ranged unit with better offense. Enhanced wall bonus against infantry."
     },
-    "off": 45,
-    "pop": 1,
-    "speedMinPerField": 18
-  },
-  "battering_ram": {
-    "buildTimeSec": 2400,
-    "carry": 0,
-    "cost": {
-      "clay": 200,
-      "iron": 200,
-      "wood": 300
+    "ranger": {
+        "name": "Ranger",
+        "internal_name": "ranger",
+        "category": "ranged",
+        "building_type": "barracks",
+        "required_building_level": 8,
+        "required_tech": "ranged_warfare",
+        "required_tech_level": 7,
+        "cost": {
+            "wood": 180,
+            "clay": 140,
+            "iron": 160
+        },
+        "population": 2,
+        "attack": 90,
+        "defense": {
+            "infantry": 40,
+            "cavalry": 60,
+            "ranged": 30
+        },
+        "speed_min_per_field": 16,
+        "carry_capacity": 30,
+        "training_time_base": 6600,
+        "rps_bonuses": {
+            "vs_siege": 2,
+            "wall_bonus_vs_infantry": 1.7
+        },
+        "special_abilities": [
+            "elite",
+            "anti_siege",
+            "wall_bonus"
+        ],
+        "description": "Elite ranged unit with anti-siege specialization. Devastating against rams and catapults."
     },
-    "def": {
-      "arc": 20,
-      "cav": 50,
-      "gen": 20
+    "skirmisher_cavalry": {
+        "name": "Skirmisher Cavalry",
+        "internal_name": "skirmisher_cavalry",
+        "category": "cavalry",
+        "building_type": "stable",
+        "required_building_level": 1,
+        "required_tech": null,
+        "required_tech_level": 0,
+        "cost": {
+            "wood": 100,
+            "clay": 50,
+            "iron": 80
+        },
+        "population": 2,
+        "attack": 60,
+        "defense": {
+            "infantry": 20,
+            "cavalry": 15,
+            "ranged": 15
+        },
+        "speed_min_per_field": 8,
+        "carry_capacity": 80,
+        "training_time_base": 3600,
+        "rps_bonuses": {
+            "vs_ranged_open_field": 1.5
+        },
+        "special_abilities": [],
+        "description": "Fast raiding cavalry. Bonus against ranged units in open field. Excellent for quick raids."
     },
-    "off": 2,
-    "pop": 5,
-    "speedMinPerField": 30
-  },
-  "berserker": {
-    "buildTimeSec": 2400,
-    "carry": 30,
-    "cost": {
-      "clay": 120,
-      "iron": 150,
-      "wood": 160
+    "lancer": {
+        "name": "Lancer",
+        "internal_name": "lancer",
+        "category": "cavalry",
+        "building_type": "stable",
+        "required_building_level": 3,
+        "required_tech": "heavy_cavalry",
+        "required_tech_level": 1,
+        "cost": {
+            "wood": 150,
+            "clay": 120,
+            "iron": 200
+        },
+        "population": 3,
+        "attack": 150,
+        "defense": {
+            "infantry": 60,
+            "cavalry": 40,
+            "ranged": 30
+        },
+        "speed_min_per_field": 9,
+        "carry_capacity": 40,
+        "training_time_base": 7200,
+        "rps_bonuses": {
+            "vs_ranged_open_field": 1.6
+        },
+        "special_abilities": [],
+        "description": "Heavy shock cavalry. High attack and population cost. Strong against ranged in open field."
+    }
+}{
+    "_comment": "Military Units System - Complete 16+ Unit Roster",
+    "_version": "2.0.0",
+    "_requirements": "1.1, 1.2, 1.3, 2.1, 2.2, 3.1, 3.2, 4.1, 4.2, 5.1, 5.2, 6.1, 6.2, 7.1, 7.2, 8.1, 8.2, 14.1",
+    "pikeneer": {
+        "name": "Pikeneer",
+        "internal_name": "pikeneer",
+        "category": "infantry",
+        "building_type": "barracks",
+        "required_building_level": 1,
+        "required_tech": null,
+        "required_tech_level": 0,
+        "cost": {
+            "wood": 50,
+            "clay": 30,
+            "iron": 10
+        },
+        "population": 1,
+        "attack": 25,
+        "defense": {
+            "infantry": 65,
+            "cavalry": 20,
+            "ranged": 15
+        },
+        "speed_min_per_field": 18,
+        "carry_capacity": 10,
+        "training_time_base": 2700,
+        "rps_bonuses": {
+            "vs_cavalry": 1.4
+        },
+        "special_abilities": [],
+        "description": "Anti-cavalry specialist with pike formation. Strong against cavalry, weak against ranged."
     },
-    "def": {
-      "arc": 40,
-      "cav": 40,
-      "gen": 60
+    "shieldbearer": {
+        "name": "Shieldbearer",
+        "internal_name": "shieldbearer",
+        "category": "infantry",
+        "building_type": "barracks",
+        "required_building_level": 2,
+        "required_tech": null,
+        "required_tech_level": 0,
+        "cost": {
+            "wood": 60,
+            "clay": 50,
+            "iron": 40
+        },
+        "population": 1,
+        "attack": 30,
+        "defense": {
+            "infantry": 70,
+            "cavalry": 65,
+            "ranged": 60
+        },
+        "speed_min_per_field": 20,
+        "carry_capacity": 15,
+        "training_time_base": 3000,
+        "rps_bonuses": [],
+        "special_abilities": [],
+        "description": "Balanced defensive infantry with shield wall formation. Reliable all-around defender."
     },
-    "off": 200,
-    "pop": 2,
-    "speedMinPerField": 15
-  },
-  "bowman": {
-    "buildTimeSec": 600,
-    "carry": 20,
-    "cost": {
-      "clay": 30,
-      "iron": 40,
-      "wood": 60
+    "raider": {
+        "name": "Raider",
+        "internal_name": "raider",
+        "category": "infantry",
+        "building_type": "barracks",
+        "required_building_level": 1,
+        "required_tech": null,
+        "required_tech_level": 0,
+        "cost": {
+            "wood": 70,
+            "clay": 40,
+            "iron": 60
+        },
+        "population": 1,
+        "attack": 60,
+        "defense": {
+            "infantry": 20,
+            "cavalry": 15,
+            "ranged": 10
+        },
+        "speed_min_per_field": 18,
+        "carry_capacity": 35,
+        "training_time_base": 2400,
+        "rps_bonuses": [],
+        "special_abilities": [],
+        "description": "Offensive infantry raider. High attack, low defense, good carry capacity for plundering."
     },
-    "def": {
-      "arc": 5,
-      "cav": 20,
-      "gen": 10
+    "warden": {
+        "name": "Warden",
+        "internal_name": "warden",
+        "category": "infantry",
+        "building_type": "barracks",
+        "required_building_level": 10,
+        "required_tech": "elite_training",
+        "required_tech_level": 8,
+        "cost": {
+            "wood": 200,
+            "clay": 180,
+            "iron": 220
+        },
+        "population": 2,
+        "attack": 80,
+        "defense": {
+            "infantry": 240,
+            "cavalry": 230,
+            "ranged": 220
+        },
+        "speed_min_per_field": 20,
+        "carry_capacity": 25,
+        "training_time_base": 7200,
+        "rps_bonuses": [],
+        "special_abilities": [
+            "elite"
+        ],
+        "description": "Elite defensive infantry. Very high defense across all types. Subject to per-account caps."
     },
-    "off": 25,
-    "pop": 1,
-    "speedMinPerField": 18
-  },
-  "catapult": {
-    "buildTimeSec": 3000,
-    "carry": 0,
-    "cost": {
-      "clay": 400,
-      "iron": 150,
-      "wood": 320
+    "militia_bowman": {
+        "name": "Militia Bowman",
+        "internal_name": "militia_bowman",
+        "category": "ranged",
+        "building_type": "barracks",
+        "required_building_level": 1,
+        "required_tech": null,
+        "required_tech_level": 0,
+        "cost": {
+            "wood": 60,
+            "clay": 30,
+            "iron": 40
+        },
+        "population": 1,
+        "attack": 25,
+        "defense": {
+            "infantry": 10,
+            "cavalry": 20,
+            "ranged": 5
+        },
+        "speed_min_per_field": 18,
+        "carry_capacity": 20,
+        "training_time_base": 3600,
+        "rps_bonuses": {
+            "wall_bonus_vs_infantry": 1.5
+        },
+        "special_abilities": [
+            "wall_bonus"
+        ],
+        "description": "Basic ranged unit. Gains significant defense bonus against infantry when behind walls."
     },
-    "def": {
-      "arc": 100,
-      "cav": 100,
-      "gen": 100
+    "longbow_scout": {
+        "name": "Longbow Scout",
+        "internal_name": "longbow_scout",
+        "category": "ranged",
+        "building_type": "barracks",
+        "required_building_level": 3,
+        "required_tech": "archery",
+        "required_tech_level": 2,
+        "cost": {
+            "wood": 80,
+            "clay": 50,
+            "iron": 60
+        },
+        "population": 1,
+        "attack": 45,
+        "defense": {
+            "infantry": 15,
+            "cavalry": 30,
+            "ranged": 10
+        },
+        "speed_min_per_field": 16,
+        "carry_capacity": 25,
+        "training_time_base": 4200,
+        "rps_bonuses": {
+            "wall_bonus_vs_infantry": 1.6
+        },
+        "special_abilities": [
+            "wall_bonus"
+        ],
+        "description": "Improved ranged unit with better offense. Enhanced wall bonus against infantry."
     },
-    "off": 100,
-    "pop": 8,
-    "speedMinPerField": 35
-  },
-  "envoy": {
-    "buildTimeSec": 60000,
-    "carry": 0,
-    "cost": {
-      "clay": 20000,
-      "iron": 25000,
-      "wood": 15000
+    "ranger": {
+        "name": "Ranger",
+        "internal_name": "ranger",
+        "category": "ranged",
+        "building_type": "barracks",
+        "required_building_level": 8,
+        "required_tech": "ranged_warfare",
+        "required_tech_level": 7,
+        "cost": {
+            "wood": 180,
+            "clay": 140,
+            "iron": 160
+        },
+        "population": 2,
+        "attack": 90,
+        "defense": {
+            "infantry": 40,
+            "cavalry": 60,
+            "ranged": 30
+        },
+        "speed_min_per_field": 16,
+        "carry_capacity": 30,
+        "training_time_base": 6600,
+        "rps_bonuses": {
+            "vs_siege": 2,
+            "wall_bonus_vs_infantry": 1.7
+        },
+        "special_abilities": [
+            "elite",
+            "anti_siege",
+            "wall_bonus"
+        ],
+        "description": "Elite ranged unit with anti-siege specialization. Devastating against rams and catapults."
     },
-    "def": {
-      "arc": 40,
-      "cav": 40,
-      "gen": 40
+    "skirmisher_cavalry": {
+        "name": "Skirmisher Cavalry",
+        "internal_name": "skirmisher_cavalry",
+        "category": "cavalry",
+        "building_type": "stable",
+        "required_building_level": 1,
+        "required_tech": null,
+        "required_tech_level": 0,
+        "cost": {
+            "wood": 100,
+            "clay": 50,
+            "iron": 80
+        },
+        "population": 2,
+        "attack": 60,
+        "defense": {
+            "infantry": 20,
+            "cavalry": 15,
+            "ranged": 15
+        },
+        "speed_min_per_field": 8,
+        "carry_capacity": 80,
+        "training_time_base": 3600,
+        "rps_bonuses": {
+            "vs_ranged_open_field": 1.5
+        },
+        "special_abilities": [],
+        "description": "Fast raiding cavalry. Bonus against ranged units in open field. Excellent for quick raids."
     },
-    "notes": "Conquest envoy; siege-paced; influence control unit",
-    "off": 30,
-    "pop": 80,
-    "speedMinPerField": 35
-  },
-  "heavy": {
-    "buildTimeSec": 1200,
-    "carry": 50,
-    "cost": {
-      "clay": 150,
-      "iron": 600,
-      "wood": 200
+    "lancer": {
+        "name": "Lancer",
+        "internal_name": "lancer",
+        "category": "cavalry",
+        "building_type": "stable",
+        "required_building_level": 3,
+        "required_tech": "heavy_cavalry",
+        "required_tech_level": 1,
+        "cost": {
+            "wood": 150,
+            "clay": 120,
+            "iron": 200
+        },
+        "population": 3,
+        "attack": 150,
+        "defense": {
+            "infantry": 60,
+            "cavalry": 40,
+            "ranged": 30
+        },
+        "speed_min_per_field": 9,
+        "carry_capacity": 40,
+        "training_time_base": 7200,
+        "rps_bonuses": {
+            "vs_ranged_open_field": 1.6
+        },
+        "special_abilities": [],
+        "description": "Heavy shock cavalry. High attack and population cost. Strong against ranged in open field."
     },
-    "def": {
-      "arc": 180,
-      "cav": 80,
-      "gen": 200
+    "pathfinder": {
+        "name": "Pathfinder",
+        "internal_name": "pathfinder",
+        "category": "scout",
+        "building_type": "barracks",
+        "required_building_level": 1,
+        "required_tech": null,
+        "required_tech_level": 0,
+        "cost": {
+            "wood": 50,
+            "clay": 30,
+            "iron": 20
+        },
+        "population": 1,
+        "attack": 0,
+        "defense": {
+            "infantry": 2,
+            "cavalry": 2,
+            "ranged": 2
+        },
+        "speed_min_per_field": 5,
+        "carry_capacity": 0,
+        "training_time_base": 1080,
+        "rps_bonuses": [],
+        "special_abilities": [
+            "scout_basic"
+        ],
+        "description": "Basic scout. Reveals troop counts and resources if survives. Very fast movement."
     },
-    "off": 150,
-    "pop": 6,
-    "speedMinPerField": 11
-  },
-  "horse_archer": {
-    "buildTimeSec": 1200,
-    "carry": 30,
-    "cost": {
-      "clay": 80,
-      "iron": 160,
-      "wood": 140
+    "shadow_rider": {
+        "name": "Shadow Rider",
+        "internal_name": "shadow_rider",
+        "category": "scout",
+        "building_type": "stable",
+        "required_building_level": 5,
+        "required_tech": "mounted_archery",
+        "required_tech_level": 4,
+        "cost": {
+            "wood": 120,
+            "clay": 100,
+            "iron": 150
+        },
+        "population": 3,
+        "attack": 10,
+        "defense": {
+            "infantry": 10,
+            "cavalry": 10,
+            "ranged": 10
+        },
+        "speed_min_per_field": 6,
+        "carry_capacity": 0,
+        "training_time_base": 4800,
+        "rps_bonuses": [],
+        "special_abilities": [
+            "scout_advanced"
+        ],
+        "description": "Advanced scout. Reveals building levels and queues if survives. Fast mounted reconnaissance."
     },
-    "def": {
-      "arc": 40,
-      "cav": 30,
-      "gen": 35
+    "battering_ram": {
+        "name": "Battering Ram",
+        "internal_name": "battering_ram",
+        "category": "siege",
+        "building_type": "workshop",
+        "required_building_level": 1,
+        "required_tech": null,
+        "required_tech_level": 0,
+        "cost": {
+            "wood": 300,
+            "clay": 200,
+            "iron": 200
+        },
+        "population": 5,
+        "attack": 2,
+        "defense": {
+            "infantry": 20,
+            "cavalry": 50,
+            "ranged": 20
+        },
+        "speed_min_per_field": 30,
+        "carry_capacity": 0,
+        "training_time_base": 14400,
+        "rps_bonuses": [],
+        "special_abilities": [
+            "wall_breaker"
+        ],
+        "description": "Wall breaching siege unit. Reduces wall level on successful attack. Vulnerable to ranged."
     },
-    "off": 80,
-    "pop": 3,
-    "speedMinPerField": 9
-  },
-  "lancer": {
-    "buildTimeSec": 1200,
-    "carry": 40,
-    "cost": {
-      "clay": 120,
-      "iron": 200,
-      "wood": 150
+    "stone_hurler": {
+        "name": "Stone Hurler",
+        "internal_name": "stone_hurler",
+        "category": "siege",
+        "building_type": "workshop",
+        "required_building_level": 3,
+        "required_tech": "artillery",
+        "required_tech_level": 3,
+        "cost": {
+            "wood": 320,
+            "clay": 400,
+            "iron": 150
+        },
+        "population": 8,
+        "attack": 100,
+        "defense": {
+            "infantry": 100,
+            "cavalry": 100,
+            "ranged": 100
+        },
+        "speed_min_per_field": 35,
+        "carry_capacity": 0,
+        "training_time_base": 18000,
+        "rps_bonuses": [],
+        "special_abilities": [
+            "building_damage"
+        ],
+        "description": "Catapult for destroying buildings. Damages targeted or random building on successful attack."
     },
-    "def": {
-      "arc": 30,
-      "cav": 40,
-      "gen": 60
+    "mantlet_crew": {
+        "name": "Mantlet Crew",
+        "internal_name": "mantlet_crew",
+        "category": "siege",
+        "building_type": "workshop",
+        "required_building_level": 2,
+        "required_tech": "siege_warfare",
+        "required_tech_level": 3,
+        "cost": {
+            "wood": 200,
+            "clay": 250,
+            "iron": 120
+        },
+        "population": 2,
+        "attack": 5,
+        "defense": {
+            "infantry": 80,
+            "cavalry": 60,
+            "ranged": 200
+        },
+        "speed_min_per_field": 28,
+        "carry_capacity": 0,
+        "training_time_base": 10800,
+        "rps_bonuses": [],
+        "special_abilities": [
+            "siege_cover"
+        ],
+        "description": "Protective siege cover. Reduces ranged damage to escorted siege units by 40%."
     },
-    "off": 150,
-    "pop": 3,
-    "speedMinPerField": 9
-  },
-  "light": {
-    "buildTimeSec": 600,
-    "carry": 80,
-    "cost": {
-      "clay": 100,
-      "iron": 250,
-      "wood": 125
+    "banner_guard": {
+        "name": "Banner Guard",
+        "internal_name": "banner_guard",
+        "category": "support",
+        "building_type": "barracks",
+        "required_building_level": 5,
+        "required_tech": "banner_tactics",
+        "required_tech_level": 4,
+        "cost": {
+            "wood": 150,
+            "clay": 120,
+            "iron": 80
+        },
+        "population": 2,
+        "attack": 25,
+        "defense": {
+            "infantry": 45,
+            "cavalry": 45,
+            "ranged": 45
+        },
+        "speed_min_per_field": 24,
+        "carry_capacity": 10,
+        "training_time_base": 9600,
+        "rps_bonuses": [],
+        "special_abilities": [
+            "aura_defense_tier_1"
+        ],
+        "aura_config": {
+            "def_multiplier": 1.15,
+            "resolve_bonus": 5,
+            "tier": 1
+        },
+        "description": "Support unit with defensive aura. Provides +15% defense to all defending troops. Does not stack."
     },
-    "def": {
-      "arc": 30,
-      "cav": 30,
-      "gen": 40
+    "war_healer": {
+        "name": "War Healer",
+        "internal_name": "war_healer",
+        "category": "support",
+        "building_type": "church",
+        "required_building_level": 1,
+        "required_tech": "divine_blessing",
+        "required_tech_level": 1,
+        "cost": {
+            "wood": 180,
+            "clay": 150,
+            "iron": 200
+        },
+        "population": 3,
+        "attack": 0,
+        "defense": {
+            "infantry": 30,
+            "cavalry": 30,
+            "ranged": 30
+        },
+        "speed_min_per_field": 20,
+        "carry_capacity": 0,
+        "training_time_base": 10800,
+        "rps_bonuses": [],
+        "special_abilities": [
+            "healer"
+        ],
+        "description": "Mystical healer. Recovers percentage of lost troops after battle. Requires world healer_enabled flag."
     },
-    "off": 130,
-    "pop": 4,
-    "speedMinPerField": 10
-  },
-  "mantlet": {
-    "buildTimeSec": 1800,
-    "carry": 0,
-    "cost": {
-      "clay": 250,
-      "iron": 120,
-      "wood": 200
+    "noble": {
+        "name": "Noble",
+        "internal_name": "noble",
+        "category": "conquest",
+        "building_type": "academy",
+        "required_building_level": 3,
+        "required_tech": null,
+        "required_tech_level": 0,
+        "cost": {
+            "wood": 40000,
+            "clay": 50000,
+            "iron": 50000,
+            "coins": 1
+        },
+        "population": 100,
+        "attack": 30,
+        "defense": {
+            "infantry": 100,
+            "cavalry": 50,
+            "ranged": 100
+        },
+        "speed_min_per_field": 35,
+        "carry_capacity": 0,
+        "training_time_base": 32400,
+        "rps_bonuses": [],
+        "special_abilities": [
+            "conquest"
+        ],
+        "description": "Conquest unit. Reduces village allegiance on successful attack. Requires minted coins. Very expensive."
     },
-    "def": {
-      "arc": 200,
-      "cav": 60,
-      "gen": 80
-    },
-    "off": 5,
-    "pop": 2,
-    "speedMinPerField": 28
-  },
-  "marcher": {
-    "buildTimeSec": 700,
-    "carry": 50,
-    "cost": {
-      "clay": 100,
-      "iron": 150,
-      "wood": 250
-    },
-    "def": {
-      "arc": 150,
-      "cav": 40,
-      "gen": 50
-    },
-    "off": 120,
-    "pop": 5,
-    "speedMinPerField": 10
-  },
-  "noble": {
-    "buildTimeSec": 54000,
-    "carry": 0,
-    "cost": {
-      "clay": 50000,
-      "coins": 4,
-      "iron": 50000,
-      "wood": 40000
-    },
-    "def": {
-      "arc": 100,
-      "cav": 50,
-      "gen": 100
-    },
-    "off": 30,
-    "pop": 100,
-    "speedMinPerField": 35
-  },
-  "paladin": {
-    "buildTimeSec": 7200,
-    "carry": 100,
-    "cost": {
-      "clay": 20000,
-      "iron": 40000,
-      "wood": 20000
-    },
-    "def": {
-      "arc": 180,
-      "cav": 200,
-      "gen": 200
-    },
-    "off": 150,
-    "pop": 10,
-    "speedMinPerField": 30
-  },
-  "raider": {
-    "buildTimeSec": 600,
-    "carry": 80,
-    "cost": {
-      "clay": 50,
-      "iron": 80,
-      "wood": 100
-    },
-    "def": {
-      "arc": 15,
-      "cav": 15,
-      "gen": 20
-    },
-    "off": 60,
-    "pop": 2,
-    "speedMinPerField": 8
-  },
-  "ram": {
-    "buildTimeSec": 1800,
-    "carry": 0,
-    "cost": {
-      "clay": 200,
-      "iron": 200,
-      "wood": 300
-    },
-    "def": {
-      "arc": 20,
-      "cav": 50,
-      "gen": 20
-    },
-    "off": 2,
-    "pop": 5,
-    "speedMinPerField": 30
-  },
-  "rune_priest": {
-    "buildTimeSec": 3600,
-    "carry": 0,
-    "cost": {
-      "clay": 150,
-      "iron": 200,
-      "wood": 150
-    },
-    "def": {
-      "arc": 30,
-      "cav": 30,
-      "gen": 30
-    },
-    "off": 0,
-    "pop": 3,
-    "speedMinPerField": 20
-  },
-  "scout": {
-    "buildTimeSec": 180,
-    "carry": 0,
-    "cost": {
-      "clay": 30,
-      "iron": 20,
-      "wood": 50
-    },
-    "def": {
-      "arc": 2,
-      "cav": 2,
-      "gen": 2
-    },
-    "off": 0,
-    "pop": 1,
-    "speedMinPerField": 5
-  },
-  "shieldmaiden": {
-    "buildTimeSec": 2400,
-    "carry": 20,
-    "cost": {
-      "clay": 160,
-      "iron": 150,
-      "wood": 120
-    },
-    "def": {
-      "arc": 180,
-      "cav": 220,
-      "gen": 220
-    },
-    "off": 60,
-    "pop": 2,
-    "speedMinPerField": 20
-  },
-  "slinger": {
-    "buildTimeSec": 540,
-    "carry": 15,
-    "cost": {
-      "clay": 40,
-      "iron": 20,
-      "wood": 40
-    },
-    "def": {
-      "arc": 8,
-      "cav": 30,
-      "gen": 12
-    },
-    "off": 25,
-    "pop": 1,
-    "speedMinPerField": 18
-  },
-  "spear": {
-    "buildTimeSec": 1080,
-    "carry": 25,
-    "cost": {
-      "clay": 30,
-      "iron": 10,
-      "wood": 50
-    },
-    "def": {
-      "arc": 20,
-      "cav": 45,
-      "gen": 15
-    },
-    "off": 10,
-    "pop": 1,
-    "speedMinPerField": 18
-  },
-  "spearguard": {
-    "buildTimeSec": 420,
-    "carry": 15,
-    "cost": {
-      "clay": 60,
-      "iron": 30,
-      "wood": 50
-    },
-    "def": {
-      "arc": 20,
-      "cav": 60,
-      "gen": 30
-    },
-    "off": 10,
-    "pop": 1,
-    "speedMinPerField": 20
-  },
-  "supply_cart": {
-    "buildTimeSec": 1800,
-    "carry": 500,
-    "cost": {
-      "clay": 200,
-      "iron": 100,
-      "wood": 200
-    },
-    "def": {
-      "arc": 5,
-      "cav": 5,
-      "gen": 10
-    },
-    "off": 0,
-    "pop": 4,
-    "speedMinPerField": 30
-  },
-  "sword": {
-    "buildTimeSec": 1500,
-    "carry": 15,
-    "cost": {
-      "clay": 30,
-      "iron": 70,
-      "wood": 30
-    },
-    "def": {
-      "arc": 40,
-      "cav": 15,
-      "gen": 50
-    },
-    "off": 25,
-    "pop": 1,
-    "speedMinPerField": 22
-  },
-  "tribesman": {
-    "buildTimeSec": 300,
-    "carry": 25,
-    "cost": {
-      "clay": 30,
-      "iron": 20,
-      "wood": 40
-    },
-    "def": {
-      "arc": 10,
-      "cav": 15,
-      "gen": 20
-    },
-    "off": 12,
-    "pop": 1,
-    "speedMinPerField": 18
-  },
-  "warlord": {
-    "buildTimeSec": 7200,
-    "carry": 50,
-    "cost": {
-      "clay": 300,
-      "iron": 300,
-      "wood": 400
-    },
-    "def": {
-      "arc": 150,
-      "cav": 150,
-      "gen": 180
-    },
-    "off": 220,
-    "pop": 5,
-    "speedMinPerField": 9
-  }
+    "standard_bearer": {
+        "name": "Standard Bearer",
+        "internal_name": "standard_bearer",
+        "category": "conquest",
+        "building_type": "rally_point",
+        "required_building_level": 10,
+        "required_tech": "leadership",
+        "required_tech_level": 5,
+        "cost": {
+            "wood": 30000,
+            "clay": 40000,
+            "iron": 40000,
+            "standards": 1
+        },
+        "population": 80,
+        "attack": 40,
+        "defense": {
+            "infantry": 80,
+            "cavalry": 60,
+            "ranged": 80
+        },
+        "speed_min_per_field": 30,
+        "carry_capacity": 0,
+        "training_time_base": 28800,
+        "rps_bonuses": [],
+        "special_abilities": [
+            "conquest"
+        ],
+        "description": "Alternative conquest unit. Reduces village allegiance on successful attack. Requires crafted standards."
+    }
 }
