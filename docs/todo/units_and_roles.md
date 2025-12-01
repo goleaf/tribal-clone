@@ -204,6 +204,7 @@ Status markers:
 - Combat integration: verify mantlet reduction, aura/healer caps, and RPS multipliers fire in battle reports and match expected loss patterns in sims.
 - Gate checks: hardcore world disables/tightens seasonal/elite units as configured; attempts to train blocked with audited errors.
 - Anti-abuse: fuzz concurrent recruit requests to ensure caps are enforced atomically; duplicate/replay tokens rejected with reason codes and logged.
+- Unit data validation: CI lint/diff passes; admin validation dump matches baseline checksum per world; overrides logged and acknowledged in changelog.
 
 ## Telemetry & Monitoring
 - Track recruit attempts, cap hits, and reasons (`ERR_CAP`, `ERR_PREREQ`, `ERR_RES`, `ERR_POP`) per world; alert on spikes.

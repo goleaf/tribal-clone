@@ -59,6 +59,10 @@ define('TRADE_POWER_DELTA_PROTECTED_POINTS', 500); // Players below this score a
 define('TRADE_ALT_IP_BLOCK_ENABLED', true); // If identity fingerprints match (e.g., IP hash), block trades as potential alts
 define('FEATURE_MIN_PAYLOAD_ENABLED', true); // Enforce minimum pop payload for commands
 define('MIN_ATTACK_POP', 5); // Minimum population required to send a command (unless siege is present)
+define('CAPTURE_START_LOYALTY', 50); // Loyalty value after conquest (unless world overrides)
+define('ANTI_SNIPE_HOURS', 12); // Grace period after conquest where floor/regen rules apply
+define('ANTI_SNIPE_FLOOR', 20); // Loyalty floor during anti-snipe window
+define('CAPTURE_BUILDING_LOSS_CHANCE', 0.35); // Chance to downgrade a random building on capture
 define('PLUNDER_DR_ENABLED', true); // Enable diminishing returns on repeated plunder within a window
 define('FEATURE_WEATHER_COMBAT_ENABLED', false); // Enable weather multipliers in combat resolution
 define('FEATURE_PARALLEL_QUEUES_ENABLED', false); // Allow resource + military build in parallel (world override)

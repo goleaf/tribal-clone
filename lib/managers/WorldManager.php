@@ -479,6 +479,11 @@ class WorldManager
         return max(0.0, $rate);
     }
 
+    public function isWallDecayEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        return (bool)($this->getSettings($worldId)['wall_decay_enabled'] ?? false);
+    }
+
     public function isPaladinEnabled(int $worldId = CURRENT_WORLD_ID): bool
     {
         return (bool)($this->getSettings($worldId)['enable_paladin'] ?? true);

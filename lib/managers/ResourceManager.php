@@ -200,6 +200,12 @@ class ResourceManager {
         $village['warehouse_capacity'] = $warehouse_capacity;
         $village['last_resource_update'] = $nowSql;
 
+        // Optional wall decay for inactive villages (uses world flag)
+        $decayInfo = $this->buildingManager->applyWallDecayIfNeeded($village, $worldConfig);
+        if ($decayInfo) {
+            $village['wall_decay'] = $decayInfo;
+        }
+
         // Notify if any resource hit capacity
         if (in_array(true, $hitCap, true)) {
             if (!class_exists('NotificationManager')) {

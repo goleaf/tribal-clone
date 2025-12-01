@@ -112,8 +112,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit();
     }
 
+    $isNoble = in_array($unitInternal, ['noble', 'nobleman', 'nobleman_unit'], true);
+    $isConquestBearer = in_array($unitInternal, ['standard_bearer', 'envoy'], true);
+
+    if ($isConquestBearer && (!defined('FEATURE_CONQUEST_UNIT_ENABLED') || !FEATURE_CONQUEST_UNIT_ENABLED)) {
+        http_response_code(400);
+        $msg = 'Conquest units are disabled on this world.';
+        echo json_encode(['error' => $msg, 'code' => 'ERR_FEATURE_DISABLED']);
+        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_FEATURE_DISABLED', $msg);
+        exit();
+    }
+
     // Extra nobleman requirements
-    if (in_array($unitInternal, ['noble', 'nobleman', 'nobleman_unit'], true)) {
+    if ($isNoble) {
         $statueLevel = $buildingManager->getBuildingLevel($village_id, 'statue');
         $academyLevel = $buildingManager->getBuildingLevel($village_id, 'academy');
         $smithyLevel = $buildingManager->getBuildingLevel($village_id, 'smithy');
@@ -148,6 +159,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_RES', $msg);
             exit();
         }
+    } elseif ($isConquestBearer) {
+        // Standard Bearer/Envoy gate: require academy + smithy + minted coins as standards sink
+        $academyLevel = $buildingManager->getBuildingLevel($village_id, 'academy');
+        $smithyLevel = $buildingManager->getBuildingLevel($village_id, 'smithy');
+        if ($academyLevel < 5 || $smithyLevel < 15) {
+            http_response_code(400);
+            $msg = 'Conquest unit requirements not met (academy 5, smithy 15).';
+            echo json_encode(['error' => $msg, 'code' => 'ERR_PREREQ']);
+            logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_PREREQ', $msg);
+            exit();
+        }
+        $stmtCoins = $conn->prepare("SELECT coins FROM villages WHERE id = ?");
+        $stmtCoins->bind_param("i", $village_id);
+        $stmtCoins->execute();
+        $rowCoins = $stmtCoins->get_result()->fetch_assoc();
+        $stmtCoins->close();
+        $coinsAvailable = (int)($rowCoins['coins'] ?? 0);
+        if ($coinsAvailable < $count) {
+            http_response_code(400);
+            $msg = 'Not enough standards/coins for conquest units.';
+            echo json_encode(['error' => $msg, 'code' => 'ERR_RES', 'coins' => $coinsAvailable]);
+            logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_RES', $msg);
+            exit();
+        }
     }
 
     // Check resources
@@ -174,12 +209,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             throw new Exception($spend['message']);
         }
 
-        if (in_array($unitInternal, ['noble', 'nobleman', 'nobleman_unit'], true)) {
+        if ($isNoble || $isConquestBearer) {
             $stmtDeductCoin = $conn->prepare("UPDATE villages SET coins = coins - ? WHERE id = ? AND coins >= ?");
             $stmtDeductCoin->bind_param("iii", $count, $village_id, $count);
             $stmtDeductCoin->execute();
             if ($stmtDeductCoin->affected_rows === 0) {
-                throw new Exception('Not enough coins to recruit noble.');
+                throw new Exception('Not enough coins/standards to recruit this unit.');
             }
             $stmtDeductCoin->close();
         }
