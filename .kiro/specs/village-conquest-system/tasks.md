@@ -7,7 +7,7 @@
   - Update unit configuration JSON with Envoy unit definition
   - _Requirements: 1.1, 2.1, 4.1, 5.1, 7.1_
 
-- [ ] 2. Implement world configuration system
+- [-] 2. Implement world configuration system
   - Add conquest configuration fields to world config schema
   - Implement WorldConfigManager to load and cache conquest settings
   - Support both allegiance-drop and control-uptime modes
