@@ -882,6 +882,15 @@ class TradeManager {
             return $headroomSource;
         }
 
+        if ($this->isTradeSystemOverloaded()) {
+            return [
+                'success' => false,
+                'message' => 'Trade system is busy. Please try again shortly.',
+                'code' => EconomyError::ERR_RATE_LIMIT,
+                'details' => ['retry_after_sec' => 30]
+            ];
+        }
+
         // Distance calculations
         $distance = calculateDistance(
             (float)$offer['source_x'],

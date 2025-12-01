@@ -64,3 +64,10 @@
 - [ ] Release comms/help: explain new map performance modes (conditional requests, clustering, fallback) and how to toggle high-contrast/reduced-motion.
 - [x] Monitoring: client perf logging enabled (render time/dropped frames) with alerts on regressions; server map_metrics dashboards up (latency/cache hit/payload). _(map_data.php now writes alert log on slow/large responses; client perf telemetry triggers alert log on high render time/dropped frames)_
 - [ ] Low-perf/offline toggles surfaced in UI with state retention per device/session; QA covers toggle on/off and re-entry.
+
+## Monitoring Plan
+- Track map endpoint latency (p50/p95/p99), cache hit %, payload size, and rate-limit hits; alert on regressions after rollout.
+- Monitor client-side perf telemetry (render time, dropped frames, fallback engagements) sampled across devices; alert on spikes.
+- Watch clustering/pagination adoption and error rates; alert if clustering toggles fail or payload caps hit unexpectedly.
+- Detect stale ETag/conditional responses (miss rate); alert if caching breaks or 304 rate drops sharply.
+- Canary worlds: tighter thresholds on latency/payload and fallback triggers to catch issues early.

@@ -682,6 +682,14 @@ class BattleManager
             
             // Commit transaction
             $this->conn->commit();
+
+            if ($hasLoyaltyUnit) {
+                $this->logConquestAttempt('sent', $attacker_user_id, (int)$villages['target_user_id'], $target_village_id, true, [
+                    'attack_id' => $attack_id,
+                    'arrival_time' => $arrival_time,
+                    'attack_type' => $attack_type
+                ]);
+            }
             
             // Build response payload
             $arrival_date = date('Y-m-d H:i:s', $arrival_time);
