@@ -3428,9 +3428,11 @@ class BattleManager
             return $carry || (($unit['category'] ?? '') === 'siege');
         }, false);
         $reduceRanged = $hasMantlets && $hasSiegeInPhase;
+        $mantletReductionApplied = false;
         foreach ($defendingUnits as $unit) {
             $unitDefense = ($unit['defense'] ?? 0) * ($unit['count'] ?? 0);
             if ($reduceRanged && ($unit['category'] ?? '') === 'archer') {
+                $mantletReductionApplied = true;
                 $unitDefense *= (1.0 - self::MANTLET_RANGED_REDUCTION);
             }
             $defensePowerBase += $unitDefense;
@@ -3447,7 +3449,8 @@ class BattleManager
                 'attacker_loss_factor' => 0,
                 'defender_loss_factor' => 1,
                 'attacker_losses' => [],
-                'defender_losses' => []
+                'defender_losses' => [],
+                'mantlet_reduction' => $mantletReductionApplied ? self::MANTLET_RANGED_REDUCTION : 0
             ];
         }
 
@@ -3489,7 +3492,8 @@ class BattleManager
             'attacker_loss_factor' => $attackerLossFactor,
             'defender_loss_factor' => $defenderLossFactor,
             'attacker_losses' => $attackerLosses,
-            'defender_losses' => $defenderLosses
+            'defender_losses' => $defenderLosses,
+            'mantlet_reduction' => $mantletReductionApplied ? self::MANTLET_RANGED_REDUCTION : 0
         ];
     }
 

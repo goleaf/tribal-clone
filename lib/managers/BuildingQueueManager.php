@@ -206,13 +206,13 @@ class BuildingQueueManager
 
             // Idempotent guard
             if ($item['status'] !== 'active' || strtotime($item['finish_time']) > time()) {
-            $this->conn->rollback();
-            $this->logQueueEvent('complete_failed', [
-                'queue_item_id' => $queueItemId,
-                'reason' => 'not_ready'
-            ]);
-            return ['success' => false, 'message' => 'Build not ready or already completed.'];
-        }
+                $this->conn->rollback();
+                $this->logQueueEvent('complete_failed', [
+                    'queue_item_id' => $queueItemId,
+                    'reason' => 'not_ready'
+                ]);
+                return ['success' => false, 'message' => 'Build not ready or already completed.'];
+            }
 
             // Apply effect: increment building level
             $stmt = $this->conn->prepare("UPDATE village_buildings SET level = level + 1 WHERE id = ? AND village_id = ?");
@@ -232,6 +232,13 @@ class BuildingQueueManager
 
             $this->conn->commit();
 
+            $this->logQueueEvent('complete', [
+                'queue_item_id' => $queueItemId,
+                'village_id' => $item['village_id'],
+                'building_type_id' => $item['building_type_id'],
+                'level' => $item['level']
+            ]);
+
             return [
                 'success' => true,
                 'next_item_id' => $this->getActiveQueueItemId($item['village_id'])
@@ -239,6 +246,10 @@ class BuildingQueueManager
 
         } catch (Exception $e) {
             $this->conn->rollback();
+            $this->logQueueEvent('complete_failed', [
+                'queue_item_id' => $queueItemId,
+                'error' => $e->getMessage()
+            ]);
             return [
                 'success' => false,
                 'message' => $e->getMessage()

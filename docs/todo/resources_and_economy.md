@@ -96,6 +96,7 @@
 - [x] Load shedding: if trade/aid endpoints face spikes, degrade gracefully (queue/try-later) instead of overloading DB; emit backpressure metric. _(trade manager now polls active routes/open offers with a soft limit + backpressure metric `trade_load_shed` and returns ERR_RATE_LIMIT with retry window)_
 - [x] Validation: block zero/negative resource sends, enforce storage limits at send/receive, and reject offers with extreme exchange ratios outside configured band. _(trade send now checks target storage headroom + ERR_RATIO already enforced on offers)_
 - [ ] Economy tests: unit tests for vault protection math, tax calculation, overflow/decay triggers, and fair-market bounds; integration tests for trade/aid flows with caps and power-delta taxes applied.
+- [ ] Pricing guardrails: define per-archetype min/max dynamic cost scalers, event modifier bounds, and conquest cost scaling curves to prevent runaway inflation or too-cheap conquest on late worlds. Document defaults and enforcement points in config loader.
 
 ### Economy Error Codes (Standard)
 - `ERR_CAP`: storage/aid cap hit. Payload: `{ "retry_after_sec": 0, "cap_type": "send|receive|storage" }`.

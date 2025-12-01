@@ -24,6 +24,7 @@
 - [x] **Client perf logging:** Log render duration and dropped frames on map interactions (sampled); ship to telemetry for regression tracking. _(map telemetry now sends render_ms + sampled dropped frames to telemetry endpoint)_
 - **Fallback mode:** If device perf is low (dropped frames threshold), auto-switch to simplified visuals: hide minor overlays, reduce command line density/update frequency; allow user opt-back.
 - **Offline/poor-connection mode:** Cache last tiles/markers for current viewport; queue marker drops locally and sync on reconnect with conflict resolution; show stale indicator on data.
+- **Offline conflict handling:** On reconnect, merge queued markers/bookmarks by timestamp; if conflict, apply server-wins but surface a “conflicts” list for user review; log conflicts for telemetry.
 
 ### Batching & Pagination Implementation Notes
 - Command batching cadence: aggregate incoming/outgoing/support/trade/scout updates per village in a 1s window; send deltas keyed by `command_id` with ops `[add|update|remove]`, plus `cursor` for continuation if >500 ops.

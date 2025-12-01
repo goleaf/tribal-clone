@@ -9,6 +9,7 @@ require_once __DIR__ . '/../lib/managers/BattleManager.php';
 require_once __DIR__ . '/../lib/managers/ResearchManager.php';
 require_once __DIR__ . '/../lib/managers/NotificationManager.php';
 require_once __DIR__ . '/../lib/managers/EndgameManager.php';
+require_once __DIR__ . '/../lib/managers/IntelManager.php';
 require_once __DIR__ . '/../lib/functions.php';
 
 // Instantiate managers
@@ -21,6 +22,7 @@ $battleManager = new BattleManager($conn, $villageManager, $buildingManager);
 $researchManager = new ResearchManager($conn);
 $notificationManager = new NotificationManager($conn);
 $endgameManager = new EndgameManager($conn);
+$intelManager = new IntelManager($conn);
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: /auth/login.php");
@@ -68,6 +70,8 @@ $production_rates = $resourceManager->getProductionRates($village_id);
 $active_upgrades = array_filter($buildings_data, static fn($b) => !empty($b['is_upgrading']));
 $build_queue_count = $buildingManager->getActivePendingQueueCount($village_id) ?? 0;
 $recruit_queue_count = count($unitManager->getRecruitmentQueues($village_id) ?? []);
+$storage_capacity = $village['warehouse_capacity'] ?? 0;
+$latestIntelAgeSeconds = $intelManager->getLatestReportAgeSecondsForUser($user_id);
 $nearCapResources = [];
 foreach (['wood', 'clay', 'iron'] as $resType) {
     $amount = (float)($village[$resType] ?? 0);
@@ -95,9 +99,68 @@ $village_background_image = ($current_hour >= $day_start_hour && $current_hour <
     : $night_background_path;
 
 $free_population = max(0, ($village['farm_capacity'] ?? 0) - ($village['population'] ?? 0));
-$storage_capacity = $village['warehouse_capacity'] ?? 0;
 $dominanceSnapshot = $endgameManager->getTribeDominanceSnapshot();
 $showDominanceBanner = $endgameManager->shouldShowDominanceWarning($dominanceSnapshot);
+
+$nudges = [];
+if ($build_queue_count === 0) {
+    $nudges[] = [
+        'code' => 'build_queue_idle',
+        'severity' => 'info',
+        'message' => 'Construction queue is idle.',
+        'action' => [
+            'type' => 'building',
+            'label' => 'Open town hall',
+            'internal' => 'main_building',
+            'name' => $buildings_data['main_building']['name'] ?? 'Town hall',
+            'description' => $buildings_data['main_building']['description'] ?? '',
+            'level' => (int)($buildings_data['main_building']['level'] ?? 0),
+        ],
+    ];
+}
+if ($recruit_queue_count === 0 && ($buildings_data['barracks']['level'] ?? 0) > 0) {
+    $nudges[] = [
+        'code' => 'recruit_queue_idle',
+        'severity' => 'info',
+        'message' => 'Recruitment queue is empty.',
+        'action' => [
+            'type' => 'building',
+            'label' => 'Open barracks',
+            'internal' => 'barracks',
+            'name' => $buildings_data['barracks']['name'] ?? 'Barracks',
+            'description' => $buildings_data['barracks']['description'] ?? '',
+            'level' => (int)($buildings_data['barracks']['level'] ?? 0),
+        ],
+    ];
+}
+if (!empty($nearCapResources)) {
+    $nudges[] = [
+        'code' => 'resource_cap',
+        'severity' => 'warning',
+        'message' => implode(', ', array_map('htmlspecialchars', $nearCapResources)) . ' near storage cap — spend or trade to avoid overflow.',
+        'action' => [
+            'type' => 'building',
+            'label' => 'Upgrade warehouse',
+            'internal' => 'warehouse',
+            'name' => $buildings_data['warehouse']['name'] ?? 'Warehouse',
+            'description' => $buildings_data['warehouse']['description'] ?? '',
+            'level' => (int)($buildings_data['warehouse']['level'] ?? 0),
+        ],
+    ];
+}
+if ($latestIntelAgeSeconds === null || $latestIntelAgeSeconds > 72 * 3600) {
+    $ageLabel = $latestIntelAgeSeconds === null ? 'No intel yet' : 'Last intel is stale';
+    $nudges[] = [
+        'code' => 'stale_intel',
+        'severity' => 'info',
+        'message' => $ageLabel . ' — send scouts to refresh enemy data.',
+        'action' => [
+            'type' => 'link',
+            'label' => 'Open Intel',
+            'href' => '/game/intel.php'
+        ],
+    ];
+}
 
 require '../header.php';
 ?>
