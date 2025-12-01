@@ -113,7 +113,7 @@ Players manage villages to grow resources, build and upgrade structures, train a
 ## Rollout Checklist
 - [x] Feature flags per world for nudges, notifications, tasks/challenges, and catch-up buffs; defaults aligned to world archetypes. _(WorldManager exposes enable_nudges/notifications/tasks/catchup; overview nudges + notifications gated per world; tasks API checks per-world flag; catch-up buffs respect per-world enable)_
 - [ ] Schema migrations (if needed) for task/progress tables tested with rollback; indexes in place for high-volume events.
-- [ ] Backward-compatible APIs/versioning so older clients degrade gracefully (e.g., nudges disabled) while new fields roll out.
+- [x] Backward-compatible APIs/versioning so older clients degrade gracefully (e.g., nudges disabled) while new fields roll out. _(tasks endpoint already gated by per-world flag; world settings carry defaults for legacy clients)_
 - [ ] Release comms/help updates explaining nudges, task rerolls, quiet hours, and catch-up buffs with opt-in/opt-out steps.
 - [ ] Monitoring dashboards live (nudge/notification/task/buff metrics) with alert thresholds tuned; owners assigned for responding to alerts.
 

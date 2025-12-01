@@ -80,6 +80,7 @@ $recruit_queue_count = count($unitManager->getRecruitmentQueues($village_id) ?? 
 $storage_capacity = $village['warehouse_capacity'] ?? 0;
 $worldSettings = $worldManager->getSettings($worldId);
 $enableNudges = $worldManager->areNudgesEnabled($worldId);
+$enableTasks = $worldManager->areTasksEnabled($worldId);
 $enableNotifications = $worldManager->areNotificationsEnabled($worldId);
 $latestIntelAgeSeconds = $intelManager->getLatestReportAgeSecondsForUser($user_id);
 $nearCapResources = [];
@@ -171,6 +172,36 @@ if ($enableNudges) {
                 'href' => '/game/intel.php'
             ],
         ];
+    }
+    if ($enableTasks) {
+        $soonestExpiry = null;
+        $soonestType = null;
+        foreach (['daily', 'weekly'] as $taskType) {
+            $tasks = $taskManager->getTasks($user_id, $taskType);
+            foreach ($tasks as $task) {
+                if (!in_array($task['status'], ['active', 'completed'], true)) {
+                    continue;
+                }
+                $remaining = strtotime($task['expires_at']) - time();
+                if ($remaining > 0 && $remaining <= 3600 && ($soonestExpiry === null || $remaining < $soonestExpiry)) {
+                    $soonestExpiry = $remaining;
+                    $soonestType = $taskType;
+                }
+            }
+        }
+        if ($soonestExpiry !== null) {
+            $minutesLeft = max(1, (int)ceil($soonestExpiry / 60));
+            $nudges[] = [
+                'code' => 'task_expiring',
+                'severity' => 'warning',
+                'message' => ucfirst($soonestType) . " tasks expire in {$minutesLeft} min — claim or reroll now.",
+                'action' => [
+                    'type' => 'link',
+                    'label' => 'Open tasks',
+                    'href' => '/ajax/tasks/tasks.php?type=' . $soonestType
+                ],
+            ];
+        }
     }
 }
 

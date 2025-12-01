@@ -2434,6 +2434,148 @@ class BattleManager
     }
 
     /**
+     * Validate command envelope for anti-cheat signals (timing, duplicate ids, tamper).
+     */
+    private function validateCommandEnvelope(
+        int $attackerUserId,
+        int $sourceVillageId,
+        int $targetVillageId,
+        string $attackType,
+        ?string $targetBuilding,
+        array $unitsSent,
+        array $options = []
+    ) {
+        $nowMs = (int)floor(microtime(true) * 1000);
+        $lastMs = isset($_SESSION['last_attack_send_ms']) ? (int)$_SESSION['last_attack_send_ms'] : null;
+        if ($lastMs !== null && ($nowMs - $lastMs) < self::MIN_COMMAND_INTERVAL_MS) {
+            $delta = $nowMs - $lastMs;
+            $this->logAbuseFlag($attackerUserId, 'SUB_100MS', [
+                'delta_ms' => $delta,
+                'source_village_id' => $sourceVillageId,
+                'target_village_id' => $targetVillageId,
+                'attack_type' => $attackType
+            ]);
+            $this->logCommandAnomaly('SUB_100MS', [
+                'delta_ms' => $delta,
+                'source_village_id' => $sourceVillageId,
+                'target_village_id' => $targetVillageId,
+                'attack_type' => $attackType,
+                'client_sent_ms' => isset($options['client_sent_ms']) ? (int)$options['client_sent_ms'] : null
+            ]);
+            $_SESSION['last_attack_send_ms'] = $nowMs;
+            return [
+                'success' => false,
+                'error' => 'Command rejected: sending too quickly. Please wait a moment.',
+                'code' => AjaxResponse::ERR_RATE_LIMIT,
+                'retry_after' => 1
+            ];
+        }
+        $_SESSION['last_attack_send_ms'] = $nowMs;
+
+        $commandId = $options['client_command_id'] ?? null;
+        $commandId = is_string($commandId) ? trim($commandId) : '';
+        if ($commandId !== '') {
+            if (strlen($commandId) > self::MAX_COMMAND_ID_LENGTH) {
+                $commandId = substr($commandId, 0, self::MAX_COMMAND_ID_LENGTH);
+            }
+            if (!isset($_SESSION['recent_command_ids'])) {
+                $_SESSION['recent_command_ids'] = [];
+            }
+            $window = self::DUPLICATE_COMMAND_WINDOW_SEC;
+            $now = time();
+            $bucket = $_SESSION['recent_command_ids'][$attackerUserId] ?? [];
+            $bucket = array_filter($bucket, function ($ts) use ($now, $window) {
+                return ($ts + $window) >= $now;
+            });
+            if (isset($bucket[$commandId])) {
+                $retryAfter = max(1, $window - ($now - $bucket[$commandId]));
+                $this->logAbuseFlag($attackerUserId, 'DUP_COMMAND_ID', [
+                    'command_id' => $commandId
+                ]);
+                $this->logCommandAnomaly('DUP_COMMAND_ID', [
+                    'command_id' => $commandId,
+                    'source_village_id' => $sourceVillageId,
+                    'target_village_id' => $targetVillageId,
+                    'attack_type' => $attackType
+                ]);
+                $_SESSION['recent_command_ids'][$attackerUserId] = $bucket;
+                return [
+                    'success' => false,
+                    'error' => 'Duplicate command detected. Please wait a moment before resending.',
+                    'code' => 'ERR_DUPLICATE_COMMAND',
+                    'retry_after' => $retryAfter
+                ];
+            }
+            $bucket[$commandId] = $now;
+            $_SESSION['recent_command_ids'][$attackerUserId] = $bucket;
+        }
+
+        $payloadHash = $options['payload_hash'] ?? null;
+        if (is_string($payloadHash) && $payloadHash !== '') {
+            $expectedHash = $this->computeCommandPayloadHash(
+                $sourceVillageId,
+                $targetVillageId,
+                $attackType,
+                $targetBuilding,
+                $unitsSent
+            );
+            if (!hash_equals($expectedHash, $payloadHash)) {
+                $this->logAbuseFlag($attackerUserId, 'PAYLOAD_TAMPER', [
+                    'source_village_id' => $sourceVillageId,
+                    'target_village_id' => $targetVillageId,
+                    'attack_type' => $attackType
+                ]);
+                $this->logCommandAnomaly('PAYLOAD_TAMPER', [
+                    'provided_hash' => $payloadHash,
+                    'expected_hash' => $expectedHash,
+                    'source_village_id' => $sourceVillageId,
+                    'target_village_id' => $targetVillageId,
+                    'attack_type' => $attackType
+                ]);
+                return [
+                    'success' => false,
+                    'error' => 'Command payload failed validation.',
+                    'code' => 'ERR_TAMPERED_PAYLOAD'
+                ];
+            }
+        }
+
+        return true;
+    }
+
+    private function computeCommandPayloadHash(int $sourceVillageId, int $targetVillageId, string $attackType, ?string $targetBuilding, array $unitsSent): string
+    {
+        $normalizedUnits = [];
+        foreach ($unitsSent as $unitId => $count) {
+            $normalizedUnits[(int)$unitId] = (int)$count;
+        }
+        ksort($normalizedUnits, SORT_NUMERIC);
+        $payload = [
+            'src' => $sourceVillageId,
+            'dst' => $targetVillageId,
+            'type' => $attackType,
+            'target_building' => $targetBuilding,
+            'units' => $normalizedUnits
+        ];
+        return hash('sha256', json_encode($payload));
+    }
+
+    private function logCommandAnomaly(string $code, array $meta = []): void
+    {
+        $entry = [
+            'ts' => time(),
+            'code' => $code,
+            'meta' => $meta,
+            'ip_hash' => substr(hash('sha256', (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown')), 0, 12),
+            'ua_hash' => substr(hash('sha256', (string)($_SERVER['HTTP_USER_AGENT'] ?? 'unknown')), 0, 12)
+        ];
+        $line = json_encode($entry);
+        if ($line !== false) {
+            @file_put_contents($this->commandAnomalyLogFile, $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+        }
+    }
+
+    /**
      * Whether current server time is inside the configured night window.
      */
     private function isNightTimeWorldConfig(): bool

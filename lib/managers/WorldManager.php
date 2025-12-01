@@ -603,7 +603,9 @@ class WorldManager
             'enable_tasks' => defined('FEATURE_TASKS_ENABLED') && FEATURE_TASKS_ENABLED ? 1 : 1,
             'enable_catchup_buffs' => defined('FEATURE_CATCHUP_BUFFS_ENABLED') && FEATURE_CATCHUP_BUFFS_ENABLED ? 1 : 1,
             'tech_mode' => 'normal',
-            'archetype' => null
+            'archetype' => null,
+            'preset_enforcement_enabled' => 0,
+            'kpi_dashboards_enabled' => 0
         ];
         foreach ($defaults as $col => $val) {
             $quotedVal = is_numeric($val) ? $val : ("'" . $this->conn->real_escape_string((string)$val) . "'");

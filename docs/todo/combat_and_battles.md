@@ -206,6 +206,7 @@
 - [ ] Property fuzzing: fuzz negative/overflow troop counts, extreme modifiers, and malformed commands; expect graceful errors not crashes.
 - [ ] Integration sims: end-to-end scenarios covering fakes + clears + conquest waves + overstack penalties + night/weather; compare against golden reports.
 - [ ] Monitoring dashboards live per world (battle volume, resolver latency, error rates, plunder DR/overstack/occupation rates) with alert thresholds and owners documented.
+- [ ] Release comms: patch notes highlighting combat changes (min-pop, overstack, night/weather), siege attrition option, and report transparency; include before/after sample reports and player-facing FAQ.
 
 ### Casualty Proportionality Options (Decision Aid)
 - **Linear (current default):** Casualties distributed proportionally by each unit type’s share of total attack/defense. Simple and predictable; easier to reason about in reports.
