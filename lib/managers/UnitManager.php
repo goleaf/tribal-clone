@@ -900,6 +900,41 @@ class UnitManager
             'count_finished' => $queue['count_finished']
         ];
     }
+
+    /**
+     * Load unit configuration version for audits; fallback to max(updated_at) from unit_types.
+     */
+    private function loadUnitConfigVersion(): ?array
+    {
+        try {
+            $check = $this->conn->query("SHOW TABLES LIKE 'unit_config_versions'");
+            if ($check && $check->num_rows > 0) {
+                $res = $this->conn->query("SELECT version, updated_at FROM unit_config_versions ORDER BY updated_at DESC LIMIT 1");
+                if ($res && ($row = $res->fetch_assoc())) {
+                    return [
+                        'version' => $row['version'] ?? null,
+                        'updated_at' => $row['updated_at'] ?? null
+                    ];
+                }
+            }
+        } catch (Throwable $e) {
+            // Ignore and fallback
+        }
+
+        try {
+            $res = $this->conn->query("SELECT MAX(updated_at) AS updated_at FROM unit_types");
+            if ($res && ($row = $res->fetch_assoc()) && !empty($row['updated_at'])) {
+                return [
+                    'version' => sha1($row['updated_at']),
+                    'updated_at' => $row['updated_at']
+                ];
+            }
+        } catch (Throwable $e) {
+            // Ignore
+        }
+
+        return null;
+    }
 }
 
 ?> 

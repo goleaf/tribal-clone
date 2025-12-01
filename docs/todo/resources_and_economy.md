@@ -122,6 +122,7 @@
 - Trade/aid errors use standardized economy codes; send flow enforces storage headroom and resource availability with `ERR_RES` instead of `ERR_CAP`.
 - Anti-push/alt guard: TradeManager now blocks trades to linked/flagged accounts and extreme power gaps for protected/low-point players, returning `ERR_ALT_BLOCK` (`alt_link`/`alt_flag`/`power_delta`).
 - Trade load-shedding path returns `ERR_RATE_LIMIT` when active routes/offers cross soft caps and logs `trade_load_shed` metrics with counts/limits for tuning.
+- Tests cover decay trimming, fair-ratio bands, merchant reservation, vault math, and power-delta anti-push blocks (see `tests/economy_test.php`).
 
 ## Acceptance Criteria
 - World configs apply correct production/storage/vault/decay values and caps for the selected archetype; overrides logged.
@@ -194,6 +195,7 @@
 - Catch-up buffs: eligibility, single-application, non-stacking with beginner protection, expiry/removal, and rebuild pack rate limits.
 - Telemetry: emit metrics for production/sinks/trade/aid/decay/DR; alert thresholds verified; log retention/audit entries confirmed.
 - Pricing guardrails: test min/max dynamic cost scalers per archetype, event modifier bounds, and conquest cost scaling curves; ensure costs clamp to bounds, alerts fire on violations, and reports/logs show applied scalers.
+- Guardrail observability: verify clamps emit `economy_guardrail_clamps_total` metrics with type/world labels, logs capture world/config values, and admin UI surfaces applied scalers/modifiers/surcharges.
 
 ## Rollout Checklist
 - [x] Feature flags for decay and plunder DR per world; defaults remain legacy-friendly via constants. _(WorldManager exposes `resource_decay_*` and new `plunder_dr_enabled`; other flags like empire surcharge/trade/event expiry still TODO)_

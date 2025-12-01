@@ -108,6 +108,7 @@ class BattleManager
             @mkdir($logDir, 0777, true);
         }
         $this->conquestLogFile = $logDir . '/conquest_attempts.log';
+        $this->commandAnomalyLogFile = $logDir . '/command_anomalies.log';
     }
     
     /**
@@ -1912,12 +1913,13 @@ class BattleManager
                 $stmt_check_existing->close();
             }
 
-            $details = [
-                'type' => 'battle',
-                'attacker_losses' => $attacker_losses,
-                'defender_losses' => $defender_losses,
-                'loot' => $loot,
-                'attack_luck' => $attack_random,
+        $correlationId = bin2hex(random_bytes(8));
+        $details = [
+            'type' => 'battle',
+            'attacker_losses' => $attacker_losses,
+            'defender_losses' => $defender_losses,
+            'loot' => $loot,
+            'attack_luck' => $attack_random,
                 'defense_luck' => $defense_random,
                 'morale' => $morale,
                 'environment' => [
@@ -1944,6 +1946,7 @@ class BattleManager
                 'vault_protected' => $vaultProtected,
                 'available_after_protection' => $availableAfterProtection,
                 'report_version' => self::REPORT_VERSION,
+                'correlation_id' => $correlationId,
                 'modifiers' => [
                     'wall_level' => $wall_level,
                     'effective_wall_level' => $effective_wall_level,

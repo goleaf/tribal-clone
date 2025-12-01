@@ -119,6 +119,19 @@ class BuildingManager {
         ];
     }
 
+    private function logWallDecay(int $villageId, int $userId, int $from, int $to): void
+    {
+        $line = sprintf(
+            "[%s] village=%d user=%d wall_decay from=%d to=%d\n",
+            date('c'),
+            $villageId,
+            $userId,
+            $from,
+            $to
+        );
+        @file_put_contents($this->wallDecayLog, $line, FILE_APPEND);
+    }
+
     /**
      * Calculates hourly resource production for a building at a given level.
      * Returns 0 when the building does not produce or data is missing.
@@ -189,6 +202,19 @@ class BuildingManager {
 
     public function getBuildingInfo($internal_name) {
         return $this->buildingConfigManager->getBuildingConfig($internal_name);
+    }
+
+    private function getBuildingTypeIdByInternal(string $internal): ?int
+    {
+        $stmt = $this->conn->prepare("SELECT id FROM building_types WHERE internal_name = ? LIMIT 1");
+        if (!$stmt) {
+            return null;
+        }
+        $stmt->bind_param("s", $internal);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ? (int)$row['id'] : null;
     }
 
     public function getBuildingInfoById($building_type_id) {

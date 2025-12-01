@@ -306,4 +306,24 @@ $runner->add('Vault protection chooses stronger of vault vs hiding place', funct
     assertEquals(['wood' => 800, 'clay' => 800, 'iron' => 800], $lootHidden['available'], 'Available should subtract hiding place when larger than vault');
 });
 
+$runner->add('TradeManager blocks power-delta pushes to protected/low-point targets', function () {
+    $conn = new SQLiteAdapter(':memory:');
+    createEconomySchema($conn);
+    $buildingTypeMap = seedBuildingTypesForEconomy($conn);
+
+    // Sender is strong; target is low-point and protected.
+    $conn->query("INSERT INTO users (id, username, points, created_at, is_protected) VALUES (1, 'strong', 10000, '" . date('Y-m-d H:i:s', strtotime('-10 days')) . "', 0)");
+    $conn->query("INSERT INTO users (id, username, points, created_at, is_protected) VALUES (2, 'rookie', 100, '" . date('Y-m-d H:i:s', strtotime('-1 day')) . "', 1)");
+    $conn->query("INSERT INTO worlds (id, name) VALUES (1, 'TradeWorld')");
+    seedVillageWithWorld($conn, 1, 1, $buildingTypeMap, ['wood' => 5000, 'clay' => 5000, 'iron' => 5000], ['market' => 3], 1, '-15 minutes');
+    seedVillageWithWorld($conn, 2, 2, $buildingTypeMap, ['wood' => 500, 'clay' => 500, 'iron' => 500], ['market' => 1], 1, '-5 minutes');
+
+    $tm = new TradeManager($conn);
+    $result = $tm->sendResources(1, 1, '500|505', ['wood' => 300]);
+
+    assertFalse($result['success'] ?? true, 'Power-delta push to protected target should be blocked');
+    assertEquals(EconomyError::ERR_ALT_BLOCK, $result['code'] ?? null, 'Block should surface ERR_ALT_BLOCK');
+    assertEquals('power_delta', $result['details']['reason'] ?? null, 'Block reason should note power_delta');
+});
+
 $runner->run();

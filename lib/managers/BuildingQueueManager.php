@@ -19,6 +19,7 @@ class BuildingQueueManager
     private int $hqMilestoneStep;
     private int $maxSlots;
     private string $logFile;
+    private string $metricsFile;
 
     public function __construct($conn, BuildingConfigManager $configManager)
     {
@@ -33,6 +34,7 @@ class BuildingQueueManager
             @mkdir($logDir, 0777, true);
         }
         $this->logFile = $logDir . '/build_queue.log';
+        $this->metricsFile = $logDir . '/build_queue_metrics.log';
     }
 
     /**
@@ -166,6 +168,17 @@ class BuildingQueueManager
                 'finish_at' => $finalFinish,
                 'status' => $finalStatus
             ]);
+            $this->logQueueMetric('enqueue', [
+                'village_id' => $villageId,
+                'user_id' => $userId,
+                'building' => $buildingInternalName,
+                'level' => $nextLevel,
+                'hq_level' => $hqLevel,
+                'queue_count' => $queueCount + 1,
+                'slot_limit' => $slotLimit,
+                'status' => $finalStatus,
+                'build_time' => $buildTime
+            ]);
 
             return [
                 'success' => true,
@@ -179,16 +192,29 @@ class BuildingQueueManager
 
         } catch (Exception $e) {
             $this->conn->rollback();
+            $safeHqLevel = $hqLevel ?? null;
+            $safeSlotLimit = $slotLimit ?? null;
+            $safeQueueCount = $queueCount ?? null;
             $this->logQueueEvent('enqueue_failed', [
                 'village_id' => $villageId,
                 'building' => $buildingInternalName,
                 'level' => $currentLevel,
-                'hq_level' => $hqLevel,
-                'slot_limit' => $slotLimit,
-                'queue_count' => $queueCount,
+                'hq_level' => $safeHqLevel,
+                'slot_limit' => $safeSlotLimit,
+                'queue_count' => $safeQueueCount,
                 'user_id' => $userId,
                 'error' => $e->getMessage(),
                 'code' => $errorCode
+            ]);
+            $this->logQueueMetric('enqueue_failed', [
+                'village_id' => $villageId,
+                'user_id' => $userId,
+                'building' => $buildingInternalName,
+                'level' => $currentLevel,
+                'hq_level' => $safeHqLevel,
+                'queue_count' => $safeQueueCount,
+                'slot_limit' => $safeSlotLimit,
+                'error_code' => $errorCode
             ]);
             return [
                 'success' => false,
@@ -251,6 +277,12 @@ class BuildingQueueManager
                 'building_type_id' => $item['building_type_id'],
                 'level' => $item['level']
             ]);
+            $this->logQueueMetric('complete', [
+                'queue_item_id' => $queueItemId,
+                'village_id' => $item['village_id'],
+                'building_type_id' => $item['building_type_id'],
+                'level' => $item['level']
+            ]);
 
             return [
                 'success' => true,
@@ -260,6 +292,10 @@ class BuildingQueueManager
         } catch (Exception $e) {
             $this->conn->rollback();
             $this->logQueueEvent('complete_failed', [
+                'queue_item_id' => $queueItemId,
+                'error' => $e->getMessage()
+            ]);
+            $this->logQueueMetric('complete_failed', [
                 'queue_item_id' => $queueItemId,
                 'error' => $e->getMessage()
             ]);
@@ -335,12 +371,25 @@ class BuildingQueueManager
                 'was_active' => $wasActive,
                 'user_id' => $userId
             ]);
+            $this->logQueueMetric('cancel', [
+                'queue_item_id' => $queueItemId,
+                'village_id' => $item['village_id'],
+                'building_type_id' => $item['building_type_id'],
+                'level' => $item['level'],
+                'was_active' => $wasActive,
+                'user_id' => $userId
+            ]);
 
             return ['success' => true, 'refund' => $refund];
 
         } catch (Exception $e) {
             $this->conn->rollback();
             $this->logQueueEvent('cancel_failed', [
+                'queue_item_id' => $queueItemId,
+                'user_id' => $userId,
+                'error' => $e->getMessage()
+            ]);
+            $this->logQueueMetric('cancel_failed', [
                 'queue_item_id' => $queueItemId,
                 'user_id' => $userId,
                 'error' => $e->getMessage()
@@ -651,5 +700,20 @@ class BuildingQueueManager
             return;
         }
         @file_put_contents($this->logFile, $line . PHP_EOL, FILE_APPEND);
+    }
+
+    /**
+     * Lightweight metrics emitter for queue events (JSONL).
+     */
+    private function logQueueMetric(string $metric, array $fields): void
+    {
+        $fields['metric'] = $metric;
+        $fields['ts'] = $fields['ts'] ?? time();
+        $fields['date'] = date('c', $fields['ts']);
+        $line = json_encode($fields);
+        if ($line === false) {
+            return;
+        }
+        @file_put_contents($this->metricsFile, $line . PHP_EOL, FILE_APPEND);
     }
 }
