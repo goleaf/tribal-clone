@@ -8,6 +8,8 @@ class BuildingConfigManager {
     private array $costCache = [];
     private array $timeCache = [];
     private ?string $configVersion = null;
+    private const COST_FACTOR_MIN = 1.01;
+    private const COST_FACTOR_MAX = 1.6;
 
     public function __construct($conn) {
         $this->conn = $conn;
@@ -106,9 +108,10 @@ class BuildingConfigManager {
         }
 
         $nextLevel = $currentLevel + 1; // kept for readability if/when level-specific logic is expanded
-        $costWood = round($config['cost_wood_initial'] * ($config['cost_factor'] ** $currentLevel));
-        $costClay = round($config['cost_clay_initial'] * ($config['cost_factor'] ** $currentLevel));
-        $costIron = round($config['cost_iron_initial'] * ($config['cost_factor'] ** $currentLevel));
+        $costFactor = $this->clampCostFactor((float)$config['cost_factor']);
+        $costWood = round($config['cost_wood_initial'] * ($costFactor ** $currentLevel));
+        $costClay = round($config['cost_clay_initial'] * ($costFactor ** $currentLevel));
+        $costIron = round($config['cost_iron_initial'] * ($costFactor ** $currentLevel));
 
         $costs = [
             'wood' => $costWood,
@@ -362,6 +365,18 @@ class BuildingConfigManager {
         }
 
         return null; // No production or capacity info for this building
+    }
+
+    /**
+     * Clamp cost factor to guardrails to prevent runaway costs or trivially cheap scaling.
+     */
+    private function clampCostFactor(float $factor): float
+    {
+        if ($factor <= 0) {
+            $factor = 1.0;
+        }
+        $factor = max(self::COST_FACTOR_MIN, min(self::COST_FACTOR_MAX, $factor));
+        return $factor;
     }
 }
 

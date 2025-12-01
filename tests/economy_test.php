@@ -292,4 +292,18 @@ $runner->add('Open offers reserve merchants for new trades', function () {
     assertEquals(EconomyError::ERR_CAP, $second['code'] ?? null, 'Should return ERR_CAP when merchants are exhausted');
 });
 
+$runner->add('Vault protection chooses stronger of vault vs hiding place', function () {
+    $resources = ['wood' => 1000, 'clay' => 1000, 'iron' => 1000];
+
+    // Vault 10% protects 100 each; hidden 50 — vault wins.
+    $loot = BattleManager::computeLootableResources($resources, 50, 10.0);
+    assertEquals(['wood' => 100, 'clay' => 100, 'iron' => 100], $loot['protected'], 'Vault should protect 10% of each resource');
+    assertEquals(['wood' => 900, 'clay' => 900, 'iron' => 900], $loot['available'], 'Available should subtract vault protection when larger than hiding place');
+
+    // Hidden larger than vault-protected should be used instead.
+    $lootHidden = BattleManager::computeLootableResources($resources, 200, 10.0);
+    assertEquals(['wood' => 100, 'clay' => 100, 'iron' => 100], $lootHidden['protected'], 'Vault protection value unchanged');
+    assertEquals(['wood' => 800, 'clay' => 800, 'iron' => 800], $lootHidden['available'], 'Available should subtract hiding place when larger than vault');
+});
+
 $runner->run();
