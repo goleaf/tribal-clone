@@ -35,12 +35,12 @@
   - **Validates: Requirements 13.1, 13.3**
 
 - [x] 2. Extend UnitManager with new functionality
-- [-] 2.1 Implement getUnitCategory() method
+- [x] 2.1 Implement getUnitCategory() method
   - Return category based on unit internal name or building type
   - Categories: 'infantry', 'cavalry', 'ranged', 'siege', 'scout', 'support', 'conquest'
   - _Requirements: 1.4, 3.3, 8.4_
 
-- [x] 2.2 Implement isUnitAvailable() method
+- [-] 2.2 Implement isUnitAvailable() method
   - Check world feature flags (conquest, seasonal, healer)
   - Check seasonal window if applicable
   - Return boolean availability
