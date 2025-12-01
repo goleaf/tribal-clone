@@ -176,6 +176,7 @@ Status markers:
 - Recruit API: prerequisites/caps/res checks return correct reason codes; concurrent recruits cannot exceed caps; per-world archetype overrides honored.
 - Combat integration: verify mantlet reduction, aura/healer caps, and RPS multipliers fire in battle reports and match expected loss patterns in sims.
 - Gate checks: hardcore world disables/tightens seasonal/elite units as configured; attempts to train blocked with audited errors.
+- Anti-abuse: fuzz concurrent recruit requests to ensure caps are enforced atomically; duplicate/replay tokens rejected with reason codes and logged.
 
 ### Aura & Healer Stacking Spec
 - **Banner Guard Aura:** Does not stack additively. Use highest-level aura in a battle (based on Banner Guard tier/upgrade). Additional Banner Guards beyond first grant no extra buff but still fight normally. Aura applies to defender only; attacker aura applies to attacker side if world enables offensive banners.

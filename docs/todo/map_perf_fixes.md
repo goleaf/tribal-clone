@@ -44,6 +44,7 @@
 ## Progress
 - Added an AJAX travel-time endpoint (`ajax/map/travel_time.php`) so map/Rally interactions can fetch distance/ETA server-side using world speed modifiers (reduces client-side recompute and keeps timings consistent).
 - Added low-perf mode on `map_data.php` (`?lowperf=1`) to skip movement payloads and flag response, reducing payload/processing for constrained clients.
+- Map UI surfaces low-perf state with a movement-warning banner when movements are hidden.
 
 ## QA & Tests
 - Simulate heavy load: 500+ command lines + 200 markers in viewport; verify batching/pagination keep p95 render <200ms and payload under max size.

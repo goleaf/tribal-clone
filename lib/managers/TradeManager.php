@@ -10,6 +10,7 @@ class TradeManager {
     private ?bool $tradeOffersTableExists = null;
     private const MIN_FAIR_RATE = 0.25; // offered/requested lower bound (25%)
     private const MAX_FAIR_RATE = 4.0;  // offered/requested upper bound (400%)
+    private const PUSH_POINTS_RATIO = 5; // block aid when sender points exceed target by 5x and target is protected/low points
 
     public function __construct($db_connection) {
         $this->conn = $db_connection;
@@ -170,7 +171,7 @@ class TradeManager {
         }
 
         if ($village['wood'] < $resources['wood'] || $village['clay'] < $resources['clay'] || $village['iron'] < $resources['iron']) {
-            return ['success' => false, 'message' => 'Not enough resources in this village.', 'code' => EconomyError::ERR_RES];
+            return ['success' => false, 'message' => 'Not enough resources in this village.', 'code' => EconomyError::ERR_CAP];
         }
 
         $targetVillage = $this->getVillageByCoords($targetX, $targetY);
@@ -179,6 +180,12 @@ class TradeManager {
         }
         if ((int)$targetVillage['id'] === $villageId) {
             return ['success' => false, 'message' => 'Cannot send resources to the same village.', 'code' => 'ERR_INPUT'];
+        }
+
+        // Anti-push: block sending to heavily protected/low-point targets when sender is much stronger
+        $pushCheck = $this->enforceAntiPush((int)$village['user_id'], (int)$targetVillage['user_id']);
+        if ($pushCheck !== true) {
+            return $pushCheck;
         }
 
         // Enforce storage headroom at target to avoid overflow abuse
@@ -203,20 +210,6 @@ class TradeManager {
         $timeSec = calculateTravelTime($distance, $speed);
         $departure = date('Y-m-d H:i:s');
         $arrival = date('Y-m-d H:i:s', time() + (int)$timeSec);
-
-        // Enforce storage caps on both receiver sides
-        $headroomBuyer = $this->checkStorageHeadroom($acceptingVillage, [
-            'wood' => (int)$offer['offered_wood'],
-            'clay' => (int)$offer['offered_clay'],
-            'iron' => (int)$offer['offered_iron'],
-        ]);
-        if ($headroomBuyer !== true) {
-            return $headroomBuyer;
-        }
-        $headroomSeller = $this->checkStorageHeadroom($sourceVillage, $requiredFromAcceptor);
-        if ($headroomSeller !== true) {
-            return $headroomSeller;
-        }
 
         // Enforce target storage caps to prevent overflow pushing.
         $capacityCheck = $this->checkStorageHeadroom($targetVillage, $resources);
@@ -690,6 +683,18 @@ class TradeManager {
             $stmt->close();
 
             $this->conn->commit();
+
+            $this->logTradeAudit('cancel_offer', [
+                'actor_user_id' => $userId,
+                'source_village_id' => $villageId,
+                'offer_id' => $offerId,
+                'refunded' => [
+                    'wood' => (int)$offer['offered_wood'],
+                    'clay' => (int)$offer['offered_clay'],
+                    'iron' => (int)$offer['offered_iron']
+                ]
+            ]);
+
             return ['success' => true];
         } catch (Exception $e) {
             $this->conn->rollback();
@@ -757,6 +762,12 @@ class TradeManager {
         }
         if ((int)$offer['source_user_id'] === $userId) {
             return ['success' => false, 'message' => 'You cannot accept your own offer from another village.', 'code' => 'ERR_ALT_BLOCK'];
+        }
+
+        // Anti-push: prevent lopsided sends to protected/low-point accounts
+        $pushCheck = $this->enforceAntiPush($userId, (int)$offer['source_user_id']);
+        if ($pushCheck !== true) {
+            return $pushCheck;
         }
 
         // Market level check for the accepting village

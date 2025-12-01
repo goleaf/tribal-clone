@@ -2983,7 +2983,8 @@ class BattleManager
             'population' => $totalPop,
             'threshold' => $threshold,
             'penalty_rate' => $penaltyRate,
-            'min_multiplier' => $minMultiplier
+            'min_multiplier' => $minMultiplier,
+            'over_pop' => $over
         ];
     }
 
