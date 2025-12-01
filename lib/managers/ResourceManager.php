@@ -78,8 +78,11 @@ class ResourceManager {
 
         // Use BuildingManager to calculate hourly production
         $worldId = $this->getWorldIdForVillage($village_id);
-        $worldConfig = $this->getWorldEconomyConfig($worldId);
-        $resourceMultiplier = $worldConfig['resource_multiplier'] ?? 1.0;
+        if (!class_exists('WorldManager')) {
+            require_once __DIR__ . '/WorldManager.php';
+        }
+        $worldManager = class_exists('WorldManager') ? new WorldManager($this->conn) : null;
+        $resourceMultiplier = $worldManager ? $worldManager->getResourceProductionMultiplier($worldId) : 1.0;
 
         return $this->buildingManager->getHourlyProduction($building_internal_name, $level) * $resourceMultiplier;
     }
@@ -129,6 +132,23 @@ class ResourceManager {
         $village['wood'] = min($village['wood'] + $gained_wood, $warehouse_cap_with_buffer);
         $village['clay'] = min($village['clay'] + $gained_clay, $warehouse_cap_with_buffer);
         $village['iron'] = min($village['iron'] + $gained_iron, $warehouse_cap_with_buffer);
+
+        // Optional decay for hoarded resources above threshold
+        $decayEnabled = defined('RESOURCE_DECAY_ENABLED') ? (bool)RESOURCE_DECAY_ENABLED : false;
+        if ($decayEnabled) {
+            $threshold = defined('RESOURCE_DECAY_THRESHOLD') ? (float)RESOURCE_DECAY_THRESHOLD : 0.8; // 80% of cap
+            $ratePerHour = defined('RESOURCE_DECAY_RATE') ? (float)RESOURCE_DECAY_RATE : 0.01; // 1% of overage per hour
+            $thresholdAmount = $warehouse_capacity * $threshold;
+
+            foreach (['wood', 'clay', 'iron'] as $res) {
+                $current = $village[$res];
+                if ($current > $thresholdAmount && $ratePerHour > 0) {
+                    $over = $current - $thresholdAmount;
+                    $decay = max(0, $over * $ratePerHour * $dt_hours);
+                    $village[$res] = max($thresholdAmount, $current - $decay);
+                }
+            }
+        }
 
         $nowSql = date('Y-m-d H:i:s', $now);
 
@@ -261,23 +281,22 @@ class ResourceManager {
             return $this->worldEconomyCache[$worldId];
         }
 
-        $stmt = $this->conn->prepare("SELECT resource_multiplier, vault_protect_pct FROM worlds WHERE id = ? LIMIT 1");
-        if ($stmt === false) {
-            return $this->worldEconomyCache[$worldId] = [
-                'resource_multiplier' => 1.0,
-                'vault_protect_pct' => 10
-            ];
+        if (!class_exists('WorldManager')) {
+            require_once __DIR__ . '/WorldManager.php';
         }
-        $stmt->bind_param("i", $worldId);
-        $stmt->execute();
-        $res = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
+        if (class_exists('WorldManager')) {
+            $wm = new WorldManager($this->conn);
+            $this->worldEconomyCache[$worldId] = [
+                'resource_multiplier' => $wm->getResourceProductionMultiplier($worldId),
+                'vault_protect_pct' => (int)$wm->getVaultProtectionPercent($worldId)
+            ];
+            return $this->worldEconomyCache[$worldId];
+        }
 
-        $this->worldEconomyCache[$worldId] = [
-            'resource_multiplier' => isset($res['resource_multiplier']) ? (float)$res['resource_multiplier'] : 1.0,
-            'vault_protect_pct' => isset($res['vault_protect_pct']) ? (int)$res['vault_protect_pct'] : 10
+        // Fallback if WorldManager is unavailable
+        return $this->worldEconomyCache[$worldId] = [
+            'resource_multiplier' => 1.0,
+            'vault_protect_pct' => 10
         ];
-
-        return $this->worldEconomyCache[$worldId];
     }
 }

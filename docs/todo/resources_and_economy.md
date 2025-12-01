@@ -85,7 +85,7 @@
 ## Implementation TODOs
 - [x] Resource config per world: production rates, storage/vault protection %, decay toggles, dynamic cost scalers, aid caps/taxes. _(config/config.php covers baseline knobs; add DB schema & world-level overrides)_
 - [x] Resource sinks: implement minting (coins/seals/standards), tribe projects currency, megaproject deliveries (wonders/beacons), and occupation taxes. _(sink plan below)_
-- [x] Anti-hoarding: overflow loss/decay above threshold (world-optional), diminishing plunder returns per attacker→target cooldown, rising conquest costs for large empires. _(anti-hoard spec below)_
+- [x] Anti-hoarding: overflow loss/decay above threshold (world-optional), diminishing plunder returns per attacker→target cooldown, rising conquest costs for large empires. _(anti-hoard spec below; decay implemented via RESOURCE_DECAY_* constants in ResourceManager)_
 - [ ] Trade system: offer/accept APIs with tax by distance/power delta; fixed/open rate modes; aid board with caps and audit logs; balancer with fees and cap checks.
 - [ ] Event economy: token balances with expiry, event shops with caps, harvest/trade wind modifiers applied per world.
 - [ ] Catch-up buffs: late-joiner production bonuses and protection; ensure non-stacking with beginner protection abuse; expiration rules.
@@ -109,6 +109,7 @@
 ## Progress
 - Added per-world economy knobs on `worlds` (`resource_multiplier`, `vault_protect_pct`) with migration/backfill defaults; `ResourceManager` applies per-world production scaling.
 - Vault protection percent now applied in plunder: BattleManager subtracts the greater of hiding place protection or world vault % per resource before loot.
+- Resource production multiplier now sourced via WorldManager in ResourceManager to align production rates with per-world config.
 
 ## Acceptance Criteria
 - World configs apply correct production/storage/vault/decay values and caps for the selected archetype; overrides logged.
@@ -116,6 +117,10 @@
 - Trade/aid routes enforce taxes/caps and block power-delta exploits; audit logs capture sender/receiver, amounts, tax, and reason codes on blocks.
 - Diminishing plunder and aid caps reset on schedule; repeated farm attempts show reduced loot; tests cover abuse edge cases.
 - Event tokens expire correctly; event shop caps enforced; late-joiner buffs applied once and expire on schedule.
+- Safeguards and error codes (`ERR_CAP`, `ERR_TAX`, `ERR_ALT_BLOCK`, `ERR_RATE_LIMIT`, `ERR_RATIO`, `ERR_VALIDATION`) enforced and surfaced with guidance in UI.
+- Auditing retains append-only logs (trades/aid/minting) for 180 days with actor/target/ip_hash/ua_hash/world_id.
+- Load shedding on trade/aid spikes returns queue/try-later with backpressure metrics; no DB timeouts.
+- Validation rejects zero/negative sends, enforces storage limits at send/receive, and blocks extreme exchange ratios; tests cover these cases.
 
 ### Anti-Hoarding & Anti-Inflation Spec
 - **Overflow/Decay:** Optional per-world `RESOURCE_DECAY_ENABLED` with `DECAY_THRESHOLD_PCT` (default 80%) and `DECAY_RATE_PER_HOUR` (e.g., 1–3% of amount above threshold). Applied in resource tick; decay logged to telemetry; disabled on casual worlds.
@@ -130,6 +135,12 @@
 - How aggressive should diminishing plunder be on repeated barb farming vs players to avoid punishing legit skirmishes?
 - Do aid taxes scale by distance only, power delta only, or both? Need formula defaults for UI explanation.
 - Are event tokens transferable between worlds or strictly per-world? Clarify to prevent hoarding/exploit.
+
+## Profiling & Load Plan
+- Economy tick soak tests with decay/DR/empire surcharges enabled at scale; measure p50/p95 latency and DB load.
+- Market/aid stress: high-volume trade/aid requests with taxes/caps/audit logging; ensure rate limits and backpressure prevent DB timeouts.
+- Minting/tribe project/megastructure load: concurrent contributions to cap enforcement; verify no lock contention and correct surcharge application.
+- Event economy soak: token grants, expiries, and shop purchases at volume; validate caps and expiry behavior and payload sizes.
 
 ### Resource Sink Plan
 - **Minting:** Coins/Seals/Standards crafted in Hall/Academy with rising costs; daily mint cap per account; consumes wood/clay/iron and optional token sink. Required for Standard Bearers.

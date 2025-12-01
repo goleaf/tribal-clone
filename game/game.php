@@ -67,6 +67,13 @@ $buildings_data = $buildingManager->getVillageBuildingsViewData($village_id, $ma
 $production_rates = $resourceManager->getProductionRates($village_id);
 $active_upgrades = array_filter($buildings_data, static fn($b) => !empty($b['is_upgrading']));
 $build_queue_count = $buildingManager->getActivePendingQueueCount($village_id) ?? 0;
+$nearCapResources = [];
+foreach (['wood', 'clay', 'iron'] as $resType) {
+    $amount = (float)($village[$resType] ?? 0);
+    if ($storage_capacity > 0 && $amount >= 0.9 * $storage_capacity) {
+        $nearCapResources[] = ucfirst($resType);
+    }
+}
 
 // --- PAGE META ---
 $pageTitle = htmlspecialchars($village['name']) . ' - Village Overview';
@@ -115,6 +122,11 @@ require '../header.php';
             <?php if (!empty($message)): ?>
                 <div class="game-message accent">
                     <?= $message ?>
+                </div>
+            <?php endif; ?>
+            <?php if (!empty($nearCapResources)): ?>
+                <div class="game-message warning">
+                    <?= implode(', ', array_map('htmlspecialchars', $nearCapResources)) ?> near storage cap — spend or trade to avoid overflow.
                 </div>
             <?php endif; ?>
             <?php if ($build_queue_count === 0): ?>

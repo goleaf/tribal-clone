@@ -249,6 +249,7 @@ $movementsStmt = $conn->prepare("
         (tv.x_coord BETWEEN ? AND ? AND tv.y_coord BETWEEN ? AND ?)
       )
 ");
+$movementAttackIds = [];
 if ($movementsStmt) {
     $movementsStmt->bind_param(
         'iiiiiiii',
@@ -269,8 +270,11 @@ if ($movementsStmt) {
             $lastModifiedTs = $startTs;
         }
 
+        $movementAttackIds[] = (int)$move['id'];
+
         if (isset($villagesById[$sourceId])) {
             $villages[$villagesById[$sourceId]]['movements'][] = [
+                'attack_id' => (int)$move['id'],
                 'type' => $move['attack_type'] === 'support' ? 'support' : 'attack',
                 'arrival' => $arrivalTs,
                 'target' => ['x' => (int)$move['target_x'], 'y' => (int)$move['target_y']]
@@ -279,6 +283,7 @@ if ($movementsStmt) {
 
         if (isset($villagesById[$targetId])) {
             $villages[$villagesById[$targetId]]['movements'][] = [
+                'attack_id' => (int)$move['id'],
                 'type' => $move['attack_type'] === 'support' ? 'support_in' : 'incoming',
                 'arrival' => $arrivalTs,
                 'source' => ['x' => (int)$move['source_x'], 'y' => (int)$move['source_y']]
@@ -286,6 +291,44 @@ if ($movementsStmt) {
         }
     }
     $movementsStmt->close();
+}
+
+// Flag movements that carry nobles
+if (!empty($movementAttackIds)) {
+    $placeholders = implode(',', array_fill(0, count($movementAttackIds), '?'));
+    $types = str_repeat('i', count($movementAttackIds));
+    $nobleSql = "
+        SELECT DISTINCT au.attack_id
+        FROM attack_units au
+        JOIN unit_types ut ON ut.id = au.unit_type_id
+        WHERE au.attack_id IN ($placeholders)
+          AND LOWER(ut.internal_name) IN ('noble', 'nobleman', 'nobleman_unit')
+          AND au.count > 0
+    ";
+    $nobleStmt = $conn->prepare($nobleSql);
+    if ($nobleStmt) {
+        $nobleStmt->bind_param($types, ...$movementAttackIds);
+        $nobleStmt->execute();
+        $res = $nobleStmt->get_result();
+        $nobleAttackIds = [];
+        while ($row = $res->fetch_assoc()) {
+            $nobleAttackIds[(int)$row['attack_id']] = true;
+        }
+        $nobleStmt->close();
+
+        if (!empty($nobleAttackIds)) {
+            foreach ($villages as &$v) {
+                if (empty($v['movements'])) continue;
+                foreach ($v['movements'] as &$move) {
+                    if (!empty($move['attack_id']) && isset($nobleAttackIds[$move['attack_id']])) {
+                        $move['has_noble'] = true;
+                    }
+                }
+                unset($move);
+            }
+            unset($v);
+        }
+    }
 }
 
 // Fetch tribes/alliances if the table exists (optional)

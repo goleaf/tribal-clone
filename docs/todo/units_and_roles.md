@@ -146,9 +146,11 @@ Status markers:
 - [ ] Mantlet effect: reduce ranged damage taken by escorted siege; integrate into combat resolver efficiently.
 - [ ] Seasonal/event unit lifecycle: spawn/expiry dates, sunset handling (auto-convert to resources or disable training), no permanent power creep.
 - [ ] Data audit: battle reports include unit-specific modifiers (aura, mantlet, healer applied) for clarity.
-- [ ] Aura/stacking rules: define Banner Guard stacking (cap/overwrite) and Healer recovery caps per battle to prevent runaway buffs; encode in resolver and docs.
+- [x] Aura/stacking rules: define Banner Guard stacking (cap/overwrite) and Healer recovery caps per battle to prevent runaway buffs; encode in resolver and docs. _(stacking spec below)_
 - [ ] World archetype gates: disable or tighten seasonal/elite units on hardcore worlds; expose per-archetype overrides in admin UI with audit trail.
 - [x] Add mantlet unit data: stats/cost/speed added to units.json for siege-cover role (effect still to wire into combat).
+- [ ] Tests: unit tests for RPS multipliers, caps, mantlet reduction, aura/healer caps, and conquest-unit limits; integration sims for common compositions vs walls/terrain to validate expected losses.
+- [ ] Anti-abuse: detect repeat exploit patterns (e.g., training beyond caps via concurrent requests), block, and log with reason codes; enforce per-account and per-village caps atomically.
 
 ## Acceptance Criteria
 - Unit stats/unlocks/caps in `units.json`/DB match design tables; RPS interactions validated in combat tests (pikes>cav, cav>ranged in field, ranged>inf blobs).
@@ -157,6 +159,14 @@ Status markers:
 - Caps on siege/elite/event/conquest units enforced per village/account; errors surfaced; no training beyond limits under load.
 - Sunset handling removes/locks expired event units cleanly; conversions/logging validated.
 - Stacking rules for auras/healers enforced and visible; archetype gates per world applied and auditable.
+
+### Aura & Healer Stacking Spec
+- **Banner Guard Aura:** Does not stack additively. Use highest-level aura in a battle (based on Banner Guard tier/upgrade). Additional Banner Guards beyond first grant no extra buff but still fight normally. Aura applies to defender only; attacker aura applies to attacker side if world enables offensive banners.
+- **Aura Values:** Configurable per level (`BANNER_AURA_DEF_MULT`, `BANNER_AURA_RESOLVE_BONUS`). Applied after overstack and before wall/terrain/morale in defense calc.
+- **Healer Recovery:** Cap recovery per battle at `min(HEALER_MAX_PCT_PER_BATTLE, healer_recovery_rate * surviving_healers)`, default 10–20% of losses. Cannot exceed available losses and cannot resurrect conquest/siege units (configurable). Recovery applied post-battle, logged in report.
+- **Diminishing Returns:** Optional world flag `HEALER_DR_ENABLED`; apply DR curve if multiple Healers present so recovery tapers (e.g., second healer at 50% effectiveness).
+- **Reporting:** Battle reports list “Banner aura active: +X% def/+Y resolve” and “Healers recovered Z troops (cap A%)” when triggered. Logs include which aura level applied.
+- **Validation:** Resolver enforces single aura application and clamps recovery to loss pool and per-battle caps.
 
 ## Open Questions
 - Do Banner Guard auras stack or overwrite? Define stacking rules and cap to avoid runaway buffs.

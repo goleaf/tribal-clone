@@ -292,10 +292,14 @@ let mapPollInterval = null;
 let worldBounds = null;
 const mapPollMs = 15000;
 const MAP_FETCH_DEBOUNCE_MS = 180;
+const MAP_SKELETON_DELAY_MS = 120;
 let mapLoadTimer = null;
 let lastQueuedRequest = null;
+let mapAbortController = null;
 const HIGH_CONTRAST_KEY = 'map_high_contrast';
+const REDUCED_MOTION_KEY = 'map_reduced_motion';
 let mapHighContrast = false;
+let mapReducedMotion = false;
 const filters = {
     barbarians: true,
     players: true,
@@ -315,13 +319,23 @@ const filters = {
 const mapLoadingEl = document.getElementById('map-loading');
 const mapSkeletonEl = document.getElementById('map-skeleton');
 const highContrastToggle = document.getElementById('high-contrast-toggle');
+const reducedMotionToggle = document.getElementById('reduced-motion-toggle');
+let mapSkeletonTimer = null;
 
 function setMapLoading(isLoading) {
     if (mapLoadingEl) {
         mapLoadingEl.style.display = isLoading ? 'flex' : 'none';
     }
     if (mapSkeletonEl) {
-        mapSkeletonEl.style.display = isLoading ? 'block' : 'none';
+        if (isLoading) {
+            clearTimeout(mapSkeletonTimer);
+            mapSkeletonTimer = setTimeout(() => {
+                mapSkeletonEl.style.display = 'block';
+            }, MAP_SKELETON_DELAY_MS);
+        } else {
+            clearTimeout(mapSkeletonTimer);
+            mapSkeletonEl.style.display = 'none';
+        }
     }
     const grid = document.getElementById('map-grid');
     if (grid) {
@@ -431,6 +445,7 @@ async function jumpToBookmark(match) {
 
 document.addEventListener('DOMContentLoaded', () => {
     initHighContrast();
+    initReducedMotion();
     const sizeInput = document.getElementById('map-size');
     const sizeLabel = document.getElementById('map-size-label');
     sizeInput.addEventListener('input', () => {
@@ -538,6 +553,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (enemyBox) filters.enemies = enemyBox.checked;
             if (neutralBox) filters.neutral = neutralBox.checked;
             if (activitySelect) filters.activity = activitySelect.value || 'any';
+            const cmdIn = document.getElementById('filter-commands-incoming');
+            const cmdOut = document.getElementById('filter-commands-outgoing');
+            const cmdSup = document.getElementById('filter-commands-support');
+            filters.commands.incoming = cmdIn ? cmdIn.checked : true;
+            filters.commands.outgoing = cmdOut ? cmdOut.checked : true;
+            filters.commands.support = cmdSup ? cmdSup.checked : true;
             renderMap();
         });
     });
@@ -713,6 +734,7 @@ function getOverlayIcon(village, annotation = {}) {
 function shouldRenderVillage(village, annotation = {}) {
     const relation = getVillageRelation(village);
     const activity = (village.activity_bucket || 'unknown').toString().toLowerCase();
+    const hasMovements = Array.isArray(village.movements) && village.movements.length > 0;
 
     if (filters.markedOnly && !annotation.note && !annotation.reserved) {
         return false;
@@ -746,6 +768,13 @@ function shouldRenderVillage(village, annotation = {}) {
             break;
     }
 
+    if (hasMovements) {
+        const anyVisible = village.movements.some((move) => movementVisible(move));
+        if (!anyVisible && filters.commands) {
+            // If all movements filtered out and filters set, allow other filters to decide; do not hide village
+        }
+    }
+
     return true;
 }
 
@@ -772,6 +801,19 @@ function indexVillages(villages, playersMap) {
         map[`${enriched.x}:${enriched.y}`] = enriched;
     });
     return map;
+}
+
+function movementVisible(move) {
+    if (!move || !filters.commands) return true;
+    const type = (move.type || '').toString().toLowerCase();
+    const isIncoming = type.includes('incoming');
+    const isSupport = type.includes('support');
+    const isOutgoing = !isIncoming && !isSupport; // treat attack/support originating from own as outgoing
+
+    if (isIncoming && !filters.commands.incoming) return false;
+    if (isSupport && !filters.commands.support) return false;
+    if (isOutgoing && !filters.commands.outgoing) return false;
+    return true;
 }
 
 async function fetchMapData(targetX, targetY, targetSize) {
@@ -931,6 +973,31 @@ function initHighContrast() {
     }
 }
 
+function applyReducedMotion(enabled) {
+    mapReducedMotion = !!enabled;
+    if (reducedMotionToggle) {
+        reducedMotionToggle.checked = mapReducedMotion;
+    }
+    if (mapReducedMotion) {
+        document.body.classList.add('map-reduced-motion');
+        localStorage.setItem(REDUCED_MOTION_KEY, '1');
+    } else {
+        document.body.classList.remove('map-reduced-motion');
+        localStorage.setItem(REDUCED_MOTION_KEY, '0');
+    }
+}
+
+function initReducedMotion() {
+    const stored = localStorage.getItem(REDUCED_MOTION_KEY);
+    const enabled = stored === '1';
+    applyReducedMotion(enabled);
+    if (reducedMotionToggle) {
+        reducedMotionToggle.addEventListener('change', (e) => {
+            applyReducedMotion(e.target.checked);
+        });
+    }
+}
+
 function renderMap() {
     const mapGrid = document.getElementById('map-grid');
     mapGrid.innerHTML = '';
@@ -979,16 +1046,29 @@ function renderMap() {
                 tile.appendChild(overlay);
 
                 if (Array.isArray(village.movements) && village.movements.length > 0) {
-                    const movementStack = document.createElement('div');
-                    movementStack.classList.add('movement-stack');
-                    village.movements.slice(0, 3).forEach(move => {
+                    const visibleMoves = village.movements.filter(movementVisible);
+                    if (visibleMoves.length > 0) {
+                        const movementStack = document.createElement('div');
+                        movementStack.classList.add('movement-stack');
+                        visibleMoves.slice(0, 3).forEach(move => {
                         const icon = document.createElement('img');
                         icon.classList.add('movement-icon');
                         icon.src = movementIcons[move.type] || overlayIcons.incoming;
                         icon.alt = move.type;
+                        if (move.has_noble) {
+                            icon.classList.add('noble-move');
+                        }
+                        const arrivalLabel = formatArrivalTime(move.arrival);
+                        if (arrivalLabel) {
+                            const directionLabel = move.type.includes('incoming') ? 'Incoming' : (move.type.includes('support') ? 'Support' : 'Outgoing');
+                            const endpoint = move.source ? `${move.source.x}|${move.source.y}` : (move.target ? `${move.target.x}|${move.target.y}` : '');
+                            const nobleTag = move.has_noble ? ' · Noble' : '';
+                            icon.title = `${directionLabel}${endpoint ? ' ' + endpoint : ''} · ETA ${arrivalLabel}${nobleTag}`;
+                        }
                         movementStack.appendChild(icon);
                     });
                     tile.appendChild(movementStack);
+                }
                 }
 
                 if (annotation.note) {
@@ -1071,6 +1151,12 @@ function updateUrl(x, y, size) {
 function moveMap(dx, dy) {
     const stride = Math.max(5, Math.floor(mapState.size / 2));
     requestMapLoad(mapState.center.x + dx * stride, mapState.center.y + dy * stride, mapState.size);
+}
+
+function formatArrivalTime(tsSeconds) {
+    if (!Number.isFinite(tsSeconds)) return '';
+    const d = new Date(tsSeconds * 1000);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 function jumpToHome() {
@@ -1217,7 +1303,7 @@ function renderMiniMap() {
         const relX = (v.x - minX) * scaleX + pad;
         const relY = (v.y - minY) * scaleY + pad;
         const relation = getVillageRelationClass(v);
-const relationColors = {
+const relationColorsDefault = {
     'relation-own': '#2c7be5',
     'relation-ally': '#4caf50',
     'relation-nap': '#1abc9c',
@@ -1226,7 +1312,17 @@ const relationColors = {
     'relation-neutral': '#d1a23d',
     'relation-barb': '#7f8c8d'
 };
-        ctx.fillStyle = relationColors[relation] || relationColors['relation-neutral'];
+const relationColorsHighContrast = {
+    'relation-own': '#1f6fff',
+    'relation-ally': '#0ac14b',
+    'relation-nap': '#04c2c9',
+    'relation-truce': '#9ea7b3',
+    'relation-enemy': '#ff3b30',
+    'relation-neutral': '#f3c622',
+    'relation-barb': '#c0c4cc'
+};
+        const colors = mapHighContrast ? relationColorsHighContrast : relationColorsDefault;
+        ctx.fillStyle = colors[relation] || colors['relation-neutral'];
         ctx.fillRect(relX - 2, relY - 2, 4, 4);
     });
 
@@ -1484,6 +1580,29 @@ const relationColors = {
     opacity: 0.45;
 }
 
+body.map-high-contrast .map-grid {
+    background: #0f172a;
+    border-color: #1f2937;
+}
+body.map-high-contrast .map-tile {
+    outline: 1px solid rgba(0,0,0,0.25);
+}
+body.map-high-contrast .map-tile.relation-own { box-shadow: inset 0 0 0 2px #1f6fff; }
+body.map-high-contrast .map-tile.relation-ally { box-shadow: inset 0 0 0 2px #0ac14b; }
+body.map-high-contrast .map-tile.relation-nap { box-shadow: inset 0 0 0 2px #04c2c9; }
+body.map-high-contrast .map-tile.relation-truce { box-shadow: inset 0 0 0 2px #9ea7b3; }
+body.map-high-contrast .map-tile.relation-enemy { box-shadow: inset 0 0 0 2px #ff3b30; }
+body.map-high-contrast .map-tile.relation-neutral { box-shadow: inset 0 0 0 2px #f3c622; }
+body.map-high-contrast .map-tile.relation-barb { box-shadow: inset 0 0 0 2px #c0c4cc; }
+body.map-high-contrast .coords {
+    background: rgba(10,10,10,0.82);
+    color: #fff;
+}
+body.map-high-contrast .village-label {
+    background: rgba(10,10,10,0.78);
+    color: #fff;
+}
+
 .village-layer {
     position: absolute;
     inset: 0;
@@ -1513,6 +1632,12 @@ const relationColors = {
     height: 14px;
 }
 
+body.map-reduced-motion .map-tile,
+body.map-reduced-motion .village-label,
+body.map-reduced-motion .coords {
+    transition: none;
+}
+
 .map-skeleton {
     position: absolute;
     inset: 0;
@@ -1529,6 +1654,11 @@ const relationColors = {
     background: linear-gradient(90deg, #e6ddcf 25%, #f2ebe1 50%, #e6ddcf 75%);
     background-size: 200% 100%;
     animation: map-skeleton 1.2s ease-in-out infinite;
+}
+
+body.map-reduced-motion .map-grid.is-loading .map-tile,
+body.map-reduced-motion .map-skeleton .skeleton-row {
+    animation: none;
 }
 
 .note-icon {
@@ -1598,6 +1728,30 @@ const relationColors = {
     height: 24px;
     border-radius: 4px;
 }
+
+.legend-dot {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid rgba(0,0,0,0.4);
+    background: #c6b28f;
+}
+.legend-dot.relation-own { background: #2c7be5; }
+.legend-dot.relation-ally { background: #4caf50; }
+.legend-dot.relation-nap { background: #1abc9c; }
+.legend-dot.relation-truce { background: #6c757d; }
+.legend-dot.relation-enemy { background: #c0392b; }
+.legend-dot.relation-neutral { background: #d1a23d; }
+.legend-dot.relation-barb { background: #7f8c8d; }
+
+body.map-high-contrast .legend-dot.relation-own { background: #1f6fff; border-color: #0d3d96; }
+body.map-high-contrast .legend-dot.relation-ally { background: #0ac14b; border-color: #036d2c; }
+body.map-high-contrast .legend-dot.relation-nap { background: #04c2c9; border-color: #006b70; }
+body.map-high-contrast .legend-dot.relation-truce { background: #9ea7b3; border-color: #4a5568; }
+body.map-high-contrast .legend-dot.relation-enemy { background: #ff3b30; border-color: #a2160f; }
+body.map-high-contrast .legend-dot.relation-neutral { background: #f3c622; border-color: #a67700; }
+body.map-high-contrast .legend-dot.relation-barb { background: #c0c4cc; border-color: #6e7683; }
 
 .map-popup {
     position: absolute;

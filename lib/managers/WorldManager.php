@@ -413,6 +413,57 @@ class WorldManager
     }
 
     /**
+     * Lightweight validation for world settings arrays.
+     * Returns ['success' => bool, 'errors' => string[]].
+     */
+    public function validateWorldConfig(array $config): array
+    {
+        $errors = [];
+
+        $speeds = [
+            'world_speed' => $config['world_speed'] ?? null,
+            'troop_speed' => $config['troop_speed'] ?? null,
+            'build_speed' => $config['build_speed'] ?? null,
+            'train_speed' => $config['train_speed'] ?? null,
+            'research_speed' => $config['research_speed'] ?? null,
+        ];
+        foreach ($speeds as $key => $val) {
+            if ($val !== null && (!is_numeric($val) || $val <= 0)) {
+                $errors[] = "$key must be a positive number.";
+            }
+        }
+
+        $tribeLimit = $config['tribe_member_limit'] ?? null;
+        if ($tribeLimit !== null && (!is_numeric($tribeLimit) || $tribeLimit < 0)) {
+            $errors[] = 'tribe_member_limit must be null or >= 0.';
+        }
+
+        $victoryType = $config['victory_type'] ?? null;
+        $victoryValue = $config['victory_value'] ?? null;
+        if (empty($victoryType)) {
+            $errors[] = 'victory_type is required.';
+        } elseif (in_array($victoryType, ['domination', 'tribe_domination', 'tribe_village_percent'], true)) {
+            if (!is_numeric($victoryValue) || $victoryValue <= 0 || $victoryValue > 100) {
+                $errors[] = 'victory_value must be between 1 and 100 for domination-style victories.';
+            }
+        }
+
+        $nightEnabled = !empty($config['night_bonus_enabled']);
+        $startHour = isset($config['night_start_hour']) ? (int)$config['night_start_hour'] : 22;
+        $endHour = isset($config['night_end_hour']) ? (int)$config['night_end_hour'] : 6;
+        if ($nightEnabled) {
+            if ($startHour < 0 || $startHour > 23 || $endHour < 0 || $endHour > 23) {
+                $errors[] = 'Night bonus hours must be between 0 and 23.';
+            }
+            if ($startHour === $endHour) {
+                $errors[] = 'Night bonus start and end hours cannot be the same.';
+            }
+        }
+
+        return ['success' => empty($errors), 'errors' => $errors];
+    }
+
+    /**
      * Archetype templates for world creation seeding.
      */
     public function getArchetypeTemplates(): array
@@ -560,6 +611,14 @@ class WorldManager
         // Clear cache
         unset($this->settingsCache[$worldId]);
 
-        return $ok ? ['success' => true, 'message' => "Applied '{$key}' archetype to world {$worldId}."] : ['success' => false, 'message' => 'Failed to apply archetype.'];
+        if ($ok) {
+            $validation = $this->validateWorldConfig(array_merge($this->getSettings($worldId), $template));
+            if (!$validation['success']) {
+                return ['success' => false, 'message' => 'Applied archetype but validation failed: ' . implode('; ', $validation['errors'])];
+            }
+            return ['success' => true, 'message' => "Applied '{$key}' archetype to world {$worldId}."];
+        }
+
+        return ['success' => false, 'message' => 'Failed to apply archetype.'];
     }
 }

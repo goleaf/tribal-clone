@@ -98,15 +98,29 @@
 - **Asymmetric Tribe Perks (experimental):** Draftable tribe edicts each week with temporary, small modifiers.
 
 ## Implementation TODOs
-- [ ] Pillar alignment audit: map systems (combat, conquest, tribes, economy, map) to pillars (tribe-first, clarity, counterplay, fairness, recovery, variety) and flag gaps.
+- [x] Pillar alignment audit: map systems (combat, conquest, tribes, economy, map) to pillars (tribe-first, clarity, counterplay, fairness, recovery, variety) and flag gaps. _(audit below)_
 - [ ] Lexicon pass: replace legacy tribal-war terms with unique naming across UI/tutorials/marketing; maintain a glossary.
   - Progress: IP-safe glossary created (docs/ip-glossary.md) and unit/building renames underway.
 - [x] World presets: documented archetype defaults (casual/classic/hardcore/experimental/seasonal) in `docs/world-presets.md`.
 - [ ] Vision KPIs: track fairness (protection/rate-limit hits), social engagement (ops, chat), progression pacing (time to 2nd village), and spend-parity metrics.
-- [ ] Player-facing manifesto: in-game/help page with vision/pillars and anti-P2W stance; keep in sync with marketing copy.
-- [ ] Differentiation proof: document unique mechanics (influence-based conquest, weather fronts, beacon networks, intel decay/misdirection) with comparisons to legacy games to support IP defensibility.
+- [x] Player-facing manifesto: in-game/help page with vision/pillars and anti-P2W stance; keep in sync with marketing copy. (`docs/manifesto.md`)
+- [x] Differentiation proof: document unique mechanics (influence-based conquest, weather fronts, beacon networks, intel decay/misdirection) with comparisons to legacy games to support IP defensibility. _(see differentiation notes below)_
 - [ ] UX tone guide: codify voice/tone for tooltips/warnings/reports aligned with pillars (clear, fair, tribe-first) and ban legacy jargon; share with localization.
 
+### Differentiation Notes (IP Support)
+- **Conquest:** Standard Bearer + allegiance system (anti-coin nobles), post-capture floors, and influence aura variant vs legacy noble captures.
+- **Intel:** Fresh/Recent/Old/Stale fidelity tiers, false-report/misdirection flags, watchtower radius + intel freshness overlays; not present in legacy titles.
+- **Map/Endgame:** Beacon networks, migratory relic shrines, rotating endgame objectives (wonders/relic VP) and seasonal resets; differs from static world domination.
+- **Weather/Terrain:** World/weather fronts (fog/rain/storm) and terrain speed/defense modifiers; uncommon in classic tribal warlikes.
+- **Anti-P2W:** Cosmetics-first economy, capped convenience, anti-push/anti-hoarding systems; highlight fairness stance.
+- **Comparison framing:** Documented in differentiation memo (internal) with side-by-side table vs legacy mechanics to show originality for legal/IP review.
+
+### Pillar Audit (Systems → Pillars & Gaps)
+- **Combat/Conquest:** Counterplay (fakes, counter-scout, overstack penalties), Fairness (morale/protection/rate limits), Clarity (report modifiers). **Gap:** battle reports still missing full modifier disclosure → action: add env/overstack flags to reports.
+- **Tribes/Social:** Tribe-first (roles, shared intel/markers), Recovery (aid/rebuild suggestions), Variety (ops planner, tribe quests). **Gap:** sitter/role delegation not enforced server-side → action: ship permission checks.
+- **Economy/Progression:** Fairness (anti-push caps, no P2W), Recovery (catch-up buffs), Variety (event economies). **Gap:** catch-up buffs not implemented → action: define per-world buffs + anti-abuse caps.
+- **Map/Intel:** Clarity (filters/overlays, intel freshness), Counterplay (fog/misdirection), Tribe-first (shared markers). **Gap:** activity heatmap/intel freshness overlays not yet live → action: build overlays.
+- **Events/Variety:** Variety (seasonal modifiers, experimental worlds), Recovery (event rebuild packs), Fairness (cosmetic-only rewards). **Gap:** event token expiry/enforcement pending → action: finalize expiry handling.
 ## Acceptance Criteria
 - Pillar audit completed with documented gaps and owners; tracked to closure.
 - Lexicon/glossary updated and applied across UI/tutorials/marketing; no legacy tribal-war terms remain in shipped strings.
@@ -115,6 +129,8 @@
 - Manifesto page live in help/marketing; updated when vision changes; clearly states anti-P2W stance.
 - Differentiation proof doc published comparing unique mechanics vs legacy games; legal/IP review signed off.
 - UX tone guide adopted in string linting/localization; audits show removal of legacy jargon in tooltips/reports/tutorials.
+- Vision/pillar audit run at least once per season; gaps tracked with owners and due dates.
+- Archetype presets enforced in world creation UI with warnings on divergence; deviations require explicit acknowledgment.
 
 ## Open Questions
 - Which legacy terms are still risky for IP overlap and need renaming first? (list candidates and owners)

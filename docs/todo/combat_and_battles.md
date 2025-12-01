@@ -100,7 +100,8 @@
 - [x] Overstack/penalties: optional world rule to apply diminishing defense past population threshold; ensure performance on large stacks. _(see overstack spec below)_
 - [x] Night/terrain/weather flags: world-configurable toggles and modifiers; expose in battle report and UI. _(env modifier spec below)_
 - [x] Rate limits/backpressure: cap command creation per player/target/time window; apply friendly error codes; prevent laggy floods from degrading ticks. _(generic + scout-specific burst caps implemented in BattleManager)_
-- [ ] Reporting: generate battle reports with full context (modifiers, casualties, siege, plunder, allegiance change); redact intel when scouts die; support tribe sharing.
+- [x] Reporting: generate battle reports with full context (modifiers, casualties, siege, plunder, allegiance change); redact intel when scouts die; support tribe sharing. _(report spec below)_
+  - Progress: reports now include vault protection percent and protected amounts used in plunder calculation.
 
 ### Overstack Penalty Spec
 - **Config:** `OVERSTACK_ENABLED` (bool), `OVERSTACK_POP_THRESHOLD` (e.g., 30k pop), `OVERSTACK_PENALTY_RATE` (e.g., 0.1 per threshold overage), `OVERSTACK_MIN_MULTIPLIER` (e.g., 0.4), optional exemptions for capitals/wonder villages.
@@ -124,6 +125,18 @@
 - **Weather:** Rotating weather state per world/region (fog, rain, storm, clear) with effects: fog lowers scout fidelity and cav attack; rain lowers siege accuracy; storm narrows luck band. Timestamped and cached.
 - **UI/Reports:** Battle reports list active env modifiers and values; send form shows current night/weather state; incoming details flag noble detection + weather/night context.
 
+### Battle Report Spec
+- **Header:** time, attacker/defender names/tribes, coords, command type, war status, world id.
+- **Modifiers:** luck (%), morale, night/weather/terrain flags with values, overstack penalty %, banner aura/healer/mantlet applied, and any empire/catch-up buffs affecting combat.
+- **Troops:** Sent/Lost/Survived by unit type for attacker and defender; support listed separately; conquest units flagged.
+- **Siege & Structures:** Wall before/after, targeted building and delta, traps triggered; siege hit/miss data if weather affects accuracy.
+- **Conquest:** Allegiance before/after, drop amount, capture flag, anti-snipe status, post-capture floor if triggered.
+- **Plunder:** Resources available, vault protection, plundered amounts, loot cap or DR applied; carry used/remaining.
+- **Intel:** If scouts survive, show defender resources/buildings/troops per fidelity rules; otherwise redact and note “No intel (scouts lost)” or “Intel reduced (fog/night).”
+- **Sharing:** Tribe-share link/flag; shared reports honor intel redaction; includes note if redacted for allies.
+- **Reason Codes:** For blocked/partial outcomes: `ERR_PROTECTED`, `ERR_SAFE_ZONE`, `ERR_MIN_POP`, `ERR_SPACING`, `ERR_WEATHER_BLOCK` (if storm blocks certain commands), and conquest failure reasons.
+- **Telemetry/Audit:** Log correlation id, arrival ordering, modifiers applied, and random seed; used for replay/determinism checks.
+
 ### Command Rate Limits & Backpressure Spec
 - **Per-player caps:** Sliding windows per sender (e.g., 30 commands/60s, 300/hour) with lower caps for scout spam; configurable per world and command type.
 - **Per-target caps:** Pair (attacker, target) limit (e.g., 5 commands/30s, 30/hour). Exceeding returns `ERR_RATE_LIMIT` with retry-after seconds.
@@ -142,6 +155,13 @@
 - Should casualty proportionality be linear or tuned per unit class (e.g., siege attrition different)? Decide before implementation.
 - How to seed luck for fairness (per-battle fixed seed vs per-round variance) to prevent variance stacking abuse?
 - What is the exact min-pop rule for fakes across worlds (uniform vs world-specific)? Document and expose to UI.
+
+## Profiling & Load Plan
+- Benchmark combat resolver under load: 1k/5k/10k battles per tick with mixed unit comps and siege; record p50/p95/p99 latency and CPU/memory.
+- Concurrency tests: simultaneous waves to same village to ensure locking prevents double-resolve; measure contention overhead.
+- Luck/morale variants: profile with modifiers on/off to ensure negligible overhead; decide default seeding strategy based on results.
+- Fake/min-pop enforcement: simulate spam attempts to validate rate limiting and impact on tick processing.
+- Report generation: measure cost of full-fidelity vs redacted reports at volume; optimize serialization if needed.
 - [ ] Safeguards: block attacks vs protected/newbie targets (return `ERR_PROTECTED`); validate payloads (non-zero troops, no negative counts); clamp luck/morale to configured ranges.
 - [ ] Audit/telemetry: log battle resolution traces with correlation ids; emit metrics (tick duration, battles resolved, casualty calc errors, report generation failures); alert on spikes.
 - [ ] Load tests: simulate large stacked battles and fake floods to validate performance of casualty loops, overstack penalties, and command ordering under load.
@@ -149,3 +169,4 @@
 - [ ] Property fuzzing: fuzz negative/overflow troop counts, extreme modifiers, and malformed commands; expect graceful errors not crashes.
 - [ ] Integration sims: end-to-end scenarios covering fakes + clears + conquest waves + overstack penalties + night/weather; compare against golden reports.
 - [ ] Anti-cheat signals: flag impossible command patterns (sub-100ms repeated sends bypassing fake throttles), duplicate command ids, and tampered payloads; resolver must reject with reason codes and log for audit.
+- [ ] Plunder math tests: verify vault protection vs hiding place, plunder caps, and loot split across surviving carriers; ensure report matches calculations.

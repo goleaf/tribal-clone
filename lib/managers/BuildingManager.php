@@ -368,30 +368,30 @@ class BuildingManager {
         
         $config = $this->buildingConfigManager->getBuildingConfig($internalName);
         if (!$config) {
-             return ['success' => false, 'message' => 'Unknown building type.'];
+             return ['success' => false, 'message' => 'Unknown building type.', 'code' => 'ERR_INPUT'];
         }
         
         if ($currentLevel >= $config['max_level']) {
-            return ['success' => false, 'message' => 'Maximum level reached for this building.'];
+            return ['success' => false, 'message' => 'Maximum level reached for this building.', 'code' => 'ERR_MAX'];
         }
 
         if ($userId !== null && $internalName === 'first_church') {
             if ($this->userHasBuiltFirstChurch($userId, $villageId)) {
-                return ['success' => false, 'message' => 'You can only have one First Church across all villages.'];
+                return ['success' => false, 'message' => 'You can only have one First Church across all villages.', 'code' => 'ERR_PREREQ'];
             }
         }
         
         $queueCount = $this->getActivePendingQueueCount($villageId);
         $maxQueueItems = $this->getQueueLimit();
         if ($queueCount >= $maxQueueItems) {
-            return ['success' => false, 'message' => "Build queue is full (max {$maxQueueItems} items)."];
+            return ['success' => false, 'message' => "Build queue is full (max {$maxQueueItems} items).", 'code' => 'ERR_CAP'];
         }
 
         $nextLevel = $currentLevel + 1;
         $upgradeCosts = $this->buildingConfigManager->calculateUpgradeCost($internalName, $currentLevel);
         
         if (!$upgradeCosts) {
-             return ['success' => false, 'message' => 'Cannot calculate upgrade costs.'];
+             return ['success' => false, 'message' => 'Cannot calculate upgrade costs.', 'code' => 'ERR_INPUT'];
         }
 
         $stmt_resources = $this->conn->prepare("SELECT wood, clay, iron FROM villages WHERE id = ?");

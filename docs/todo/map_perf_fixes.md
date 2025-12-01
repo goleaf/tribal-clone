@@ -11,8 +11,8 @@
 - **Batching:** Collapse incoming command updates into 1s batches per village; send deltas instead of full lists. Batch marker updates similarly.
 - **Pagination:** Paginate command lists (incoming/outgoing/support/trade/scout) for selected areas; lazy-load on scroll.
 - **Skeletons:** Implement skeleton states for zoom levels while tiles/commands load; avoid jarring redraws on pan/zoom.
-- **Accessibility:** Provide high-contrast palette for diplomacy/overlays, keyboard navigation for selection/filter toggles, and reduced-motion mode for command lines.
-- **Metrics:** Track map request rate, cache hit %, average payload size, and client render time; alert on spikes in payload or render latency.
+- **Accessibility:** Provide high-contrast palette for diplomacy/overlays, keyboard navigation for selection/filter toggles, and reduced-motion mode for command lines. _(high-contrast + reduced-motion toggles live on map toolbar)_
+- [x] **Metrics:** Track map request rate, cache hit %, average payload size, and client render time; alert on spikes in payload or render latency. _(map_data.php logs status/cache hit, bytes, and duration to logs/map_metrics.log; client render logging still pending)_
 - **Testing:** Simulate 500+ concurrent commands on a sector; assert p95 render < 200ms on mid-tier mobile and server responses < 200ms with caching enabled.
 
 ## Additional Fixes
@@ -31,6 +31,8 @@
 - Rate limits return `ERR_RATE_LIMITED` with retry-after; fetch debouncing prevents duplicate loads on rapid pan/zoom.
 - Accessibility modes (high contrast/reduced motion) apply to diplomacy/overlays and command lines without breaking performance.
 - Telemetry shows cache hit %, request rate, payload size, render time; alerts fire on payload spikes or render regressions.
+- Fallback/low-perf mode engages when dropped-frame threshold hit and can be toggled off; user sees simplified overlays/lines.
+- Offline/poor-connection mode caches last viewport, queues marker drops, syncs on reconnect with conflicts resolved, and marks stale data clearly.
 
 ## Open Questions
 - Should far-zoom clustering be done server-side (pre-aggregated) or client-side? Decide per world size/perf budget.
@@ -40,3 +42,14 @@
 
 ## Progress
 - Added an AJAX travel-time endpoint (`ajax/map/travel_time.php`) so map/Rally interactions can fetch distance/ETA server-side using world speed modifiers (reduces client-side recompute and keeps timings consistent).
+
+## QA & Tests
+- Simulate heavy load: 500+ command lines + 200 markers in viewport; verify batching/pagination keep p95 render <200ms and payload under max size.
+- Offline/poor-connection: toggle offline, cache last viewport, queue marker drops, reconnect and confirm conflict resolution and stale indicators.
+- Fallback mode: force low-perf device profile; ensure minor overlays/lines hide, update rate drops, and user toggle works.
+- Rate limits: hammer map fetch/marker-drop endpoints to confirm `ERR_RATE_LIMITED` with retry-after and no server degradation.
+
+## Profiling Plan
+- Front-end: capture performance profiles on low/mid/high devices with 500–1000 commands + overlays; record main-thread time, memory, and dropped frames; compare with/without clustering and fallback mode.
+- Backend: benchmark map endpoints under concurrent load with conditional requests vs full; log p50/p95 latency and payload sizes; verify ETag/cache hit ratios.
+- Payloads: test JSON vs binary delta payloads for size and CPU cost; choose defaults per world type; document thresholds to auto-switch.

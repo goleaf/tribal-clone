@@ -23,7 +23,6 @@ class BattleManager
     private const WALL_BONUS_PER_LEVEL = 0.08;
     private const BEGINNER_PROTECTION_POINTS = 200;
     private const WORLD_UNIT_SPEED = 1.0; // fields per hour baseline
-    private const MIN_ATTACK_POP = 5; // Minimum population for an outgoing attack unless siege present
     private const TARGET_COMMAND_CAP = 200; // Max concurrent incoming commands per target village
     private const SIEGE_UNIT_INTERNALS = ['ram', 'catapult', 'trebuchet'];
     private const LOYALTY_UNIT_INTERNALS = ['noble', 'chieftain', 'senator', 'chief'];
@@ -57,6 +56,7 @@ class BattleManager
     private const LOW_POWER_ATTACK_CAP_POINTS = 500; // applies stricter caps to defenders at/below this score
     private const LOW_POWER_ATTACKS_PER_ATTACKER_PER_DAY = 5;
     private const LOW_POWER_ATTACKS_PER_TRIBE_PER_DAY = 20;
+    private const MIN_ATTACK_POP = 5;
 
     /**
      * @param mysqli $conn Database connection
@@ -172,7 +172,7 @@ class BattleManager
                 return [
                     'success' => false,
                     'error' => 'You are under beginner protection and cannot attack stronger players yet.',
-                    'code' => 'ERR_PROTECTED'
+                    'code' => AjaxResponse::ERR_PROTECTED
                 ];
             }
         }
@@ -225,7 +225,7 @@ class BattleManager
                 return [
                     'success' => false,
                     'error' => $protectionCheck['error'] ?? 'Attack blocked due to beginner protection.',
-                    'code' => 'ERR_PROTECTED'
+                    'code' => AjaxResponse::ERR_PROTECTED
                 ];
             }
         }
@@ -1360,6 +1360,9 @@ class BattleManager
 
         // --- LOOT ---
         $loot = [ 'wood' => 0, 'clay' => 0, 'iron' => 0 ];
+        $vaultPct = 0.0;
+        $vaultProtected = ['wood' => 0, 'clay' => 0, 'iron' => 0];
+        $availableAfterProtection = null;
         if ($attacker_win && !empty($remaining_attacking_units)) {
             $attack_capacity = 0;
             foreach ($remaining_attacking_units as $unit_type_id => $count) {
@@ -1375,7 +1378,6 @@ class BattleManager
                 $stmt_res->close();
 
                 $hiddenPerResource = $this->getHiddenResourcesPerType($attack['target_village_id']);
-                $vaultPct = 0.0;
                 if (!class_exists('WorldManager')) {
                     require_once __DIR__ . '/WorldManager.php';
                 }
@@ -1396,6 +1398,7 @@ class BattleManager
                     'clay' => max(0, $res['clay'] - max($hiddenPerResource, $vaultProtected['clay'])),
                     'iron' => max(0, $res['iron'] - max($hiddenPerResource, $vaultProtected['iron'])),
                 ];
+                $availableAfterProtection = $available;
 
                 $max_available = $available['wood'] + $available['clay'] + $available['iron'];
                 if ($isRaid) {
@@ -1668,6 +1671,9 @@ class BattleManager
                 'building_damage' => $building_damage_report,
                 'hiding_place_level' => $this->buildingManager->getBuildingLevel($attack['target_village_id'], 'hiding_place'),
                 'hidden_per_resource' => $this->getHiddenResourcesPerType($attack['target_village_id']),
+                'vault_protection_percent' => $vaultPct,
+                'vault_protected' => $vaultProtected,
+                'available_after_protection' => $availableAfterProtection,
                 'attack_power' => $attackPowerFinal,
                 'defense_power' => $defensePowerFinal,
                 'phase_reports' => $phaseReports,
@@ -2132,7 +2138,7 @@ class BattleManager
             return [
                 'allowed' => false,
                 'error' => 'You are under beginner protection and cannot attack other players yet.',
-                'code' => 'ERR_PROTECTED'
+                'code' => AjaxResponse::ERR_PROTECTED
             ];
         }
 
@@ -2141,7 +2147,7 @@ class BattleManager
             return [
                 'allowed' => false,
                 'error' => 'Target player is under beginner protection.',
-                'code' => 'ERR_PROTECTED'
+                'code' => AjaxResponse::ERR_PROTECTED
             ];
         }
 

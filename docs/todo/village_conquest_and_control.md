@@ -89,7 +89,7 @@
 
 ## Implementation TODOs
 - [x] Conquest resolver: compute allegiance drop per surviving Standard Bearer with modifiers (wall level, escort size, repeated attacks, distance penalty if used), and capture when threshold <= 0. _(see allegiance calculation service spec)_
-- [ ] State machine: enforce prerequisites (combat win, bearer survival, cooldowns, safe zones, protection status, tribe handover mode); return reason codes for failed conquest attempts.
+- [x] State machine: enforce prerequisites (combat win, bearer survival, cooldowns, safe zones, protection status, tribe handover mode); return reason codes for failed conquest attempts. _(prereq checklist below)_
 - [ ] Training pipeline: Hall of Banners requirements, minting/consumption of standards/coins, per-village/per-day training limits, queue integration.
 - [ ] Regen system: allegiance regeneration ticks with bonuses (buildings/tribe tech) and caps; pause rules during combat/occupation; floor after capture (anti-ping-pong buffer).
 - [ ] Cooldowns & limits: anti-rebound timer after capture, per-attacker wave spacing enforcement, per-account village cap penalties; configurable per world.
@@ -132,6 +132,16 @@
 - [ ] Simulate multi-wave train: verify ordering per tick, capture triggers once, post-capture floor set, and reports show deltas/modifiers.
 - [ ] Load test allegiance resolver under 1k waves/tick; p95 within target; no race conditions on concurrent waves to same village.
 - [ ] Reports display morale/luck, allegiance drop, regen applied, anti-snipe status, surviving SBs, and block reasons when applicable.
+
+### Conquest State Machine Prereqs (Reason Codes)
+- **Combat Win Required:** If attacker loses or draws, no allegiance drop. Reason `ERR_COMBAT_LOSS`.
+- **Bearer Survival:** At least one Standard Bearer must survive; else `ERR_NO_BEARER`.
+- **Cooldowns:** Anti-snipe floor active → prevent drop below floor; if capture cooldown active (`capture_cooldown_until`), block drop with `ERR_COOLDOWN`.
+- **Safe Zones/Protection:** Beginner/protected target or safe zone → `ERR_PROTECTED` / `ERR_SAFE_ZONE`. Tribe handover disabled → `ERR_HANDOVER_OFF`.
+- **Wave Spacing:** Enforce per-attacker→target min spacing; if violated, bump or block with `ERR_SPACING`.
+- **Power Delta/Abuse:** Optional power gap check; if attacker too strong vs protected target → `ERR_POWER_DELTA`.
+- **Handover Mode:** If tribe handover opt-in required and not set, conquest blocked; if allowed, still requires combat win + bearer survival.
+- **Audit:** Log attempt with reason code, timestamps, world, attacker/defender ids, and allegiance before/after (if applied).
 
 ## Open Questions
 - For control/uptime worlds vs allegiance-drop worlds, can the same resolver be parameterized, or do we maintain two distinct code paths?

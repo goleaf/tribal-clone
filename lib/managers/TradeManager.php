@@ -8,6 +8,8 @@ class TradeManager {
     private $conn;
     private bool $tradeTablesEnsured = false;
     private ?bool $tradeOffersTableExists = null;
+    private const MIN_FAIR_RATE = 0.25; // offered/requested lower bound (25%)
+    private const MAX_FAIR_RATE = 4.0;  // offered/requested upper bound (400%)
 
     public function __construct($db_connection) {
         $this->conn = $db_connection;
@@ -477,6 +479,18 @@ class TradeManager {
         }
         if ($requestResources['wood'] + $requestResources['clay'] + $requestResources['iron'] <= 0) {
             return ['success' => false, 'message' => 'Requested resources must be greater than zero.', 'code' => 'ERR_INPUT'];
+        }
+
+        // Enforce fair-market bounds to reduce pushing/abuse
+        $totalOffered = $offerResources['wood'] + $offerResources['clay'] + $offerResources['iron'];
+        $totalRequested = $requestResources['wood'] + $requestResources['clay'] + $requestResources['iron'];
+        $ratio = $totalRequested > 0 ? ($totalOffered / $totalRequested) : 0;
+        if ($ratio < self::MIN_FAIR_RATE || $ratio > self::MAX_FAIR_RATE) {
+            return [
+                'success' => false,
+                'message' => 'Trade offer ratio outside allowed range. Adjust amounts to be fair.',
+                'code' => EconomyError::ERR_TAX
+            ];
         }
 
         $village = $this->getVillageWithOwner($villageId);

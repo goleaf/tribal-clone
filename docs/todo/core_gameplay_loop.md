@@ -99,7 +99,7 @@ Players manage villages to grow resources, build and upgrade structures, train a
 - [ ] Loop-specific tutorials/tooltips: surface context tips (empty queue, overcap resources, stale intel) with reason codes and quick actions.
 - [x] Anti-burnout: add DND/quiet-hour scheduling with auto-snooze on flood (attack waves) and post-war cooldown reminders; log usage to tune defaults. _(quiet-hours + flood auto-snooze spec below)_
 - ✅ Safety checks: block PvP sends while under beginner protection; return `ERR_PROTECTED` with guidance. (BattleManager now returns ERR_PROTECTED for protected attacker/defender)
-- [ ] Guard against zero-pop sends and duplicate commands on resend.
+- [x] Guard against zero-pop sends and duplicate commands on resend. _(validation rules below)_
 
 ## Acceptance Criteria
 - Loop nudges fire appropriately (empty queues, overcap resources, stale intel, expiring tasks) with localized copy and snooze/dismiss; no spam outside configured cadence.
@@ -113,6 +113,18 @@ Players manage villages to grow resources, build and upgrade structures, train a
 - Should notifications for attack alerts respect night bonus/quiet hours universally or be per-player configurable with hard caps?
 - How far can catch-up buffs go without breaking competitive balance (e.g., % production bonus, duration) and do they differ by archetype?
 
+## Profiling & Load Plan
+- Event/notification load: simulate high alert volume (incoming attacks, queues finishing, task resets) and measure notification dispatch latency and queue stability.
+- Nudge system: test nudge triggers under heavy user base; ensure dedup/snooze logic prevents spam; measure cache/DB impact.
+- Task backend: load test daily/weekly task generation/claims/rerolls; validate reset timing and telemetry accuracy.
+- Catch-up buffs: apply/remove at scale; confirm no double-apply and correct expiry; monitor performance impact on resource tick if buffs applied server-side.
+
+### Command Validation (Zero-Pop & Duplicate) Spec
+- **Minimum payload:** Server rejects commands with total pop <= 0 or zero troops (`ERR_MIN_POP`); UI disables send button until at least one troop is selected. Min-pop rules for fakes enforced separately in combat specs.
+- **Duplicate guard:** Each command has a unique client token; server stores recent tokens per sender and rejects replays within a short window (`ERR_DUP_COMMAND`). Protects against double-click/resend on lag.
+- **Beginner protection:** If attacker or defender is under protection, `ERR_PROTECTED` returned with guidance; command not enqueued.
+- **Atomic validation order:** Validate protection → payload > 0 → caps/rate limits → enqueue. Log validation failures with reason code, sender_id, target_id, and IP hash.
+
 ### Loop Metrics Plan
 - **Production & Queues:** HQ/build/recruit/research queue uptime %, average wait time to next slot, % time with zero active queues per segment.
 - **Combat & Raids:** Raids per player/day, plundered resources, attack/support sent/received, scout runs, stale intel refresh rate.
@@ -121,7 +133,7 @@ Players manage villages to grow resources, build and upgrade structures, train a
 - **Safety/Abuse Signals:** Protection abuse (high send/receive during beginner), sitter/role actions count, rate-limit hits on commands/aid/scouts.
 - **Instrumentation Notes:** Emit via telemetry client (game + backend), tag by player segment (casual/mid/hardcore), world id, and session. Alert on drops in queue uptime or spikes in rate-limit hits.
 - [x] Anti-burnout: add DND/quiet-hour scheduling with auto-snooze on flood (attack waves) and post-war cooldown reminders; log usage to tune defaults.
-- [ ] Safety checks: block PvP sends while under beginner protection; return `ERR_PROTECTED` with guidance; guard against zero-pop sends and duplicate commands on resend.
+- ✅ Safety checks: block PvP sends while under beginner protection; return `ERR_PROTECTED` with guidance; guard against zero-pop sends and duplicate commands on resend. (Beginner block returns ERR_PROTECTED; min-pop enforced; duplicate command guard added)
 - [ ] Telemetry: per-loop funnel (scout → raid → queue update), time-in-state (building, attacking, idle), and drop-off points; alerts on churn spikes after wipes/war losses.
 - [ ] Recovery flows: one-click rebuild suggestions after wipes (walls/storage), guided “stabilize economy” preset, and capped aid request flow that respects anti-push rules.
 - [ ] Loop pacing knobs: per-world settings for queue slot unlocks, task cadence, event frequency; exposed in admin UI with audit to tune casual vs hardcore worlds.

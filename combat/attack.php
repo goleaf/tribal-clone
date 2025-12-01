@@ -138,6 +138,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attack'])) {
             $message = "You must send at least one unit.";
             $message_type = "error";
         } else {
+            // Duplicate command guard (prevents double-submit/resend spam)
+            $signaturePayload = [
+                'src' => $source_village_id,
+                'dst' => $target_village_id,
+                'type' => $attack_type,
+                'target_building' => $target_building,
+                'units' => $units_sent
+            ];
+            $signature = hash('sha256', json_encode($signaturePayload));
+            $dupWindow = defined('ATTACK_DUPLICATE_WINDOW_SEC') ? (int)ATTACK_DUPLICATE_WINDOW_SEC : 5;
+            $lastSig = $_SESSION['last_attack_signature'] ?? null;
+            $nowTs = time();
+            if ($lastSig && $lastSig['sig'] === $signature && ($nowTs - (int)$lastSig['ts']) <= $dupWindow) {
+                $message = "This command was just sent. Please wait a few seconds before resending.";
+                $message_type = "error";
+                if (isset($_POST['ajax']) && $_POST['ajax'] == 1) {
+                    echo json_encode([
+                        'success' => false,
+                        'message' => $message,
+                        'error_code' => 'ERR_DUPLICATE',
+                        'retry_after_sec' => $dupWindow - ($nowTs - (int)$lastSig['ts'])
+                    ]);
+                    exit();
+                }
+            } else {
+                $_SESSION['last_attack_signature'] = ['sig' => $signature, 'ts' => $nowTs];
+            }
+
             if ($rally_point_level <= 0) {
                 $message = "Build a Rally Point before sending troops.";
                 $message_type = "error";

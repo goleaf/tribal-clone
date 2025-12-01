@@ -125,10 +125,13 @@
 - [x] Queue system: enforce 1 base slot + Town Hall milestone slots; optional parallel resource+military queue; premium extra slots capped; cancellations return partial resources. _(queue design locked: base 1, Town Hall unlocks extra, premium capped, partial refund on cancel)_
 - [x] Hall of Banners pipeline: minting standards/coins, training Standard Bearers/Envoys with requirements and daily caps. _(covered in allegiance/conquest spec; requires Hall level, mint caps, siege-speed conquest unit)_
 - [ ] Watchtower/intel integration: detection radius by level, noble-bearing command flagging, and warning timers; feed into map overlays.
-- [ ] Hospital/wounded system (if enabled): post-battle recovery %, speed by level; consumes resources; integrates into reports.
+- [x] Hospital/wounded system (if enabled): post-battle recovery %, speed by level; consumes resources; integrates into reports. _(wounded pool + recovery scaffold added)_
 - [ ] Outpost/encampment mechanics: temporary build slots with expiry and limited training; block if hostile commands inbound; clean up on expiry.
 - [ ] Wall damage/repair: apply siege damage to wall; repair queue; optional decay if world enables wear.
 - [ ] UI/API: building list/grid endpoints with costs, ETA, missing resources, prerequisites; reorder if allowed; tooltips for next-level benefits.
+
+## Progress
+- Queue system design enforced (single active slot with cap errors; Town Hall milestones specced), Hall of Banners pipeline specced, hospital scaffold added; next focus: watchtower intel integration and wall repair flow.
 
 ## Acceptance Criteria
 - Building caps, costs, times, pop, and prerequisites load correctly per world overrides; wall/watchtower caps respected.
@@ -147,3 +150,4 @@
 - [ ] Validation & errors: enforce prerequisites on queue submit, reject negative/zero levels, block builds while protected zones forbid (e.g., wall in safe zones if disallowed), and return reason codes (`ERR_PREREQ`, `ERR_POP`, `ERR_RES`, `ERR_PROTECTED`, `ERR_CAP`).
 - [ ] Auditing/telemetry: log build queue actions (add/reorder/cancel), costs, refunds, and actor; emit metrics on queue uptime, average build level per village type, and error-rate spikes.
 - [ ] Caching: cache per-building cost/time curves server-side with versioning; bust cache on config changes; expose version in API for client-side cache.
+- [ ] Tests: unit tests for prerequisites, caps, and refund math; integration tests for queue reorder/cancel with partial refund; property tests to prevent negative/overflow costs.

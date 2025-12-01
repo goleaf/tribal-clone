@@ -335,6 +335,24 @@ class UnitManager
      */
     public function recruitUnits($village_id, $unit_type_id, $count, $building_level)
     {
+        if ($count === null || (int)$count <= 0) {
+            return [
+                'success' => false,
+                'error' => 'You must recruit at least one unit.',
+                'code' => 'ERR_INPUT'
+            ];
+        }
+        $count = (int)$count;
+
+        if ($building_level === null || (int)$building_level <= 0) {
+            return [
+                'success' => false,
+                'error' => 'Training building not available.',
+                'code' => 'ERR_PREREQ'
+            ];
+        }
+        $building_level = (int)$building_level;
+
         if (!isset($this->unit_types_cache[$unit_type_id])) {
             return [
             'success' => false,
