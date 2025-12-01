@@ -61,7 +61,7 @@
   - **Property 19: World cost multiplier application**
   - **Validates: Requirements 11.2, 11.4**
 
-- [x] 2.6 Implement checkSeasonalWindow() method
+- [-] 2.6 Implement checkSeasonalWindow() method
   - Query seasonal_units table for unit
   - Compare current timestamp with start/end timestamps
   - Return availability status with window details
