@@ -133,6 +133,7 @@ function createEconomySchema(SQLiteAdapter $conn): void
             wood INTEGER DEFAULT 0,
             clay INTEGER DEFAULT 0,
             iron INTEGER DEFAULT 0,
+            conquered_at TEXT DEFAULT NULL,
             warehouse_capacity INTEGER DEFAULT 1000,
             population INTEGER DEFAULT 0,
             farm_capacity INTEGER DEFAULT 0,

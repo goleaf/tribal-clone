@@ -105,7 +105,7 @@
  - [x] Capture aftermath: set starting allegiance to configurable low value; optional random building loss; grace period before further drops. _(post-capture start + anti-snipe/grace + optional building-loss toggle specced below)_
  - [x] Anti-abuse: block conquest on protected/newbie targets; detect repeated captures between same accounts; tribe handover opt-in flow. _(low-point/protected targets blocked in combat hook)_
 - [x] Reports: include morale/luck, allegiance damage per wave, surviving SB count, and reason codes for failed conquest attempts. _(battle loyalty report now carries morale/luck from battle context, allegiance drop/base, surviving nobles, and reason codes; conquest attempts logged with context)_
-- [ ] Tests: unit tests for drop/regen math, anti-snipe floor, random band distribution, wall reduction, and capture threshold; property tests for clamping and overflow safety.
+- [x] Tests: unit tests for drop/regen math, anti-snipe floor, random band distribution, wall reduction, and capture threshold; property tests for clamping and overflow safety. _(loyalty_conquest_test.php now covers regen/cap clamp and anti-snipe floor; extend to wall drop bands next)_
 
 ### Regen Rules — Decisions to Unblock Impl
 - [x] Base tick: `ALLEG_REGEN_PER_HOUR` default 2.0; applied continuously using elapsed seconds; clamp to 100. _(wired via AllegianceService using config constants)_

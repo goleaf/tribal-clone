@@ -195,6 +195,7 @@
 - Catch-up buffs: eligibility, single-application, non-stacking with beginner protection, expiry/removal, and rebuild pack rate limits.
 - Telemetry: emit metrics for production/sinks/trade/aid/decay/DR; alert thresholds verified; log retention/audit entries confirmed.
 - Pricing guardrails: test min/max dynamic cost scalers per archetype, event modifier bounds, and conquest cost scaling curves; ensure costs clamp to bounds, alerts fire on violations, and reports/logs show applied scalers.
+- Tax/Aid calculations: verify distance and power-delta tax factors apply correctly, rounding is stable, and caps/fair-band enforcement return proper reason codes without overflow/negative totals.
 - Guardrail observability: verify clamps emit `economy_guardrail_clamps_total` metrics with type/world labels, logs capture world/config values, and admin UI surfaces applied scalers/modifiers/surcharges.
 
 ## Rollout Checklist

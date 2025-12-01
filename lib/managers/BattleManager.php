@@ -1888,6 +1888,7 @@ class BattleManager
             if ($loyalty_report) {
                 if ($villageConquered && $attacker_user_id !== null) {
                     $this->transferVillageOwnership($attack['target_village_id'], $attacker_user_id, $loyalty_after);
+                    $captureAftermath = $this->applyCaptureAftermath($attack['target_village_id']);
                 } else {
                     $this->updateVillageLoyalty($attack['target_village_id'], $loyalty_after);
                 }
