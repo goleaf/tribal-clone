@@ -193,10 +193,37 @@ class UnitManager
     public function checkRecruitRequirements($unit_type_id, $village_id)
     {
         if (!isset($this->unit_types_cache[$unit_type_id])) {
-            return ['can_recruit' => false, 'reason' => 'unit_not_found'];
+            return ['can_recruit' => false, 'reason' => 'unit_not_found', 'code' => 'ERR_PREREQ'];
         }
 
         $unit = $this->unit_types_cache[$unit_type_id];
+        $internal = $unit['internal_name'] ?? '';
+
+        // Get world ID for feature flag checks
+        $worldId = defined('CURRENT_WORLD_ID') ? (int)CURRENT_WORLD_ID : 1;
+
+        // Check world feature flags
+        if (!$this->isUnitAvailable($internal, $worldId)) {
+            return [
+                'can_recruit' => false,
+                'reason' => 'feature_disabled',
+                'code' => 'ERR_FEATURE_DISABLED',
+                'unit' => $internal
+            ];
+        }
+
+        // Check seasonal window
+        $window = $this->checkSeasonalWindow($internal, time());
+        if (!$window['available'] && $window['start'] !== null) {
+            return [
+                'can_recruit' => false,
+                'reason' => 'seasonal_expired',
+                'code' => 'ERR_SEASONAL_EXPIRED',
+                'unit' => $internal,
+                'window_start' => $window['start'],
+                'window_end' => $window['end']
+            ];
+        }
 
         // Check required building exists
         $stmt = $this->conn->prepare("
@@ -213,7 +240,7 @@ class UnitManager
 
         if ($result->num_rows === 0) {
             $stmt->close();
-            return ['can_recruit' => false, 'reason' => 'building_not_found'];
+            return ['can_recruit' => false, 'reason' => 'building_not_found', 'code' => 'ERR_PREREQ'];
         }
 
         $building = $result->fetch_assoc();
@@ -224,6 +251,7 @@ class UnitManager
             return [
                 'can_recruit' => false,
                 'reason' => 'building_level_too_low',
+                'code' => 'ERR_PREREQ',
                 'required_building_level' => $unit['required_building_level'],
                 'current_building_level' => $building['level']
             ];
@@ -248,6 +276,7 @@ class UnitManager
                 return [
                     'can_recruit' => false,
                     'reason' => 'tech_level_too_low',
+                    'code' => 'ERR_PREREQ',
                     'required_tech' => $unit['required_tech'],
                     'required_tech_level' => $unit['required_tech_level'],
                     'current_tech_level' => 0
@@ -257,11 +286,12 @@ class UnitManager
             $research = $result->fetch_assoc();
             $stmt->close();
 
-        if ($research['level'] < $unit['required_tech_level']) {
-            return [
-                'can_recruit' => false,
-                'reason' => 'tech_level_too_low',
-                'required_tech' => $unit['required_tech'],
+            if ($research['level'] < $unit['required_tech_level']) {
+                return [
+                    'can_recruit' => false,
+                    'reason' => 'tech_level_too_low',
+                    'code' => 'ERR_PREREQ',
+                    'required_tech' => $unit['required_tech'],
                     'required_tech_level' => $unit['required_tech_level'],
                     'current_tech_level' => $research['level']
                 ];
@@ -382,7 +412,7 @@ class UnitManager
 
         if (!isset($this->unit_types_cache[$unit_type_id])) {
             return [
-            'success' => false,
+                'success' => false,
                 'error' => 'Unit does not exist.'
             ];
         }
@@ -391,6 +421,59 @@ class UnitManager
         $building_type = $unit['building_type'];
         $unitPop = (int)($unit['population'] ?? 0);
         $internal = $unit['internal_name'] ?? '';
+
+        // Get user ID for elite cap checks
+        $stmtUser = $this->conn->prepare("SELECT user_id FROM villages WHERE id = ? LIMIT 1");
+        if (!$stmtUser) {
+            return ['success' => false, 'error' => 'Database error.'];
+        }
+        $stmtUser->bind_param("i", $village_id);
+        $stmtUser->execute();
+        $villageRow = $stmtUser->get_result()->fetch_assoc();
+        $stmtUser->close();
+        
+        if (!$villageRow) {
+            return ['success' => false, 'error' => 'Village not found.'];
+        }
+        $userId = (int)$villageRow['user_id'];
+
+        // Check elite unit caps
+        $capCheck = $this->checkEliteUnitCap($userId, $internal, $count);
+        if (!$capCheck['can_train']) {
+            return [
+                'success' => false,
+                'error' => 'Elite unit cap reached for your account.',
+                'code' => 'ERR_CAP',
+                'cap' => $capCheck['max'],
+                'current' => $capCheck['current']
+            ];
+        }
+
+        // Check conquest unit resource requirements (coins/standards)
+        $isConquestUnit = in_array($internal, ['noble', 'nobleman', 'standard_bearer', 'envoy'], true);
+        if ($isConquestUnit) {
+            // Check if village has enough coins/standards
+            $resourceField = in_array($internal, ['noble', 'nobleman'], true) ? 'noble_coins' : 'standards';
+            
+            $stmtRes = $this->conn->prepare("SELECT $resourceField FROM villages WHERE id = ? LIMIT 1");
+            if ($stmtRes) {
+                $stmtRes->bind_param("i", $village_id);
+                $stmtRes->execute();
+                $resRow = $stmtRes->get_result()->fetch_assoc();
+                $stmtRes->close();
+                
+                $available = (int)($resRow[$resourceField] ?? 0);
+                if ($available < $count) {
+                    return [
+                        'success' => false,
+                        'error' => "Not enough $resourceField to train conquest units.",
+                        'code' => 'ERR_RES',
+                        'required' => $count,
+                        'available' => $available
+                    ];
+                }
+            }
+        }
 
         // Siege cap per village (counts existing + queued)
         if (self::SIEGE_CAP_PER_VILLAGE > 0 && in_array($internal, self::SIEGE_INTERNALS, true)) {
@@ -429,31 +512,62 @@ class UnitManager
         $current_time = time();
         $finish_time = $current_time + $total_time;
 
-        // Insert into recruitment queue
-        $stmt = $this->conn->prepare("
-            INSERT INTO unit_queue
-            (village_id, unit_type_id, count, count_finished, started_at, finish_at, building_type)
-            VALUES (?, ?, ?, 0, ?, ?, ?)
-        ");
+        // Begin transaction for atomic resource deduction
+        $this->conn->begin_transaction();
 
-        $stmt->bind_param("iiiiss", $village_id, $unit_type_id, $count, $current_time, $finish_time, $building_type);
+        try {
+            // Deduct conquest resources if applicable
+            if ($isConquestUnit) {
+                $resourceField = in_array($internal, ['noble', 'nobleman'], true) ? 'noble_coins' : 'standards';
+                $stmtDeduct = $this->conn->prepare("UPDATE villages SET $resourceField = $resourceField - ? WHERE id = ?");
+                if (!$stmtDeduct) {
+                    throw new Exception("Failed to prepare resource deduction");
+                }
+                $stmtDeduct->bind_param("ii", $count, $village_id);
+                if (!$stmtDeduct->execute()) {
+                    throw new Exception("Failed to deduct conquest resources");
+                }
+                $stmtDeduct->close();
+            }
 
-        if (!$stmt->execute()) {
+            // Insert into recruitment queue
+            $stmt = $this->conn->prepare("
+                INSERT INTO unit_queue
+                (village_id, unit_type_id, count, count_finished, started_at, finish_at, building_type)
+                VALUES (?, ?, ?, 0, ?, ?, ?)
+            ");
+
+            if (!$stmt) {
+                throw new Exception("Failed to prepare queue insertion");
+            }
+
+            $stmt->bind_param("iiiiss", $village_id, $unit_type_id, $count, $current_time, $finish_time, $building_type);
+
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to insert into queue");
+            }
+
+            $queue_id = $stmt->insert_id;
+            $stmt->close();
+
+            // Commit transaction
+            $this->conn->commit();
+
+            return [
+                'success' => true,
+                'message' => "Started recruiting $count units. Finishes at " . date('H:i:s d.m.Y', $finish_time),
+                'queue_id' => $queue_id,
+                'finish_time' => $finish_time
+            ];
+
+        } catch (Exception $e) {
+            // Rollback on error
+            $this->conn->rollback();
             return [
                 'success' => false,
-                'error' => 'Database error while adding to the recruitment queue.'
+                'error' => 'Database error while adding to the recruitment queue: ' . $e->getMessage()
             ];
         }
-
-        $queue_id = $stmt->insert_id;
-        $stmt->close();
-
-        return [
-            'success' => true,
-            'message' => "Started recruiting $count units. Finishes at " . date('H:i:s d.m.Y', $finish_time),
-            'queue_id' => $queue_id,
-            'finish_time' => $finish_time
-        ];
     }
 
     /**
