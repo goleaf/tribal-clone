@@ -108,6 +108,12 @@ Players manage villages to grow resources, build and upgrade structures, train a
 - Catch-up buffs apply once per eligible player and expire on schedule; cannot stack with beginner protection exploits; telemetry shows adoption.
 - Sitter/role actions audited; permissions enforced per world; reason codes returned on blocked actions.
 
+## Rollout Checklist
+- [ ] Feature flags per world for nudges, notifications, tasks/challenges, and catch-up buffs; defaults aligned to world archetypes.
+- [ ] Schema migrations (if needed) for task/progress tables tested with rollback; indexes in place for high-volume events.
+- [ ] Backward-compatible APIs/versioning so older clients degrade gracefully (e.g., nudges disabled) while new fields roll out.
+- [ ] Release comms/help updates explaining nudges, task rerolls, quiet hours, and catch-up buffs with opt-in/opt-out steps.
+
 ## Open Questions
 - What snooze durations feel right for nudges (e.g., 30m/2h/1 day) to avoid annoyance but keep effectiveness?
 - Should notifications for attack alerts respect night bonus/quiet hours universally or be per-player configurable with hard caps?
@@ -144,3 +150,11 @@ Players manage villages to grow resources, build and upgrade structures, train a
 - **Flood Auto-Snooze:** If >N attack commands land in a rolling 5-minute window on the player, auto-snooze non-critical notifications for 30 minutes and send a single “Flood in progress, snoozed non-critical alerts” message. Player can override to resume.
 - **Post-War Cooldown Reminder:** After sustained ops (e.g., >X commands sent/received in 2 hours), prompt player with optional rest/reminder toggle; no blocking, just suggestion to reduce burnout.
 - **Logging/Telemetry:** Track quiet-hour opt-ins, snooze triggers, overrides, and flood counts; alert if snooze triggers spike (could indicate abuse/attacks). Respect per-world rules (hard quiet hours on casual worlds, optional on hardcore).
+
+## Acceptance Criteria
+- Telemetry dashboards live for loop funnel (scout→raid→queue), time-in-state, and churn alerts; alerts fire on configured thresholds.
+- Protection/min-pop/duplicate guards enforced server-side with reason codes; blocked commands never enqueue.
+- Recovery flows available post-wipe with capped aid requests; anti-push rules applied; rebuild suggestions target walls/storage.
+- Loop pacing knobs configurable per world in admin UI with audit trail; defaults set per archetype.
+- Quiet hours/DND and flood auto-snooze function on desktop/mobile; critical alerts bypass only when configured; usage logged.
+- QA scenarios (tutorial→raid→tribe join→conquest) meet target times-to-first actions and pass protection/anti-abuse checks.

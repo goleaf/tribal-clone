@@ -123,6 +123,16 @@
 - **Economy/Progression:** Fairness (anti-push caps, no P2W), Recovery (catch-up buffs), Variety (event economies). **Gap:** catch-up buffs not implemented → action: define per-world buffs + anti-abuse caps.
 - **Map/Intel:** Clarity (filters/overlays, intel freshness), Counterplay (fog/misdirection), Tribe-first (shared markers). **Gap:** activity heatmap/intel freshness overlays not yet live → action: build overlays.
 - **Events/Variety:** Variety (seasonal modifiers, experimental worlds), Recovery (event rebuild packs), Fairness (cosmetic-only rewards). **Gap:** event token expiry/enforcement pending → action: finalize expiry handling.
+
+### KPI Spec (summary)
+- Full breakdown in `docs/kpis.md`:
+  - Fairness/safety: protection blocks, rate-limit hits, abuse flags.
+  - Social: ops participation, support volume, chat/forum activity.
+  - Progression/pacing: time to 2nd village, queue uptime, growth benchmarks.
+  - Combat health: K/D, overstack frequency, intel freshness, conquest funnel.
+  - Economy/spend parity: resource flows, QoL usage, cosmetic adoption.
+  - Retention: D1/D7/D30, sessions/day, task completion.
+  - Alert thresholds for spikes/regressions.
 ## Acceptance Criteria
 - Pillar audit completed with documented gaps and owners; tracked to closure.
 - Lexicon/glossary updated and applied across UI/tutorials/marketing; no legacy tribal-war terms remain in shipped strings.

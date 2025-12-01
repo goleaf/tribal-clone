@@ -122,6 +122,7 @@
 - Load shedding on trade/aid spikes returns queue/try-later with backpressure metrics; no DB timeouts.
 - Validation rejects zero/negative sends, enforces storage limits at send/receive, and blocks extreme exchange ratios; tests cover these cases.
 - Vault math validated: loot calculations use max(vault_pct, hiding_place) per resource; reports show protected amount and applied percentage correctly.
+- Event tokens expire on schedule; shop caps enforced per player/global; purchases reject with clear errors when expired/capped; event modifiers apply and surface in UI.
 
 ### Catch-Up Buffs Spec
 - **Eligibility:** Players whose account age or points are below configured thresholds relative to world age (e.g., joined >7 days after world start or below 50% of median points).

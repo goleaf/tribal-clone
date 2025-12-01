@@ -34,6 +34,7 @@ class BattleManager
     private const SOFT_FLAG_PENALTY_MULTIPLIER = 0.5; // halve caps when flagged
     private const SITTER_MAX_OUTGOING_PER_HOUR = 10; // sitter cannot exceed this command count per hour
     private const MAX_LOYALTY_UNITS_PER_COMMAND = 1; // nobles/standard bearers per command
+    private const MANTLET_RANGED_REDUCTION = 0.4; // 40% reduction to ranged defense vs escorted siege
     private const PHASE_ORDER = ['infantry', 'cavalry', 'archer'];
     private const RESEARCH_BONUS_PER_LEVEL = 0.10; // +10% per smithy level
     private const LOYALTY_MIN = 0;
@@ -394,6 +395,13 @@ class BattleManager
                 'success' => false,
                 'error' => sprintf('Minimum payload is %d population or at least one siege unit.', self::MIN_ATTACK_POP),
                 'code' => 'MIN_PAYLOAD'
+            ];
+        }
+        if ($loyaltyCount > self::MAX_LOYALTY_UNITS_PER_COMMAND) {
+            return [
+                'success' => false,
+                'error' => sprintf('Only %d conquest unit(s) may be sent per command.', self::MAX_LOYALTY_UNITS_PER_COMMAND),
+                'code' => 'CONQUEST_CAP'
             ];
         }
 
@@ -1363,6 +1371,10 @@ class BattleManager
         $attackerAlive = array_sum(array_column($attacking_units, 'count')) > 0;
         $defenderAlive = array_sum(array_column($defending_units, 'count')) > 0;
 
+        // Overstack penalty (optional world rule)
+        $overstackMultiplier = $this->getOverstackMultiplier($defending_units);
+        $defense_multiplier *= $overstackMultiplier;
+
         $attackPowerFinal = $this->sumPower($attacking_units, 'attack') * $morale * $attack_random;
         $defensePowerFinal = $this->sumPower($defending_units, 'defense') * $defense_multiplier;
 
@@ -1716,6 +1728,13 @@ class BattleManager
                 'attack_luck' => $attack_random,
                 'defense_luck' => $defense_random,
                 'morale' => $morale,
+                'environment' => [
+                    'night' => $this->isNightTimeWorldConfig(),
+                    'terrain_attack_multiplier' => $this->getEnvMultiplier('terrain_attack_multiplier'),
+                    'terrain_defense_multiplier' => $this->getEnvMultiplier('terrain_defense_multiplier'),
+                    'weather_attack_multiplier' => $this->getEnvMultiplier('weather_attack_multiplier'),
+                    'weather_defense_multiplier' => $this->getEnvMultiplier('weather_defense_multiplier'),
+                ],
                 'attacker_points' => $attacker_points,
                 'defender_points' => $defender_points,
                 'attack_type' => $attack['attack_type'],
@@ -2113,6 +2132,44 @@ class BattleManager
         }
 
         return (int)$row['population'];
+    }
+
+    /**
+     * Whether current server time is inside the configured night window.
+     */
+    private function isNightTimeWorldConfig(): bool
+    {
+        if (!class_exists('WorldManager')) {
+            require_once __DIR__ . '/WorldManager.php';
+        }
+        if (!class_exists('WorldManager')) {
+            return false;
+        }
+        $wm = new WorldManager($this->conn);
+        $settings = $wm->getSettings(CURRENT_WORLD_ID);
+        if (empty($settings['night_bonus_enabled'])) {
+            return false;
+        }
+        $hour = (int)date('H');
+        $start = (int)($settings['night_start_hour'] ?? 22);
+        $end = (int)($settings['night_end_hour'] ?? 6);
+        if ($start > $end) {
+            return $hour >= $start || $hour < $end;
+        }
+        return $hour >= $start && $hour < $end;
+    }
+
+    private function getEnvMultiplier(string $key): float
+    {
+        if (!class_exists('WorldManager')) {
+            require_once __DIR__ . '/WorldManager.php';
+        }
+        if (!class_exists('WorldManager')) {
+            return 1.0;
+        }
+        $wm = new WorldManager($this->conn);
+        $settings = $wm->getSettings(CURRENT_WORLD_ID);
+        return isset($settings[$key]) ? (float)$settings[$key] : 1.0;
     }
 
     /**
@@ -3010,8 +3067,17 @@ class BattleManager
             $attackPowerBase += ($unit['attack'] ?? 0) * ($unit['count'] ?? 0);
         }
         $defensePowerBase = 0.0;
+        $hasMantlets = $this->hasInternalUnit($attackingUnits, 'mantlet');
+        $hasSiegeInPhase = array_reduce($attackersInPhase, function ($carry, $unit) {
+            return $carry || (($unit['category'] ?? '') === 'siege');
+        }, false);
+        $reduceRanged = $hasMantlets && $hasSiegeInPhase;
         foreach ($defendingUnits as $unit) {
-            $defensePowerBase += ($unit['defense'] ?? 0) * ($unit['count'] ?? 0);
+            $unitDefense = ($unit['defense'] ?? 0) * ($unit['count'] ?? 0);
+            if ($reduceRanged && ($unit['category'] ?? '') === 'archer') {
+                $unitDefense *= (1.0 - self::MANTLET_RANGED_REDUCTION);
+            }
+            $defensePowerBase += $unitDefense;
         }
 
         $attackPower = $attackPowerBase * $morale * $attackLuck;

@@ -74,4 +74,10 @@ define('NEWBIE_PROTECTION_POINTS_CAP', 200); // Protection auto-ends above this 
 
 // Command rate limiting
 define('ATTACK_SEND_COOLDOWN_MS', 700); // minimum ms between attack/command sends per user
+
+// Overstack defense penalty (optional)
+define('OVERSTACK_ENABLED', false); // set true to enable defense penalties for overstacked villages
+define('OVERSTACK_POP_THRESHOLD', 30000); // population threshold before penalties apply
+define('OVERSTACK_PENALTY_RATE', 0.1); // penalty per threshold over (e.g., 0.1 = -10% defense per +threshold pop)
+define('OVERSTACK_MIN_MULTIPLIER', 0.4); // floor multiplier to avoid zeroing defense
 ?>

@@ -362,6 +362,22 @@ class UnitManager
 
         $unit = $this->unit_types_cache[$unit_type_id];
         $building_type = $unit['building_type'];
+        $unitPop = (int)($unit['population'] ?? 0);
+
+        // Population cap check (farm capacity)
+        $farmCapacity = $this->getFarmCapacity($village_id);
+        $popUsage = $this->getPopulationUsage($village_id);
+        $pendingPop = $unitPop * $count;
+        if ($farmCapacity > 0 && ($popUsage['used'] + $popUsage['queued'] + $pendingPop) > $farmCapacity) {
+            return [
+                'success' => false,
+                'error' => 'Not enough farm capacity to recruit these units.',
+                'code' => 'ERR_POP',
+                'farm_capacity' => $farmCapacity,
+                'population_used' => $popUsage,
+                'population_needed' => $pendingPop
+            ];
+        }
 
         // Calculate training time
         $time_per_unit = $this->calculateRecruitmentTime($unit_type_id, $building_level);
@@ -499,6 +515,61 @@ class UnitManager
         }
 
         $stmt->close();
+    }
+
+    /**
+     * Get population usage (existing + queued) for a village.
+     */
+    private function getPopulationUsage(int $villageId): array
+    {
+        $used = 0;
+        $queued = 0;
+
+        $stmtUsed = $this->conn->prepare("
+            SELECT SUM(vu.count * ut.population) AS pop_used
+            FROM village_units vu
+            JOIN unit_types ut ON ut.id = vu.unit_type_id
+            WHERE vu.village_id = ?
+        ");
+        if ($stmtUsed) {
+            $stmtUsed->bind_param("i", $villageId);
+            $stmtUsed->execute();
+            $row = $stmtUsed->get_result()->fetch_assoc();
+            $used = (int)($row['pop_used'] ?? 0);
+            $stmtUsed->close();
+        }
+
+        $stmtQueued = $this->conn->prepare("
+            SELECT SUM((uq.count - uq.count_finished) * ut.population) AS pop_queued
+            FROM unit_queue uq
+            JOIN unit_types ut ON ut.id = uq.unit_type_id
+            WHERE uq.village_id = ?
+        ");
+        if ($stmtQueued) {
+            $stmtQueued->bind_param("i", $villageId);
+            $stmtQueued->execute();
+            $rowQ = $stmtQueued->get_result()->fetch_assoc();
+            $queued = (int)($rowQ['pop_queued'] ?? 0);
+            $stmtQueued->close();
+        }
+
+        return ['used' => $used, 'queued' => $queued];
+    }
+
+    /**
+     * Fetch farm capacity for a village (population cap).
+     */
+    private function getFarmCapacity(int $villageId): int
+    {
+        $stmt = $this->conn->prepare("SELECT farm_capacity FROM villages WHERE id = ? LIMIT 1");
+        if ($stmt === false) {
+            return 0;
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return isset($row['farm_capacity']) ? (int)$row['farm_capacity'] : 0;
     }
 
     /**

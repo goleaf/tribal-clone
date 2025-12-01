@@ -216,6 +216,7 @@ require '../header.php';
                     </div>
                     <div class="travel-error" id="travel-error" style="display:none;"></div>
                 </div>
+                <div class="movement-summary" id="movement-summary" style="display:none;"></div>
                 <div class="note-card">
                     <div class="reserve-row">
                         <label class="reserve-toggle">
@@ -279,6 +280,10 @@ const movementIcons = {
 };
 const tileSize = { width: 53, height: 38 };
 const pointBrackets = [0, 300, 1000, 3000, 9000, 12000];
+const MOVEMENT_RENDER_LIMIT_NEAR = 3;
+const MOVEMENT_RENDER_LIMIT_FAR = 1;
+const MOVEMENT_HIDE_THRESHOLD = 25; // hide movement icons entirely on very far zooms
+const PERF_SAMPLE_RATE = 0.05; // 5% of map loads
 
 const currentUserId = <?php echo (int)$user_id; ?>;
 const currentUserAllyId = <?php echo $userAllyId !== null ? (int)$userAllyId : 'null'; ?>;
@@ -318,6 +323,8 @@ const HIGH_CONTRAST_KEY = 'map_high_contrast';
 const REDUCED_MOTION_KEY = 'map_reduced_motion';
 let mapHighContrast = false;
 let mapReducedMotion = false;
+let lastMapPayloadBytes = null;
+const PERF_SAMPLE_RATE = 0.1;
 const filters = {
     barbarians: true,
     players: true,
@@ -890,6 +897,14 @@ async function fetchMapData(targetX, targetY, targetSize, controller) {
     window.__mapETag = response.headers.get('ETag') || null;
     window.__mapLastModified = response.headers.get('Last-Modified') || null;
     window.__mapCache = data;
+    lastMapPayloadBytes = parseInt(response.headers.get('Content-Length') || '0', 10) || null;
+    if (!lastMapPayloadBytes) {
+        try {
+            lastMapPayloadBytes = JSON.stringify(data).length;
+        } catch (e) {
+            lastMapPayloadBytes = null;
+        }
+    }
     return data;
 }
 
@@ -952,7 +967,9 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
     setMapLoading(true);
     try {
         const size = normalizeSize(targetSize);
+        const fetchStart = performance.now();
         const data = await fetchMapData(targetX, targetY, size, mapAbortController);
+        const fetchMs = performance.now() - fetchStart;
         if (!data) {
             return;
         }
@@ -968,12 +985,23 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
         mapState.myTribeId = data.my_tribe_id || currentUserAllyId || null;
         mapState.unitSpeeds = data.unit_speeds || {};
         worldBounds = data.world_bounds || worldBounds;
+        const renderStart = performance.now();
         renderMap();
         renderMiniMap();
         updateControls();
         if (!skipUrl) {
             updateUrl(mapState.center.x, mapState.center.y, mapState.size);
         }
+        const renderMs = performance.now() - renderStart;
+        sampleMapPerf({
+            fetch_ms: Math.round(fetchMs),
+            render_ms: Math.round(renderMs),
+            size: mapState.size,
+            truncated: !!data.movements_truncated,
+            center_x: mapState.center.x,
+            center_y: mapState.center.y,
+            ts: Date.now()
+        });
     } catch (error) {
         if (error.name === 'AbortError') {
             // ignore
@@ -1090,7 +1118,25 @@ function handleMapKeydown(event) {
     event.preventDefault();
 }
 
+function sampleMapPerf(payload) {
+    if (Math.random() > PERF_SAMPLE_RATE) return;
+    const body = JSON.stringify(payload);
+    const url = '../ajax/map/client_perf.php';
+    if (navigator.sendBeacon) {
+        navigator.sendBeacon(url, body);
+    } else {
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body,
+            keepalive: true,
+            credentials: 'same-origin'
+        }).catch(() => {});
+    }
+}
+
 function renderMap() {
+    const renderStart = performance.now();
     const mapGrid = document.getElementById('map-grid');
     mapGrid.innerHTML = '';
     const size = mapState.size;
@@ -1137,13 +1183,14 @@ function renderMap() {
                 overlay.alt = 'Village marker';
                 tile.appendChild(overlay);
 
-                const showMovements = mapState.size <= 21;
+                const showMovements = mapState.size < MOVEMENT_HIDE_THRESHOLD;
                 if (showMovements && Array.isArray(village.movements) && village.movements.length > 0) {
                     const visibleMoves = village.movements.filter(movementVisible);
                     if (visibleMoves.length > 0) {
                         const movementStack = document.createElement('div');
                         movementStack.classList.add('movement-stack');
-                        visibleMoves.slice(0, 3).forEach(move => {
+                        const renderLimit = mapState.size > 19 ? MOVEMENT_RENDER_LIMIT_FAR : MOVEMENT_RENDER_LIMIT_NEAR;
+                        visibleMoves.slice(0, renderLimit).forEach(move => {
                             const icon = document.createElement('img');
                             icon.classList.add('movement-icon');
                             icon.src = movementIcons[move.type] || overlayIcons.incoming;
@@ -1219,6 +1266,30 @@ function renderMap() {
     }
 
     mapGrid.appendChild(fragment);
+    const renderDuration = performance.now() - renderStart;
+    maybeSendMapTelemetry(renderDuration);
+}
+
+let lastTelemetrySend = 0;
+function maybeSendMapTelemetry(renderMs) {
+    const now = Date.now();
+    // Sample 1 in 20 renders and throttle to once per 30s.
+    if (Math.random() > 0.05) return;
+    if (now - lastTelemetrySend < 30000) return;
+    lastTelemetrySend = now;
+    fetch('../ajax/telemetry/map_perf.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            render_ms: renderMs,
+            payload_bytes: mapState.lastPayloadBytes || null,
+            cache_hit_pct: null,
+            request_rate: null,
+            dropped_frames: null
+        })
+    }).catch(() => {
+        // ignore telemetry failures
+    });
 }
 
 function updateControls() {
@@ -1351,6 +1422,7 @@ function showVillagePopup(x, y) {
     const travelTimeDisplay = document.getElementById('travel-time-display');
     const travelDistanceDisplay = document.getElementById('travel-distance-display');
     const travelError = document.getElementById('travel-error');
+    const movementSummary = document.getElementById('movement-summary');
     const popupSendUnitsButton = document.getElementById('popup-send-units');
     const popupAttackButton = document.getElementById('popup-attack');
     const popupSupportButton = document.getElementById('popup-support');
@@ -1407,6 +1479,25 @@ function showVillagePopup(x, y) {
         travelUnitSelect.dataset.targetY = y;
         populateTravelUnits();
         triggerTravelEstimate();
+    }
+
+    if (movementSummary) {
+        const summary = village.movement_summary || {};
+        const { incoming = 0, outgoing = 0, support = 0, has_noble = false, earliest = null } = summary;
+        const parts = [];
+        parts.push(`<span class="pill incoming">Incoming: ${incoming}</span>`);
+        parts.push(`<span class="pill outgoing">Outgoing: ${outgoing}</span>`);
+        parts.push(`<span class="pill support">Support: ${support}</span>`);
+        if (has_noble) {
+            parts.push('<span class="pill noble">Noble spotted</span>');
+        }
+        let eta = '';
+        if (earliest) {
+            const etaDate = new Date(earliest * 1000);
+            eta = `<div>Earliest command ETA: ${etaDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
+        }
+        movementSummary.innerHTML = `<div class="count-row">${parts.join('')}</div>${eta}`;
+        movementSummary.style.display = 'block';
     }
 
     if (village.id === currentVillageId) {

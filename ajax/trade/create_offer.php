@@ -44,7 +44,7 @@ try {
     if (!$result['success']) {
         AjaxResponse::error(
             $result['message'] ?? 'Could not create offer.',
-            null,
+            $result['details'] ?? null,
             400,
             $result['code'] ?? null
         );

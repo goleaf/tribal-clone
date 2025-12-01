@@ -4849,6 +4849,38 @@ body.map-loading #map-skeleton {
     font-size: 12px;
 }
 
+.movement-summary {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid #e1d2b8;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin: 8px 0;
+    font-size: 13px;
+    color: #4a3c2f;
+    display: grid;
+    gap: 6px;
+}
+
+.movement-summary .count-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.movement-summary .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.movement-summary .pill.incoming { background: rgba(239, 68, 68, 0.12); }
+.movement-summary .pill.outgoing { background: rgba(59, 130, 246, 0.12); }
+.movement-summary .pill.support  { background: rgba(16, 185, 129, 0.12); }
+.movement-summary .pill.noble    { background: rgba(224, 138, 60, 0.15); }
+
 @media (max-width: 800px) {
     .map-controls {
         justify-content: flex-start;

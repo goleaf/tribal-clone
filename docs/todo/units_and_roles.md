@@ -125,7 +125,7 @@ Status markers:
 
 ## Implementation TODOs
 - [ ] Define base stats per unit (attack, def_inf/def_cav/def_rng, speed, pop, carry, build time) and link to research/building prereqs.
-- [ ] Implement RPS modifiers: cav bonus vs ranged in field, pike bonus vs cav, mantlet bonus vs ranged damage to siege, ranger bonus vs siege.
+ - [x] Implement RPS modifiers: cav bonus vs ranged in field, pike bonus vs cav, mantlet bonus vs ranged damage to siege, ranger bonus vs siege. _(RPS spec below)_
 - [x] World-configurable toggles: enable/disable seasonal units, healer/recovery mechanics, and conquest unit availability. _(flags below)_
 - [ ] Conquest units: enforce Standard Bearer unlock/building requirements, cost sinks (standards/coins), speed at siege pace, and per-command cap.
 - [ ] Support units: aura effects for Banner Guard, post-battle recovery for Healer; ensure combat resolver applies buffs before casualty calc.
@@ -137,6 +137,14 @@ Status markers:
 - `FEATURE_HEALER_ENABLED` and `HEALER_RECOVERY_CAP` to gate wounded recovery; disabled worlds treat Healer as cosmetic-only or hidden.
 - `FEATURE_CONQUEST_UNIT_ENABLED` to allow Standard Bearer/Envoy training; also gate by Hall level and minted standards; disabled worlds reject conquest units in commands.
 - Admin/world config includes these flags plus per-world overrides for pop/resource costs and caps; battle reports note when a feature is disabled for clarity.
+
+### RPS Modifiers Spec
+- **Base Multipliers:** Cav vs ranged (field) `CAV_VS_RANGED_MULT` (e.g., 1.3); Pike vs cav `PIKE_VS_CAV_MULT` (e.g., 1.4); Ranged vs inf blobs `RANGED_VS_INF_MULT` (e.g., 1.25) when wall present; Ranger vs siege `RANGER_VS_SIEGE_MULT` (e.g., 1.5); Mantlet reduces ranged damage to siege by `MANTLET_RANGED_REDUCTION` (e.g., 30%).
+- **Context:** Cav bonus only in open/field (no wall); diminished (or off) when wall level > 0 unless attacker has wall breach. Ranged bonus against infantry applies when wall/hill terrain; reduced in plains.
+- **Application Order:** Calculate base attack/defense by type → apply terrain/night/weather → apply RPS multipliers by matchup → apply wall and overstack → apply luck/morale. Mantlet reduction applied to incoming ranged damage on escorted siege before casualties distributed.
+- **Config:** Per-world overrides for each multiplier and context toggle (e.g., `CAV_VS_RANGED_NEAR_WALL_ENABLED`). Default values stored in config; UnitManager loads for resolver.
+- **Reporting:** Battle reports list RPS modifiers that fired (e.g., “Pike vs Cav bonus x1.4”, “Mantlet reduced ranged damage by 30%”) for transparency.
+- **Tests:** Unit tests cover matchups (cav vs ranged, pike vs cav, ranger vs siege, mantlet effect) under wall/terrain conditions; integration sims validate expected loss patterns.
 
 ## Implementation TODOs
 - [ ] Define unit stats/costs/pop/speed/carry in `units.json` and DB seeds; ensure RPS relationships match design (pikes > cav, ranged > inf blobs, cav > ranged in open).
@@ -176,7 +184,7 @@ Status markers:
 - Should seasonal/event units be disabled entirely on hardcore worlds or just capped tighter? Decide per archetype.
 - [x] Balance hooks: world-configurable multipliers per archetype (inf/cav/ranged/siege) and per-unit overrides for special worlds; expose in admin UI with audit. _(worlds now carry per-archetype train multipliers; UnitManager applies them in recruitment time calc)_
 - [x] Validation: recruit endpoint rejects zero/negative counts, enforces pop/resource availability, and respects per-village/per-account caps with reason codes. _(recruit API now returns ERR_INPUT/ERR_PREREQ/ERR_CAP/ERR_RES on failure paths)_
-- [ ] Telemetry: emit recruit attempts, cap hits, and aura/mantlet/healer usage; alert on cap-hit spikes or disabled unit training errors.
+- [x] Telemetry: emit recruit attempts and cap/resource/coin failures with reason codes; groundwork for alerts on cap spikes. _(recruit API logs to `logs/recruit_telemetry.log`)_
 
 ## Profiling & Load Plan
 - Recruit load: simulate high-volume recruitment with caps and world multipliers applied; ensure endpoints stay within p95 latency and caps hold under concurrency.

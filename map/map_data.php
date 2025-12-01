@@ -294,26 +294,44 @@ if (!$lowPerfMode) {
 
             $movementAttackIds[] = (int)$move['id'];
 
-            if (isset($villagesById[$sourceId])) {
-                $villages[$villagesById[$sourceId]]['movements'][] = [
-                    'attack_id' => (int)$move['id'],
-                    'type' => $move['attack_type'] === 'support' ? 'support' : 'attack',
-                    'arrival' => $arrivalTs,
-                    'target' => ['x' => (int)$move['target_x'], 'y' => (int)$move['target_y']]
-                ];
+        if (isset($villagesById[$sourceId])) {
+            $villages[$villagesById[$sourceId]]['movements'][] = [
+                'attack_id' => (int)$move['id'],
+                'type' => $move['attack_type'] === 'support' ? 'support' : 'attack',
+                'arrival' => $arrivalTs,
+                'target' => ['x' => (int)$move['target_x'], 'y' => (int)$move['target_y']]
+            ];
+            $summary =& $villages[$villagesById[$sourceId]]['movement_summary'];
+            if ($move['attack_type'] === 'support') {
+                $summary['support']++;
+            } else {
+                $summary['outgoing']++;
             }
-
-            if (isset($villagesById[$targetId])) {
-                $villages[$villagesById[$targetId]]['movements'][] = [
-                    'attack_id' => (int)$move['id'],
-                    'type' => $move['attack_type'] === 'support' ? 'support_in' : 'incoming',
-                    'arrival' => $arrivalTs,
-                    'source' => ['x' => (int)$move['source_x'], 'y' => (int)$move['source_y']]
-                ];
+            if ($summary['earliest'] === null || $arrivalTs < $summary['earliest']) {
+                $summary['earliest'] = $arrivalTs;
             }
         }
-        $movementsStmt->close();
+
+        if (isset($villagesById[$targetId])) {
+            $villages[$villagesById[$targetId]]['movements'][] = [
+                'attack_id' => (int)$move['id'],
+                'type' => $move['attack_type'] === 'support' ? 'support_in' : 'incoming',
+                'arrival' => $arrivalTs,
+                'source' => ['x' => (int)$move['source_x'], 'y' => (int)$move['source_y']]
+            ];
+            $summary =& $villages[$villagesById[$targetId]]['movement_summary'];
+            if ($move['attack_type'] === 'support') {
+                $summary['support']++;
+            } else {
+                $summary['incoming']++;
+            }
+            if ($summary['earliest'] === null || $arrivalTs < $summary['earliest']) {
+                $summary['earliest'] = $arrivalTs;
+            }
+        }
     }
+    $movementsStmt->close();
+}
 }
 
 // Flag movements that carry nobles
@@ -345,6 +363,7 @@ if (!$lowPerfMode && !empty($movementAttackIds)) {
                 foreach ($v['movements'] as &$move) {
                     if (!empty($move['attack_id']) && isset($nobleAttackIds[$move['attack_id']])) {
                         $move['has_noble'] = true;
+                        $v['movement_summary']['has_noble'] = true;
                     }
                 }
                 unset($move);
@@ -400,23 +419,23 @@ if ($boundsStmt) {
 
 // Unit speed lookup (minutes per field -> fields per hour)
 $unitSpeeds = [];
-$speedStmt = $conn->prepare("SELECT internal_name, speed, is_active FROM unit_types");
-if ($speedStmt) {
-    $speedStmt->execute();
-    $speedRes = $speedStmt->get_result();
-    while ($u = $speedRes->fetch_assoc()) {
-        $internal = strtolower($u['internal_name'] ?? '');
-        $minutesPerField = isset($u['speed']) ? (float)$u['speed'] : null;
-        if ($minutesPerField && $minutesPerField > 0) {
-            $unitSpeeds[$internal] = [
-                'minutes_per_field' => $minutesPerField,
-                'fields_per_hour' => 60 / $minutesPerField,
-                'active' => (bool)($u['is_active'] ?? 1)
-            ];
+    $speedStmt = $conn->prepare("SELECT internal_name, speed, is_active FROM unit_types");
+    if ($speedStmt) {
+        $speedStmt->execute();
+        $speedRes = $speedStmt->get_result();
+        while ($u = $speedRes->fetch_assoc()) {
+            $internal = strtolower($u['internal_name'] ?? '');
+            $minutesPerField = isset($u['speed']) ? (float)$u['speed'] : null;
+            if ($minutesPerField && $minutesPerField > 0) {
+                $unitSpeeds[$internal] = [
+                    'minutes_per_field' => $minutesPerField,
+                    'fields_per_hour' => 60 / $minutesPerField,
+                    'active' => (bool)($u['is_active'] ?? 1)
+                ];
+            }
         }
+        $speedStmt->close();
     }
-    $speedStmt->close();
-}
 
 $payload = [
     'center' => ['x' => $centerX, 'y' => $centerY],

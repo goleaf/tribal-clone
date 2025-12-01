@@ -512,6 +512,27 @@ class TradeManager {
             return ['success' => false, 'message' => 'Requested resources must be greater than zero.', 'code' => 'ERR_INPUT'];
         }
 
+        // Validate exchange ratio within allowed band
+        $offeredTotal = $offerResources['wood'] + $offerResources['clay'] + $offerResources['iron'];
+        $requestedTotal = $requestResources['wood'] + $requestResources['clay'] + $requestResources['iron'];
+        $minRatio = defined('TRADE_MIN_RATIO') ? (float)TRADE_MIN_RATIO : 0.5;
+        $maxRatio = defined('TRADE_MAX_RATIO') ? (float)TRADE_MAX_RATIO : 2.0;
+        if ($requestedTotal > 0) {
+            $ratio = $offeredTotal / $requestedTotal;
+            if ($ratio < $minRatio || $ratio > $maxRatio) {
+                return [
+                    'success' => false,
+                    'message' => 'Exchange ratio outside allowed range.',
+                    'code' => EconomyError::ERR_RATIO,
+                    'details' => [
+                        'offered_ratio' => $ratio,
+                        'min_ratio' => $minRatio,
+                        'max_ratio' => $maxRatio
+                    ]
+                ];
+            }
+        }
+
         // Enforce fair-market bounds to reduce pushing/abuse
         $totalOffered = $offerResources['wood'] + $offerResources['clay'] + $offerResources['iron'];
         $totalRequested = $requestResources['wood'] + $requestResources['clay'] + $requestResources['iron'];
