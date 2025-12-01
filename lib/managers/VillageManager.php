@@ -258,7 +258,7 @@ class VillageManager
         $completed_queue_items = [];
         
         // Fetch completed builds from the queue
-        $stmt_check_finished = $this->conn->prepare("SELECT bq.id, bq.village_building_id, bq.level, bt.name, bt.internal_name FROM building_queue bq JOIN building_types bt ON bq.building_type_id = bt.id WHERE bq.village_id = ? AND bq.finish_time <= NOW()");
+        $stmt_check_finished = $this->conn->prepare("SELECT bq.id, bq.village_building_id, bq.level, bq.is_demolition, bq.refund_wood, bq.refund_clay, bq.refund_iron, bt.name, bt.internal_name FROM building_queue bq JOIN building_types bt ON bq.building_type_id = bt.id WHERE bq.village_id = ? AND bq.finish_time <= NOW()");
         $stmt_check_finished->bind_param("i", $village_id);
         $stmt_check_finished->execute();
         $result_finished = $stmt_check_finished->get_result();
@@ -275,6 +275,25 @@ class VillageManager
                     throw new Exception("Failed to update building level after completion for village_building_id " . $finished_building_queue_item['village_building_id'] . ".");
                 }
                 $stmt_update_vb_level->close();
+
+                // Apply demolition refunds (if any)
+                if (!empty($finished_building_queue_item['is_demolition'])) {
+                    $refundWood = (int)$finished_building_queue_item['refund_wood'];
+                    $refundClay = (int)$finished_building_queue_item['refund_clay'];
+                    $refundIron = (int)$finished_building_queue_item['refund_iron'];
+                    if ($refundWood || $refundClay || $refundIron) {
+                        $stmt_refund = $this->conn->prepare("
+                            UPDATE villages
+                            SET wood = wood + ?, clay = clay + ?, iron = iron + ?
+                            WHERE id = ?
+                        ");
+                        if ($stmt_refund) {
+                            $stmt_refund->bind_param("iiii", $refundWood, $refundClay, $refundIron, $village_id);
+                            $stmt_refund->execute();
+                            $stmt_refund->close();
+                        }
+                    }
+                }
 
                 // Remove task from build queue
                 $stmt_delete_queue_item = $this->conn->prepare("DELETE FROM building_queue WHERE id = ?");

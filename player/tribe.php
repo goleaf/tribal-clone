@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $result = ['success' => false, 'message' => 'Unknown action'];
     $currentTribeForAction = $tribeManager->getTribeForUser($user_id);
-    $canManageTribe = $currentTribeForAction && in_array($currentTribeForAction['role'], ['leader', 'baron'], true);
+    $canManageTribe = $currentTribeForAction && $tribeManager->roleHasPermission($currentTribeForAction['role'], 'manage_roles');
 
     switch ($action) {
         case 'create':
@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
             }
             if (!$canManageTribe) {
-                $result = ['success' => false, 'message' => 'Only leaders or barons can claim tribe rewards.'];
+                $result = ['success' => false, 'message' => 'Only leaders or co-leaders can claim tribe rewards.'];
                 break;
             }
             $result = $tribeProgression->claimQuestReward((int)$currentTribeForAction['id'], $questKey, $user_id);
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
             }
             if (!$canManageTribe) {
-                $result = ['success' => false, 'message' => 'Only leaders or barons can spend skill points.'];
+                $result = ['success' => false, 'message' => 'Only leaders or co-leaders can spend skill points.'];
                 break;
             }
             $result = $tribeProgression->upgradeSkill((int)$currentTribeForAction['id'], $skillKey, $user_id);
@@ -107,7 +107,12 @@ $tribeInvites = $currentTribe ? $tribeManager->getInvitationsForTribe((int)$curr
 $tribeSkills = $currentTribe ? $tribeProgression->getTribeSkills((int)$currentTribe['id']) : [];
 $tribeQuests = $currentTribe ? $tribeProgression->getTribeQuests((int)$currentTribe['id']) : [];
 $availableSkillPoints = $currentTribe ? $tribeProgression->getAvailableSkillPoints((int)$currentTribe['id']) : 0;
-$allowedRoles = ['baron' => 'Baron (co-leader)', 'diplomat' => 'Diplomat', 'recruiter' => 'Recruiter', 'member' => 'Member'];
+$canManageRoles = $currentTribe ? $tribeManager->roleHasPermission($currentTribe['role'], 'manage_roles') : false;
+$allowedRoles = [
+    'co_leader' => 'Co-leader',
+    'officer' => 'Officer',
+    'member' => 'Member'
+];
 
 $pageTitle = 'Tribe';
 require '../header.php';
@@ -134,7 +139,8 @@ require '../header.php';
                     <div>
                         <div style="font-size:12px;color:#8d5c2c;letter-spacing:0.05em;text-transform:uppercase;">Your tribe</div>
                         <div style="font-size:24px;font-weight:700;color:#5a3b1a;">[<?= htmlspecialchars($currentTribe['tag'] ?? '') ?>] <?= htmlspecialchars($currentTribe['name']) ?></div>
-                        <div style="color:#7a6347;margin-top:4px;">Role: <?= htmlspecialchars(ucfirst($currentTribe['role'])) ?></div>
+                        <?php $roleLabel = ucfirst(str_replace('_', ' ', $currentTribe['role'])); ?>
+                        <div style="color:#7a6347;margin-top:4px;">Role: <?= htmlspecialchars($roleLabel) ?></div>
                     </div>
                     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
                         <div class="stat-card" style="background:#fff;border:1px solid #e0c9a6;border-radius:8px;padding:10px 14px;min-width:120px;text-align:center;">
@@ -244,20 +250,20 @@ require '../header.php';
                                     </td>
                                     <td><?= (int)$quest['reward_xp'] ?> XP</td>
                                     <td>
-                                        <?php if ($isClaimed): ?>
-                                            <span class="badge" style="background:#5a9d54;">Claimed</span>
-                                        <?php elseif ($isCompleted): ?>
-                                            <span class="badge" style="background:#c7852a;">Completed</span>
-                                        <?php else: ?>
-                                            <span class="badge" style="background:#8d5c2c;">In progress</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <?php if (in_array($currentTribe['role'], ['leader','baron'], true)): ?>
-                                        <td>
-                                            <?php if ($isCompleted && !$isClaimed): ?>
-                                                <form method="POST" action="tribe.php">
-                                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
-                                                    <input type="hidden" name="action" value="claim_quest">
+                                <?php if ($isClaimed): ?>
+                                    <span class="badge" style="background:#5a9d54;">Claimed</span>
+                                <?php elseif ($isCompleted): ?>
+                                    <span class="badge" style="background:#c7852a;">Completed</span>
+                                <?php else: ?>
+                                    <span class="badge" style="background:#8d5c2c;">In progress</span>
+                                <?php endif; ?>
+                            </td>
+                            <?php if ($canManageRoles): ?>
+                                <td>
+                                    <?php if ($isCompleted && !$isClaimed): ?>
+                                        <form method="POST" action="tribe.php">
+                                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                                            <input type="hidden" name="action" value="claim_quest">
                                                     <input type="hidden" name="quest_key" value="<?= htmlspecialchars($quest['key']) ?>">
                                                     <button type="submit" class="btn btn-secondary">Claim XP</button>
                                                 </form>
@@ -283,7 +289,7 @@ require '../header.php';
                                 <th>Player</th>
                                 <th>Role</th>
                                 <th>Joined</th>
-                                <?php if ($currentTribe['role'] === 'leader'): ?>
+                                <?php if ($canManageRoles): ?>
                                     <th>Actions</th>
                                 <?php endif; ?>
                             </tr>
@@ -292,9 +298,9 @@ require '../header.php';
                             <?php foreach ($tribeMembers as $member): ?>
                                 <tr>
                                     <td><?= htmlspecialchars($member['username']) ?></td>
-                                    <td><?= htmlspecialchars(ucfirst($member['role'])) ?></td>
+                                    <td><?= htmlspecialchars(ucfirst(str_replace('_', ' ', $member['role']))) ?></td>
                                     <td><?= htmlspecialchars(date('Y-m-d', strtotime($member['joined_at']))) ?></td>
-                                    <?php if ($currentTribe['role'] === 'leader'): ?>
+                                    <?php if ($canManageRoles): ?>
                                         <td>
                                             <?php if ($member['role'] !== 'leader' && $member['user_id'] !== $user_id): ?>
                                                 <form method="POST" action="tribe.php" style="display:flex;gap:6px;align-items:center;">

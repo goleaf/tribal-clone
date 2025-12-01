@@ -774,8 +774,9 @@ class BattleManager
         $wall_bonus = 1 + ($effective_wall_level * self::WALL_BONUS_PER_LEVEL);
         $faith_bonus = $this->calculateFaithDefenseBonus($attack['target_village_id']);
         // --- TOTAL STRENGTH ---
-        $total_attack_strength = $this->calculateAttackPower($attacking_units);
-        $total_defense_strength = $this->calculateDefensePower($defending_units, $wall_bonus * $faith_bonus, $defense_random);
+        $attackProfile = $this->calculateAttackProfile($attacking_units);
+        $total_attack_strength = $attackProfile['total'];
+        $total_defense_strength = $this->calculateDefensePower($defending_units, $wall_bonus * $faith_bonus, $defense_random, $attackProfile);
 
         $attackPower = max(0, $total_attack_strength * $morale * $attack_random);
         $defensePower = max(1, $total_defense_strength); // wall/defense luck already applied inside calculateDefensePower
@@ -885,7 +886,24 @@ class BattleManager
                 if (!empty($target_building_name)) {
                     $initial_level = $this->buildingManager->getBuildingLevel($attack['target_village_id'], $target_building_name);
                     if ($initial_level > 0) {
-                        $accuracy_factor = $this->randomFloat(0.25, 0.75);
+                        $accuracy_factor = 0.25; // base
+                        if (!empty($attack['target_building'])) {
+                            $accuracy_factor += 0.25; // assume scout intel if a target was set
+                        }
+                        $accuracy_factor = min(1.0, $accuracy_factor);
+
+                        // Roll to see if we miss the intended building
+                        $hitRoll = $this->randomFloat(0, 1);
+                        if ($hitRoll > $accuracy_factor) {
+                            // Missed: hit a random building that exists
+                            $village_buildings = $this->buildingManager->getVillageBuildingsLevels($attack['target_village_id']);
+                            $possible_targets = array_filter($village_buildings, fn($level) => $level > 0);
+                            if (!empty($possible_targets)) {
+                                $target_building_name = array_rand($possible_targets);
+                                $initial_level = $possible_targets[$target_building_name];
+                            }
+                        }
+
                         $damage_value = $surviving_catapults * 2 * $accuracy_factor;
                         $levels_destroyed = (int)floor($damage_value);
 
@@ -1412,16 +1430,96 @@ class BattleManager
     }
 
     /**
+     * Attack profile split by unit class.
+     */
+    private function calculateAttackProfile(array $units): array
+    {
+        $profile = [
+            'by_class' => [
+                'infantry' => 0,
+                'cavalry' => 0,
+                'archer' => 0,
+                'siege' => 0
+            ],
+            'total' => 0
+        ];
+
+        foreach ($units as $unit) {
+            $class = $this->getUnitClass($unit['internal_name'] ?? '');
+            $attackValue = ($unit['attack'] ?? 0) * ($unit['count'] ?? 0);
+            $profile['by_class'][$class] += $attackValue;
+            $profile['total'] += $attackValue;
+        }
+
+        return $profile;
+    }
+
+    /**
+     * Defense profile for a single unit (per class, fallback to general defense).
+     */
+    private function getDefenseProfile(array $unit): array
+    {
+        $base = (float)($unit['defense'] ?? 0);
+        $defCav = (float)($unit['defense_cavalry'] ?? $base);
+        $defArch = (float)($unit['defense_archer'] ?? $base);
+
+        return [
+            'infantry' => $base,
+            'cavalry' => $defCav,
+            'archer' => $defArch,
+            'siege' => $base
+        ];
+    }
+
+    /**
+     * Map internal unit name to combat class.
+     */
+    private function getUnitClass(string $internalName): string
+    {
+        $internalName = strtolower($internalName);
+        if (in_array($internalName, ['light', 'heavy', 'marcher', 'spy'])) {
+            return 'cavalry';
+        }
+        if (in_array($internalName, ['archer', 'marcher'])) {
+            return 'archer';
+        }
+        if (in_array($internalName, ['ram', 'catapult'])) {
+            return 'siege';
+        }
+        return 'infantry';
+    }
+
+    /**
      * Defense power with wall bonus and luck already baked in.
      */
-    private function calculateDefensePower(array $units, float $wallBonus, float $luck): float
+    private function calculateDefensePower(array $units, float $wallBonus, float $luck, array $attackProfile): float
     {
-        $power = 0;
+        $defenseProfile = [
+            'infantry' => 0,
+            'cavalry' => 0,
+            'archer' => 0,
+            'siege' => 0
+        ];
+
         foreach ($units as $unit) {
-            $def = $unit['defense'] ?? 0;
-            $power += $def * ($unit['count'] ?? 0);
+            $profile = $this->getDefenseProfile($unit);
+            $count = $unit['count'] ?? 0;
+            $defenseProfile['infantry'] += $profile['infantry'] * $count;
+            $defenseProfile['cavalry'] += $profile['cavalry'] * $count;
+            $defenseProfile['archer'] += $profile['archer'] * $count;
+            $defenseProfile['siege'] += $profile['siege'] * $count;
         }
-        return max(1, $power * $wallBonus * $luck);
+
+        $defenseProfile = array_map(fn($v) => $v * $wallBonus * $luck, $defenseProfile);
+
+        $effectiveDefense = 0;
+        $attackTotal = max(1, $attackProfile['total']);
+        foreach (['infantry', 'cavalry', 'archer', 'siege'] as $class) {
+            $attackShare = ($attackProfile['by_class'][$class] ?? 0) / $attackTotal;
+            $effectiveDefense += $attackShare * ($defenseProfile[$class] ?? 0);
+        }
+
+        return max(1, $effectiveDefense);
     }
 
     /**
@@ -1434,17 +1532,20 @@ class BattleManager
         $attackerWins = $attackPower >= $defensePower;
         $ratio = $attackPower / $defensePower;
 
-        $baseLossModifier = 0.7;
-        if ($isRaid) {
-            $baseLossModifier *= self::RAID_CASUALTY_FACTOR;
-        }
+        $minLoss = 0.30; // floors for realism
+        $lossScale = 0.9;
 
         if ($attackerWins) {
-            $defenderLossFactor = min(1.0, $baseLossModifier * pow($ratio, 0.85));
-            $attackerLossFactor = min(1.0, max(self::WINNER_MINIMUM_LOSS, $baseLossModifier * pow(1 / $ratio, 0.55)));
+            $defenderLossFactor = min(1.0, max($minLoss, $lossScale * pow($ratio, 0.9)));
+            $attackerLossFactor = min(1.0, max($minLoss, $lossScale * pow(1 / $ratio, 0.65)));
         } else {
-            $attackerLossFactor = min(1.0, $baseLossModifier * pow(1 / max(0.0001, $ratio), 0.85));
-            $defenderLossFactor = min(1.0, max(self::WINNER_MINIMUM_LOSS, $baseLossModifier * pow($ratio, 0.55)));
+            $attackerLossFactor = min(1.0, max($minLoss, $lossScale * pow(1 / max(0.0001, $ratio), 0.9)));
+            $defenderLossFactor = min(1.0, max($minLoss, $lossScale * pow($ratio, 0.65)));
+        }
+
+        if ($isRaid) {
+            $attackerLossFactor *= self::RAID_CASUALTY_FACTOR;
+            $defenderLossFactor *= self::RAID_CASUALTY_FACTOR;
         }
 
         $attacker_losses = [];
