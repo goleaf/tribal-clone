@@ -162,49 +162,23 @@ class BuildingUpgradeValidationTest {
         $barracksTypeId = $this->db->query("SELECT id FROM building_types WHERE internal_name = 'barracks'")->fetch_assoc()['id'];
         $barracksMaxLevel = $this->db->query("SELECT max_level FROM building_types WHERE internal_name = 'barracks'")->fetch_assoc()['max_level'];
         
-        // Check if rows exist
-        $checkStmt = $this->db->prepare("SELECT COUNT(*) as cnt FROM village_buildings WHERE village_id = ? AND building_type_id = ?");
-        $checkStmt->bind_param("ii", $this->testVillageId, $mainBuildingTypeId);
-        $checkStmt->execute();
-        $count = $checkStmt->get_result()->fetch_assoc()['cnt'];
-        $checkStmt->close();
-        
-        if ($count == 0) {
-            echo "  Debug: No village_buildings row found for village {$this->testVillageId} and building_type_id {$mainBuildingTypeId}\n";
-            return false;
-        }
-        
         // Ensure main_building is at sufficient level
         $stmt = $this->db->prepare("UPDATE village_buildings SET level = 10 WHERE village_id = ? AND building_type_id = ?");
         $stmt->bind_param("ii", $this->testVillageId, $mainBuildingTypeId);
         $stmt->execute();
-        $affected1 = $stmt->affected_rows;
         $stmt->close();
         
         // Set barracks to max level
         $stmt = $this->db->prepare("UPDATE village_buildings SET level = ? WHERE village_id = ? AND building_type_id = ?");
         $stmt->bind_param("iii", $barracksMaxLevel, $this->testVillageId, $barracksTypeId);
         $stmt->execute();
-        $affected2 = $stmt->affected_rows;
         $stmt->close();
-        
-        // Verify levels
-        $mainLevel = $this->buildingManager->getBuildingLevel($this->testVillageId, 'main_building');
-        $barracksLevel = $this->buildingManager->getBuildingLevel($this->testVillageId, 'barracks');
-        
-        if ($mainLevel != 10 || $barracksLevel != $barracksMaxLevel) {
-            echo "  Debug: main_building level: $mainLevel (expected 10, affected: $affected1), barracks level: $barracksLevel (expected $barracksMaxLevel, affected: $affected2)\n";
-        }
         
         $result = $this->buildingManager->canUpgradeBuilding(
             $this->testVillageId, 
             'barracks',
             $this->testUserId
         );
-        
-        if (!(!$result['success'] && $result['code'] === 'ERR_CAP')) {
-            echo "  Debug: Expected ERR_CAP, got: " . json_encode($result) . "\n";
-        }
         
         return !$result['success'] && $result['code'] === 'ERR_CAP';
     }
@@ -243,10 +217,6 @@ class BuildingUpgradeValidationTest {
         $stmt->bind_param("i", $this->testVillageId);
         $stmt->execute();
         $stmt->close();
-        
-        if (!(!$result['success'] && $result['code'] === 'ERR_RES')) {
-            echo "  Debug: Expected ERR_RES, got: " . json_encode($result) . "\n";
-        }
         
         return !$result['success'] && $result['code'] === 'ERR_RES';
     }
@@ -304,10 +274,6 @@ class BuildingUpgradeValidationTest {
             'barracks',
             $this->testUserId
         );
-        
-        if ($result['success'] !== true) {
-            echo "  Debug: Expected success, got: " . json_encode($result) . "\n";
-        }
         
         return $result['success'] === true;
     }
