@@ -37,6 +37,7 @@ if ($queue_item) {
     echo json_encode([
         'status' => 'success',
         'data' => [
+            'config_version' => $buildingConfigManager->getConfigVersion(),
             'queue_item' => [
                 'id' => $queue_item['id'],
                 'building_name' => $queue_item['name'],
@@ -52,6 +53,7 @@ if ($queue_item) {
     echo json_encode([
         'status' => 'success',
         'data' => [
+            'config_version' => $buildingConfigManager->getConfigVersion(),
             'queue_item' => null
         ]
     ]);

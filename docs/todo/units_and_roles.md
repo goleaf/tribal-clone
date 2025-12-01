@@ -239,6 +239,7 @@ Status markers:
 - [ ] Schema/data migrations (units.json/DB seeds) tested with rollback; ensure indexes for caps/limits if stored in DB.
 - [ ] Backward-compatible recruit APIs and battle reports while new fields roll out; version reports to avoid client breakage.
 - [ ] Release comms/help updates covering unit caps, event unit availability, aura/healer rules, and mantlet effects; include examples.
+- [ ] Unit data diff + lint in CI to block stealth balance changes; publish weekly diff report and assign owners for violations; ensure world overrides logged.
 
 ## Monitoring Plan
 - Track recruit API latency/error rates and cap hits by unit type; alert on spikes indicating misconfig or abuse.

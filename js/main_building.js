@@ -130,7 +130,9 @@ async function fetchAndRenderMainBuildingPanel(villageId, buildingInternalName) 
 
         } else if (data.error) {
             actionContent.innerHTML = '<p>Error loading Main Building panel: ' + data.error + '</p>';
-            window.toastManager.showToast(data.error, 'error');
+            if (window.toastManager) {
+                window.toastManager.showToast(data.error, 'error');
+            }
         } else {
              actionContent.innerHTML = '<p>Invalid server response or action not applicable to Main Building.</p>';
          }

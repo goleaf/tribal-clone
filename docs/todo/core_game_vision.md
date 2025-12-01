@@ -150,6 +150,7 @@
 - [ ] Config/migration tests for preset defaults and KPI collection with rollback; safe defaults when absent.
 - [ ] Backward compatibility: older clients handle missing manifesto/links gracefully; new links gated by version checks.
 - [ ] Release comms: publish manifesto/pillars and preset defaults; reiterate anti-P2W stance in help/marketing.
+- [ ] KPI dashboards published (fairness/social/pacing/spend parity) with alert thresholds and owners documented.
 
 ### Vision KPI Spec
 - **Fairness:** Track protection hits (`ERR_PROTECTED`), rate-limit hits, push/aid caps hit, vault/plunder DR activations; alert on spikes. Segment by world type.

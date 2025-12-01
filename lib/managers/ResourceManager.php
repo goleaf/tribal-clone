@@ -25,7 +25,8 @@ class ResourceManager {
         $resourceMultiplier = $worldConfig['resource_multiplier'] ?? 1.0;
         $catchupMultiplier = 1.0;
         $ownerId = $this->getUserIdByVillage($village_id);
-        if ($ownerId !== null && $this->catchupManager) {
+        $catchupEnabled = $worldConfig['catchup_enabled'] ?? true;
+        if ($ownerId !== null && $this->catchupManager && $catchupEnabled) {
             $catchupMultiplier = $this->catchupManager->getMultiplier($ownerId);
         }
 
@@ -43,8 +44,6 @@ class ResourceManager {
             $levels[$row['internal_name']] = (int)$row['level'];
         }
         $stmt->close();
-
-        $multiplier = $this->catchupManager ? $this->catchupManager->getMultiplier($this->getUserIdByVillage($village_id)) : 1.0;
 
         $mult = $resourceMultiplier * $catchupMultiplier;
 
@@ -402,6 +401,7 @@ class ResourceManager {
                 'resource_decay_enabled' => $wm->isResourceDecayEnabled($worldId),
                 'resource_decay_threshold_pct' => $wm->getResourceDecayThresholdPct($worldId),
                 'resource_decay_rate_per_hour' => $wm->getResourceDecayRatePerHour($worldId),
+                'catchup_enabled' => $wm->areCatchupBuffsEnabled($worldId),
             ];
             return $this->worldEconomyCache[$worldId];
         }

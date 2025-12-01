@@ -265,6 +265,42 @@ class WorldManager
         return true;
     }
 
+    public function isMapBatchingEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        if (defined('MAP_BATCHING_ENABLED')) {
+            return (bool)MAP_BATCHING_ENABLED;
+        }
+        $settings = $this->getSettings($worldId);
+        return !empty($settings['map_batching_enabled']);
+    }
+
+    public function isMapClusteringEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        if (defined('MAP_CLUSTERING_ENABLED')) {
+            return (bool)MAP_CLUSTERING_ENABLED;
+        }
+        $settings = $this->getSettings($worldId);
+        return !empty($settings['map_clustering_enabled']);
+    }
+
+    public function isMapDeltaEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        if (defined('MAP_DELTA_ENABLED')) {
+            return (bool)MAP_DELTA_ENABLED;
+        }
+        $settings = $this->getSettings($worldId);
+        return !empty($settings['map_delta_enabled']);
+    }
+
+    public function isMapFallbackEnabled(int $worldId = CURRENT_WORLD_ID): bool
+    {
+        if (defined('MAP_FALLBACK_ENABLED')) {
+            return (bool)MAP_FALLBACK_ENABLED;
+        }
+        $settings = $this->getSettings($worldId);
+        return !empty($settings['map_fallback_enabled']);
+    }
+
     public function getWorldSpeed(int $worldId = CURRENT_WORLD_ID): float
     {
         $settings = $this->getSettings($worldId);

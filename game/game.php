@@ -9,6 +9,7 @@ require_once __DIR__ . '/../lib/managers/BattleManager.php';
 require_once __DIR__ . '/../lib/managers/ResearchManager.php';
 require_once __DIR__ . '/../lib/managers/NotificationManager.php';
 require_once __DIR__ . '/../lib/managers/EndgameManager.php';
+require_once __DIR__ . '/../lib/managers/WorldManager.php';
 require_once __DIR__ . '/../lib/managers/IntelManager.php';
 require_once __DIR__ . '/../lib/functions.php';
 
@@ -22,6 +23,7 @@ $battleManager = new BattleManager($conn, $villageManager, $buildingManager);
 $researchManager = new ResearchManager($conn);
 $notificationManager = new NotificationManager($conn);
 $endgameManager = new EndgameManager($conn);
+$worldManager = new WorldManager($conn);
 $intelManager = new IntelManager($conn);
 
 if (!isset($_SESSION['user_id'])) {
@@ -71,6 +73,8 @@ $active_upgrades = array_filter($buildings_data, static fn($b) => !empty($b['is_
 $build_queue_count = $buildingManager->getActivePendingQueueCount($village_id) ?? 0;
 $recruit_queue_count = count($unitManager->getRecruitmentQueues($village_id) ?? []);
 $storage_capacity = $village['warehouse_capacity'] ?? 0;
+$worldSettings = $worldManager->getSettings(CURRENT_WORLD_ID);
+$enableNudges = (bool)($worldSettings['enable_nudges'] ?? true);
 $latestIntelAgeSeconds = $intelManager->getLatestReportAgeSecondsForUser($user_id);
 $nearCapResources = [];
 foreach (['wood', 'clay', 'iron'] as $resType) {

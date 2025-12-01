@@ -6,6 +6,7 @@ declare(strict_types=1);
  */
 require_once '../../init.php';
 require_once '../../lib/utils/AjaxResponse.php';
+require_once '../../lib/managers/BuildingConfigManager.php';
 
 // Ensure the user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -98,12 +99,16 @@ try {
         ];
     }
     $stmt_queue->close();
+
+    // Config version for client cache-busting of cost/time curves
+    $configManager = new BuildingConfigManager($conn);
     
     // Return data as JSON
     AjaxResponse::success([
         'building_queue' => $building_queue,
         'completed_count' => $completed_count,
-        'current_server_time' => date('Y-m-d H:i:s')
+        'current_server_time' => date('Y-m-d H:i:s'),
+        'config_version' => $configManager->getConfigVersion()
     ]);
     
 } catch (Exception $e) {

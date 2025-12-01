@@ -184,7 +184,7 @@
 ## Rollout Checklist
 - [ ] Feature flags per world for parallel queues, watchtower intel, hospital recovery, and outposts/decay; defaults aligned to archetypes.
 - [ ] Migrations/config changes for building caps/queue rules tested with rollback; sane defaults when settings absent.
-- [ ] Backward-compatible building endpoints (cost/queue) while new fields roll out; version responses to avoid client breakage.
+- [x] Backward-compatible building endpoints (cost/queue) while new fields roll out; version responses to avoid client breakage. _(building queue/status endpoints now include `config_version` hash for cache-busting while keeping legacy fields intact)_
 - [ ] Release comms/help: explain queue rules, watchtower intel, hospital recovery, and outpost behavior; include examples/tooltips.
 ## Open Questions
 - Should parallel construction be globally allowed (resource + military) or world-configurable, and how to message when blocked?

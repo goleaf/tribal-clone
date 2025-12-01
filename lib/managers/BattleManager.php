@@ -3807,11 +3807,12 @@ class BattleManager
         if ($stmt === false) {
             return;
         }
-        array_unshift($params, $types);
-        foreach ($params as $key => $value) {
-            $params[$key] = &$params[$key];
+        $bindParams = [$types];
+        foreach ($params as &$param) {
+            $bindParams[] = &$param;
         }
-        call_user_func_array([$stmt, 'bind_param'], $params);
+        unset($param);
+        call_user_func_array([$stmt, 'bind_param'], $bindParams);
         $stmt->execute();
         $stmt->close();
     }

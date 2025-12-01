@@ -98,10 +98,10 @@ $worldSize = defined('WORLD_SIZE') ? (int)WORLD_SIZE : 1000;
 $wm = new WorldManager($conn);
 $worldSettings = $wm->getSettings(CURRENT_WORLD_ID);
 $mapFeatures = [
-    'batching' => (bool)($worldSettings['map_batching_enabled'] ?? false),
-    'clustering' => (bool)($worldSettings['map_clustering_enabled'] ?? false),
-    'delta' => (bool)($worldSettings['map_delta_enabled'] ?? false),
-    'fallback' => (bool)($worldSettings['map_fallback_enabled'] ?? false),
+    'batching' => $wm->isMapBatchingEnabled(CURRENT_WORLD_ID),
+    'clustering' => $wm->isMapClusteringEnabled(CURRENT_WORLD_ID),
+    'delta' => $wm->isMapDeltaEnabled(CURRENT_WORLD_ID),
+    'fallback' => $wm->isMapFallbackEnabled(CURRENT_WORLD_ID),
 ];
 
 // Handle conditional requests for data freshness without excessive payloads.

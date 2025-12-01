@@ -1021,7 +1021,7 @@ class VillageManager
     public function getFirstVillage(int $user_id): ?array
     {
         $stmt = $this->conn->prepare("
-            SELECT id, name, x_coord, y_coord, wood, clay, iron, warehouse_capacity, population, farm_capacity, last_resource_update
+            SELECT id, name, x_coord, y_coord, wood, clay, iron, warehouse_capacity, population, farm_capacity, last_resource_update, world_id
             FROM villages
             WHERE user_id = ?
             LIMIT 1
