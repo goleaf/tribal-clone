@@ -24,6 +24,8 @@ class WorldManager
         'resource_decay_enabled' => "INTEGER NOT NULL DEFAULT 0",
         'resource_decay_threshold_pct' => "REAL NOT NULL DEFAULT 0.8",
         'resource_decay_rate_per_hour' => "REAL NOT NULL DEFAULT 0.01",
+        'catchup_multiplier' => "REAL NOT NULL DEFAULT 1.0",
+        'catchup_duration_hours' => "INTEGER NOT NULL DEFAULT 0",
         'terrain_attack_multiplier' => "REAL NOT NULL DEFAULT 1.0",
         'terrain_defense_multiplier' => "REAL NOT NULL DEFAULT 1.0",
         'weather_attack_multiplier' => "REAL NOT NULL DEFAULT 1.0",

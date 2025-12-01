@@ -171,7 +171,20 @@ class TradeManager {
         }
 
         if ($village['wood'] < $resources['wood'] || $village['clay'] < $resources['clay'] || $village['iron'] < $resources['iron']) {
-            return ['success' => false, 'message' => 'Not enough resources in this village.', 'code' => EconomyError::ERR_CAP];
+            return [
+                'success' => false,
+                'message' => 'Not enough resources in this village.',
+                'code' => EconomyError::ERR_CAP,
+                'details' => [
+                    'cap_type' => 'storage',
+                    'required' => $resources,
+                    'available' => [
+                        'wood' => (int)$village['wood'],
+                        'clay' => (int)$village['clay'],
+                        'iron' => (int)$village['iron']
+                    ]
+                ]
+            ];
         }
 
         $targetVillage = $this->getVillageByCoords($targetX, $targetY);
@@ -792,7 +805,20 @@ class TradeManager {
         if ($acceptingVillage['wood'] < $requiredFromAcceptor['wood'] ||
             $acceptingVillage['clay'] < $requiredFromAcceptor['clay'] ||
             $acceptingVillage['iron'] < $requiredFromAcceptor['iron']) {
-            return ['success' => false, 'message' => 'Not enough resources to accept this offer.', 'code' => EconomyError::ERR_CAP];
+            return [
+                'success' => false,
+                'message' => 'Not enough resources to accept this offer.',
+                'code' => EconomyError::ERR_CAP,
+                'details' => [
+                    'cap_type' => 'storage',
+                    'required' => $requiredFromAcceptor,
+                    'available' => [
+                        'wood' => (int)$acceptingVillage['wood'],
+                        'clay' => (int)$acceptingVillage['clay'],
+                        'iron' => (int)$acceptingVillage['iron']
+                    ]
+                ]
+            ];
         }
 
         // Prevent overflow at the receiving ends before creating routes

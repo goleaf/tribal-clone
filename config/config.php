@@ -54,6 +54,9 @@ define('WORLD_DURATION_DAYS', 0);         // 0 = unlimited; otherwise days until
 define('BASE_URL', 'http://localhost:8000/'); // Change to the appropriate URL if the project is not in the htdocs root
 define('TRADER_SPEED', 100); // Trader speed in fields per hour
 define('TRADER_CAPACITY', 1000); // Resources one trader can carry
+define('TRADE_POWER_DELTA_BLOCK_RATIO', 8); // Block aid when power gap exceeds this multiple for protected players
+define('TRADE_POWER_DELTA_PROTECTED_POINTS', 500); // Players below this score are protected from lopsided aid
+define('TRADE_ALT_IP_BLOCK_ENABLED', true); // If identity fingerprints match (e.g., IP hash), block trades as potential alts
 define('INACTIVE_TO_BARBARIAN_DAYS', 30); // Days of inactivity before a player village becomes barbarian (cron-driven)
 define('PALADIN_WEAPON', 'none'); // Options: 'none', 'bonfire', 'vascos_scepter'
 define('PALADIN_WEAPON_BONFIRE_MULTIPLIER', 1.5); // Attack/defense multiplier for catapults when Bonfire is equipped
