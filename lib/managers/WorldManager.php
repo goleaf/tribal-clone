@@ -192,7 +192,7 @@ class WorldManager
                         foreach ($selectable as $key) {
                             if (array_key_exists($key, $row) && $row[$key] !== null) {
                                 $val = $row[$key];
-                                if (in_array($key, ['world_speed', 'troop_speed', 'build_speed', 'train_speed', 'research_speed', 'resource_production_multiplier', 'resource_multiplier', 'vault_protection_percent', 'vault_protect_pct', 'inf_train_multiplier', 'cav_train_multiplier', 'rng_train_multiplier', 'siege_train_multiplier', 'overstack_penalty_rate', 'overstack_min_multiplier'], true)) {
+                                if (in_array($key, ['world_speed', 'troop_speed', 'build_speed', 'train_speed', 'research_speed', 'resource_production_multiplier', 'resource_multiplier', 'vault_protection_percent', 'vault_protect_pct', 'inf_train_multiplier', 'cav_train_multiplier', 'rng_train_multiplier', 'siege_train_multiplier', 'train_multiplier_inf', 'train_multiplier_cav', 'train_multiplier_rng', 'train_multiplier_siege', 'cost_multiplier_inf', 'cost_multiplier_cav', 'cost_multiplier_rng', 'cost_multiplier_siege', 'overstack_penalty_rate', 'overstack_min_multiplier', 'healer_recovery_cap'], true)) {
                                     $defaults[$key] = (float)$val;
                                 } elseif ($key === 'tribe_member_limit' || $key === 'victory_value' || $key === 'overstack_pop_threshold' || $key === 'min_attack_pop') {
                                     $defaults[$key] = $val === null ? null : (int)$val;
@@ -484,10 +484,10 @@ class WorldManager
     {
         $settings = $this->getSettings($worldId);
         $key = match (strtolower($archetype)) {
-            'inf' => 'inf_train_multiplier',
-            'cav' => 'cav_train_multiplier',
-            'rng' => 'rng_train_multiplier',
-            'siege' => 'siege_train_multiplier',
+            'inf' => 'train_multiplier_inf',
+            'cav' => 'train_multiplier_cav',
+            'rng' => 'train_multiplier_rng',
+            'siege' => 'train_multiplier_siege',
             default => null,
         };
         $base = $this->getTrainSpeed($worldId);
