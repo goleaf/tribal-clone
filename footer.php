@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 // require_once 'init.php'; // init.php is already included in header.php
 ?>
     <footer class="site-footer">
@@ -12,8 +13,8 @@
             <ul>
                 <li><a href="auth/register.php">Register</a></li>
                 <li><a href="auth/login.php">Log in</a></li>
-                <li><a href="#">Help</a></li>
-                <li><a href="#">Terms</a></li>
+                <li><a href="help.php">Help</a></li>
+                <li><a href="terms.php">Terms</a></li>
             </ul>
         </div>
         <div class="footer-info">

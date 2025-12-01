@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 // Start the session only if it is not already active
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
@@ -89,7 +90,7 @@ if (isset($_SESSION['user_id'])) {
 
 } else {
     // If the user is not logged in, redirect to login unless this is a public page
-    $public_pages = ['index.php', 'auth/login.php', 'auth/register.php', 'install.php', 'admin/', 'admin/admin_login.php', 'admin/db_verify.php', 'favicon.ico', 'css/', 'js/', 'img/', 'ajax/']; // Add other public paths (folders and ajax)
+    $public_pages = ['index.php', 'auth/login.php', 'auth/register.php', 'install.php', 'admin/', 'admin/admin_login.php', 'admin/db_verify.php', 'favicon.ico', 'css/', 'js/', 'img/', 'ajax/', 'help.php', 'terms.php']; // Add other public paths (folders and ajax)
     $current_path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     $current_path = trim($current_path, '/');
     

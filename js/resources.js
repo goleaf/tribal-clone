@@ -1,54 +1,43 @@
 /**
- * Dynamic resource updates without page refresh
+ * Dynamic resource updates without page refresh.
+ * Keeps client-side counters in sync with server production.
  */
 
-// ResourceUpdater manages real-time resource updates
 class ResourceUpdater {
     /**
-     * Constructor
-     * @param {Object} options - Configuration options
+     * @param {Object} options configuration overrides
      */
     constructor(options = {}) {
-        // Default options
         const defaultApiUrl = `${window.location.origin}/ajax_proxy.php`;
         this.options = {
-            apiUrl: defaultApiUrl, // Same-origin proxy avoids CORS issues
-            updateInterval: 30000, // 30 seconds
-            tickInterval: 1000, // 1 second
+            apiUrl: defaultApiUrl,
+            updateInterval: 30000, // 30s
+            tickInterval: 1000, // 1s
             resourcesSelector: '#resources-bar',
             villageId: null,
             ...options
         };
-        
-        // Resource state
+
         this.resources = {
             wood: { amount: 0, capacity: 0, production: 0, production_per_second: 0 },
             clay: { amount: 0, capacity: 0, production: 0, production_per_second: 0 },
             iron: { amount: 0, capacity: 0, production: 0, production_per_second: 0 },
-            population: { amount: 0 }
+            population: { amount: 0, capacity: 0 }
         };
-        
-        // Flags
+
         this.isInitialized = false;
         this.updateTimer = null;
         this.tickTimer = null;
         this.lastServerUpdate = null;
         this.lastClientUpdate = null;
         this.abortController = null;
-        
-        // Initialize
+
         this.init();
     }
-    
-    /**
-     * Initialize the resource updater
-     */
+
     async init() {
         try {
-            // Fetch initial data
             const data = await this.fetchUpdate();
-            
-            // Start timers if data loaded
             if (data) {
                 this.isInitialized = true;
                 this.startUpdateTimer();
@@ -58,10 +47,7 @@ class ResourceUpdater {
             console.error('Resource updater initialization error:', error);
         }
     }
-    
-    /**
-     * Fetch resource updates from the server
-     */
+
     async fetchUpdate() {
         try {
             if (this.abortController) {
@@ -69,13 +55,11 @@ class ResourceUpdater {
             }
             this.abortController = new AbortController();
 
-            // Build request URL
             let url = this.options.apiUrl;
             if (this.options.villageId) {
                 url += `?village_id=${this.options.villageId}`;
             }
-            
-            // Perform request
+
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
@@ -86,47 +70,28 @@ class ResourceUpdater {
                 credentials: 'same-origin',
                 signal: this.abortController.signal
             });
-            
-            // Validate response
+
             if (!response.ok) {
-                // Handle 401/500 explicitly
                 if (response.status === 401) {
-                    console.log('Session expired or user not logged in. Redirect to login if desired...');
-                    // Optional redirect to login
-                    // window.location.href = 'login.php';
                     return null;
                 }
-                
-                if (response.status === 500) {
-                    const errorText = await response.text();
-                    console.error('Server error 500:', errorText);
-                    throw new Error(`HTTP 500 error: ${errorText.substring(0, 100)}...`);
-                }
-                
-                throw new Error(`HTTP error: ${response.status}`);
+                const errorText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 120)}`);
             }
-            
-            // Parse JSON with error handling
+
+            const rawText = await response.text();
             let data;
             try {
-                const text = await response.text();
-                try {
-                    data = JSON.parse(text);
-                } catch (e) {
-                    console.error('Invalid JSON response:', text.substring(0, 100) + '...');
-                    throw new Error('Server returned invalid data format');
-                }
+                data = JSON.parse(rawText);
             } catch (e) {
-                console.error('Response processing error:', e);
+                console.error('Invalid JSON response:', rawText.substring(0, 200));
                 throw e;
             }
-            
-            // Check response status
+
             if (data.status !== 'success') {
                 throw new Error(data.message || 'Unknown server error');
             }
-            
-            // Update resource data, including production rates
+
             this.resources.wood = {
                 amount: parseFloat(data.data.wood.amount),
                 capacity: parseFloat(data.data.wood.capacity),
@@ -145,68 +110,51 @@ class ResourceUpdater {
                 production: parseFloat(data.data.iron.production) || 0,
                 production_per_second: parseFloat(data.data.iron.production_per_second) || 0
             };
-            // Population has no per-second production; only amount and capacity
             this.resources.population = {
                 amount: parseFloat(data.data.population.amount),
-                capacity: parseFloat(data.data.population.capacity) || 0 // Can be 0 at early levels
+                capacity: parseFloat(data.data.population.capacity) || 0
             };
-            
-            // Save timestamps
+
             this.lastServerUpdate = new Date(data.data.current_server_time);
             this.lastClientUpdate = new Date();
-            
-            // Refresh UI
+
             this.updateUI();
-            
             return data;
         } catch (error) {
             if (error.name !== 'AbortError') {
                 console.error('Error fetching resource updates:', error);
             }
-            // Keep running with previous values
             return null;
         } finally {
             this.abortController = null;
         }
     }
-    
-    /**
-     * Update the UI with current resource values
-     */
+
     updateUI() {
-        // Find resource container
         const container = document.querySelector(this.options.resourcesSelector);
         if (!container) return;
-        
-        // Update resource values
+
         this.updateResourceDisplay(container, 'wood', this.resources.wood);
         this.updateResourceDisplay(container, 'clay', this.resources.clay);
         this.updateResourceDisplay(container, 'iron', this.resources.iron);
         this.updateResourceDisplay(container, 'population', this.resources.population);
     }
-    
-    /**
-     * Update display of a single resource including tooltips/bars.
-     * @param {HTMLElement} container - Resource container.
-     * @param {string} resourceType - e.g. 'wood', 'clay'.
-     * @param {Object} resourceData - Data object (amount, capacity, production_per_hour, production_per_second).
-     */
+
     updateResourceDisplay(container, resourceType, resourceData) {
         const currentAmount = Math.floor(resourceData.amount);
         const capacity = resourceData.capacity;
         const productionPerHour = resourceData.production ?? resourceData.production_per_hour ?? 0;
 
-        // Update main resource bar
         const valueElement = container.querySelector(`#current-${resourceType}`);
         if (valueElement) {
             valueElement.textContent = this.formatNumber(currentAmount);
             if (capacity) {
-                if (currentAmount >= capacity * 0.9 && currentAmount < capacity) {
-                    valueElement.classList.add('resource-almost-full');
-                    valueElement.classList.remove('resource-full');
-                } else if (currentAmount >= capacity) {
+                if (currentAmount >= capacity) {
                     valueElement.classList.add('resource-full');
                     valueElement.classList.remove('resource-almost-full');
+                } else if (currentAmount >= capacity * 0.9) {
+                    valueElement.classList.add('resource-almost-full');
+                    valueElement.classList.remove('resource-full');
                 } else {
                     valueElement.classList.remove('resource-almost-full', 'resource-full');
                 }
@@ -223,7 +171,6 @@ class ResourceUpdater {
             productionElement.textContent = `+${this.formatNumber(productionPerHour)}/h`;
         }
 
-        // Update tooltip
         const tooltipCurrent = container.querySelector(`#tooltip-current-${resourceType}`);
         if (tooltipCurrent) tooltipCurrent.textContent = this.formatNumber(currentAmount);
 
@@ -235,99 +182,68 @@ class ResourceUpdater {
             tooltipProduction.textContent = `+${this.formatNumber(productionPerHour)}/h`;
         }
 
-        // Update progress bar in tooltip
         const progressBarInner = container.querySelector(`#bar-${resourceType}`);
         if (progressBarInner && capacity) {
             const percentage = Math.min(100, (currentAmount / capacity) * 100);
             progressBarInner.style.width = `${percentage}%`;
         }
     }
-    
-    /**
-     * Update resources based on elapsed time
-     */
+
     tick() {
         if (!this.isInitialized || !this.lastClientUpdate) return;
-        
-        // Calculate elapsed time since last client update
+
         const now = new Date();
         const elapsedSeconds = (now - this.lastClientUpdate) / 1000;
         this.lastClientUpdate = now;
-        
-        // Update resources using per-second production
+
         for (const resourceType of ['wood', 'clay', 'iron']) {
             const resource = this.resources[resourceType];
-            
-            // Add produced resources
             if (resource.production_per_second > 0) {
                 const newAmount = resource.amount + (resource.production_per_second * elapsedSeconds);
-                
-                // Do not exceed storage capacity
                 resource.amount = resource.capacity ? Math.min(newAmount, resource.capacity) : newAmount;
             }
         }
-        // Population has no production but has a cap
+
         if (this.resources.population.capacity) {
             this.resources.population.amount = Math.min(this.resources.population.amount, this.resources.population.capacity);
         }
-        
-        // Update UI
+
         this.updateUI();
     }
-    
-    /**
-     * Starts the server update timer
-     */
+
     startUpdateTimer() {
         this.stopUpdateTimer();
         this.updateTimer = setInterval(() => this.fetchUpdate(), this.options.updateInterval);
     }
-    
-    /**
-     * Stops the server update timer
-     */
+
     stopUpdateTimer() {
         if (this.updateTimer) {
             clearInterval(this.updateTimer);
             this.updateTimer = null;
         }
     }
-    
-    /**
-     * Starts the client tick timer
-     */
+
     startTickTimer() {
         this.stopTickTimer();
         this.tickTimer = setInterval(() => this.tick(), this.options.tickInterval);
     }
-    
-    /**
-     * Stops the client tick timer
-     */
+
     stopTickTimer() {
         if (this.tickTimer) {
             clearInterval(this.tickTimer);
             this.tickTimer = null;
         }
     }
-    
-    /**
-     * Formats a number for display
-     */
+
     formatNumber(number) {
-        return window.formatNumber(number); // Use global function from utils.js
+        return window.formatNumber(number);
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Get village ID from the global JavaScript variable
     const villageId = window.currentVillageId || null;
-    
-    // Initialize only if village ID is available
     if (villageId) {
-        window.resourceUpdater = new ResourceUpdater({
-            villageId: villageId
-        });
+        window.resourceUpdater = new ResourceUpdater({ villageId });
     } else {
         console.warn('Village ID not found. Resource updater will not start.');
     }

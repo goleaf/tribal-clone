@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 require_once __DIR__ . '/init.php';
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
@@ -62,6 +63,18 @@ getCSRFToken();
 if (!isset($pageTitle)) {
     $pageTitle = 'Tribal Wars';
 }
+
+// Set a permissive-but-explicit Content Security Policy and allow eval for legacy scripts
+$csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com",
+    "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
+    "img-src 'self' data:",
+    "font-src 'self' https://cdnjs.cloudflare.com data:",
+    "connect-src 'self'",
+    "frame-ancestors 'self'"
+];
+header('Content-Security-Policy: ' . implode('; ', $csp));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -99,9 +112,9 @@ if (!isset($pageTitle)) {
         window.gameMessages = <?= json_encode($gameMessages) ?>;
     </script>
     <?php if (isset($_SESSION['user_id'])): ?>
-    <script src="/js/resources.js" defer></script>
-    <script src="/js/notifications.js" defer></script>
-    <script src="/js/buildings.js"></script>
+<?php $assetVersion = 'v1'; ?>
+<script src="/js/resources.js?<?= $assetVersion ?>" defer></script>
+<script src="/js/notifications.js?<?= $assetVersion ?>" defer></script>
     <?php endif; ?>
 </head>
 <body>
