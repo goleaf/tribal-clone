@@ -35,18 +35,18 @@
   - **Validates: Requirements 13.1, 13.3**
 
 - [-] 2. Extend UnitManager with new functionality
-- [-] 2.1 Implement getUnitCategory() method
+- [x] 2.1 Implement getUnitCategory() method
   - Return category based on unit internal name or building type
   - Categories: 'infantry', 'cavalry', 'ranged', 'siege', 'scout', 'support', 'conquest'
   - _Requirements: 1.4, 3.3, 8.4_
 
-- [ ] 2.2 Implement isUnitAvailable() method
+- [x] 2.2 Implement isUnitAvailable() method
   - Check world feature flags (conquest, seasonal, healer)
   - Check seasonal window if applicable
   - Return boolean availability
   - _Requirements: 10.1, 10.2, 15.5_
 
-- [ ] 2.3 Implement getEffectiveUnitStats() method
+- [x] 2.3 Implement getEffectiveUnitStats() method
   - Load base stats from unit_types
   - Apply world training time multipliers by archetype
   - Apply world cost multipliers by archetype
@@ -61,7 +61,7 @@
   - **Property 19: World cost multiplier application**
   - **Validates: Requirements 11.2, 11.4**
 
-- [ ] 2.6 Implement checkSeasonalWindow() method
+- [x] 2.6 Implement checkSeasonalWindow() method
   - Query seasonal_units table for unit
   - Compare current timestamp with start/end timestamps
   - Return availability status with window details
@@ -71,14 +71,14 @@
   - **Property 17: Seasonal window enforcement**
   - **Validates: Requirements 10.1, 10.2, 10.4**
 
-- [ ] 2.8 Implement checkEliteUnitCap() method
+- [x] 2.8 Implement checkEliteUnitCap() method
   - Query elite_unit_caps table for user
   - Count existing units across all villages
   - Compare against per-account cap
   - Return cap status
   - _Requirements: 9.2_
 
-- [ ] 2.9 Extend checkRecruitRequirements() to include seasonal and elite checks
+- [x] 2.9 Extend checkRecruitRequirements() to include seasonal and elite checks
   - Add seasonal window validation
   - Add elite unit cap validation
   - Return detailed error codes (ERR_SEASONAL_EXPIRED, ERR_CAP)
@@ -88,7 +88,7 @@
   - **Property 1: Unit unlock prerequisites**
   - **Validates: Requirements 1.1, 1.2, 1.3, 2.1, 2.2, 3.1, 3.2, 4.1, 4.2, 5.1, 5.2, 6.1, 6.2, 7.1, 7.2, 8.1, 8.2, 14.1, 15.1, 15.2**
 
-- [ ] 2.11 Extend recruitUnits() to handle conquest unit resource deduction
+- [x] 2.11 Extend recruitUnits() to handle conquest unit resource deduction
   - Check for Noble/Standard Bearer unit types
   - Verify coin/standard availability
   - Deduct coins/standards atomically in transaction
