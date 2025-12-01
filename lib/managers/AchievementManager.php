@@ -702,10 +702,32 @@ class AchievementManager
             $unitsStmt->close();
         }
 
+        $totalPoints = 0;
+        $pointsStmt = $this->conn->prepare("SELECT points FROM users WHERE id = ? LIMIT 1");
+        if ($pointsStmt) {
+            $pointsStmt->bind_param("i", $userId);
+            $pointsStmt->execute();
+            $pRow = $pointsStmt->get_result()->fetch_assoc();
+            $pointsStmt->close();
+            $totalPoints = $pRow ? (int)$pRow['points'] : 0;
+        }
+
+        $enemiesDefeated = $this->getOpponentsDefeated($userId);
+        $successfulAttacks = $this->countSuccessfulAttacks($userId);
+        $successfulDefenses = $this->countSuccessfulDefenses($userId);
+        $conquests = $this->countConquests($userId);
+        $maxedBuildings = $this->countMaxedBuildingTypes($userId);
+
         return [
             'building_levels' => $buildingLevels,
             'best_balanced_stock' => $bestBalanced,
             'total_units' => $totalUnits,
+            'total_points' => $totalPoints,
+            'enemies_defeated' => $enemiesDefeated,
+            'successful_attacks' => $successfulAttacks,
+            'successful_defenses' => $successfulDefenses,
+            'conquests' => $conquests,
+            'maxed_buildings' => $maxedBuildings,
         ];
     }
 
