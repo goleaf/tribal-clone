@@ -76,8 +76,9 @@ $active_upgrades = array_filter($buildings_data, static fn($b) => !empty($b['is_
 $build_queue_count = $buildingManager->getActivePendingQueueCount($village_id) ?? 0;
 $recruit_queue_count = count($unitManager->getRecruitmentQueues($village_id) ?? []);
 $storage_capacity = $village['warehouse_capacity'] ?? 0;
-$worldSettings = $worldManager->getSettings(CURRENT_WORLD_ID);
-$enableNudges = (bool)($worldSettings['enable_nudges'] ?? true);
+$worldSettings = $worldManager->getSettings($worldId);
+$enableNudges = $worldManager->areNudgesEnabled($worldId);
+$enableNotifications = $worldManager->areNotificationsEnabled($worldId);
 $latestIntelAgeSeconds = $intelManager->getLatestReportAgeSecondsForUser($user_id);
 $nearCapResources = [];
 foreach (['wood', 'clay', 'iron'] as $resType) {

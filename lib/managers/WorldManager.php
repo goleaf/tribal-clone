@@ -105,10 +105,6 @@ class WorldManager
             'resource_decay_enabled' => false,
             'resource_decay_threshold_pct' => 0.8,
             'resource_decay_rate_per_hour' => 0.01,
-            'map_batching_enabled' => false,
-            'map_clustering_enabled' => false,
-            'map_delta_enabled' => false,
-            'map_fallback_enabled' => false,
             'overstack_enabled' => defined('OVERSTACK_ENABLED') ? (bool)OVERSTACK_ENABLED : false,
             'overstack_pop_threshold' => defined('OVERSTACK_POP_THRESHOLD') ? (int)OVERSTACK_POP_THRESHOLD : 30000,
             'overstack_penalty_rate' => defined('OVERSTACK_PENALTY_RATE') ? (float)OVERSTACK_PENALTY_RATE : 0.1,
@@ -116,6 +112,11 @@ class WorldManager
             'min_attack_pop_enabled' => defined('FEATURE_MIN_PAYLOAD_ENABLED') ? (bool)FEATURE_MIN_PAYLOAD_ENABLED : true,
             'min_attack_pop' => defined('MIN_ATTACK_POP') ? (int)MIN_ATTACK_POP : 5,
             'plunder_dr_enabled' => defined('PLUNDER_DR_ENABLED') ? (bool)PLUNDER_DR_ENABLED : true,
+            'parallel_queues_enabled' => defined('FEATURE_PARALLEL_QUEUES_ENABLED') ? (bool)FEATURE_PARALLEL_QUEUES_ENABLED : false,
+            'watchtower_enabled' => defined('FEATURE_WATCHTOWER_ENABLED') ? (bool)FEATURE_WATCHTOWER_ENABLED : true,
+            'hospital_enabled' => defined('FEATURE_HOSPITAL_ENABLED') ? (bool)FEATURE_HOSPITAL_ENABLED : true,
+            'outpost_enabled' => defined('FEATURE_OUTPOST_ENABLED') ? (bool)FEATURE_OUTPOST_ENABLED : false,
+            'wall_decay_enabled' => defined('WALL_DECAY_ENABLED') ? (bool)WALL_DECAY_ENABLED : false,
             'map_batching_enabled' => false,
             'map_clustering_enabled' => false,
             'map_delta_enabled' => false,
@@ -156,7 +157,7 @@ class WorldManager
                                     $defaults[$key] = (float)$val;
                                 } elseif ($key === 'tribe_member_limit' || $key === 'victory_value' || $key === 'overstack_pop_threshold' || $key === 'min_attack_pop') {
                                     $defaults[$key] = $val === null ? null : (int)$val;
-                                } elseif (in_array($key, ['enable_archer', 'enable_paladin', 'enable_paladin_weapons', 'night_bonus_enabled', 'resource_decay_enabled', 'overstack_enabled', 'min_attack_pop_enabled', 'weather_enabled', 'plunder_dr_enabled', 'map_batching_enabled', 'map_clustering_enabled', 'map_delta_enabled', 'map_fallback_enabled', 'enable_nudges', 'enable_notifications', 'enable_tasks', 'enable_catchup_buffs'], true)) {
+                                } elseif (in_array($key, ['enable_archer', 'enable_paladin', 'enable_paladin_weapons', 'night_bonus_enabled', 'resource_decay_enabled', 'overstack_enabled', 'min_attack_pop_enabled', 'weather_enabled', 'plunder_dr_enabled', 'parallel_queues_enabled', 'watchtower_enabled', 'hospital_enabled', 'outpost_enabled', 'wall_decay_enabled', 'map_batching_enabled', 'map_clustering_enabled', 'map_delta_enabled', 'map_fallback_enabled', 'enable_nudges', 'enable_notifications', 'enable_tasks', 'enable_catchup_buffs'], true)) {
                                     $defaults[$key] = (bool)$val;
                                 } elseif (in_array($key, ['night_start_hour', 'night_end_hour'], true)) {
                                     $defaults[$key] = (int)$val;

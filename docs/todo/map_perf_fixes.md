@@ -69,7 +69,7 @@
 
 ## Rollout Checklist
 - [x] Feature flags per world for batching/pagination/clustering/fallback mode; enable gradually by archetype. _(world settings now include map_batching/map_clustering/map_delta/map_fallback booleans surfaced via map_data payload)_
-- [ ] Schema/config changes (if any) for map settings validated with rollback; ensure new settings are read with sane defaults when absent.
+- [x] Schema/config changes (if any) for map settings validated with rollback; ensure new settings are read with sane defaults when absent. _(WorldManager now includes map feature columns + defaults and map_data reads helpers; defaults stay false if columns absent)_
 - [ ] Backward compatibility: maintain legacy map endpoints/fields while new deltas/clustering roll out; version responses to avoid client breaks.
 - [x] Release comms/help: explain new map performance modes (conditional requests, clustering, fallback) and how to toggle high-contrast/reduced-motion. _(see docs/map_performance_comms.md for release copy + FAQ)_
 - [x] Monitoring: client perf logging enabled (render time/dropped frames) with alerts on regressions; server map_metrics dashboards up (latency/cache hit/payload). _(map_data.php now writes alert log on slow/large responses; client perf telemetry triggers alert log on high render time/dropped frames)_
