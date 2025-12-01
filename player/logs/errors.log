@@ -2,3 +2,6 @@
 Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/player/tribe.php(64): require()
 #1 {main}
 --------------------------------------------------------------------------------
+[2025-12-01 04:01:19] EXCEPTION: Call to undefined method TribeManager::getTribeForUser() in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/player/tribe.php line 102
+Trace: #0 {main}
+--------------------------------------------------------------------------------

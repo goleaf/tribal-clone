@@ -45,7 +45,7 @@ class UnitManager
     /**
      * Get units that can be recruited in a building.
      *
-     * @param string $building_type Building type (barracks, stable, garage)
+     * @param string $building_type Building type (barracks, stable, workshop, academy, statue)
      * @param int $building_level Building level
      * @return array Units available for recruitment
      */
