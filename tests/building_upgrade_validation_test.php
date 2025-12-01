@@ -97,7 +97,7 @@ class BuildingUpgradeValidationTest {
         
         // Create test village
         $worldId = 1; // Default world
-        $stmt = $this->db->prepare("INSERT INTO villages (user_id, world_id, name, x, y, wood, clay, iron) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $this->db->prepare("INSERT INTO villages (user_id, world_id, name, x_coord, y_coord, wood, clay, iron) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $villageName = 'Test Village';
         $x = 500;
         $y = 500;
@@ -105,35 +105,24 @@ class BuildingUpgradeValidationTest {
         $clay = 10000;
         $iron = 10000;
         $stmt->bind_param("iisiiiii", $this->testUserId, $worldId, $villageName, $x, $y, $wood, $clay, $iron);
-        $stmt->execute();
+        if (!$stmt->execute()) {
+            echo "Setup ERROR: Failed to create village: " . $stmt->error . "\n";
+            exit(1);
+        }
         $this->testVillageId = $this->db->insert_id;
         $stmt->close();
         
-        // Initialize village buildings - use a simpler approach
+        // Initialize village buildings
         $result = $this->db->query("SELECT id, internal_name FROM building_types");
-        $count = 0;
         while ($row = $result->fetch_assoc()) {
             $buildingTypeId = $row['id'];
             $level = ($row['internal_name'] === 'main_building') ? 10 : 0;
             
             $stmt = $this->db->prepare("INSERT INTO village_buildings (village_id, building_type_id, level) VALUES (?, ?, ?)");
             $stmt->bind_param("iii", $this->testVillageId, $buildingTypeId, $level);
-            if (!$stmt->execute()) {
-                echo "Setup ERROR: Failed to insert building {$row['internal_name']}: " . $stmt->error . "\n";
-            }
+            $stmt->execute();
             $stmt->close();
-            $count++;
         }
-        
-        echo "Setup: Created $count building entries for village {$this->testVillageId}\n";
-        
-        // Verify the setup
-        $verifyStmt = $this->db->prepare("SELECT COUNT(*) as cnt FROM village_buildings WHERE village_id = ?");
-        $verifyStmt->bind_param("i", $this->testVillageId);
-        $verifyStmt->execute();
-        $actualCount = $verifyStmt->get_result()->fetch_assoc()['cnt'];
-        $verifyStmt->close();
-        echo "Setup: Verified $actualCount rows in database\n";
     }
     
     private function cleanupTestData() {
