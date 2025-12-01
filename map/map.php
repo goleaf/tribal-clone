@@ -850,6 +850,13 @@ async function fetchMapData(targetX, targetY, targetSize, controller) {
         headers['If-Modified-Since'] = window.__mapLastModified;
     }
     const response = await fetch(url, { credentials: 'same-origin', headers, signal: controller?.signal });
+    if (response.status === 429) {
+        const retryAfter = parseInt(response.headers.get('Retry-After') || '1', 10);
+        const err = new Error('Rate limited');
+        err.code = 'RATE_LIMIT';
+        err.retryAfterMs = (isNaN(retryAfter) ? 1 : retryAfter) * 1000;
+        throw err;
+    }
     if (response.status === 304) {
         if (window.__mapCache) {
             // Reuse cached payload; adjust center/size to requested params
@@ -966,22 +973,26 @@ async function loadMap(targetX, targetY, targetSize, options = {}) {
             updateUrl(mapState.center.x, mapState.center.y, mapState.size);
         }
     } catch (error) {
-        if (error.name !== 'AbortError') {
-            const isRate = typeof error.message === 'string' && error.message.startsWith('RATE_LIMIT:');
-            if (isRate) {
-                const parts = error.message.split(':');
-                const retryAfter = parts.length > 1 ? parseInt(parts[1], 10) : 1;
-                console.warn(`Map fetch rate-limited. Retrying in ${retryAfter}s.`);
-                setTimeout(() => {
-                    requestMapLoad(targetX, targetY, targetSize, options);
-                }, Math.max(500, retryAfter * 1000));
-            } else {
-                console.error('Failed to load map data:', error);
+        if (error.name === 'AbortError') {
+            // ignore
+        } else if (error.code === 'RATE_LIMIT') {
+            if (mapRateWarningEl) {
+                mapRateWarningEl.style.display = 'block';
             }
+            const retryAfter = Math.max(500, (error.retryAfterMs || 1000));
+            console.warn(`Map fetch rate-limited. Retrying in ${Math.round(retryAfter / 1000)}s.`);
+            setTimeout(() => {
+                requestMapLoad(targetX, targetY, targetSize, { ...options, skipUrl: true });
+            }, retryAfter);
+        } else {
+            console.error('Failed to load map data:', error);
         }
     } finally {
         mapFetchInFlight = false;
         setMapLoading(false);
+        if (mapRateWarningEl && error?.code !== 'RATE_LIMIT') {
+            mapRateWarningEl.style.display = 'none';
+        }
         if (!mapLoadTimer && lastQueuedRequest) {
             const req = lastQueuedRequest;
             lastQueuedRequest = null;

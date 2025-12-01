@@ -181,6 +181,12 @@ class TradeManager {
             return ['success' => false, 'message' => 'Cannot send resources to the same village.', 'code' => 'ERR_INPUT'];
         }
 
+        // Enforce storage headroom at target to avoid overflow abuse
+        $headroomCheck = $this->checkStorageHeadroom($targetVillage, $resources);
+        if ($headroomCheck !== true) {
+            return $headroomCheck;
+        }
+
         $marketLevel = $this->getMarketLevel($villageId);
         if ($marketLevel <= 0) {
             return ['success' => false, 'message' => 'Build a market to send resources.', 'code' => EconomyError::ERR_CAP];
@@ -675,6 +681,26 @@ class TradeManager {
 
         if (!$offer) {
             return ['success' => false, 'message' => 'Offer not available anymore.', 'code' => EconomyError::ERR_CAP];
+        }
+
+        // Enforce fair-market bounds even on older offers
+        $totalOffered = (int)$offer['offered_wood'] + (int)$offer['offered_clay'] + (int)$offer['offered_iron'];
+        $totalRequested = (int)$offer['requested_wood'] + (int)$offer['requested_clay'] + (int)$offer['requested_iron'];
+        if ($totalOffered <= 0 || $totalRequested <= 0) {
+            return ['success' => false, 'message' => 'Invalid offer payload.', 'code' => EconomyError::ERR_VALIDATION];
+        }
+        $ratio = $totalOffered / $totalRequested;
+        if ($ratio < self::MIN_FAIR_RATE || $ratio > self::MAX_FAIR_RATE) {
+            return [
+                'success' => false,
+                'message' => 'Trade offer ratio outside allowed range.',
+                'code' => EconomyError::ERR_RATIO,
+                'details' => [
+                    'offered_ratio' => round($ratio, 3),
+                    'min_ratio' => self::MIN_FAIR_RATE,
+                    'max_ratio' => self::MAX_FAIR_RATE
+                ]
+            ];
         }
 
         $sourceVillage = $this->getVillageWithOwner((int)$offer['source_village_id']);

@@ -10,14 +10,17 @@ command -v git >/dev/null 2>&1 || { echo "git is required on PATH"; exit 1; }
 command -v codex >/dev/null 2>&1 || { echo "codex CLI is required on PATH"; exit 1; }
 
 run_codex() {
-  local prompt="$1"
+  local prompt="$1" output
 
   if command -v script >/dev/null 2>&1; then
     # script allocates a pseudo-TTY so codex does not complain about stdout.
-    script -q /dev/null -- codex "$prompt"
+    output="$(script -q /dev/null codex "$prompt" 2>/dev/null || true)"
   else
-    codex "$prompt"
+    output="$(codex "$prompt" 2>/dev/null || true)"
   fi
+
+  # Drop script noise.
+  printf '%s\n' "$output" | sed '/^Script started/d;/^Script done/d'
 }
 
 generate_message() {

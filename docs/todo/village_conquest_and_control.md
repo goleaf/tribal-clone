@@ -91,14 +91,14 @@
 - [x] Conquest resolver: compute allegiance drop per surviving Standard Bearer with modifiers (wall level, escort size, repeated attacks, distance penalty if used), and capture when threshold <= 0. _(see allegiance calculation service spec)_
 - [x] State machine: enforce prerequisites (combat win, bearer survival, cooldowns, safe zones, protection status, tribe handover mode); return reason codes for failed conquest attempts. _(prereq checklist below)_
 - [x] Training pipeline: Hall of Banners requirements, minting/consumption of standards/coins, per-village/per-day training limits, queue integration. _(see training pipeline spec)_
-- [ ] Regen system: allegiance regeneration ticks with bonuses (buildings/tribe tech) and caps; pause rules during combat/occupation; floor after capture (anti-ping-pong buffer).
+ - [x] Regen system: allegiance regeneration ticks with bonuses (buildings/tribe tech) and caps; pause rules during combat/occupation; floor after capture (anti-ping-pong buffer). _(regen spec below)_
 - [ ] Cooldowns & limits: anti-rebound timer after capture, per-attacker wave spacing enforcement, per-account village cap penalties; configurable per world.
 - [ ] Anti-abuse checks: block captures vs protected/low-point players; flag repeated swaps between same accounts/tribes; apply tax/lockout on tribe-internal transfers if opt-in missing.
 - [ ] Reporting: battle/conquest reports show allegiance deltas, morale/luck, modifiers applied, and reason codes for blocks; log all conquest attempts for audit.
 
 ## Implementation TODOs
 - [x] Implement allegiance calculation service: per-wave allegiance drop resolution, regen tick, anti-snipe floor, and post-capture reset. _(spec below)_
-- [ ] Persistence: schema for allegiance value per village, last_allegiance_update, and capture_cooldown_until.
+- [x] Persistence: schema for allegiance value per village, last_allegiance_update, and capture_cooldown_until. _(columns added via add_allegiance_columns migration + sqlite schema updated)_
 - [ ] Combat hook: apply allegiance drop only if attackers win and at least one Standard Bearer survives; respect wall-based reduction.
 - [ ] Standard Bearer config: costs, speed, pop, min building level, max per command, and daily mint limits.
 - [ ] Regen rules: configurable per-world base regen/hour; tribe tech/items modifiers; pause during anti-snipe; cap at 100.
@@ -125,6 +125,14 @@
 - **Anti-Snipe Floor:** After capture, set `anti_snipe_until = now + configured_ms` and `allegiance_floor = configured_floor` (e.g., 10). While active, allegiance cannot be reduced below floor.
 - **Post-Capture Reset:** On capture, set allegiance to `post_capture_start` (e.g., 25–35), reset last_update timestamp, start anti-snipe timer, and emit capture event for reports/logs.
 - **Outputs:** new allegiance value, capture flag, applied drop amount, regen applied, timestamps for next tick, and current floor/grace state for UI/reporting.
+
+### Regen System Spec
+- **Base Regen:** Per-world `ALLEG_REGEN_PER_HOUR` (e.g., 1–5) applied continuously using elapsed seconds since last tick; stored as float, clamped to [0,100].
+- **Modifiers:** Buildings (Shrine/Temple, Hall of Banners levels) and tribe tech can add flat or % bonuses; cap total regen multiplier to avoid runaway (e.g., max 2x).
+- **Pause Rules:** Regen paused during anti-snipe grace, during occupation/uptime windows, and while a battle is in progress on the village tick. Optional pause while hostile command en route within X seconds.
+- **Decay:** Optional `ALLEG_DECAY_PER_HOUR` for abandoned villages; only when no owner/low activity. Disabled by default.
+- **Persistence:** Track `last_allegiance_update` timestamp per village; service updates this each tick after applying regen/decay.
+- **UI/Reports:** Reports show regen applied between waves; UI tooltip shows current regen rate and modifiers.
 
 ### Training Pipeline (Hall of Banners / Envoys)
 - **Prereqs:** Hall of Banners level N (configurable); require research node `conquest_training` and minted standards/crests in inventory. World flag `FEATURE_CONQUEST_UNIT_ENABLED` must be on.

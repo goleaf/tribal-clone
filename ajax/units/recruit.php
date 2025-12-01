@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     if (!$unit_id || !$count || !is_numeric($count) || $count <= 0) {
         http_response_code(400);
-        echo json_encode(['error' => 'Invalid input.']);
+        echo json_encode(['error' => 'Invalid input.', 'code' => 'ERR_INPUT']);
         exit();
     }
 
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $requirements = $unitManager->checkRecruitRequirements($unit_id, $village_id);
     if (!$requirements['can_recruit']) {
         http_response_code(400);
-        echo json_encode(['error' => "Cannot recruit unit: " . $requirements['reason']]);
+        echo json_encode(['error' => "Cannot recruit unit: " . $requirements['reason'], 'code' => 'ERR_PREREQ']);
         exit();
     }
 
@@ -99,14 +99,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $marketLevel = $buildingManager->getBuildingLevel($village_id, 'market');
         if ($statueLevel <= 0 || $academyLevel < 1 || $smithyLevel < 20 || $marketLevel < 10) {
             http_response_code(400);
-            echo json_encode(['error' => 'Noble requirements not met (statue, academy 1, smithy 20, market 10).']);
+            echo json_encode(['error' => 'Noble requirements not met (statue, academy 1, smithy 20, market 10).', 'code' => 'ERR_PREREQ']);
             exit();
         }
         $userNobles = $unitManager->countUserNobles($user_id);
         $maxNobles = $unitManager->getMaxNoblesForUser($user_id);
         if ($userNobles + $count > $maxNobles) {
             http_response_code(400);
-            echo json_encode(['error' => 'Noble cap reached', 'max_nobles' => $maxNobles, 'current_nobles' => $userNobles]);
+            echo json_encode(['error' => 'Noble cap reached', 'code' => 'ERR_CAP', 'max_nobles' => $maxNobles, 'current_nobles' => $userNobles]);
             exit();
         }
         // Coin check
@@ -118,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $coinsAvailable = (int)($rowCoins['coins'] ?? 0);
         if ($coinsAvailable < $count) {
             http_response_code(400);
-            echo json_encode(['error' => 'Not enough coins', 'coins' => $coinsAvailable]);
+            echo json_encode(['error' => 'Not enough coins', 'code' => 'ERR_RES', 'coins' => $coinsAvailable]);
             exit();
         }
     }
@@ -127,7 +127,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $resource_check = $unitManager->checkResourcesForRecruitment($unit_id, $count, $village);
     if (!$resource_check['can_afford']) {
         http_response_code(400);
-        echo json_encode(['error' => 'Not enough resources.']);
+        echo json_encode([
+            'error' => 'Not enough resources.',
+            'code' => 'ERR_RES',
+            'missing' => $resource_check['missing'] ?? null
+        ]);
         exit();
     }
 
@@ -163,7 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     } catch (Exception $e) {
         $conn->rollback();
         http_response_code(500);
-        echo json_encode(['error' => 'An error occurred during recruitment: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'An error occurred during recruitment: ' . $e->getMessage(), 'code' => 'ERR_SERVER']);
     }
 }
 ?>

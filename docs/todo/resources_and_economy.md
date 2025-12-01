@@ -87,14 +87,14 @@
 - [x] Resource sinks: implement minting (coins/seals/standards), tribe projects currency, megaproject deliveries (wonders/beacons), and occupation taxes. _(sink plan below)_
 - [x] Anti-hoarding: overflow loss/decay above threshold (world-optional), diminishing plunder returns per attacker→target cooldown, rising conquest costs for large empires. _(anti-hoard spec below; decay implemented via RESOURCE_DECAY_* constants in ResourceManager)_
  - [x] Trade system: offer/accept APIs with tax by distance/power delta; fixed/open rate modes; aid board with caps and audit logs; balancer with fees and cap checks. _(trade system spec below)_
-- [ ] Event economy: token balances with expiry, event shops with caps, harvest/trade wind modifiers applied per world.
+- [x] Event economy: token balances with expiry, event shops with caps, harvest/trade wind modifiers applied per world. _(event economy spec below)_
  - [x] Catch-up buffs: late-joiner production bonuses and protection; ensure non-stacking with beginner protection abuse; expiration rules. _(buff spec below)_
 - [ ] Telemetry: metrics on production, sinks (minting, tribe projects), trade volumes, plunder/decay losses, and aid flows; alerts on anomalies.
 - [ ] Safeguards: cap storage overflows, block trades/aid to protected alts (power delta + IP/alt flags), and enforce fair-market bounds on offers to reduce pushing.
 - [x] Error codes: standardize economy errors (`ERR_CAP`, `ERR_TAX`, `ERR_ALT_BLOCK`, `ERR_RATE_LIMIT`) and surface retry/next steps in UI. _(see error code spec below)_
 - [ ] Auditing: append-only logs for trades/aid/minting with actor, target, amounts, ip_hash/ua_hash, and world_id; retain 180 days.
 - [ ] Load shedding: if trade/aid endpoints face spikes, degrade gracefully (queue/try-later) instead of overloading DB; emit backpressure metric.
-- [ ] Validation: block zero/negative resource sends, enforce storage limits at send/receive, and reject offers with extreme exchange ratios outside configured band.
+- [x] Validation: block zero/negative resource sends, enforce storage limits at send/receive, and reject offers with extreme exchange ratios outside configured band. _(trade send now checks target storage headroom + ERR_RATIO already enforced on offers)_
 - [ ] Economy tests: unit tests for vault protection math, tax calculation, overflow/decay triggers, and fair-market bounds; integration tests for trade/aid flows with caps and power-delta taxes applied.
 
 ### Economy Error Codes (Standard)
@@ -130,6 +130,14 @@
 - **Anti-abuse:** Disable buffs when player exceeds point threshold or after duration ends; strip on PvP attack initiation if world rules require. Log activations and expiries; rate-limit rebuild pack requests and tie to recent losses.
 - **Config:** Per-world settings for production %, time %, duration, point thresholds, and rebuild pack contents; admin audit when changed.
 - **Telemetry:** Emit buff grants, expiries, and abuse blocks; monitor adoption and churn deltas for tuning.
+
+### Event Economy Spec
+- **Currencies:** Event tokens tracked per world; have `granted_at`, `expires_at`, and `source` fields. Expired tokens auto-removed by daily job; UI shows countdown.
+- **Shops:** Event shop configs per world with item caps, costs, and availability windows. Enforce per-item and per-account caps; items are cosmetic/QoL only (no power boosts).
+- **Harvest/Trade Winds Modifiers:** World flags to enable event modifiers (e.g., +20% production for 48h, -15% trade tax). Modifiers carry start/end timestamps; applied in ResourceManager/Market and surfaced in UI.
+- **Grants:** Tokens granted via events/quests/battles; grant endpoint validates caps and sets expiry. Logs include actor, amount, source, world_id.
+- **Redemption:** Purchase endpoint checks token balance, caps, and window; deducts tokens atomically. Returns `ERR_EVENT_EXPIRED`/`ERR_CAP`/`ERR_TOKENS` as needed.
+- **Telemetry/Audit:** Metrics for tokens granted/spent/expired, shop purchases by item, and modifier activation; append-only logs for grants/purchases with ip_hash/ua_hash.
 
 ### Trade System Spec
 - **Modes:** `fixed_rate` (beginner/casual worlds with configured fair ratios and tight bands) and `open_rate` (free market). World flag controls mode; UI shows mode badge.

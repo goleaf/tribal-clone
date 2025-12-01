@@ -22,6 +22,8 @@ class WorldManager
         'resource_production_multiplier' => "REAL NOT NULL DEFAULT 1.0",
         'vault_protection_percent' => "REAL NOT NULL DEFAULT 0.0",
         'resource_decay_enabled' => "INTEGER NOT NULL DEFAULT 0",
+        'resource_decay_threshold_pct' => "REAL NOT NULL DEFAULT 0.8",
+        'resource_decay_rate_per_hour' => "REAL NOT NULL DEFAULT 0.01",
         'enable_archer' => "INTEGER NOT NULL DEFAULT 1",
         'enable_paladin' => "INTEGER NOT NULL DEFAULT 1",
         'enable_paladin_weapons' => "INTEGER NOT NULL DEFAULT 1",
@@ -69,6 +71,8 @@ class WorldManager
             'vault_protection_percent' => 0.0,
             'vault_protect_pct' => 0.0,
             'resource_decay_enabled' => false,
+            'resource_decay_threshold_pct' => 0.8,
+            'resource_decay_rate_per_hour' => 0.01,
             'enable_archer' => true,
             'enable_paladin' => true,
             'enable_paladin_weapons' => true,
@@ -160,6 +164,33 @@ class WorldManager
         return max(0.1, (float)($settings['research_speed'] ?? 1.0));
     }
 
+    public function getTrainSpeedForUnit(string $internalName, int $worldId = CURRENT_WORLD_ID): float
+    {
+        $settings = $this->getSettings($worldId);
+        $base = $this->getTrainSpeed($worldId);
+        $internalName = strtolower(trim($internalName));
+
+        // Map archetype buckets
+        $bucket = 'inf';
+        if (in_array($internalName, ['light', 'heavy', 'marcher', 'cavalry', 'knight'], true)) {
+            $bucket = 'cav';
+        } elseif (in_array($internalName, ['archer', 'marcher'], true)) {
+            $bucket = 'rng';
+        } elseif (in_array($internalName, ['ram', 'catapult', 'trebuchet'], true)) {
+            $bucket = 'siege';
+        }
+
+        $bucketKey = match ($bucket) {
+            'cav' => 'cav_train_multiplier',
+            'rng' => 'rng_train_multiplier',
+            'siege' => 'siege_train_multiplier',
+            default => 'inf_train_multiplier',
+        };
+
+        $bucketMult = isset($settings[$bucketKey]) ? (float)$settings[$bucketKey] : 1.0;
+        return max(0.1, $base * $bucketMult);
+    }
+
     public function isNightBonusEnabled(int $worldId = CURRENT_WORLD_ID): bool
     {
         return (bool)($this->getSettings($worldId)['night_bonus_enabled'] ?? false);
@@ -193,6 +224,18 @@ class WorldManager
     public function isResourceDecayEnabled(int $worldId = CURRENT_WORLD_ID): bool
     {
         return (bool)($this->getSettings($worldId)['resource_decay_enabled'] ?? false);
+    }
+
+    public function getResourceDecayThresholdPct(int $worldId = CURRENT_WORLD_ID): float
+    {
+        $pct = (float)($this->getSettings($worldId)['resource_decay_threshold_pct'] ?? 0.8);
+        return max(0.0, min(1.0, $pct));
+    }
+
+    public function getResourceDecayRatePerHour(int $worldId = CURRENT_WORLD_ID): float
+    {
+        $rate = (float)($this->getSettings($worldId)['resource_decay_rate_per_hour'] ?? 0.01);
+        return max(0.0, $rate);
     }
 
     public function isPaladinEnabled(int $worldId = CURRENT_WORLD_ID): bool
@@ -313,6 +356,7 @@ class WorldManager
             $stmtInsert->execute();
             $stmtInsert->close();
         }
+        $this->logConfigChange(1, null, [], $this->getSettings(1), 'seed_world');
     }
 
     /**
@@ -567,7 +611,7 @@ class WorldManager
     /**
      * Applies a world archetype template to an existing world row.
      */
-    public function applyArchetypeToWorld(int $worldId, string $archetype): array
+    public function applyArchetypeToWorld(int $worldId, string $archetype, ?int $actorUserId = null): array
     {
         $templates = $this->getArchetypeTemplates();
         $key = strtolower(trim($archetype));
@@ -576,6 +620,7 @@ class WorldManager
         }
 
         $this->ensureSchema();
+        $before = $this->getSettings($worldId);
         $template = $templates[$key];
         $columns = $this->getWorldColumns();
         $applicable = array_intersect(array_keys($template), $columns);
@@ -618,9 +663,76 @@ class WorldManager
             if (!$validation['success']) {
                 return ['success' => false, 'message' => 'Applied archetype but validation failed: ' . implode('; ', $validation['errors'])];
             }
+            $this->logConfigChange($worldId, $actorUserId, $before, $this->getSettings($worldId), 'apply_archetype:' . $key);
             return ['success' => true, 'message' => "Applied '{$key}' archetype to world {$worldId}."];
         }
 
         return ['success' => false, 'message' => 'Failed to apply archetype.'];
+    }
+
+    /**
+     * Append an audit entry for world configuration changes.
+     */
+    public function logConfigChange(int $worldId, ?int $actorUserId, array $before, array $after, string $action = 'update'): void
+    {
+        $this->ensureAuditTable();
+        $stmt = $this->conn->prepare("
+            INSERT INTO world_config_audit (world_id, actor_user_id, action, before_json, after_json)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        if ($stmt === false) {
+            return;
+        }
+        $beforeJson = json_encode($before);
+        $afterJson = json_encode($after);
+        $stmt->bind_param(
+            "iisss",
+            $worldId,
+            $actorUserId,
+            $action,
+            $beforeJson,
+            $afterJson
+        );
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    /**
+     * Returns recent audit log entries for a world.
+     */
+    public function getConfigAudit(int $worldId, int $limit = 20): array
+    {
+        $this->ensureAuditTable();
+        $stmt = $this->conn->prepare("
+            SELECT id, world_id, actor_user_id, action, before_json, after_json, created_at
+            FROM world_config_audit
+            WHERE world_id = ?
+            ORDER BY created_at DESC, id DESC
+            LIMIT ?
+        ");
+        if ($stmt === false) {
+            return [];
+        }
+        $stmt->bind_param("ii", $worldId, $limit);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $rows = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+        $stmt->close();
+        return $rows;
+    }
+
+    private function ensureAuditTable(): void
+    {
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS world_config_audit (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                world_id INTEGER NOT NULL,
+                actor_user_id INTEGER NULL,
+                action TEXT NOT NULL,
+                before_json TEXT,
+                after_json TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        ");
     }
 }

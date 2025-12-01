@@ -160,6 +160,7 @@ Status markers:
 - Caps on siege/elite/event/conquest units enforced per village/account; errors surfaced; no training beyond limits under load.
 - Sunset handling removes/locks expired event units cleanly; conversions/logging validated.
 - Stacking rules for auras/healers enforced and visible; archetype gates per world applied and auditable.
+- Anti-abuse: concurrent training requests cannot bypass caps; duplicate/replay attempts rejected with reason codes and logged.
 
 ### Aura & Healer Stacking Spec
 - **Banner Guard Aura:** Does not stack additively. Use highest-level aura in a battle (based on Banner Guard tier/upgrade). Additional Banner Guards beyond first grant no extra buff but still fight normally. Aura applies to defender only; attacker aura applies to attacker side if world enables offensive banners.
@@ -174,7 +175,7 @@ Status markers:
 - How is healer recovery capped per battle (per unit, per pop, global %) to prevent infinite sustain?
 - Should seasonal/event units be disabled entirely on hardcore worlds or just capped tighter? Decide per archetype.
 - [x] Balance hooks: world-configurable multipliers per archetype (inf/cav/ranged/siege) and per-unit overrides for special worlds; expose in admin UI with audit. _(worlds now carry per-archetype train multipliers; UnitManager applies them in recruitment time calc)_
-- [ ] Validation: recruit endpoint rejects zero/negative counts, enforces pop/resource availability, and respects per-village/per-account caps with reason codes.
+- [x] Validation: recruit endpoint rejects zero/negative counts, enforces pop/resource availability, and respects per-village/per-account caps with reason codes. _(recruit API now returns ERR_INPUT/ERR_PREREQ/ERR_CAP/ERR_RES on failure paths)_
 - [ ] Telemetry: emit recruit attempts, cap hits, and aura/mantlet/healer usage; alert on cap-hit spikes or disabled unit training errors.
 
 ## Profiling & Load Plan

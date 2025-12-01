@@ -33,6 +33,7 @@ class BattleManager
     private const SOFT_FLAG_THRESHOLD = 3; // flags in window to trigger penalty
     private const SOFT_FLAG_PENALTY_MULTIPLIER = 0.5; // halve caps when flagged
     private const SITTER_MAX_OUTGOING_PER_HOUR = 10; // sitter cannot exceed this command count per hour
+    private const MAX_LOYALTY_UNITS_PER_COMMAND = 1; // nobles/standard bearers per command
     private const PHASE_ORDER = ['infantry', 'cavalry', 'archer'];
     private const RESEARCH_BONUS_PER_LEVEL = 0.10; // +10% per smithy level
     private const LOYALTY_MIN = 0;

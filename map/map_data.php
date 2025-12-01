@@ -84,6 +84,7 @@ $freshnessHeaders = [];
 $centerX = isset($_GET['x']) ? (int)$_GET['x'] : 0;
 $centerY = isset($_GET['y']) ? (int)$_GET['y'] : 0;
 $size = isset($_GET['size']) ? max(7, min(31, (int)$_GET['size'])) : 15;
+$lowPerfMode = !empty($_GET['lowperf']);
 
 $radius = (int)floor(($size - 1) / 2);
 $centerX = max(0, min($worldSize - 1, $centerX));
@@ -227,87 +228,89 @@ if (($ifNoneMatch && trim($ifNoneMatch) === $etag) || ($ifModifiedSinceTs && $if
     exit;
 }
 
-// Fetch active movements (attacks/support/return) intersecting the viewport
-$movementsStmt = $conn->prepare("
-    SELECT 
-        a.id,
-        a.source_village_id,
-        a.target_village_id,
-        a.attack_type,
-        a.arrival_time,
-        a.start_time,
-        sv.x_coord AS source_x,
-        sv.y_coord AS source_y,
-        tv.x_coord AS target_x,
-        tv.y_coord AS target_y
-    FROM attacks a
-    JOIN villages sv ON sv.id = a.source_village_id
-    JOIN villages tv ON tv.id = a.target_village_id
-    WHERE a.is_completed = 0 
-      AND a.is_canceled = 0 
-      AND a.arrival_time > NOW()
-      AND (
-        (sv.x_coord BETWEEN ? AND ? AND sv.y_coord BETWEEN ? AND ?) OR
-        (tv.x_coord BETWEEN ? AND ? AND tv.y_coord BETWEEN ? AND ?)
-      )
-    ORDER BY a.arrival_time ASC
-    LIMIT ?
-");
 $movementAttackIds = [];
-if ($movementsStmt) {
-    $movementsStmt->bind_param(
-        'iiiiiiiii',
-        $minX, $maxX, $minY, $maxY,
-        $minX, $maxX, $minY, $maxY,
-        $movementsLimit + 1
-    );
-    $movementsStmt->execute();
-    $movementsRes = $movementsStmt->get_result();
-    $fetchedMoves = [];
-    while ($move = $movementsRes->fetch_assoc()) {
-        $fetchedMoves[] = $move;
-    }
-    if (count($fetchedMoves) > $movementsLimit) {
-        $movementsTruncated = true;
-        $fetchedMoves = array_slice($fetchedMoves, 0, $movementsLimit);
-    }
-    foreach ($fetchedMoves as $move) {
-        $sourceId = (int)$move['source_village_id'];
-        $targetId = (int)$move['target_village_id'];
-        $arrivalTs = strtotime($move['arrival_time']);
-        $startTs = isset($move['start_time']) ? strtotime($move['start_time']) : 0;
-        if ($arrivalTs > $lastModifiedTs) {
-            $lastModifiedTs = $arrivalTs;
+if (!$lowPerfMode) {
+    // Fetch active movements (attacks/support/return) intersecting the viewport
+    $movementsStmt = $conn->prepare("
+        SELECT 
+            a.id,
+            a.source_village_id,
+            a.target_village_id,
+            a.attack_type,
+            a.arrival_time,
+            a.start_time,
+            sv.x_coord AS source_x,
+            sv.y_coord AS source_y,
+            tv.x_coord AS target_x,
+            tv.y_coord AS target_y
+        FROM attacks a
+        JOIN villages sv ON sv.id = a.source_village_id
+        JOIN villages tv ON tv.id = a.target_village_id
+        WHERE a.is_completed = 0 
+          AND a.is_canceled = 0 
+          AND a.arrival_time > NOW()
+          AND (
+            (sv.x_coord BETWEEN ? AND ? AND sv.y_coord BETWEEN ? AND ?) OR
+            (tv.x_coord BETWEEN ? AND ? AND tv.y_coord BETWEEN ? AND ?)
+          )
+        ORDER BY a.arrival_time ASC
+        LIMIT ?
+    ");
+    if ($movementsStmt) {
+        $movementsStmt->bind_param(
+            'iiiiiiiii',
+            $minX, $maxX, $minY, $maxY,
+            $minX, $maxX, $minY, $maxY,
+            $movementsLimit + 1
+        );
+        $movementsStmt->execute();
+        $movementsRes = $movementsStmt->get_result();
+        $fetchedMoves = [];
+        while ($move = $movementsRes->fetch_assoc()) {
+            $fetchedMoves[] = $move;
         }
-        if ($startTs > $lastModifiedTs) {
-            $lastModifiedTs = $startTs;
+        if (count($fetchedMoves) > $movementsLimit) {
+            $movementsTruncated = true;
+            $fetchedMoves = array_slice($fetchedMoves, 0, $movementsLimit);
         }
+        foreach ($fetchedMoves as $move) {
+            $sourceId = (int)$move['source_village_id'];
+            $targetId = (int)$move['target_village_id'];
+            $arrivalTs = strtotime($move['arrival_time']);
+            $startTs = isset($move['start_time']) ? strtotime($move['start_time']) : 0;
+            if ($arrivalTs > $lastModifiedTs) {
+                $lastModifiedTs = $arrivalTs;
+            }
+            if ($startTs > $lastModifiedTs) {
+                $lastModifiedTs = $startTs;
+            }
 
-        $movementAttackIds[] = (int)$move['id'];
+            $movementAttackIds[] = (int)$move['id'];
 
-        if (isset($villagesById[$sourceId])) {
-            $villages[$villagesById[$sourceId]]['movements'][] = [
-                'attack_id' => (int)$move['id'],
-                'type' => $move['attack_type'] === 'support' ? 'support' : 'attack',
-                'arrival' => $arrivalTs,
-                'target' => ['x' => (int)$move['target_x'], 'y' => (int)$move['target_y']]
-            ];
-        }
+            if (isset($villagesById[$sourceId])) {
+                $villages[$villagesById[$sourceId]]['movements'][] = [
+                    'attack_id' => (int)$move['id'],
+                    'type' => $move['attack_type'] === 'support' ? 'support' : 'attack',
+                    'arrival' => $arrivalTs,
+                    'target' => ['x' => (int)$move['target_x'], 'y' => (int)$move['target_y']]
+                ];
+            }
 
-        if (isset($villagesById[$targetId])) {
-            $villages[$villagesById[$targetId]]['movements'][] = [
-                'attack_id' => (int)$move['id'],
-                'type' => $move['attack_type'] === 'support' ? 'support_in' : 'incoming',
-                'arrival' => $arrivalTs,
-                'source' => ['x' => (int)$move['source_x'], 'y' => (int)$move['source_y']]
-            ];
+            if (isset($villagesById[$targetId])) {
+                $villages[$villagesById[$targetId]]['movements'][] = [
+                    'attack_id' => (int)$move['id'],
+                    'type' => $move['attack_type'] === 'support' ? 'support_in' : 'incoming',
+                    'arrival' => $arrivalTs,
+                    'source' => ['x' => (int)$move['source_x'], 'y' => (int)$move['source_y']]
+                ];
+            }
         }
+        $movementsStmt->close();
     }
-    $movementsStmt->close();
 }
 
 // Flag movements that carry nobles
-if (!empty($movementAttackIds)) {
+if (!$lowPerfMode && !empty($movementAttackIds)) {
     $placeholders = implode(',', array_fill(0, count($movementAttackIds), '?'));
     $types = str_repeat('i', count($movementAttackIds));
     $nobleSql = "

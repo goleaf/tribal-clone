@@ -134,10 +134,10 @@ class ResourceManager {
         $village['iron'] = min($village['iron'] + $gained_iron, $warehouse_cap_with_buffer);
 
         // Optional decay for hoarded resources above threshold
-        $decayEnabled = defined('RESOURCE_DECAY_ENABLED') ? (bool)RESOURCE_DECAY_ENABLED : false;
+        $decayEnabled = $worldConfig['resource_decay_enabled'] ?? (defined('RESOURCE_DECAY_ENABLED') ? (bool)RESOURCE_DECAY_ENABLED : false);
         if ($decayEnabled) {
-            $threshold = defined('RESOURCE_DECAY_THRESHOLD') ? (float)RESOURCE_DECAY_THRESHOLD : 0.8; // 80% of cap
-            $ratePerHour = defined('RESOURCE_DECAY_RATE') ? (float)RESOURCE_DECAY_RATE : 0.01; // 1% of overage per hour
+            $threshold = $worldConfig['resource_decay_threshold_pct'] ?? (defined('RESOURCE_DECAY_THRESHOLD') ? (float)RESOURCE_DECAY_THRESHOLD : 0.8); // 80% of cap
+            $ratePerHour = $worldConfig['resource_decay_rate_per_hour'] ?? (defined('RESOURCE_DECAY_RATE') ? (float)RESOURCE_DECAY_RATE : 0.01); // 1% of overage per hour
             $thresholdAmount = $warehouse_capacity * $threshold;
 
             foreach (['wood', 'clay', 'iron'] as $res) {
@@ -288,7 +288,10 @@ class ResourceManager {
             $wm = new WorldManager($this->conn);
             $this->worldEconomyCache[$worldId] = [
                 'resource_multiplier' => $wm->getResourceProductionMultiplier($worldId),
-                'vault_protect_pct' => (int)$wm->getVaultProtectionPercent($worldId)
+                'vault_protect_pct' => (int)$wm->getVaultProtectionPercent($worldId),
+                'resource_decay_enabled' => $wm->isResourceDecayEnabled($worldId),
+                'resource_decay_threshold_pct' => $wm->getResourceDecayThresholdPct($worldId),
+                'resource_decay_rate_per_hour' => $wm->getResourceDecayRatePerHour($worldId),
             ];
             return $this->worldEconomyCache[$worldId];
         }
