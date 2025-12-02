@@ -1595,6 +1595,52 @@ class BattleManager
             }
         }
 
+        // --- HEALER RECOVERY (SUPPORT UNIT MECHANICS) ---
+        $healerRecovery = [];
+        $worldId = isset($villages['source_world_id']) ? (int)$villages['source_world_id'] : (defined('CURRENT_WORLD_ID') ? (int)CURRENT_WORLD_ID : 1);
+        
+        // Apply healer recovery to defender losses (defenders have healers)
+        if (!empty($remaining_defending_units)) {
+            $recoveredDefender = $this->applyHealerRecovery($defender_losses, $defending_units, $worldId);
+            if (!empty($recoveredDefender)) {
+                foreach ($recoveredDefender as $unitTypeId => $recoveredCount) {
+                    // Add recovered units back to remaining count
+                    if (isset($defender_losses[$unitTypeId])) {
+                        $defender_losses[$unitTypeId]['remaining_count'] += $recoveredCount;
+                        $defender_losses[$unitTypeId]['lost_count'] -= $recoveredCount;
+                        $remaining_defending_units[$unitTypeId] = ($remaining_defending_units[$unitTypeId] ?? 0) + $recoveredCount;
+                        
+                        // Update the defending_units array for database persistence
+                        if (isset($defending_units[$unitTypeId])) {
+                            $defending_units[$unitTypeId]['count'] += $recoveredCount;
+                        }
+                    }
+                }
+                $healerRecovery['defender'] = $recoveredDefender;
+            }
+        }
+        
+        // Apply healer recovery to attacker losses (attackers have healers)
+        if (!empty($remaining_attacking_units)) {
+            $recoveredAttacker = $this->applyHealerRecovery($attacker_losses, $attacking_units, $worldId);
+            if (!empty($recoveredAttacker)) {
+                foreach ($recoveredAttacker as $unitTypeId => $recoveredCount) {
+                    // Add recovered units back to remaining count
+                    if (isset($attacker_losses[$unitTypeId])) {
+                        $attacker_losses[$unitTypeId]['remaining_count'] += $recoveredCount;
+                        $attacker_losses[$unitTypeId]['lost_count'] -= $recoveredCount;
+                        $remaining_attacking_units[$unitTypeId] = ($remaining_attacking_units[$unitTypeId] ?? 0) + $recoveredCount;
+                        
+                        // Update the attacking_units array for database persistence
+                        if (isset($attacking_units[$unitTypeId])) {
+                            $attacking_units[$unitTypeId]['count'] += $recoveredCount;
+                        }
+                    }
+                }
+                $healerRecovery['attacker'] = $recoveredAttacker;
+            }
+        }
+
         // --- LOOT ---
         $loot = [ 'wood' => 0, 'clay' => 0, 'iron' => 0 ];
         $vaultPct = 0.0;
@@ -2055,6 +2101,7 @@ class BattleManager
                         'reduction_percent' => $mantletProtection > 0 ? round($mantletProtection * 100, 1) : 0,
                         'protection_multiplier' => $mantletProtection
                     ],
+                    'healer_recovery' => $healerRecovery,
                     'rps_modifiers' => $rpsModifiers
                 ],
                 'attack_power' => $attackPowerFinal,

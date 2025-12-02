@@ -230,7 +230,7 @@
   - **Property 4: Ranged wall bonus**
   - **Validates: Requirements 2.3, 2.4**
 
-- [-] 8. Implement support unit mechanics in BattleManager
+- [x] 8. Implement support unit mechanics in BattleManager
 - [x] 8.1 Create calculateBannerAura() method
   - Scan defender units for Banner Guards
   - Identify highest aura tier present
@@ -276,7 +276,7 @@
   - **Property 11: Healer recovery cap**
   - **Validates: Requirements 6.4**
 
-- [-] 8.9 Integrate applyHealerRecovery() into resolveBattle()
+- [x] 8.9 Integrate applyHealerRecovery() into resolveBattle()
   - Call after casualty calculation
   - Add recovered units back to survivor counts
   - Include recovery details in battle report
