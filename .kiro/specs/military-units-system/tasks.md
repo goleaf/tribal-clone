@@ -99,7 +99,7 @@
   - **Property 23: Conquest resource deduction**
   - **Validates: Requirements 15.3, 16.4**
 
-- [-] 3. Implement unit cap enforcement
+- [x] 3. Implement unit cap enforcement
 - [x] 3.1 Implement getVillageUnitCountWithQueue() helper (already exists, verify it works)
   - Count existing units in village_units
   - Count queued units in unit_queue
@@ -117,7 +117,7 @@
   - Reject if exceeded with ERR_CAP
   - _Requirements: 9.2_
 
-- [-] 3.4 Add per-command conquest cap validation
+- [x] 3.4 Add per-command conquest cap validation
   - Verify conquest units per command ≤ MAX_LOYALTY_UNITS_PER_COMMAND
   - Reject if exceeded with ERR_CAP
   - _Requirements: 9.3_
