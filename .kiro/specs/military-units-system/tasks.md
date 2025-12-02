@@ -377,7 +377,7 @@
   - _Requirements: 14.5_
 
 - [-] 13. Implement seasonal unit lifecycle management
-- [ ] 13.1 Create seasonal unit sunset job
+- [-] 13.1 Create seasonal unit sunset job
   - Query seasonal_units for expired events
   - Disable training for expired units
   - Convert existing units to resources or disable based on world config
