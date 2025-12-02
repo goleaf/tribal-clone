@@ -4249,6 +4249,168 @@ class BattleManager
     }
 
     /**
+     * Process conquest unit allegiance reduction
+     * @param int $targetVillageId Target village ID
+     * @param array $survivingConquestUnits Surviving nobles/standard bearers (unit composition array)
+     * @param bool $attackerWon Whether attacker won the battle
+     * @param int $attackerId Attacker user ID
+     * @param int $defenderId Defender user ID
+     * @param int $attackId Attack ID for logging
+     * @return array ['allegiance_reduced' => int, 'new_allegiance' => int, 'captured' => bool, 'reason' => string]
+     */
+    private function processConquestAllegiance(
+        int $targetVillageId,
+        array $survivingConquestUnits,
+        bool $attackerWon,
+        int $attackerId,
+        ?int $defenderId,
+        int $attackId
+    ): array {
+        // Get current loyalty/allegiance
+        $loyalty_before = $this->getVillageLoyalty($targetVillageId);
+        $loyalty_after = $loyalty_before;
+        
+        // Get loyalty cap and drop multiplier
+        $loyalty_cap = method_exists($this->villageManager, 'getEffectiveLoyaltyCap')
+            ? (int)round($this->villageManager->getEffectiveLoyaltyCap($targetVillageId))
+            : self::LOYALTY_MAX;
+        $dropMultiplier = method_exists($this->villageManager, 'getLoyaltyDropMultiplier')
+            ? $this->villageManager->getLoyaltyDropMultiplier($targetVillageId)
+            : 1.0;
+
+        // Check conquest immunity and cooldowns
+        $nowTs = time();
+        $targetConqueredAt = $this->getVillageConqueredAt($targetVillageId);
+        $captureCooldownUntil = $this->getCaptureCooldownUntil($targetVillageId);
+        if ($captureCooldownUntil === null && $targetConqueredAt !== null) {
+            $fallbackCooldown = $targetConqueredAt + (self::CONQUEST_IMMUNITY_HOURS * 3600);
+            if ($fallbackCooldown > $nowTs) {
+                $captureCooldownUntil = $fallbackCooldown;
+            }
+        }
+        $captureImmune = $captureCooldownUntil !== null && $captureCooldownUntil > $nowTs;
+
+        // Calculate loyalty floor
+        $loyalty_floor = $this->getEffectiveLoyaltyFloor(
+            $survivingConquestUnits,
+            $targetVillageId,
+            $targetConqueredAt,
+            $captureCooldownUntil
+        );
+
+        // Count surviving conquest units (nobles/standard bearers)
+        $survivingNobles = $this->countNobleUnits($survivingConquestUnits);
+        $noblePresent = $survivingNobles > 0;
+        
+        // Get defender village count for last-village protection
+        $defenderVillageCount = $defenderId ? $this->getVillageCountForUser($defenderId) : null;
+
+        $conquestReason = $noblePresent ? 'attempt' : 'no_noble_present';
+        $villageConquered = false;
+        $dropBase = 0;
+        $dropApplied = 0;
+
+        if ($noblePresent) {
+            $dropMin = defined('NOBLE_MIN_DROP') ? (int)NOBLE_MIN_DROP : self::LOYALTY_DROP_MIN;
+            $dropMax = defined('NOBLE_MAX_DROP') ? (int)NOBLE_MAX_DROP : self::LOYALTY_DROP_MAX;
+
+            if ($attackerWon) {
+                // Successful noble strike - calculate allegiance reduction
+                $dropBase = random_int($dropMin, $dropMax);
+                $dropApplied = max(1, (int)round($dropBase * $dropMultiplier));
+                $loyalty_after = max($loyalty_floor, $loyalty_before - $dropApplied);
+                $villageConquered = ($loyalty_floor === self::LOYALTY_MIN) && $loyalty_after <= self::LOYALTY_MIN;
+
+                // Check if capture is allowed
+                if ($villageConquered) {
+                    // Enforce conquest point-range gate (50%-150%) when not barbarian
+                    if ($defenderId && $defenderId > 0) {
+                        $defender_points = $this->getVillagePointsWithFallback($targetVillageId);
+                        $attacker_points = $this->getUserPoints($attackerId);
+                        if ($attacker_points > 0 && $defender_points > 0) {
+                            $ratio = $defender_points / $attacker_points;
+                            if ($ratio < 0.5 || $ratio > 1.5) {
+                                $villageConquered = false;
+                                $conquestReason = 'point_range_block';
+                            }
+                        }
+                    }
+
+                    // Last-village protection: cannot conquer defender's final village
+                    if ($villageConquered && $defenderVillageCount !== null && $defenderVillageCount <= 1) {
+                        $villageConquered = false;
+                        $conquestReason = 'last_village_protected';
+                    }
+
+                    // Capture cooldown immunity
+                    if ($villageConquered && $captureImmune) {
+                        $villageConquered = false;
+                        $conquestReason = 'capture_cooldown';
+                        // Keep loyalty above zero while immunity is active
+                        $loyalty_after = max($loyalty_after, max($loyalty_floor, 1));
+                    }
+                }
+
+                if ($villageConquered) {
+                    // Village captured - reset loyalty
+                    $loyalty_after = $this->getConqueredLoyaltyReset((float)$loyalty_cap);
+                    $conquestReason = 'captured';
+                } elseif ($dropApplied > 0 && $conquestReason === 'attempt') {
+                    $conquestReason = 'drop_applied';
+                }
+            } else {
+                // Failed attempt still chips loyalty
+                $dropBase = random_int(self::LOYALTY_FAIL_DROP_MIN, self::LOYALTY_FAIL_DROP_MAX);
+                $dropApplied = max(0, (int)round($dropBase * $dropMultiplier));
+                if ($dropApplied > 0) {
+                    $loyalty_after = max($loyalty_floor, $loyalty_before - $dropApplied);
+                    $conquestReason = 'drop_on_failed_wave';
+                } else {
+                    $conquestReason = 'attacker_lost';
+                }
+            }
+
+            // Log conquest attempt
+            $logPath = $this->conquestLogFile;
+            $logPayload = [
+                'ts' => time(),
+                'attack_id' => $attackId,
+                'target_village_id' => $targetVillageId,
+                'attacker_user_id' => $attackerId,
+                'defender_user_id' => $defenderId,
+                'attacker_won' => $attackerWon,
+                'loyalty_before' => $loyalty_before,
+                'loyalty_after' => $loyalty_after,
+                'drop' => $dropApplied,
+                'drop_base' => $dropBase,
+                'conquered' => $villageConquered,
+                'reason' => $conquestReason,
+                'defender_village_count' => $defenderVillageCount,
+                'surviving_nobles' => $survivingNobles,
+                'capture_cooldown_until' => $captureCooldownUntil
+            ];
+            @file_put_contents($logPath, json_encode($logPayload) . PHP_EOL, FILE_APPEND);
+        }
+
+        return [
+            'allegiance_reduced' => $dropApplied,
+            'new_allegiance' => $loyalty_after,
+            'captured' => $villageConquered,
+            'reason' => $conquestReason,
+            'before' => $loyalty_before,
+            'after' => $loyalty_after,
+            'drop' => $dropApplied,
+            'drop_base' => $dropBase,
+            'floor' => $loyalty_floor,
+            'cap' => $loyalty_cap,
+            'drop_multiplier' => $dropMultiplier,
+            'surviving_nobles' => $survivingNobles,
+            'capture_cooldown_until' => $captureCooldownUntil,
+            'capture_cooldown_active' => $captureImmune
+        ];
+    }
+
+    /**
      * Column existence helper (cached).
      */
     private function villageColumnExists(string $column): bool

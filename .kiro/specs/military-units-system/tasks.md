@@ -283,7 +283,7 @@
   - _Requirements: 6.4_
 
 - [-] 9. Implement conquest mechanics in BattleManager
-- [-] 9.1 Create processConquestAllegiance() method
+- [x] 9.1 Create processConquestAllegiance() method
   - Check if attacker won the battle
   - Count surviving Noble/Standard Bearer units
   - Calculate allegiance reduction (configured amount per unit)
@@ -304,7 +304,7 @@
   - **Property 14: Conquest requires victory**
   - **Validates: Requirements 7.5**
 
-- [ ] 9.2 Integrate processConquestAllegiance() into resolveBattle()
+- [-] 9.2 Integrate processConquestAllegiance() into resolveBattle()
   - Call after casualty calculation if attacker won
   - Transfer village ownership if captured
   - Include allegiance change in battle report
