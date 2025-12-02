@@ -12,6 +12,7 @@ require_once __DIR__ . '/../init.php';
 require_once __DIR__ . '/../lib/managers/BattleManager.php';
 require_once __DIR__ . '/../lib/managers/VillageManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingManager.php';
+require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php';
 
 class SiegeMechanicsIntegrationTest
 {
@@ -25,7 +26,8 @@ class SiegeMechanicsIntegrationTest
     {
         $this->conn = $conn;
         $this->villageManager = new VillageManager($conn);
-        $this->buildingManager = new BuildingManager($conn);
+        $buildingConfigManager = new BuildingConfigManager($conn);
+        $this->buildingManager = new BuildingManager($conn, $buildingConfigManager);
         $this->battleManager = new BattleManager($conn, $this->villageManager, $this->buildingManager);
     }
 
@@ -98,12 +100,12 @@ class SiegeMechanicsIntegrationTest
     }
 
     /**
-     * Test that Stone Hurlers damage buildings on successful attack
+     * Test that Stone Hurlers/Catapults damage buildings on successful attack
      * Requirement 5.4
      */
     private function testBuildingDamageWithStoneHurlers()
     {
-        echo "Test 2: Building damage with Stone Hurlers\n";
+        echo "Test 2: Building damage with Catapults\n";
         
         try {
             // Create test villages
@@ -114,13 +116,13 @@ class SiegeMechanicsIntegrationTest
             $this->buildingManager->setBuildingLevel($defenderVillageId, 'barracks', 5);
             $this->buildingManager->setBuildingLevel($defenderVillageId, 'farm', 8);
             
-            // Add stone hurlers to attacker
+            // Add catapults to attacker (using legacy name that exists in DB)
             $catapultCount = 3;
-            $this->addUnitsToVillage($attackerVillageId, 'stone_hurler', $catapultCount);
+            $this->addUnitsToVillage($attackerVillageId, 'catapult', $catapultCount);
             
             // Create attack with target building
             $attackId = $this->createTestAttack($attackerVillageId, $defenderVillageId, 'attack', 'barracks');
-            $this->addUnitsToAttack($attackId, 'stone_hurler', $catapultCount);
+            $this->addUnitsToAttack($attackId, 'catapult', $catapultCount);
             
             // Verify building damage logic exists
             $reflection = new ReflectionClass($this->battleManager);
@@ -140,7 +142,7 @@ class SiegeMechanicsIntegrationTest
             
         } catch (Exception $e) {
             $this->testResults[] = [
-                'name' => 'Building damage with Stone Hurlers',
+                'name' => 'Building damage with Catapults',
                 'passed' => false,
                 'message' => 'Error: ' . $e->getMessage()
             ];
