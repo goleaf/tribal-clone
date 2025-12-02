@@ -14,7 +14,7 @@
   - Add feature flags (FEATURE_CONQUEST_UNIT_ENABLED, etc.)
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
 
-- [-] 3. Implement AllegianceService core calculations
+- [x] 3. Implement AllegianceService core calculations
   - [x] 3.1 Implement allegiance drop calculation with wall reduction
     - Calculate base drop with random band per Envoy
     - Apply wall level reduction factor
@@ -40,7 +40,7 @@
     - **Property 13: Regeneration pause during anti-snipe**
     - **Validates: Requirements 4.1, 4.2, 4.3, 4.4**
 
-  - [ ] 3.5 Implement anti-snipe floor enforcement
+  - [x] 3.5 Implement anti-snipe floor enforcement
     - Check if anti-snipe period is active
     - Enforce minimum allegiance floor
     - Handle floor expiry logic
@@ -51,7 +51,7 @@
     - **Property 17: Floor expiry**
     - **Validates: Requirements 5.3, 5.4**
 
-  - [ ] 3.7 Implement capture detection logic
+  - [x] 3.7 Implement capture detection logic
     - Check if allegiance <= 0 (allegiance mode) or control >= 100 with uptime complete (control mode)
     - Respect anti-snipe and cooldown states
     - Return capture flag and metadata
