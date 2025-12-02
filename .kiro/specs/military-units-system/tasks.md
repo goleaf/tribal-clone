@@ -197,7 +197,7 @@
 - [ ] 6. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [-] 7. Implement RPS combat modifiers in BattleManager
+- [x] 7. Implement RPS combat modifiers in BattleManager
 - [x] 7.1 Create applyRPSModifiers() method
   - Load unit categories for attacker and defender
   - Apply cavalry vs ranged bonus in open field
@@ -230,7 +230,7 @@
   - **Property 4: Ranged wall bonus**
   - **Validates: Requirements 2.3, 2.4**
 
-- [ ] 8. Implement support unit mechanics in BattleManager
+- [-] 8. Implement support unit mechanics in BattleManager
 - [ ] 8.1 Create calculateBannerAura() method
   - Scan defender units for Banner Guards
   - Identify highest aura tier present

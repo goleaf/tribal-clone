@@ -19,7 +19,12 @@ class RPSModifiersIntegrationTest
     {
         $this->conn = $conn;
         $villageManager = new VillageManager($conn);
-        $buildingManager = new BuildingManager($conn);
+        
+        // Initialize BuildingConfigManager for BuildingManager
+        require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php';
+        $buildingConfigManager = new BuildingConfigManager($conn);
+        $buildingManager = new BuildingManager($conn, $buildingConfigManager);
+        
         $this->battleManager = new BattleManager($conn, $villageManager, $buildingManager);
     }
 
