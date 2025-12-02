@@ -613,11 +613,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (details.loyalty) {
                 const l = details.loyalty;
                 const change = l.drop ? ` (${l.drop > 0 ? '-' : ''}${l.drop})` : '';
-                const conquered = l.conquered ? '<strong>Village conquered!</strong>' : '';
+                const conquered = l.conquered ? '<strong style="color: #c44;">Village conquered!</strong>' : '';
+                let conquestInfo = '';
+                if (l.conquest_units_count && l.conquest_units_count > 0) {
+                    conquestInfo = `<p style="font-size: 12px; color: #666;">${l.conquest_units_count} conquest unit${l.conquest_units_count > 1 ? 's' : ''} survived</p>`;
+                }
                 detailsHtml += `
                     <div class="battle-loyalty">
-                        <h4>Loyalty</h4>
-                        <p>Before: ${l.before ?? '?'} → After: ${l.after ?? '?'}${change} ${conquered}</p>
+                        <h4>Conquest & Allegiance</h4>
+                        <p>Allegiance: ${l.before ?? '?'} → ${l.after ?? '?'}${change} ${conquered}</p>
+                        ${conquestInfo}
                     </div>
                 `;
             }
