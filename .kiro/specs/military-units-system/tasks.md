@@ -130,7 +130,7 @@
   - **Property 28: Concurrent cap enforcement**
   - **Validates: Requirements 17.4**
 
-- [ ] 4. Implement validation and error handling
+- [-] 4. Implement validation and error handling
 - [ ] 4.1 Add input validation to recruit.php
   - Validate count is positive integer
   - Validate unit_id exists
