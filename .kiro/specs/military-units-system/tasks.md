@@ -112,12 +112,12 @@
   - Reject if exceeded with ERR_CAP
   - _Requirements: 9.1_
 
-- [-] 3.3 Add per-account elite cap check to recruitUnits()
+- [x] 3.3 Add per-account elite cap check to recruitUnits()
   - Call checkEliteUnitCap() for elite units
   - Reject if exceeded with ERR_CAP
   - _Requirements: 9.2_
 
-- [ ] 3.4 Add per-command conquest cap validation
+- [-] 3.4 Add per-command conquest cap validation
   - Verify conquest units per command ≤ MAX_LOYALTY_UNITS_PER_COMMAND
   - Reject if exceeded with ERR_CAP
   - _Requirements: 9.3_
