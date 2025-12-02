@@ -99,7 +99,7 @@
   - **Property 23: Conquest resource deduction**
   - **Validates: Requirements 15.3, 16.4**
 
-- [ ] 3. Implement unit cap enforcement
+- [-] 3. Implement unit cap enforcement
 - [ ] 3.1 Implement getVillageUnitCountWithQueue() helper (already exists, verify it works)
   - Count existing units in village_units
   - Count queued units in unit_queue
