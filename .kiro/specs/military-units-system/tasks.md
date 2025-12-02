@@ -390,8 +390,8 @@
   - Log activation events
   - _Requirements: 10.1_
 
-- [-] 14. Implement data validation and diff tooling
-- [ ] 14.1 Create unit data validation script
+- [x] 14. Implement data validation and diff tooling
+- [x] 14.1 Create unit data validation script
   - Validate all required fields are present and positive
   - Validate RPS relationships (pike def_cav > pike def_inf, etc.)
   - Validate world overrides maintain balance constraints
@@ -402,7 +402,7 @@
   - **Property 21: RPS relationship validation**
   - **Validates: Requirements 13.2, 13.5**
 
-- [ ] 14.3 Create unit data diff generator
+- [x] 14.3 Create unit data diff generator
   - Compare current units.json with previous version
   - Generate human-readable diff showing stat changes
   - Output diff for changelog documentation
