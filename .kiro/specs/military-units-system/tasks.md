@@ -390,7 +390,7 @@
   - Log activation events
   - _Requirements: 10.1_
 
-- [ ] 14. Implement data validation and diff tooling
+- [-] 14. Implement data validation and diff tooling
 - [ ] 14.1 Create unit data validation script
   - Validate all required fields are present and positive
   - Validate RPS relationships (pike def_cav > pike def_inf, etc.)
