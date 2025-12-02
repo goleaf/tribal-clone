@@ -231,7 +231,7 @@
   - **Validates: Requirements 2.3, 2.4**
 
 - [-] 8. Implement support unit mechanics in BattleManager
-- [-] 8.1 Create calculateBannerAura() method
+- [x] 8.1 Create calculateBannerAura() method
   - Scan defender units for Banner Guards
   - Identify highest aura tier present
   - Return aura multiplier and resolve bonus
@@ -242,13 +242,13 @@
   - **Property 10: Banner aura application**
   - **Validates: Requirements 6.3, 6.5**
 
-- [ ] 8.3 Integrate calculateBannerAura() into resolveBattle()
+- [-] 8.3 Integrate calculateBannerAura() into resolveBattle()
   - Call before casualty calculation
   - Apply aura multiplier to defender defense
   - Include aura details in battle report
   - _Requirements: 6.3, 6.5_
 
-- [ ] 8.4 Create calculateMantletProtection() method
+- [x] 8.4 Create calculateMantletProtection() method
   - Scan attacker units for Mantlets
   - Calculate ranged damage reduction percentage
   - Return protection multiplier (0.0 to 1.0)
@@ -265,7 +265,7 @@
   - Include mantlet effect in battle report
   - _Requirements: 14.2, 14.3, 14.4, 14.5_
 
-- [ ] 8.7 Create applyHealerRecovery() method
+- [x] 8.7 Create applyHealerRecovery() method
   - Scan survivor units for War Healers
   - Calculate recovery amount based on healer count and losses
   - Cap recovery at world healer_recovery_cap percentage

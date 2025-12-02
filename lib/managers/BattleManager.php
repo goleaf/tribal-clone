@@ -5073,4 +5073,165 @@ class BattleManager
         return $unitsData;
     }
 
+    /**
+     * Calculate Banner Guard aura effects for defending forces.
+     * Scans defender units for Banner Guards and identifies the highest aura tier present.
+     * Only the highest tier aura applies - multiple Banner Guards do not stack.
+     * 
+     * @param array $defenderUnits Defender unit composition with counts
+     * @return array ['def_multiplier' => float, 'resolve_bonus' => int, 'tier' => int, 'applied' => bool]
+     */
+    private function calculateBannerAura(array $defenderUnits): array
+    {
+        $highestTier = 0;
+        $highestMultiplier = 1.0;
+        $highestResolveBonus = 0;
+        $bannerCount = 0;
+        
+        $unitsData = $this->loadUnitsJsonData();
+        
+        foreach ($defenderUnits as $unit) {
+            $count = (int)($unit['count'] ?? 0);
+            if ($count <= 0) {
+                continue;
+            }
+            
+            $internalName = strtolower($unit['internal_name'] ?? '');
+            
+            // Check if this unit has aura abilities
+            if (isset($unitsData[$internalName])) {
+                $unitData = $unitsData[$internalName];
+                $specialAbilities = $unitData['special_abilities'] ?? [];
+                
+                // Check for aura abilities (e.g., "aura_defense_tier_1")
+                foreach ($specialAbilities as $ability) {
+                    if (strpos($ability, 'aura_defense_tier_') === 0) {
+                        $bannerCount += $count;
+                        
+                        // Extract tier from ability name
+                        $tier = (int)str_replace('aura_defense_tier_', '', $ability);
+                        
+                        if ($tier > $highestTier && isset($unitData['aura_config'])) {
+                            $highestTier = $tier;
+                            $auraConfig = $unitData['aura_config'];
+                            $highestMultiplier = (float)($auraConfig['def_multiplier'] ?? 1.0);
+                            $highestResolveBonus = (int)($auraConfig['resolve_bonus'] ?? 0);
+                        }
+                    }
+                }
+            }
+        }
+        
+        return [
+            'def_multiplier' => $highestMultiplier,
+            'resolve_bonus' => $highestResolveBonus,
+            'tier' => $highestTier,
+            'applied' => $highestTier > 0,
+            'banner_count' => $bannerCount
+        ];
+    }
+
+    /**
+     * Calculate Mantlet protection for siege units.
+     * Mantlets provide ranged damage reduction to escorted siege units.
+     * Protection is removed if mantlets are killed during battle.
+     * 
+     * @param array $attackerUnits Attacker unit composition with counts
+     * @return float Ranged damage reduction multiplier (0.0 to 1.0, where 0.4 = 40% reduction)
+     */
+    private function calculateMantletProtection(array $attackerUnits): float
+    {
+        $mantletCount = 0;
+        $siegeCount = 0;
+        
+        foreach ($attackerUnits as $unit) {
+            $count = (int)($unit['count'] ?? 0);
+            if ($count <= 0) {
+                continue;
+            }
+            
+            $internalName = strtolower($unit['internal_name'] ?? '');
+            $category = strtolower($unit['category'] ?? '');
+            
+            // Count mantlets
+            if ($internalName === 'mantlet_crew' || strpos($internalName, 'mantlet') !== false) {
+                $mantletCount += $count;
+            }
+            
+            // Count siege units that can be protected
+            if ($category === 'siege' && $internalName !== 'mantlet_crew') {
+                $siegeCount += $count;
+            }
+        }
+        
+        // Mantlets only provide protection if there are siege units to protect
+        if ($mantletCount > 0 && $siegeCount > 0) {
+            // Return the configured reduction percentage
+            return self::MANTLET_RANGED_REDUCTION;
+        }
+        
+        return 0.0;
+    }
+
+    /**
+     * Apply War Healer recovery after battle.
+     * Healers recover a percentage of lost troops based on healer count and world settings.
+     * Recovery is capped at the world's healer_recovery_cap percentage.
+     * 
+     * @param array $losses Unit losses from battle (unit_type_id => ['lost_count' => int, ...])
+     * @param array $survivors Surviving units (unit_type_id => ['count' => int, ...])
+     * @param int $worldId World ID for configuration lookup
+     * @return array Recovered units by type ['unit_type_id' => recovered_count, ...]
+     */
+    private function applyHealerRecovery(array $losses, array $survivors, int $worldId): array
+    {
+        $recovered = [];
+        
+        // Count surviving healers
+        $healerCount = 0;
+        foreach ($survivors as $unit) {
+            $internalName = strtolower($unit['internal_name'] ?? '');
+            if ($internalName === 'war_healer' || strpos($internalName, 'healer') !== false) {
+                $healerCount += (int)($unit['count'] ?? 0);
+            }
+        }
+        
+        // No healers = no recovery
+        if ($healerCount === 0) {
+            return $recovered;
+        }
+        
+        // Get world healer recovery cap
+        $recoveryCap = 0.15; // Default 15%
+        
+        // Load from world settings if available
+        if (!class_exists('WorldManager')) {
+            require_once __DIR__ . '/WorldManager.php';
+        }
+        if (class_exists('WorldManager')) {
+            $wm = new WorldManager($this->conn);
+            if (method_exists($wm, 'getHealerRecoveryCap')) {
+                $recoveryCap = (float)$wm->getHealerRecoveryCap($worldId);
+            }
+        }
+        
+        // Calculate recovery for each unit type
+        foreach ($losses as $unitTypeId => $lossData) {
+            $lostCount = (int)($lossData['lost_count'] ?? 0);
+            if ($lostCount <= 0) {
+                continue;
+            }
+            
+            // Base recovery: 5% per healer, capped at world setting
+            $recoveryRate = min($recoveryCap, 0.05 * $healerCount);
+            $recoveredCount = (int)floor($lostCount * $recoveryRate);
+            
+            if ($recoveredCount > 0) {
+                $recovered[$unitTypeId] = $recoveredCount;
+            }
+        }
+        
+        return $recovered;
+    }
+
 }
