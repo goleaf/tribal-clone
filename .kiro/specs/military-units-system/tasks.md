@@ -332,8 +332,8 @@
   - **Property 6: Scout intel revelation**
   - **Validates: Requirements 4.3, 4.4**
 
-- [-] 11. Implement siege mechanics in BattleManager
-- [ ] 11.1 Extend wall reduction logic for Battering Rams
+- [x] 11. Implement siege mechanics in BattleManager
+- [x] 11.1 Extend wall reduction logic for Battering Rams
   - Count surviving rams after battle
   - Calculate wall level reduction based on ram count
   - Update village wall level in database
@@ -344,7 +344,7 @@
   - **Property 8: Siege wall reduction**
   - **Validates: Requirements 5.3**
 
-- [ ] 11.3 Extend building damage logic for Stone Hurlers
+- [x] 11.3 Extend building damage logic for Stone Hurlers
   - Count surviving catapults after battle
   - Damage targeted building or select random if none specified
   - Update building level in database

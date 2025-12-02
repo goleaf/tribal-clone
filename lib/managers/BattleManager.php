@@ -1750,18 +1750,23 @@ class BattleManager
         }
 
         // --- BUILDING DAMAGE (CATAPULTS) ---
+        // Requirement 5.4: Count surviving catapults, damage targeted building or random, update database
         $building_damage_report = null;
         if ($attacker_win && !$isRaid) {
             $surviving_catapults = 0;
             foreach ($remaining_attacking_units as $unit_type_id => $count) {
-                if (isset($attacking_units[$unit_type_id]) && $attacking_units[$unit_type_id]['internal_name'] === 'catapult') {
+                $internal = $attacking_units[$unit_type_id]['internal_name'] ?? '';
+                // Support both legacy 'catapult' and new 'stone_hurler' internal names
+                if ($internal === 'catapult' || $internal === 'stone_hurler') {
                     $surviving_catapults += $count;
                 }
             }
 
             if ($surviving_catapults > 0) {
                 $target_building_name = $attack['target_building'];
+                $was_targeted = !empty($target_building_name);
 
+                // If no target specified, select random building with level > 0
                 if (empty($target_building_name)) {
                     $village_buildings = $this->buildingManager->getVillageBuildingsLevels($attack['target_village_id']);
                     $possible_targets = array_filter($village_buildings, function($level) {
@@ -1775,14 +1780,18 @@ class BattleManager
                 if (!empty($target_building_name)) {
                     $initial_level = $this->buildingManager->getBuildingLevel($attack['target_village_id'], $target_building_name);
                     if ($initial_level > 0) {
+                        // Base accuracy: 25%, +25% if building was specifically targeted
                         $accuracy_factor = 0.25;
-                        if (!empty($attack['target_building'])) {
+                        if ($was_targeted) {
                             $accuracy_factor += 0.25;
                         }
                         $accuracy_factor = min(1.0, $accuracy_factor);
 
+                        // Roll for accuracy - if miss, hit random building instead
                         $hitRoll = $this->randomFloat(0, 1);
-                        if ($hitRoll > $accuracy_factor) {
+                        $hit_intended_target = $hitRoll <= $accuracy_factor;
+                        
+                        if (!$hit_intended_target) {
                             $village_buildings = $this->buildingManager->getVillageBuildingsLevels($attack['target_village_id']);
                             $possible_targets = array_filter($village_buildings, fn($level) => $level > 0);
                             if (!empty($possible_targets)) {
@@ -1791,6 +1800,7 @@ class BattleManager
                             }
                         }
 
+                        // Calculate damage with research bonus
                         $catapult_bonus = 1 + (($attackerResearch['improved_catapult'] ?? 0) * self::RESEARCH_BONUS_PER_LEVEL);
                         $damage_value = $surviving_catapults * 2 * $accuracy_factor * $catapult_bonus;
                         $levels_destroyed = (int)floor($damage_value);
@@ -1800,7 +1810,11 @@ class BattleManager
                             $building_damage_report = [
                                 'building_name' => $target_building_name,
                                 'initial_level' => $initial_level,
-                                'final_level' => $final_level
+                                'final_level' => $final_level,
+                                'catapults_survived' => $surviving_catapults,
+                                'levels_destroyed' => $levels_destroyed,
+                                'was_targeted' => $was_targeted,
+                                'hit_intended_target' => $hit_intended_target
                             ];
                         }
                     }
