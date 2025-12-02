@@ -311,7 +311,7 @@
   - Log conquest attempts to conquest_attempts.log
   - _Requirements: 7.3, 7.4, 7.5_
 
-- [-] 10. Implement scout intel mechanics in BattleManager
+- [x] 10. Implement scout intel mechanics in BattleManager
 - [x] 10.1 Extend scout combat resolution
   - Compare attacking scouts vs defending scouts
   - Kill attacking scouts if outnumbered
