@@ -546,6 +546,55 @@ class UnitManager
             ];
         }
 
+        // Resource availability validation
+        $stmtResources = $this->conn->prepare("SELECT wood, clay, iron FROM villages WHERE id = ? LIMIT 1");
+        if (!$stmtResources) {
+            return ['success' => false, 'error' => 'Database error.', 'code' => 'ERR_SERVER'];
+        }
+        $stmtResources->bind_param("i", $village_id);
+        $stmtResources->execute();
+        $resourceRow = $stmtResources->get_result()->fetch_assoc();
+        $stmtResources->close();
+        
+        if (!$resourceRow) {
+            return ['success' => false, 'error' => 'Village not found.', 'code' => 'ERR_SERVER'];
+        }
+        
+        $wood_cost = (int)($unit['cost_wood'] ?? 0) * $count;
+        $clay_cost = (int)($unit['cost_clay'] ?? 0) * $count;
+        $iron_cost = (int)($unit['cost_iron'] ?? 0) * $count;
+        
+        $wood_available = (int)($resourceRow['wood'] ?? 0);
+        $clay_available = (int)($resourceRow['clay'] ?? 0);
+        $iron_available = (int)($resourceRow['iron'] ?? 0);
+        
+        $wood_missing = max(0, $wood_cost - $wood_available);
+        $clay_missing = max(0, $clay_cost - $clay_available);
+        $iron_missing = max(0, $iron_cost - $iron_available);
+        
+        if ($wood_missing > 0 || $clay_missing > 0 || $iron_missing > 0) {
+            return [
+                'success' => false,
+                'error' => 'Not enough resources to recruit these units.',
+                'code' => 'ERR_RES',
+                'missing' => [
+                    'wood' => $wood_missing,
+                    'clay' => $clay_missing,
+                    'iron' => $iron_missing
+                ],
+                'required' => [
+                    'wood' => $wood_cost,
+                    'clay' => $clay_cost,
+                    'iron' => $iron_cost
+                ],
+                'available' => [
+                    'wood' => $wood_available,
+                    'clay' => $clay_available,
+                    'iron' => $iron_available
+                ]
+            ];
+        }
+
         // Calculate training time
         $time_per_unit = $this->calculateRecruitmentTime($unit_type_id, $building_level);
         $total_time = $time_per_unit * $count;

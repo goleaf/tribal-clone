@@ -141,7 +141,7 @@
   - **Property 25: Input validation**
   - **Validates: Requirements 17.1**
 
-- [-] 4.3 Add population capacity validation to recruitUnits()
+- [x] 4.3 Add population capacity validation to recruitUnits()
   - Calculate total population (current + queued + requested)
   - Compare against farm capacity
   - Return ERR_POP if exceeded
@@ -151,7 +151,7 @@
   - **Property 26: Population capacity enforcement**
   - **Validates: Requirements 17.2**
 
-- [ ] 4.5 Add resource availability validation to recruitUnits()
+- [x] 4.5 Add resource availability validation to recruitUnits()
   - Check wood, clay, iron availability
   - Return ERR_RES with missing amounts if insufficient
   - _Requirements: 17.3_
@@ -160,7 +160,7 @@
   - **Property 27: Resource availability enforcement**
   - **Validates: Requirements 17.3**
 
-- [ ] 4.7 Add feature flag validation to recruit.php
+- [-] 4.7 Add feature flag validation to recruit.php
   - Check world feature flags for conquest/seasonal/healer units
   - Return ERR_FEATURE_DISABLED if disabled
   - _Requirements: 15.5_
