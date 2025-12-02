@@ -47,11 +47,11 @@ if (!$userInsert) {
     exit(1);
 }
 
-// Create test village with resources
+// Create test village with resources (conquest units are very expensive)
 $insertResult = $conn->query("INSERT INTO villages (id, user_id, world_id, name, x_coord, y_coord, 
               wood, clay, iron, farm_capacity, noble_coins, standards) 
               VALUES ($testVillageId, $testUserId, $testWorldId, 'Test Village', 500, 500, 
-              10000, 10000, 10000, 1000, 5, 3)");
+              100000, 100000, 100000, 10000, 5, 3)");
 
 if (!$insertResult) {
     echo "ERROR: Failed to create test village: " . $conn->error . "\n";
