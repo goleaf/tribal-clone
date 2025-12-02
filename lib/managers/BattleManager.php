@@ -1724,21 +1724,27 @@ class BattleManager
         }
 
         // --- WALL DAMAGE (RAMS) ---
+        // Requirement 5.3: Count surviving rams after battle, calculate wall level reduction, update database
         $wall_damage_report = ['initial_level' => $wall_level, 'final_level' => $wall_level];
         if ($attacker_win && !$isRaid) {
             $surviving_rams = 0;
             foreach ($remaining_attacking_units as $unit_type_id => $count) {
-                if (isset($attacking_units[$unit_type_id]) && $attacking_units[$unit_type_id]['internal_name'] === 'ram') {
+                $internal = $attacking_units[$unit_type_id]['internal_name'] ?? '';
+                // Support both legacy 'ram' and new 'battering_ram' internal names
+                if ($internal === 'ram' || $internal === 'battering_ram') {
                     $surviving_rams += $count;
                 }
             }
 
             if ($surviving_rams > 0 && $wall_level > 0) {
+                // Calculate wall damage: each ram contributes 2 damage, wall level provides 0.5 resistance
                 $damage_value = ($surviving_rams * 2) - ($wall_level * 0.5);
                 $levels_destroyed = (int)floor(max(0, $damage_value));
                 if ($levels_destroyed > 0) {
                     $new_wall_level = max(0, $wall_level - min($levels_destroyed, $wall_level));
                     $wall_damage_report['final_level'] = $new_wall_level;
+                    $wall_damage_report['rams_survived'] = $surviving_rams;
+                    $wall_damage_report['levels_destroyed'] = $levels_destroyed;
                 }
             }
         }
