@@ -355,7 +355,7 @@
   - **Property 9: Catapult building damage**
   - **Validates: Requirements 5.4**
 
-- [ ] 12. Implement UI and display logic
+- [-] 12. Implement UI and display logic
 - [ ] 12.1 Update recruitment panel to show unit details
   - Display attack, defense values by type, speed, carry, population
   - Display resource costs, training time, prerequisites
