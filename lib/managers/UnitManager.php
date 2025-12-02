@@ -442,7 +442,8 @@ class UnitManager
         if (!isset($this->unit_types_cache[$unit_type_id])) {
             return [
                 'success' => false,
-                'error' => 'Unit does not exist.'
+                'error' => 'Unit does not exist.',
+                'code' => 'ERR_INPUT'
             ];
         }
 
