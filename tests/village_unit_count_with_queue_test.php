@@ -8,7 +8,8 @@ require_once __DIR__ . '/../init.php';
 require_once __DIR__ . '/../lib/managers/UnitManager.php';
 
 // Test setup
-$db = Database::getInstance()->getConnection();
+global $conn;
+$db = $conn;
 
 // Clean up test data
 $db->query("DELETE FROM villages WHERE name LIKE 'Test Village Cap%'");

@@ -759,8 +759,14 @@ class UnitManager
 
     /**
      * Get total count of specified unit internals in village (existing + queued).
+     * 
+     * @param int $villageId Village ID
+     * @param array $internalNames Array of unit internal names to count
+     * @return int Total count of units (existing + queued)
+     * 
+     * Requirements: 9.5
      */
-    private function getVillageUnitCountWithQueue(int $villageId, array $internalNames): int
+    public function getVillageUnitCountWithQueue(int $villageId, array $internalNames): int
     {
         if (empty($internalNames)) {
             return 0;
