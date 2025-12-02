@@ -6,13 +6,20 @@ require_once __DIR__ . '/../../lib/managers/BuildingManager.php';
 require_once __DIR__ . '/../../lib/managers/BuildingConfigManager.php';
 require_once __DIR__ . '/../../lib/managers/ResourceManager.php';
 
-function logRecruitTelemetry(int $userId, int $villageId, int $unitId, int $count, string $status, string $code, string $message): void
+function logRecruitTelemetry(int $userId, int $villageId, int $unitId, int $count, string $status, string $code, string $message, int $worldId = null): void
 {
     $logFile = __DIR__ . '/../../logs/recruit_telemetry.log';
+    
+    // Get world ID if not provided
+    if ($worldId === null) {
+        $worldId = defined('CURRENT_WORLD_ID') ? (int)CURRENT_WORLD_ID : 1;
+    }
+    
     $entry = [
         'ts' => date('c'),
         'user_id' => $userId,
         'village_id' => $villageId,
+        'world_id' => $worldId,
         'unit_id' => $unitId,
         'count' => $count,
         'status' => $status,

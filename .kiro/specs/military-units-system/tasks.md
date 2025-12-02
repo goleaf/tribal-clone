@@ -169,8 +169,8 @@
   - **Property 24: Feature flag enforcement**
   - **Validates: Requirements 15.5**
 
-- [ ] 5. Implement telemetry and logging
-- [ ] 5.1 Extend logRecruitTelemetry() in recruit.php
+- [-] 5. Implement telemetry and logging
+- [-] 5.1 Extend logRecruitTelemetry() in recruit.php
   - Log all training requests (success and failure)
   - Include unit type, count, world ID, player ID, outcome, error code
   - Write to logs/recruit_telemetry.log
