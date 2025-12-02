@@ -214,13 +214,13 @@
   - **Property 15: Ranger anti-siege bonus**
   - **Validates: Requirements 8.4**
 
-- [-] 7.4 Integrate applyRPSModifiers() into resolveBattle()
+- [x] 7.4 Integrate applyRPSModifiers() into resolveBattle()
   - Call after loading unit compositions
   - Apply before casualty calculation
   - Include modifiers in battle report
   - _Requirements: 1.4, 3.3, 3.4, 8.4_
 
-- [ ] 7.5 Add ranged wall bonus calculation
+- [x] 7.5 Add ranged wall bonus calculation
   - Check if defender has ranged units and wall > 0
   - Apply bonus defense multiplier against infantry
   - Reduce effectiveness in open field (wall = 0)

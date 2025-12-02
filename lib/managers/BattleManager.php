@@ -1492,6 +1492,13 @@ class BattleManager
         $faith_bonus = $this->calculateFaithDefenseBonus($attack['target_village_id']);
         $defense_multiplier = $wall_bonus * $faith_bonus * $defense_random;
 
+        // --- RPS COMBAT MODIFIERS ---
+        $rpsContext = [
+            'wall_level' => $wall_level,
+            'terrain' => 'open_field' // Can be extended with terrain system later
+        ];
+        $rpsModifiers = $this->applyRPSModifiers($attacking_units, $defending_units, $rpsContext);
+
         // --- PHASED COMBAT (Infantry -> Cavalry -> Archer) ---
         $initial_attacker_counts = [];
         $initial_defender_counts = [];
@@ -2030,7 +2037,8 @@ class BattleManager
                     'mantlet' => [
                         'applied' => $mantletReductionApplied > 0,
                         'reduction_percent' => $mantletReductionApplied > 0 ? round($mantletReductionApplied * 100, 1) : 0
-                    ]
+                    ],
+                    'rps_modifiers' => $rpsModifiers
                 ],
                 'attack_power' => $attackPowerFinal,
                 'defense_power' => $defensePowerFinal,
