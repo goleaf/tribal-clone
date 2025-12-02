@@ -10,6 +10,7 @@ define('DB_DRIVER', 'sqlite');
 require_once __DIR__ . '/../lib/Database.php';
 require_once __DIR__ . '/../lib/functions.php';
 require_once __DIR__ . '/../lib/managers/VillageManager.php';
+require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingManager.php';
 require_once __DIR__ . '/../lib/managers/BattleManager.php';
 
@@ -91,7 +92,8 @@ $conn->query("INSERT INTO unit_types (id, internal_name, name, attack, defense, 
 
 // Create managers
 $vm = new VillageManager($conn);
-$bm = new BuildingManager($conn);
+$buildingConfigManager = new BuildingConfigManager($conn);
+$bm = new BuildingManager($conn, $buildingConfigManager);
 $battleManager = new BattleManager($conn, $vm, $bm);
 
 echo "=== Conquest Allegiance Integration Test ===\n\n";
