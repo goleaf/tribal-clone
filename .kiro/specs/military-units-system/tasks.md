@@ -411,8 +411,8 @@
 - [ ] 15. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 16. Create configuration files and documentation
-- [ ] 16.1 Create config/rps_modifiers.php
+- [-] 16. Create configuration files and documentation
+- [-] 16.1 Create config/rps_modifiers.php
   - Define RPS multiplier constants (CAV_VS_RANGED_MULT, PIKE_VS_CAV_MULT, etc.)
   - Define context rules (wall level, terrain)
   - Document each modifier
