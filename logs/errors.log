@@ -381,3 +381,9 @@ Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/t
 Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/village_unit_count_with_queue_test.php(72): assert(false, 'Test 2 Failed: ...')
 #1 {main}
 --------------------------------------------------------------------------------
+[2025-12-02 09:49:46] ERROR: require_once(../../init.php): Failed to open stream: No such file or directory in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/ajax/units/recruit.php line 2
+--------------------------------------------------------------------------------
+[2025-12-02 09:49:46] EXCEPTION: Failed opening required '../../init.php' (include_path='.:') in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/ajax/units/recruit.php line 2
+Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/telemetry_logging_test.php(30): require_once()
+#1 {main}
+--------------------------------------------------------------------------------
