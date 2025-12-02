@@ -101,8 +101,8 @@ if ($nobleId) {
     $row = $result->fetch_assoc();
     $initialCoins = (int)$row['noble_coins'];
     
-    // Attempt to train 2 nobles
-    $response = $unitManager->recruitUnits($testVillageId, $nobleId, 2, 10);
+    // Attempt to train 1 noble (per-command cap is 1)
+    $response = $unitManager->recruitUnits($testVillageId, $nobleId, 1, 10);
     
     if ($response['success']) {
         // Verify coins were deducted
@@ -110,11 +110,11 @@ if ($nobleId) {
         $row = $result->fetch_assoc();
         $finalCoins = (int)$row['noble_coins'];
         
-        if ($finalCoins === ($initialCoins - 2)) {
+        if ($finalCoins === ($initialCoins - 1)) {
             echo "  ✓ PASS: Noble coins deducted correctly ($initialCoins -> $finalCoins)\n";
             $testsPassed++;
         } else {
-            echo "  ✗ FAIL: Noble coins not deducted correctly (expected " . ($initialCoins - 2) . ", got $finalCoins)\n";
+            echo "  ✗ FAIL: Noble coins not deducted correctly (expected " . ($initialCoins - 1) . ", got $finalCoins)\n";
             $testsFailed++;
         }
         
@@ -131,11 +131,11 @@ if ($nobleId) {
 if ($nobleId) {
     echo "Test 2: Train noble with insufficient noble_coins\n";
     
-    // Set coins to 1
-    $conn->query("UPDATE villages SET noble_coins = 1 WHERE id = $testVillageId");
+    // Set coins to 0
+    $conn->query("UPDATE villages SET noble_coins = 0 WHERE id = $testVillageId");
     
-    // Attempt to train 2 nobles (should fail)
-    $response = $unitManager->recruitUnits($testVillageId, $nobleId, 2, 10);
+    // Attempt to train 1 noble (should fail due to insufficient coins)
+    $response = $unitManager->recruitUnits($testVillageId, $nobleId, 1, 10);
     
     if (!$response['success'] && isset($response['code']) && $response['code'] === 'ERR_RES') {
         echo "  ✓ PASS: Training rejected with ERR_RES\n";
@@ -152,7 +152,7 @@ if ($nobleId) {
     $row = $result->fetch_assoc();
     $coins = (int)$row['noble_coins'];
     
-    if ($coins === 1) {
+    if ($coins === 0) {
         echo "  ✓ PASS: Noble coins not deducted on failure\n";
         $testsPassed++;
     } else {
