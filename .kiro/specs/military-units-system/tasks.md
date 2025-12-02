@@ -231,7 +231,7 @@
   - **Validates: Requirements 2.3, 2.4**
 
 - [-] 8. Implement support unit mechanics in BattleManager
-- [ ] 8.1 Create calculateBannerAura() method
+- [-] 8.1 Create calculateBannerAura() method
   - Scan defender units for Banner Guards
   - Identify highest aura tier present
   - Return aura multiplier and resolve bonus
