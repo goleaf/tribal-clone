@@ -2230,32 +2230,74 @@ class BattleManager
         $total_defender_survivors = $defender_scout_total - $total_defender_losses;
 
         // Prepare intel if successful
+        // Requirement 4.3, 4.4: Different intel levels based on scout type
         $intel = [];
-        if ($success) {
-            $stmt_res = $this->conn->prepare("SELECT wood, clay, iron FROM villages WHERE id = ?");
-            $stmt_res->bind_param("i", $attack['target_village_id']);
-            $stmt_res->execute();
-            $resources = $stmt_res->get_result()->fetch_assoc();
-            $stmt_res->close();
-            $intel['resources'] = $resources ?: ['wood' => 0, 'clay' => 0, 'iron' => 0];
-
-            $intel_level = $attacker_spy_level + ($attacker_survivors >= 5 ? 2 : ($attacker_survivors >= 2 ? 1 : 0));
-
-            if ($intel_level >= 2) {
-                $intel['buildings'] = $this->getBuildingSnapshot($attack['target_village_id']);
+        $has_pathfinder = false;
+        $has_shadow_rider = false;
+        
+        if ($success && $total_attacker_survivors > 0) {
+            // Check which scout types survived
+            foreach ($attacker_scout_survivors as $unit_type_id => $survivor_count) {
+                if ($survivor_count > 0) {
+                    $internal = $attacker_scouts[$unit_type_id]['internal_name'];
+                    if ($internal === 'pathfinder' || $internal === 'spy') {
+                        $has_pathfinder = true;
+                    }
+                    if ($internal === 'shadow_rider') {
+                        $has_shadow_rider = true;
+                    }
+                }
             }
-            if ($intel_level >= 3) {
+            
+            // Requirement 4.3: Pathfinder reveals troop counts and resources
+            if ($has_pathfinder) {
+                $stmt_res = $this->conn->prepare("SELECT wood, clay, iron FROM villages WHERE id = ?");
+                $stmt_res->bind_param("i", $attack['target_village_id']);
+                $stmt_res->execute();
+                $resources = $stmt_res->get_result()->fetch_assoc();
+                $stmt_res->close();
+                $intel['resources'] = $resources ?: ['wood' => 0, 'clay' => 0, 'iron' => 0];
+                
+                // Troop counts
                 $intel['units'] = $this->getVillageUnitSnapshot($attack['target_village_id']);
             }
-            if ($intel_level >= 4) {
-                $intel['research'] = $this->getResearchSnapshot($attack['target_village_id']);
+            
+            // Requirement 4.4: Shadow Rider reveals building levels and queues
+            if ($has_shadow_rider) {
+                $intel['buildings'] = $this->getBuildingSnapshot($attack['target_village_id']);
+                $intel['building_queue'] = $this->getBuildingQueueSnapshot($attack['target_village_id']);
+                $intel['unit_queue'] = $this->getUnitQueueSnapshot($attack['target_village_id']);
+            }
+            
+            // Legacy spy intel levels (for backward compatibility)
+            if (!$has_pathfinder && !$has_shadow_rider) {
+                $stmt_res = $this->conn->prepare("SELECT wood, clay, iron FROM villages WHERE id = ?");
+                $stmt_res->bind_param("i", $attack['target_village_id']);
+                $stmt_res->execute();
+                $resources = $stmt_res->get_result()->fetch_assoc();
+                $stmt_res->close();
+                $intel['resources'] = $resources ?: ['wood' => 0, 'clay' => 0, 'iron' => 0];
+
+                $intel_level = $attacker_spy_level + ($total_attacker_survivors >= 5 ? 2 : ($total_attacker_survivors >= 2 ? 1 : 0));
+
+                if ($intel_level >= 2) {
+                    $intel['buildings'] = $this->getBuildingSnapshot($attack['target_village_id']);
+                }
+                if ($intel_level >= 3) {
+                    $intel['units'] = $this->getVillageUnitSnapshot($attack['target_village_id']);
+                }
+                if ($intel_level >= 4) {
+                    $intel['research'] = $this->getResearchSnapshot($attack['target_village_id']);
+                }
             }
         }
 
-        // Units to return (include any non-spy units to avoid losing them)
+        // Units to return (include any non-scout units to avoid losing them)
         $units_to_return = $other_units;
-        if ($spy_unit_type_id !== null && $attacker_survivors > 0) {
-            $units_to_return[$spy_unit_type_id] = ($units_to_return[$spy_unit_type_id] ?? 0) + $attacker_survivors;
+        foreach ($attacker_scout_survivors as $unit_type_id => $survivor_count) {
+            if ($survivor_count > 0) {
+                $units_to_return[$unit_type_id] = ($units_to_return[$unit_type_id] ?? 0) + $survivor_count;
+            }
         }
 
         // Fetch user IDs
@@ -2272,12 +2314,31 @@ class BattleManager
         $details = [
             'type' => 'spy',
             'success' => $success,
-            'attacker_spies_sent' => $attacker_spies,
-            'attacker_spies_lost' => $attacker_losses,
-            'attacker_spies_returned' => $attacker_survivors,
-            'defender_spies' => $defender_spies,
-            'defender_spies_lost' => $defender_losses,
-            'defender_spies_remaining' => $defender_survivors,
+            'scouts_outnumbered' => $scouts_outnumbered,
+            'attacker_scouts_sent' => $attacker_scout_total,
+            'attacker_scouts_lost' => $total_attacker_losses,
+            'attacker_scouts_returned' => $total_attacker_survivors,
+            'attacker_scout_details' => array_map(function($unit_type_id) use ($attacker_scouts, $attacker_scout_losses, $attacker_scout_survivors) {
+                return [
+                    'name' => $attacker_scouts[$unit_type_id]['name'],
+                    'internal_name' => $attacker_scouts[$unit_type_id]['internal_name'],
+                    'sent' => $attacker_scouts[$unit_type_id]['count'],
+                    'lost' => $attacker_scout_losses[$unit_type_id] ?? 0,
+                    'returned' => $attacker_scout_survivors[$unit_type_id] ?? 0
+                ];
+            }, array_keys($attacker_scouts)),
+            'defender_scouts' => $defender_scout_total,
+            'defender_scouts_lost' => $total_defender_losses,
+            'defender_scouts_remaining' => $total_defender_survivors,
+            'defender_scout_details' => array_map(function($unit_type_id) use ($defender_scouts, $defender_scout_losses, $defender_scout_survivors) {
+                return [
+                    'name' => $defender_scouts[$unit_type_id]['name'],
+                    'internal_name' => $defender_scouts[$unit_type_id]['internal_name'],
+                    'initial' => $defender_scouts[$unit_type_id]['count'],
+                    'lost' => $defender_scout_losses[$unit_type_id] ?? 0,
+                    'remaining' => $defender_scout_survivors[$unit_type_id] ?? 0
+                ];
+            }, array_keys($defender_scouts)),
             'attacker_spy_level' => $attacker_spy_level,
             'defender_spy_level' => $defender_spy_level,
             'wall_level' => $wall_level,
@@ -2286,7 +2347,17 @@ class BattleManager
                 'defense' => round($defense_score, 2)
             ],
             'intel' => $intel,
-            'returned_units' => $units_to_return
+            'intel_redacted' => !$success || $total_attacker_survivors === 0,
+            'has_pathfinder' => $has_pathfinder ?? false,
+            'has_shadow_rider' => $has_shadow_rider ?? false,
+            'returned_units' => $units_to_return,
+            // Legacy fields for backward compatibility
+            'attacker_spies_sent' => $attacker_scout_total,
+            'attacker_spies_lost' => $total_attacker_losses,
+            'attacker_spies_returned' => $total_attacker_survivors,
+            'defender_spies' => $defender_scout_total,
+            'defender_spies_lost' => $total_defender_losses,
+            'defender_spies_remaining' => $total_defender_survivors
         ];
         $report_data_json = json_encode($details);
         $attacker_won_int = $success ? 1 : 0;
@@ -2294,16 +2365,19 @@ class BattleManager
         // Persist results
         $this->conn->begin_transaction();
         try {
-            // Update defender spies
-            if ($defender_spy_row_id !== null) {
-                if ($defender_survivors > 0) {
+            // Update defender scouts
+            foreach ($defender_scouts as $unit_type_id => $scout_data) {
+                $row_id = $scout_data['row_id'];
+                $survivors = $defender_scout_survivors[$unit_type_id] ?? 0;
+                
+                if ($survivors > 0) {
                     $stmt_update = $this->conn->prepare("UPDATE village_units SET count = ? WHERE id = ?");
-                    $stmt_update->bind_param("ii", $defender_survivors, $defender_spy_row_id);
+                    $stmt_update->bind_param("ii", $survivors, $row_id);
                     $stmt_update->execute();
                     $stmt_update->close();
                 } else {
                     $stmt_delete = $this->conn->prepare("DELETE FROM village_units WHERE id = ?");
-                    $stmt_delete->bind_param("i", $defender_spy_row_id);
+                    $stmt_delete->bind_param("i", $row_id);
                     $stmt_delete->execute();
                     $stmt_delete->close();
                 }
