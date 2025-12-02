@@ -169,7 +169,7 @@
   - **Property 24: Feature flag enforcement**
   - **Validates: Requirements 15.5**
 
-- [-] 5. Implement telemetry and logging
+- [x] 5. Implement telemetry and logging
 - [x] 5.1 Extend logRecruitTelemetry() in recruit.php
   - Log all training requests (success and failure)
   - Include unit type, count, world ID, player ID, outcome, error code
@@ -184,12 +184,12 @@
   - **Property 30: Telemetry emission**
   - **Validates: Requirements 18.1, 18.2, 18.3**
 
-- [-] 5.4 Add cap hit counter incrementation
+- [x] 5.4 Add cap hit counter incrementation
   - Increment counter when ERR_CAP is returned
   - Track by unit type and world
   - _Requirements: 18.2_
 
-- [ ] 5.5 Add error counter incrementation
+- [x] 5.5 Add error counter incrementation
   - Increment counter for each error code
   - Track by reason code
   - _Requirements: 18.3_

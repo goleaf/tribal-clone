@@ -6,7 +6,7 @@ require_once __DIR__ . '/../../lib/managers/BuildingManager.php';
 require_once __DIR__ . '/../../lib/managers/BuildingConfigManager.php';
 require_once __DIR__ . '/../../lib/managers/ResourceManager.php';
 
-function logRecruitTelemetry(int $userId, int $villageId, int $unitId, int $count, string $status, string $code, string $message, int $worldId = null): void
+function logRecruitTelemetry(int $userId, int $villageId, int $unitId, int $count, string $status, string $code, string $message, ?int $worldId = null): void
 {
     $logFile = __DIR__ . '/../../logs/recruit_telemetry.log';
     
