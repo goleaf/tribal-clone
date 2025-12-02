@@ -412,12 +412,12 @@
   - Ensure all tests pass, ask the user if questions arise.
 
 - [-] 16. Create configuration files and documentation
-- [-] 16.1 Create config/rps_modifiers.php
+- [x] 16.1 Create config/rps_modifiers.php
   - Define RPS multiplier constants (CAV_VS_RANGED_MULT, PIKE_VS_CAV_MULT, etc.)
   - Define context rules (wall level, terrain)
   - Document each modifier
 
-- [ ] 16.2 Create config/unit_caps.php
+- [-] 16.2 Create config/unit_caps.php
   - Define default cap values per unit category
   - Define per-village, per-account, per-command caps
   - Document cap rationale
