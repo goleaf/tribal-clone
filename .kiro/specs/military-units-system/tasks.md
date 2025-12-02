@@ -194,10 +194,10 @@
   - Track by reason code
   - _Requirements: 18.3_
 
-- [-] 6. Checkpoint - Ensure all tests pass
+- [ ] 6. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 7. Implement RPS combat modifiers in BattleManager
+- [-] 7. Implement RPS combat modifiers in BattleManager
 - [ ] 7.1 Create applyRPSModifiers() method
   - Load unit categories for attacker and defender
   - Apply cavalry vs ranged bonus in open field
