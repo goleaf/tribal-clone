@@ -14,8 +14,8 @@
   - Add feature flags (FEATURE_CONQUEST_UNIT_ENABLED, etc.)
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
 
-- [ ] 3. Implement AllegianceService core calculations
-  - [ ] 3.1 Implement allegiance drop calculation with wall reduction
+- [-] 3. Implement AllegianceService core calculations
+  - [x] 3.1 Implement allegiance drop calculation with wall reduction
     - Calculate base drop with random band per Envoy
     - Apply wall level reduction factor
     - Apply world multipliers and modifiers
@@ -27,7 +27,7 @@
     - **Property 7: Wall impact on survival**
     - **Validates: Requirements 2.1, 2.5, 3.2**
 
-  - [ ] 3.3 Implement regeneration tick calculation
+  - [x] 3.3 Implement regeneration tick calculation
     - Calculate time-based regeneration with elapsed seconds
     - Apply building and tech bonuses with multiplier cap
     - Implement pause logic for anti-snipe periods
