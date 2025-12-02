@@ -198,7 +198,7 @@
   - Ensure all tests pass, ask the user if questions arise.
 
 - [-] 7. Implement RPS combat modifiers in BattleManager
-- [-] 7.1 Create applyRPSModifiers() method
+- [x] 7.1 Create applyRPSModifiers() method
   - Load unit categories for attacker and defender
   - Apply cavalry vs ranged bonus in open field
   - Apply pike vs cavalry bonus
@@ -214,7 +214,7 @@
   - **Property 15: Ranger anti-siege bonus**
   - **Validates: Requirements 8.4**
 
-- [ ] 7.4 Integrate applyRPSModifiers() into resolveBattle()
+- [-] 7.4 Integrate applyRPSModifiers() into resolveBattle()
   - Call after loading unit compositions
   - Apply before casualty calculation
   - Include modifiers in battle report

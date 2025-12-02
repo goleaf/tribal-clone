@@ -4899,4 +4899,170 @@ class BattleManager
         @file_put_contents($logDir . '/battle_trace.log', $line . PHP_EOL, FILE_APPEND | LOCK_EX);
     }
 
+    /**
+     * Apply rock-paper-scissors combat modifiers based on unit matchups.
+     * 
+     * @param array $attackerUnits Attacker unit composition with categories
+     * @param array $defenderUnits Defender unit composition with categories
+     * @param array $context Battle context (wall_level, terrain, etc.)
+     * @return array Modified attack/defense values with RPS bonuses applied
+     */
+    private function applyRPSModifiers(array &$attackerUnits, array &$defenderUnits, array $context): array
+    {
+        $wallLevel = (int)($context['wall_level'] ?? 0);
+        $modifiersApplied = [];
+
+        // Count unit types for matchup detection
+        $attackerCavalryCount = 0;
+        $attackerInfantryCount = 0;
+        $defenderRangedCount = 0;
+        $defenderCavalryCount = 0;
+        $defenderSiegeCount = 0;
+
+        foreach ($attackerUnits as $unit) {
+            $category = $unit['category'] ?? 'infantry';
+            $count = $unit['count'] ?? 0;
+            if ($category === 'cavalry') {
+                $attackerCavalryCount += $count;
+            } elseif ($category === 'infantry') {
+                $attackerInfantryCount += $count;
+            }
+        }
+
+        foreach ($defenderUnits as $unit) {
+            $category = $unit['category'] ?? 'infantry';
+            $count = $unit['count'] ?? 0;
+            if ($category === 'ranged' || $category === 'archer') {
+                $defenderRangedCount += $count;
+            } elseif ($category === 'cavalry') {
+                $defenderCavalryCount += $count;
+            } elseif ($category === 'siege') {
+                $defenderSiegeCount += $count;
+            }
+        }
+
+        // Apply cavalry vs ranged bonus in open field (wall = 0)
+        if ($attackerCavalryCount > 0 && $defenderRangedCount > 0 && $wallLevel === 0) {
+            foreach ($attackerUnits as &$unit) {
+                $category = $unit['category'] ?? 'infantry';
+                $internalName = strtolower($unit['internal_name'] ?? '');
+                
+                if ($category === 'cavalry') {
+                    // Check for RPS bonuses in unit data
+                    $rpsBonus = 1.5; // Default cavalry vs ranged bonus
+                    
+                    // Load from units.json if available
+                    $unitsData = $this->loadUnitsJsonData();
+                    if (isset($unitsData[$internalName]['rps_bonuses']['vs_ranged_open_field'])) {
+                        $rpsBonus = (float)$unitsData[$internalName]['rps_bonuses']['vs_ranged_open_field'];
+                    }
+                    
+                    $unit['attack'] = ($unit['attack'] ?? 0) * $rpsBonus;
+                    $modifiersApplied[] = [
+                        'type' => 'cavalry_vs_ranged_open_field',
+                        'unit' => $unit['name'] ?? 'Cavalry',
+                        'multiplier' => $rpsBonus
+                    ];
+                }
+            }
+            unset($unit);
+        }
+
+        // Apply pike vs cavalry bonus (defender infantry with anti-cavalry specialization)
+        if ($attackerCavalryCount > 0 && $defenderCavalryCount === 0) {
+            foreach ($defenderUnits as &$unit) {
+                $internalName = strtolower($unit['internal_name'] ?? '');
+                
+                // Check if this is a pike unit (pikeneer or similar)
+                $unitsData = $this->loadUnitsJsonData();
+                if (isset($unitsData[$internalName]['rps_bonuses']['vs_cavalry'])) {
+                    $rpsBonus = (float)$unitsData[$internalName]['rps_bonuses']['vs_cavalry'];
+                    $unit['defense'] = ($unit['defense'] ?? 0) * $rpsBonus;
+                    $modifiersApplied[] = [
+                        'type' => 'pike_vs_cavalry',
+                        'unit' => $unit['name'] ?? 'Pike Infantry',
+                        'multiplier' => $rpsBonus
+                    ];
+                }
+            }
+            unset($unit);
+        }
+
+        // Apply ranger vs siege bonus
+        if ($defenderSiegeCount > 0) {
+            foreach ($attackerUnits as &$unit) {
+                $internalName = strtolower($unit['internal_name'] ?? '');
+                
+                // Check if this is a ranger unit with anti-siege bonus
+                $unitsData = $this->loadUnitsJsonData();
+                if (isset($unitsData[$internalName]['rps_bonuses']['vs_siege'])) {
+                    $rpsBonus = (float)$unitsData[$internalName]['rps_bonuses']['vs_siege'];
+                    $unit['attack'] = ($unit['attack'] ?? 0) * $rpsBonus;
+                    $modifiersApplied[] = [
+                        'type' => 'ranger_vs_siege',
+                        'unit' => $unit['name'] ?? 'Ranger',
+                        'multiplier' => $rpsBonus
+                    ];
+                }
+            }
+            unset($unit);
+        }
+
+        // Apply ranged wall bonus against infantry
+        if ($defenderRangedCount > 0 && $wallLevel > 0 && $attackerInfantryCount > 0) {
+            foreach ($defenderUnits as &$unit) {
+                $category = $unit['category'] ?? 'infantry';
+                $internalName = strtolower($unit['internal_name'] ?? '');
+                
+                if ($category === 'ranged' || $category === 'archer') {
+                    // Check for wall bonus in unit data
+                    $unitsData = $this->loadUnitsJsonData();
+                    $wallBonus = 1.5; // Default wall bonus
+                    
+                    if (isset($unitsData[$internalName]['rps_bonuses']['wall_bonus_vs_infantry'])) {
+                        $wallBonus = (float)$unitsData[$internalName]['rps_bonuses']['wall_bonus_vs_infantry'];
+                    }
+                    
+                    $unit['defense'] = ($unit['defense'] ?? 0) * $wallBonus;
+                    $modifiersApplied[] = [
+                        'type' => 'ranged_wall_bonus_vs_infantry',
+                        'unit' => $unit['name'] ?? 'Ranged',
+                        'multiplier' => $wallBonus,
+                        'wall_level' => $wallLevel
+                    ];
+                }
+            }
+            unset($unit);
+        }
+
+        return $modifiersApplied;
+    }
+
+    /**
+     * Load units.json data for RPS bonus lookups.
+     * 
+     * @return array Units data indexed by internal_name
+     */
+    private function loadUnitsJsonData(): array
+    {
+        static $unitsData = null;
+        
+        if ($unitsData === null) {
+            $unitsJsonPath = __DIR__ . '/../../data/units.json';
+            if (file_exists($unitsJsonPath)) {
+                $jsonContent = file_get_contents($unitsJsonPath);
+                $decoded = json_decode($jsonContent, true);
+                if (is_array($decoded)) {
+                    $unitsData = $decoded;
+                } else {
+                    $unitsData = [];
+                }
+            } else {
+                $unitsData = [];
+            }
+        }
+        
+        return $unitsData;
+    }
+
 }
