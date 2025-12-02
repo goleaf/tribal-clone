@@ -312,7 +312,7 @@
   - _Requirements: 7.3, 7.4, 7.5_
 
 - [-] 10. Implement scout intel mechanics in BattleManager
-- [-] 10.1 Extend scout combat resolution
+- [x] 10.1 Extend scout combat resolution
   - Compare attacking scouts vs defending scouts
   - Kill attacking scouts if outnumbered
   - Prevent intel revelation if scouts die
@@ -322,7 +322,7 @@
   - **Property 7: Scout combat resolution**
   - **Validates: Requirements 4.5**
 
-- [ ] 10.3 Extend battle report generation for scout intel
+- [x] 10.3 Extend battle report generation for scout intel
   - Include troop counts and resources for Pathfinder survivors
   - Include building levels and queues for Shadow Rider survivors
   - Redact intel if scouts die

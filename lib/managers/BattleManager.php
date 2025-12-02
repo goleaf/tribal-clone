@@ -4733,6 +4733,71 @@ class BattleManager
         ksort($research);
         return $research;
     }
+
+    /**
+     * Helper: return building queue snapshot for a village.
+     * Requirement 4.4: Shadow Rider reveals building queues
+     */
+    private function getBuildingQueueSnapshot(int $villageId): array
+    {
+        $stmt = $this->conn->prepare("
+            SELECT bt.internal_name, bt.name, bq.target_level, bq.finish_at
+            FROM building_queue bq
+            JOIN building_types bt ON bq.building_type_id = bt.id
+            WHERE bq.village_id = ?
+            ORDER BY bq.finish_at ASC
+        ");
+        $queue = [];
+        if ($stmt === false) {
+            return $queue;
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $queue[] = [
+                'internal_name' => $row['internal_name'],
+                'name' => $row['name'],
+                'target_level' => (int)$row['target_level'],
+                'finish_at' => (int)$row['finish_at']
+            ];
+        }
+        $stmt->close();
+        return $queue;
+    }
+
+    /**
+     * Helper: return unit queue snapshot for a village.
+     * Requirement 4.4: Shadow Rider reveals recruitment queues
+     */
+    private function getUnitQueueSnapshot(int $villageId): array
+    {
+        $stmt = $this->conn->prepare("
+            SELECT ut.internal_name, ut.name, uq.count, uq.count_finished, uq.finish_at
+            FROM unit_queue uq
+            JOIN unit_types ut ON uq.unit_type_id = ut.id
+            WHERE uq.village_id = ?
+            ORDER BY uq.finish_at ASC
+        ");
+        $queue = [];
+        if ($stmt === false) {
+            return $queue;
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $queue[] = [
+                'internal_name' => $row['internal_name'],
+                'name' => $row['name'],
+                'count' => (int)$row['count'],
+                'count_finished' => (int)$row['count_finished'],
+                'finish_at' => (int)$row['finish_at']
+            ];
+        }
+        $stmt->close();
+        return $queue;
+    }
     
     /**
      * Fetch list of incoming attacks for a village
