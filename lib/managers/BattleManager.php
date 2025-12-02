@@ -2108,7 +2108,7 @@ class BattleManager
 
         // Fetch attacking units
         $stmt_get_units = $this->conn->prepare("
-            SELECT au.unit_type_id, au.count, ut.internal_name, ut.name
+            SELECT au.unit_type_id, au.count, ut.internal_name, ut.name, ut.category
             FROM attack_units au
             JOIN unit_types ut ON au.unit_type_id = ut.id
             WHERE au.attack_id = ?
@@ -2117,71 +2117,117 @@ class BattleManager
         $stmt_get_units->execute();
         $attack_units_result = $stmt_get_units->get_result();
 
-        $attacker_spies = 0;
-        $spy_unit_type_id = null;
+        $attacker_scouts = [];
+        $attacker_scout_total = 0;
         $other_units = [];
 
         while ($unit = $attack_units_result->fetch_assoc()) {
-            if ($unit['internal_name'] === 'spy') {
-                $attacker_spies += $unit['count'];
-                $spy_unit_type_id = $unit['unit_type_id'];
+            $internal = $unit['internal_name'];
+            $category = $unit['category'] ?? '';
+            
+            // Support both legacy 'spy' and new scout units (pathfinder, shadow_rider)
+            if ($internal === 'spy' || $category === 'scout' || in_array($internal, ['pathfinder', 'shadow_rider'], true)) {
+                $attacker_scouts[$unit['unit_type_id']] = [
+                    'count' => (int)$unit['count'],
+                    'internal_name' => $internal,
+                    'name' => $unit['name']
+                ];
+                $attacker_scout_total += (int)$unit['count'];
             } else {
-                // Safety: return any non-spy units untouched
+                // Safety: return any non-scout units untouched
                 $other_units[$unit['unit_type_id']] = $unit['count'];
             }
         }
         $stmt_get_units->close();
 
-        // Defender spies
-        $defender_spies = 0;
-        $defender_spy_row_id = null;
-        $stmt_def_spies = $this->conn->prepare("
-            SELECT vu.id, vu.count
+        // Defender scouts (all scout types)
+        $defender_scouts = [];
+        $defender_scout_total = 0;
+        $stmt_def_scouts = $this->conn->prepare("
+            SELECT vu.id, vu.unit_type_id, vu.count, ut.internal_name, ut.name, ut.category
             FROM village_units vu
             JOIN unit_types ut ON vu.unit_type_id = ut.id
-            WHERE vu.village_id = ? AND ut.internal_name = 'spy'
+            WHERE vu.village_id = ? 
+              AND (ut.internal_name = 'spy' OR ut.category = 'scout' OR ut.internal_name IN ('pathfinder', 'shadow_rider'))
         ");
-        $stmt_def_spies->bind_param("i", $attack['target_village_id']);
-        $stmt_def_spies->execute();
-        $def_res = $stmt_def_spies->get_result();
-        if ($row = $def_res->fetch_assoc()) {
-            $defender_spies = (int)$row['count'];
-            $defender_spy_row_id = (int)$row['id'];
+        $stmt_def_scouts->bind_param("i", $attack['target_village_id']);
+        $stmt_def_scouts->execute();
+        $def_res = $stmt_def_scouts->get_result();
+        while ($row = $def_res->fetch_assoc()) {
+            $defender_scouts[$row['unit_type_id']] = [
+                'row_id' => (int)$row['id'],
+                'count' => (int)$row['count'],
+                'internal_name' => $row['internal_name'],
+                'name' => $row['name']
+            ];
+            $defender_scout_total += (int)$row['count'];
         }
-        $stmt_def_spies->close();
+        $stmt_def_scouts->close();
 
         $attacker_spy_level = $this->getResearchLevelForVillage($attack['source_village_id'], 'spying');
         $defender_spy_level = $this->getResearchLevelForVillage($attack['target_village_id'], 'spying');
         $wall_level = $this->buildingManager->getBuildingLevel($attack['target_village_id'], 'wall');
 
+        // Scout combat resolution: Compare attacking scouts vs defending scouts
+        // Requirement 4.5: Kill attacking scouts if outnumbered
+        $scouts_outnumbered = $defender_scout_total > $attacker_scout_total;
+        
         // Scores and outcome
-        $attack_score = max(1, $attacker_spies) * (1 + 0.15 * $attacker_spy_level);
-        $defense_score = max(0, $defender_spies * (1 + 0.15 * $defender_spy_level)) + ($wall_level * 0.6);
+        $attack_score = max(1, $attacker_scout_total) * (1 + 0.15 * $attacker_spy_level);
+        $defense_score = max(0, $defender_scout_total * (1 + 0.15 * $defender_spy_level)) + ($wall_level * 0.6);
         $attack_score *= (random_int(90, 110) / 100);
         $defense_score *= (random_int(90, 110) / 100);
 
-        $success = $attack_score >= max(1, $defense_score) && $attacker_spies > 0;
+        $success = $attack_score >= max(1, $defense_score) && $attacker_scout_total > 0;
+        
+        // Requirement 4.5: If scouts are outnumbered, they die and intel is prevented
+        if ($scouts_outnumbered) {
+            $success = false;
+        }
 
-        // Casualties
-        $attacker_losses = 0;
-        if ($attacker_spies > 0) {
+        // Calculate casualties for each scout type
+        $attacker_scout_losses = [];
+        $attacker_scout_survivors = [];
+        $total_attacker_losses = 0;
+        
+        if ($attacker_scout_total > 0) {
             if ($success) {
-                $attacker_losses = min(
-                    $attacker_spies,
-                    (int)ceil(($defense_score / max(1, $attack_score)) * $attacker_spies * 0.6)
-                );
+                // Successful mission: moderate losses
+                $loss_rate = min(0.6, ($defense_score / max(1, $attack_score)) * 0.6);
             } else {
-                $attacker_losses = $attacker_spies;
+                // Failed mission or outnumbered: all scouts die
+                $loss_rate = 1.0;
+            }
+            
+            foreach ($attacker_scouts as $unit_type_id => $scout_data) {
+                $losses = (int)ceil($scout_data['count'] * $loss_rate);
+                $attacker_scout_losses[$unit_type_id] = $losses;
+                $attacker_scout_survivors[$unit_type_id] = max(0, $scout_data['count'] - $losses);
+                $total_attacker_losses += $losses;
             }
         }
-        $attacker_survivors = max(0, $attacker_spies - $attacker_losses);
+        
+        $total_attacker_survivors = $attacker_scout_total - $total_attacker_losses;
 
+        // Defender scout casualties
+        $defender_scout_losses = [];
+        $defender_scout_survivors = [];
+        $total_defender_losses = 0;
+        
         if ($success) {
-            $defender_losses = min($defender_spies, max(0, (int)floor($attacker_spies / 2)));
+            $defender_loss_rate = min(0.5, $attacker_scout_total / max(1, $defender_scout_total * 2));
         } else {
-            $defender_losses = min($defender_spies, (int)ceil($attacker_spies * 0.3));
+            $defender_loss_rate = min(0.3, $attacker_scout_total / max(1, $defender_scout_total * 3));
         }
-        $defender_survivors = max(0, $defender_spies - $defender_losses);
+        
+        foreach ($defender_scouts as $unit_type_id => $scout_data) {
+            $losses = (int)ceil($scout_data['count'] * $defender_loss_rate);
+            $defender_scout_losses[$unit_type_id] = $losses;
+            $defender_scout_survivors[$unit_type_id] = max(0, $scout_data['count'] - $losses);
+            $total_defender_losses += $losses;
+        }
+        
+        $total_defender_survivors = $defender_scout_total - $total_defender_losses;
 
         // Prepare intel if successful
         $intel = [];
