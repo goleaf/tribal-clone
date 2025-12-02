@@ -481,6 +481,19 @@ class UnitManager
         // Check conquest unit resource requirements (coins/standards)
         $isConquestUnit = in_array($internal, ['noble', 'nobleman', 'standard_bearer', 'envoy'], true);
         if ($isConquestUnit) {
+            // Per-command conquest cap: limit training batch size
+            // This prevents training more conquest units than can be used in a single command
+            $maxConquestPerCommand = 1; // MAX_LOYALTY_UNITS_PER_COMMAND from BattleManager
+            if ($count > $maxConquestPerCommand) {
+                return [
+                    'success' => false,
+                    'error' => "Cannot train more than $maxConquestPerCommand conquest unit(s) at once (per-command limit).",
+                    'code' => 'ERR_CAP',
+                    'cap' => $maxConquestPerCommand,
+                    'requested' => $count
+                ];
+            }
+            
             // Check if village has enough coins/standards
             $resourceField = in_array($internal, ['noble', 'nobleman'], true) ? 'noble_coins' : 'standards';
             
