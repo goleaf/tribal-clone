@@ -88,18 +88,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $unit_id = $data['unit_id'] ?? null;
     $count = $data['count'] ?? null;
 
-    if (!$unit_id || !$count || !is_numeric($count) || $count <= 0) {
+    // Input validation: Validate unit_id exists and is numeric
+    if (!$unit_id || !is_numeric($unit_id) || $unit_id <= 0) {
         http_response_code(400);
-        $msg = 'Invalid input.';
-        echo json_encode(['error' => $msg, 'code' => 'ERR_INPUT']);
+        $msg = 'Invalid unit_id.';
+        echo json_encode(['error' => $msg, 'code' => 'ERR_INPUT', 'details' => ['field' => 'unit_id']]);
+        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, (int)$count, 'fail', 'ERR_INPUT', $msg);
+        exit();
+    }
+
+    // Input validation: Validate count is positive integer
+    if (!$count || !is_numeric($count) || $count <= 0 || $count != intval($count)) {
+        http_response_code(400);
+        $msg = 'Invalid count. Must be a positive integer.';
+        echo json_encode(['error' => $msg, 'code' => 'ERR_INPUT', 'details' => ['field' => 'count', 'value' => $count]]);
         logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, (int)$count, 'fail', 'ERR_INPUT', $msg);
         exit();
     }
 
     $count = intval($count);
+    $unit_id = intval($unit_id);
+    
+    // Input validation: Verify unit_id exists in database
+    $unitMeta = $unitManager->getUnitById($unit_id);
+    if (!$unitMeta) {
+        http_response_code(400);
+        $msg = 'Unit does not exist.';
+        echo json_encode(['error' => $msg, 'code' => 'ERR_INPUT', 'details' => ['field' => 'unit_id', 'value' => $unit_id]]);
+        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_INPUT', $msg);
+        exit();
+    }
+
     $building_level = $buildingManager->getBuildingLevel($village_id, $building_internal_name);
 
-    $unitMeta = $unitManager->getUnitById($unit_id);
     $unitInternal = $unitMeta['internal_name'] ?? '';
 
     // Check requirements

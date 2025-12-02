@@ -131,7 +131,7 @@
   - **Validates: Requirements 17.4**
 
 - [-] 4. Implement validation and error handling
-- [ ] 4.1 Add input validation to recruit.php
+- [x] 4.1 Add input validation to recruit.php
   - Validate count is positive integer
   - Validate unit_id exists
   - Return ERR_INPUT for invalid inputs
@@ -141,7 +141,7 @@
   - **Property 25: Input validation**
   - **Validates: Requirements 17.1**
 
-- [ ] 4.3 Add population capacity validation to recruitUnits()
+- [-] 4.3 Add population capacity validation to recruitUnits()
   - Calculate total population (current + queued + requested)
   - Compare against farm capacity
   - Return ERR_POP if exceeded
