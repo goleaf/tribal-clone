@@ -356,14 +356,14 @@
   - **Validates: Requirements 5.4**
 
 - [-] 12. Implement UI and display logic
-- [-] 12.1 Update recruitment panel to show unit details
+- [x] 12.1 Update recruitment panel to show unit details
   - Display attack, defense values by type, speed, carry, population
   - Display resource costs, training time, prerequisites
   - Display RPS matchup information (strengths/weaknesses)
   - Display special abilities (aura, siege, conquest)
   - _Requirements: 12.1, 12.2, 12.3, 12.4_
 
-- [ ] 12.2 Update recruitment panel to show effective values
+- [-] 12.2 Update recruitment panel to show effective values
   - Apply world multipliers to displayed costs and times
   - Add notation indicating world modifications
   - _Requirements: 11.5, 12.5_
