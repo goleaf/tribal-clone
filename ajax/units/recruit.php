@@ -95,12 +95,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $unit_id = $data['unit_id'] ?? null;
     $count = $data['count'] ?? null;
 
+    // Get world ID early for telemetry
+    $worldId = defined('CURRENT_WORLD_ID') ? (int)CURRENT_WORLD_ID : 1;
+    
     // Input validation: Validate unit_id exists and is numeric
     if (!$unit_id || !is_numeric($unit_id) || $unit_id <= 0) {
         http_response_code(400);
         $msg = 'Invalid unit_id.';
         echo json_encode(['error' => $msg, 'code' => 'ERR_INPUT', 'details' => ['field' => 'unit_id']]);
-        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, (int)$count, 'fail', 'ERR_INPUT', $msg);
+        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, (int)$count, 'fail', 'ERR_INPUT', $msg, $worldId);
         exit();
     }
 
@@ -109,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         http_response_code(400);
         $msg = 'Invalid count. Must be a positive integer.';
         echo json_encode(['error' => $msg, 'code' => 'ERR_INPUT', 'details' => ['field' => 'count', 'value' => $count]]);
-        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, (int)$count, 'fail', 'ERR_INPUT', $msg);
+        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, (int)$count, 'fail', 'ERR_INPUT', $msg, $worldId);
         exit();
     }
 
@@ -122,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         http_response_code(400);
         $msg = 'Unit does not exist.';
         echo json_encode(['error' => $msg, 'code' => 'ERR_INPUT', 'details' => ['field' => 'unit_id', 'value' => $unit_id]]);
-        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_INPUT', $msg);
+        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_INPUT', $msg, $worldId);
         exit();
     }
 
@@ -131,12 +134,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $unitInternal = $unitMeta['internal_name'] ?? '';
 
     // Feature flag validation: Check world feature flags for conquest/seasonal/healer units
-    $worldId = defined('CURRENT_WORLD_ID') ? (int)CURRENT_WORLD_ID : 1;
     if (!$unitManager->isUnitAvailable($unitInternal, $worldId)) {
         http_response_code(400);
         $msg = "Unit type '{$unitInternal}' is disabled on this world.";
         echo json_encode(['error' => $msg, 'code' => 'ERR_FEATURE_DISABLED', 'unit' => $unitInternal]);
-        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_FEATURE_DISABLED', $msg);
+        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_FEATURE_DISABLED', $msg, $worldId);
         exit();
     }
 
@@ -158,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
         
         echo json_encode($response);
-        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', $code, $msg);
+        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', $code, $msg, $worldId);
         exit();
     }
 
@@ -175,7 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             http_response_code(400);
             $msg = 'Noble requirements not met (statue, academy 1, smithy 20, market 10).';
             echo json_encode(['error' => $msg, 'code' => 'ERR_PREREQ']);
-            logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_PREREQ', $msg);
+            logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_PREREQ', $msg, $worldId);
             exit();
         }
         $userNobles = $unitManager->countUserNobles($user_id);
