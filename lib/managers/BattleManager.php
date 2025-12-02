@@ -1492,6 +1492,12 @@ class BattleManager
         $faith_bonus = $this->calculateFaithDefenseBonus($attack['target_village_id']);
         $defense_multiplier = $wall_bonus * $faith_bonus * $defense_random;
 
+        // --- BANNER AURA (SUPPORT UNIT MECHANICS) ---
+        $bannerAura = $this->calculateBannerAura($defending_units);
+        if ($bannerAura['applied']) {
+            $defense_multiplier *= $bannerAura['def_multiplier'];
+        }
+
         // --- RPS COMBAT MODIFIERS ---
         $rpsContext = [
             'wall_level' => $wall_level,
@@ -2034,6 +2040,13 @@ class BattleManager
                         'weather_defense_multiplier' => $this->getEnvMultiplier('weather_defense_multiplier'),
                     ],
                     'overstack' => $overstack,
+                    'banner_aura' => [
+                        'applied' => $bannerAura['applied'],
+                        'def_multiplier' => $bannerAura['def_multiplier'],
+                        'tier' => $bannerAura['tier'],
+                        'resolve_bonus' => $bannerAura['resolve_bonus'],
+                        'banner_count' => $bannerAura['banner_count']
+                    ],
                     'mantlet' => [
                         'applied' => $mantletReductionApplied > 0,
                         'reduction_percent' => $mantletReductionApplied > 0 ? round($mantletReductionApplied * 100, 1) : 0

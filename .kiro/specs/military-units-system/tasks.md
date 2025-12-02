@@ -242,7 +242,7 @@
   - **Property 10: Banner aura application**
   - **Validates: Requirements 6.3, 6.5**
 
-- [-] 8.3 Integrate calculateBannerAura() into resolveBattle()
+- [x] 8.3 Integrate calculateBannerAura() into resolveBattle()
   - Call before casualty calculation
   - Apply aura multiplier to defender defense
   - Include aura details in battle report
@@ -259,7 +259,7 @@
   - **Property 22: Mantlet protection application**
   - **Validates: Requirements 14.2, 14.3, 14.4**
 
-- [ ] 8.6 Integrate calculateMantletProtection() into resolveBattle()
+- [-] 8.6 Integrate calculateMantletProtection() into resolveBattle()
   - Apply before distributing casualties to siege units
   - Reduce ranged damage to siege by protection percentage
   - Include mantlet effect in battle report
