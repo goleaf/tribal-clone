@@ -130,7 +130,7 @@
   - **Property 28: Concurrent cap enforcement**
   - **Validates: Requirements 17.4**
 
-- [-] 4. Implement validation and error handling
+- [x] 4. Implement validation and error handling
 - [x] 4.1 Add input validation to recruit.php
   - Validate count is positive integer
   - Validate unit_id exists
@@ -160,7 +160,7 @@
   - **Property 27: Resource availability enforcement**
   - **Validates: Requirements 17.3**
 
-- [-] 4.7 Add feature flag validation to recruit.php
+- [x] 4.7 Add feature flag validation to recruit.php
   - Check world feature flags for conquest/seasonal/healer units
   - Return ERR_FEATURE_DISABLED if disabled
   - _Requirements: 15.5_

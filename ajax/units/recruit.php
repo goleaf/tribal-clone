@@ -123,6 +123,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     $unitInternal = $unitMeta['internal_name'] ?? '';
 
+    // Feature flag validation: Check world feature flags for conquest/seasonal/healer units
+    $worldId = defined('CURRENT_WORLD_ID') ? (int)CURRENT_WORLD_ID : 1;
+    if (!$unitManager->isUnitAvailable($unitInternal, $worldId)) {
+        http_response_code(400);
+        $msg = "Unit type '{$unitInternal}' is disabled on this world.";
+        echo json_encode(['error' => $msg, 'code' => 'ERR_FEATURE_DISABLED', 'unit' => $unitInternal]);
+        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_FEATURE_DISABLED', $msg);
+        exit();
+    }
+
     // Check requirements
     $requirements = $unitManager->checkRecruitRequirements($unit_id, $village_id, $count);
     if (!$requirements['can_recruit']) {
@@ -147,14 +157,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     $isNoble = in_array($unitInternal, ['noble', 'nobleman', 'nobleman_unit'], true);
     $isConquestBearer = in_array($unitInternal, ['standard_bearer', 'envoy'], true);
-
-    if ($isConquestBearer && (!defined('FEATURE_CONQUEST_UNIT_ENABLED') || !FEATURE_CONQUEST_UNIT_ENABLED)) {
-        http_response_code(400);
-        $msg = 'Conquest units are disabled on this world.';
-        echo json_encode(['error' => $msg, 'code' => 'ERR_FEATURE_DISABLED']);
-        logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_FEATURE_DISABLED', $msg);
-        exit();
-    }
 
     // Extra nobleman requirements
     if ($isNoble) {
