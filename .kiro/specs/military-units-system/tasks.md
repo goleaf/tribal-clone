@@ -363,12 +363,12 @@
   - Display special abilities (aura, siege, conquest)
   - _Requirements: 12.1, 12.2, 12.3, 12.4_
 
-- [-] 12.2 Update recruitment panel to show effective values
+- [x] 12.2 Update recruitment panel to show effective values
   - Apply world multipliers to displayed costs and times
   - Add notation indicating world modifications
   - _Requirements: 11.5, 12.5_
 
-- [ ] 12.3 Update battle reports to include new modifiers
+- [-] 12.3 Update battle reports to include new modifiers
   - Display RPS modifiers that were applied
   - Display aura effects and tier
   - Display mantlet protection percentage

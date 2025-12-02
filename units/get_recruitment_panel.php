@@ -155,15 +155,35 @@ foreach ($availableUnits as $unit_data) {
     echo '<div><strong>Speed:</strong> ' . $speed . ' min/field</div>';
     echo '<div><strong>Carry:</strong> ' . $carry . '</div>';
     echo '<div><strong>Population:</strong> ' . $population . '</div>';
-    echo '<div><strong>Training:</strong> ' . gmdate('H:i:s', $training_time) . '</div>';
+    echo '<div><strong>Training:</strong> ' . gmdate('H:i:s', $training_time);
+    if ($time_modified) {
+        $train_mult = $effectiveStats['archetype_train_multiplier'];
+        $train_pct = round($train_mult * 100);
+        echo ' <span style="font-size: 10px; color: ' . ($train_mult > 1.0 ? '#4c4' : '#c44') . ';" title="World speed modifier applied">(' . $train_pct . '%)</span>';
+    }
+    echo '</div>';
     echo '</div>';
     
-    // Resource costs
+    // Resource costs with world modifier notation
+    $cost_modified = false;
+    $time_modified = false;
+    if (isset($effectiveStats['archetype_cost_multiplier']) && $effectiveStats['archetype_cost_multiplier'] != 1.0) {
+        $cost_modified = true;
+    }
+    if (isset($effectiveStats['archetype_train_multiplier']) && $effectiveStats['archetype_train_multiplier'] != 1.0) {
+        $time_modified = true;
+    }
+    
     echo '<div style="margin-bottom: 12px;">';
     echo '<strong>Cost:</strong> ';
     echo '<img src="../img/wood.png" title="Wood" alt="Wood" style="width: 16px; height: 16px; vertical-align: middle;">' . $cost_wood . ' ';
     echo '<img src="../img/stone.png" title="Clay" alt="Clay" style="width: 16px; height: 16px; vertical-align: middle;">' . $cost_clay . ' ';
     echo '<img src="../img/iron.png" title="Iron" alt="Iron" style="width: 16px; height: 16px; vertical-align: middle;">' . $cost_iron;
+    if ($cost_modified) {
+        $cost_mult = $effectiveStats['archetype_cost_multiplier'];
+        $cost_pct = round($cost_mult * 100);
+        echo ' <span style="font-size: 11px; color: ' . ($cost_mult > 1.0 ? '#c44' : '#4c4') . ';" title="World modifier applied">(' . $cost_pct . '%)</span>';
+    }
     echo '</div>';
     
     // Prerequisites
