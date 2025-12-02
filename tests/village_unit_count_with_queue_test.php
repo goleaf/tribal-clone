@@ -24,9 +24,15 @@ $userId = $db->insert_id;
 
 // Create test village
 $villageName = 'Test Village Cap ' . time();
-$db->query("INSERT INTO villages (name, user_id, x, y, wood, clay, iron, farm_capacity) 
-            VALUES ('$villageName', $userId, 500, 500, 10000, 10000, 10000, 1000)");
-$villageId = $db->insert_id;
+$worldId = 1;
+$x = 500;
+$y = 500;
+$stmt = $db->prepare("INSERT INTO villages (name, user_id, world_id, x_coord, y_coord, wood, clay, iron, farm_capacity) 
+            VALUES (?, ?, ?, ?, ?, 10000, 10000, 10000, 1000)");
+$stmt->bind_param("siiii", $villageName, $userId, $worldId, $x, $y);
+$stmt->execute();
+$villageId = $stmt->insert_id;
+$stmt->close();
 
 // Get unit type IDs for siege units
 $ramResult = $db->query("SELECT id FROM unit_types WHERE internal_name = 'ram' LIMIT 1");

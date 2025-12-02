@@ -100,13 +100,13 @@
   - **Validates: Requirements 15.3, 16.4**
 
 - [-] 3. Implement unit cap enforcement
-- [-] 3.1 Implement getVillageUnitCountWithQueue() helper (already exists, verify it works)
+- [x] 3.1 Implement getVillageUnitCountWithQueue() helper (already exists, verify it works)
   - Count existing units in village_units
   - Count queued units in unit_queue
   - Return total count
   - _Requirements: 9.5_
 
-- [ ] 3.2 Add per-village siege cap check to recruitUnits()
+- [-] 3.2 Add per-village siege cap check to recruitUnits()
   - Count total siege units (rams, catapults) with queue
   - Compare against SIEGE_CAP_PER_VILLAGE constant
   - Reject if exceeded with ERR_CAP
