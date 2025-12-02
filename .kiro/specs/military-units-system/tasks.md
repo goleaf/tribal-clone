@@ -332,7 +332,7 @@
   - **Property 6: Scout intel revelation**
   - **Validates: Requirements 4.3, 4.4**
 
-- [ ] 11. Implement siege mechanics in BattleManager
+- [-] 11. Implement siege mechanics in BattleManager
 - [ ] 11.1 Extend wall reduction logic for Battering Rams
   - Count surviving rams after battle
   - Calculate wall level reduction based on ram count
