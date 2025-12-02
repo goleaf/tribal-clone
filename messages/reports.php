@@ -671,6 +671,72 @@ document.addEventListener('DOMContentLoaded', () => {
                 detailsHtml += `</div>`;
             }
 
+            // RPS Modifiers
+            if (details.modifiers && details.modifiers.rps_modifiers) {
+                const rps = details.modifiers.rps_modifiers;
+                const rpsParts = [];
+                if (rps.cavalry_vs_ranged && rps.cavalry_vs_ranged !== 1) {
+                    const pct = Math.round((rps.cavalry_vs_ranged - 1) * 100);
+                    rpsParts.push(`Cavalry vs Ranged: ${pct > 0 ? '+' : ''}${pct}%`);
+                }
+                if (rps.pike_vs_cavalry && rps.pike_vs_cavalry !== 1) {
+                    const pct = Math.round((rps.pike_vs_cavalry - 1) * 100);
+                    rpsParts.push(`Pike vs Cavalry: ${pct > 0 ? '+' : ''}${pct}%`);
+                }
+                if (rps.ranger_vs_siege && rps.ranger_vs_siege !== 1) {
+                    const pct = Math.round((rps.ranger_vs_siege - 1) * 100);
+                    rpsParts.push(`Ranger vs Siege: ${pct > 0 ? '+' : ''}${pct}%`);
+                }
+                if (rps.ranged_wall_bonus && rps.ranged_wall_bonus !== 1) {
+                    const pct = Math.round((rps.ranged_wall_bonus - 1) * 100);
+                    rpsParts.push(`Ranged Wall Bonus: ${pct > 0 ? '+' : ''}${pct}%`);
+                }
+                if (rpsParts.length) {
+                    detailsHtml += `
+                        <div class="battle-rps-modifiers">
+                            <h4>Combat Modifiers (RPS)</h4>
+                            <p>${rpsParts.join(' · ')}</p>
+                        </div>
+                    `;
+                }
+            }
+
+            // Banner Aura
+            if (details.modifiers && details.modifiers.banner_aura && details.modifiers.banner_aura.applied) {
+                const aura = details.modifiers.banner_aura;
+                const defBonus = Math.round((aura.def_multiplier - 1) * 100);
+                detailsHtml += `
+                    <div class="battle-banner-aura">
+                        <h4>Banner Guard Aura</h4>
+                        <p>Tier ${aura.tier} aura active (${aura.banner_count} Banner Guard${aura.banner_count > 1 ? 's' : ''})</p>
+                        <p>Defense bonus: +${defBonus}%, Resolve bonus: +${aura.resolve_bonus}</p>
+                    </div>
+                `;
+            }
+
+            // Mantlet Protection
+            if (details.modifiers && details.modifiers.mantlet && details.modifiers.mantlet.applied) {
+                const mantlet = details.modifiers.mantlet;
+                detailsHtml += `
+                    <div class="battle-mantlet">
+                        <h4>Mantlet Protection</h4>
+                        <p>Ranged damage to siege units reduced by ${mantlet.reduction_percent}%</p>
+                    </div>
+                `;
+            }
+
+            // Healer Recovery
+            if (details.modifiers && details.modifiers.healer_recovery && details.modifiers.healer_recovery.recovered_count > 0) {
+                const healer = details.modifiers.healer_recovery;
+                detailsHtml += `
+                    <div class="battle-healer">
+                        <h4>War Healer Recovery</h4>
+                        <p>${healer.healer_count} War Healer${healer.healer_count > 1 ? 's' : ''} recovered ${healer.recovered_count} wounded troops</p>
+                        ${healer.capped ? '<p style="color: #c44; font-size: 12px;">Recovery capped at world limit</p>' : ''}
+                    </div>
+                `;
+            }
+
             detailsHtml += `</div>`;
         }
 
