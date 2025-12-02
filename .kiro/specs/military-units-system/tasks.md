@@ -259,7 +259,7 @@
   - **Property 22: Mantlet protection application**
   - **Validates: Requirements 14.2, 14.3, 14.4**
 
-- [-] 8.6 Integrate calculateMantletProtection() into resolveBattle()
+- [x] 8.6 Integrate calculateMantletProtection() into resolveBattle()
   - Apply before distributing casualties to siege units
   - Reduce ranged damage to siege by protection percentage
   - Include mantlet effect in battle report
@@ -276,7 +276,7 @@
   - **Property 11: Healer recovery cap**
   - **Validates: Requirements 6.4**
 
-- [ ] 8.9 Integrate applyHealerRecovery() into resolveBattle()
+- [-] 8.9 Integrate applyHealerRecovery() into resolveBattle()
   - Call after casualty calculation
   - Add recovered units back to survivor counts
   - Include recovery details in battle report

@@ -1505,6 +1505,9 @@ class BattleManager
         ];
         $rpsModifiers = $this->applyRPSModifiers($attacking_units, $defending_units, $rpsContext);
 
+        // --- MANTLET PROTECTION (SUPPORT UNIT MECHANICS) ---
+        $mantletProtection = $this->calculateMantletProtection($attacking_units);
+
         // --- PHASED COMBAT (Infantry -> Cavalry -> Archer) ---
         $initial_attacker_counts = [];
         $initial_defender_counts = [];
@@ -2048,8 +2051,9 @@ class BattleManager
                         'banner_count' => $bannerAura['banner_count']
                     ],
                     'mantlet' => [
-                        'applied' => $mantletReductionApplied > 0,
-                        'reduction_percent' => $mantletReductionApplied > 0 ? round($mantletReductionApplied * 100, 1) : 0
+                        'applied' => $mantletProtection > 0,
+                        'reduction_percent' => $mantletProtection > 0 ? round($mantletProtection * 100, 1) : 0,
+                        'protection_multiplier' => $mantletProtection
                     ],
                     'rps_modifiers' => $rpsModifiers
                 ],
