@@ -408,10 +408,10 @@
   - Output diff for changelog documentation
   - _Requirements: 13.4_
 
-- [ ] 15. Final checkpoint - Ensure all tests pass
+- [-] 15. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [-] 16. Create configuration files and documentation
+- [x] 16. Create configuration files and documentation
 - [x] 16.1 Create config/rps_modifiers.php
   - Define RPS multiplier constants (CAV_VS_RANGED_MULT, PIKE_VS_CAV_MULT, etc.)
   - Define context rules (wall level, terrain)
@@ -422,7 +422,7 @@
   - Define per-village, per-account, per-command caps
   - Document cap rationale
 
-- [-] 16.3 Update README with unit system documentation
+- [x] 16.3 Update README with unit system documentation
   - Document unit categories and roles
   - Document RPS mechanics
   - Document support unit mechanics
