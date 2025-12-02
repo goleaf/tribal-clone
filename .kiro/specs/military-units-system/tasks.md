@@ -417,12 +417,12 @@
   - Define context rules (wall level, terrain)
   - Document each modifier
 
-- [-] 16.2 Create config/unit_caps.php
+- [x] 16.2 Create config/unit_caps.php
   - Define default cap values per unit category
   - Define per-village, per-account, per-command caps
   - Document cap rationale
 
-- [ ] 16.3 Update README with unit system documentation
+- [-] 16.3 Update README with unit system documentation
   - Document unit categories and roles
   - Document RPS mechanics
   - Document support unit mechanics
