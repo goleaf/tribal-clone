@@ -312,7 +312,7 @@
   - _Requirements: 7.3, 7.4, 7.5_
 
 - [-] 10. Implement scout intel mechanics in BattleManager
-- [ ] 10.1 Extend scout combat resolution
+- [-] 10.1 Extend scout combat resolution
   - Compare attacking scouts vs defending scouts
   - Kill attacking scouts if outnumbered
   - Prevent intel revelation if scouts die
