@@ -168,6 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $msg = "Unit type '{$unitInternal}' is disabled on this world.";
         echo json_encode(['error' => $msg, 'code' => 'ERR_FEATURE_DISABLED', 'unit' => $unitInternal]);
         logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_FEATURE_DISABLED', $msg, $worldId);
+        incrementErrorCounter('ERR_FEATURE_DISABLED');
         exit();
     }
 
@@ -211,6 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $msg = 'Noble requirements not met (statue, academy 1, smithy 20, market 10).';
             echo json_encode(['error' => $msg, 'code' => 'ERR_PREREQ']);
             logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_PREREQ', $msg, $worldId);
+            incrementErrorCounter('ERR_PREREQ');
             exit();
         }
         $userNobles = $unitManager->countUserNobles($user_id);
@@ -236,6 +238,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $msg = 'Not enough coins';
             echo json_encode(['error' => $msg, 'code' => 'ERR_RES', 'coins' => $coinsAvailable]);
             logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_RES', $msg, $worldId);
+            incrementErrorCounter('ERR_RES');
             exit();
         }
     } elseif ($isConquestBearer) {
@@ -247,6 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $msg = 'Conquest unit requirements not met (academy 5, smithy 15).';
             echo json_encode(['error' => $msg, 'code' => 'ERR_PREREQ']);
             logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_PREREQ', $msg, $worldId);
+            incrementErrorCounter('ERR_PREREQ');
             exit();
         }
         $stmtCoins = $conn->prepare("SELECT coins FROM villages WHERE id = ?");
@@ -260,6 +264,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $msg = 'Not enough standards/coins for conquest units.';
             echo json_encode(['error' => $msg, 'code' => 'ERR_RES', 'coins' => $coinsAvailable]);
             logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_RES', $msg, $worldId);
+            incrementErrorCounter('ERR_RES');
             exit();
         }
     }
@@ -275,6 +280,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'missing' => $resource_check['missing'] ?? null
         ]);
         logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_RES', $msg, $worldId);
+        incrementErrorCounter('ERR_RES');
         exit();
     }
 
@@ -314,6 +320,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $msg = 'An error occurred during recruitment: ' . $e->getMessage();
         echo json_encode(['error' => $msg, 'code' => 'ERR_SERVER']);
         logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_SERVER', $msg, $worldId);
+        incrementErrorCounter('ERR_SERVER');
     }
 }
 ?>
