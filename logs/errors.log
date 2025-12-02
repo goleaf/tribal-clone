@@ -373,3 +373,11 @@ Trace: #0 {main}
 Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/village_unit_count_with_queue_test.php(59): assert(false, 'Test 2 Failed: ...')
 #1 {main}
 --------------------------------------------------------------------------------
+[2025-12-02 09:26:42] EXCEPTION: Test 2 Failed: Should have 15 existing siege units, got 0 in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/village_unit_count_with_queue_test.php line 66
+Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/village_unit_count_with_queue_test.php(66): assert(false, 'Test 2 Failed: ...')
+#1 {main}
+--------------------------------------------------------------------------------
+[2025-12-02 09:27:03] EXCEPTION: Test 2 Failed: Should have 15 existing siege units, got 0 in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/village_unit_count_with_queue_test.php line 72
+Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/village_unit_count_with_queue_test.php(72): assert(false, 'Test 2 Failed: ...')
+#1 {main}
+--------------------------------------------------------------------------------

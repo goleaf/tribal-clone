@@ -52,10 +52,23 @@ assert($count === 0, "Test 1 Failed: Empty village should have 0 siege units, go
 echo "✓ Test 1 passed: Empty village has 0 siege units\n";
 
 // Test 2: Add existing units
-$db->query("INSERT INTO village_units (village_id, unit_type_id, count) VALUES ($villageId, $ramId, 10)");
-$db->query("INSERT INTO village_units (village_id, unit_type_id, count) VALUES ($villageId, $catapultId, 5)");
+$insertRam = $db->query("INSERT INTO village_units (village_id, unit_type_id, count) VALUES ($villageId, $ramId, 10)");
+if (!$insertRam) {
+    echo "Ram insert error: " . $db->error . "\n";
+}
+$insertCat = $db->query("INSERT INTO village_units (village_id, unit_type_id, count) VALUES ($villageId, $catapultId, 5)");
+if (!$insertCat) {
+    echo "Catapult insert error: " . $db->error . "\n";
+}
+echo "Inserted rams: " . ($insertRam ? "success" : "failed") . ", catapults: " . ($insertCat ? "success" : "failed") . "\n";
+
+// Verify the inserts worked
+$verify = $db->query("SELECT COUNT(*) as cnt FROM village_units WHERE village_id = $villageId");
+$verifyRow = $verify->fetch_assoc();
+echo "Village units count in DB: " . $verifyRow['cnt'] . "\n";
 
 $count = $unitManager->getVillageUnitCountWithQueue($villageId, ['ram', 'catapult']);
+echo "getVillageUnitCountWithQueue returned: $count\n";
 assert($count === 15, "Test 2 Failed: Should have 15 existing siege units, got $count");
 echo "✓ Test 2 passed: Correctly counts existing units (15)\n";
 
