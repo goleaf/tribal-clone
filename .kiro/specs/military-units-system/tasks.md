@@ -184,7 +184,7 @@
   - **Property 30: Telemetry emission**
   - **Validates: Requirements 18.1, 18.2, 18.3**
 
-- [ ] 5.4 Add cap hit counter incrementation
+- [-] 5.4 Add cap hit counter incrementation
   - Increment counter when ERR_CAP is returned
   - Track by unit type and world
   - _Requirements: 18.2_

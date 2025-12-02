@@ -30,6 +30,32 @@ function logRecruitTelemetry(int $userId, int $villageId, int $unitId, int $coun
     @file_put_contents($logFile, $line, FILE_APPEND | LOCK_EX);
 }
 
+function incrementCapHitCounter(int $unitId, int $worldId, string $unitInternal = ''): void
+{
+    $counterFile = __DIR__ . '/../../logs/cap_hit_counters.log';
+    $entry = [
+        'ts' => date('c'),
+        'world_id' => $worldId,
+        'unit_id' => $unitId,
+        'unit_internal' => $unitInternal,
+        'event' => 'cap_hit'
+    ];
+    $line = json_encode($entry) . PHP_EOL;
+    @file_put_contents($counterFile, $line, FILE_APPEND | LOCK_EX);
+}
+
+function incrementErrorCounter(string $errorCode): void
+{
+    $counterFile = __DIR__ . '/../../logs/error_counters.log';
+    $entry = [
+        'ts' => date('c'),
+        'error_code' => $errorCode,
+        'event' => 'error'
+    ];
+    $line = json_encode($entry) . PHP_EOL;
+    @file_put_contents($counterFile, $line, FILE_APPEND | LOCK_EX);
+}
+
 // Initialize managers
 $unitManager = new UnitManager($conn);
 $villageManager = new VillageManager($conn);
@@ -104,6 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $msg = 'Invalid unit_id.';
         echo json_encode(['error' => $msg, 'code' => 'ERR_INPUT', 'details' => ['field' => 'unit_id']]);
         logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, (int)$count, 'fail', 'ERR_INPUT', $msg, $worldId);
+        incrementErrorCounter('ERR_INPUT');
         exit();
     }
 
@@ -113,6 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $msg = 'Invalid count. Must be a positive integer.';
         echo json_encode(['error' => $msg, 'code' => 'ERR_INPUT', 'details' => ['field' => 'count', 'value' => $count]]);
         logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, (int)$count, 'fail', 'ERR_INPUT', $msg, $worldId);
+        incrementErrorCounter('ERR_INPUT');
         exit();
     }
 
@@ -126,6 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $msg = 'Unit does not exist.';
         echo json_encode(['error' => $msg, 'code' => 'ERR_INPUT', 'details' => ['field' => 'unit_id', 'value' => $unit_id]]);
         logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_INPUT', $msg, $worldId);
+        incrementErrorCounter('ERR_INPUT');
         exit();
     }
 
@@ -154,6 +183,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         if ($code === 'ERR_CAP' && isset($requirements['current_count'], $requirements['max_cap'])) {
             $response['current_count'] = $requirements['current_count'];
             $response['max_cap'] = $requirements['max_cap'];
+            // Increment cap hit counter
+            incrementCapHitCounter($unit_id, $worldId, $unitInternal);
         } elseif ($code === 'ERR_SEASONAL_EXPIRED' && isset($requirements['window_start'], $requirements['window_end'])) {
             $response['window_start'] = $requirements['window_start'];
             $response['window_end'] = $requirements['window_end'];
@@ -161,6 +192,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         
         echo json_encode($response);
         logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', $code, $msg, $worldId);
+        // Increment error counter for all errors
+        incrementErrorCounter($code);
         exit();
     }
 
@@ -187,6 +220,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $msg = 'Noble cap reached';
             echo json_encode(['error' => $msg, 'code' => 'ERR_CAP', 'max_nobles' => $maxNobles, 'current_nobles' => $userNobles]);
             logRecruitTelemetry($user_id, (int)$village_id, (int)$unit_id, $count, 'fail', 'ERR_CAP', $msg, $worldId);
+            incrementCapHitCounter($unit_id, $worldId, $unitInternal);
+            incrementErrorCounter('ERR_CAP');
             exit();
         }
         // Coin check
