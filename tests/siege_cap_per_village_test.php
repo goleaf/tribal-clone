@@ -43,10 +43,10 @@ $workshopTypeId = $workshopTypeRow['id'];
 
 $db->query("INSERT INTO village_buildings (village_id, building_type_id, level) VALUES ($villageId, $workshopTypeId, 10)");
 
-// Get ram unit type
-$ramResult = $db->query("SELECT id FROM unit_types WHERE internal_name = 'ram' LIMIT 1");
+// Get ram unit type (try both 'ram' and 'battering_ram')
+$ramResult = $db->query("SELECT id FROM unit_types WHERE internal_name IN ('ram', 'battering_ram') LIMIT 1");
 $ramRow = $ramResult->fetch_assoc();
-$ramId = $ramRow['id'];
+$ramId = $ramRow ? $ramRow['id'] : null;
 
 if (!$ramId) {
     echo "SKIP: Ram unit type not found\n";

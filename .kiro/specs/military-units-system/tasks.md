@@ -106,13 +106,13 @@
   - Return total count
   - _Requirements: 9.5_
 
-- [-] 3.2 Add per-village siege cap check to recruitUnits()
+- [x] 3.2 Add per-village siege cap check to recruitUnits()
   - Count total siege units (rams, catapults) with queue
   - Compare against SIEGE_CAP_PER_VILLAGE constant
   - Reject if exceeded with ERR_CAP
   - _Requirements: 9.1_
 
-- [ ] 3.3 Add per-account elite cap check to recruitUnits()
+- [-] 3.3 Add per-account elite cap check to recruitUnits()
   - Call checkEliteUnitCap() for elite units
   - Reject if exceeded with ERR_CAP
   - _Requirements: 9.2_
