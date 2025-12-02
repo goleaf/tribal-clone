@@ -282,7 +282,7 @@
   - Include recovery details in battle report
   - _Requirements: 6.4_
 
-- [ ] 9. Implement conquest mechanics in BattleManager
+- [-] 9. Implement conquest mechanics in BattleManager
 - [ ] 9.1 Create processConquestAllegiance() method
   - Check if attacker won the battle
   - Count surviving Noble/Standard Bearer units
