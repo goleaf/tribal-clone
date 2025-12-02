@@ -1803,131 +1803,24 @@ class BattleManager
         }
 
         // --- LOYALTY / CONQUEST (NOBLES) ---
-        $loyalty_report = null;
-        $villageConquered = false;
-        $loyalty_before = $this->getVillageLoyalty($attack['target_village_id']);
-        $loyalty_after = $loyalty_before;
-        $loyalty_cap = method_exists($this->villageManager, 'getEffectiveLoyaltyCap')
-            ? (int)round($this->villageManager->getEffectiveLoyaltyCap($attack['target_village_id']))
-            : self::LOYALTY_MAX;
-        $dropMultiplier = method_exists($this->villageManager, 'getLoyaltyDropMultiplier')
-            ? $this->villageManager->getLoyaltyDropMultiplier($attack['target_village_id'])
-            : 1.0;
-
-        $nowTs = time();
-        $targetConqueredAt = $this->getVillageConqueredAt((int)$attack['target_village_id']);
-        $captureCooldownUntil = $this->getCaptureCooldownUntil((int)$attack['target_village_id']);
-        if ($captureCooldownUntil === null && $targetConqueredAt !== null) {
-            $fallbackCooldown = $targetConqueredAt + (self::CONQUEST_IMMUNITY_HOURS * 3600);
-            if ($fallbackCooldown > $nowTs) {
-                $captureCooldownUntil = $fallbackCooldown;
-            }
-        }
-        $captureImmune = $captureCooldownUntil !== null && $captureCooldownUntil > $nowTs;
-
-        $loyalty_floor = $this->getEffectiveLoyaltyFloor(
-            $attacking_units,
+        // Process conquest allegiance reduction using the new method
+        $loyalty_report = $this->processConquestAllegiance(
             (int)$attack['target_village_id'],
-            $targetConqueredAt,
-            $captureCooldownUntil
+            $attacking_units,
+            $attacker_win && !$defenderAlive,
+            (int)$attacker_user_id,
+            $defender_user_id,
+            $attack_id
         );
-        $noblePresent = $this->hasNobleUnit($attacking_units);
-        $survivingNobles = $this->countNobleUnits($attacking_units);
-        $defenderVillageCount = $defender_user_id ? $this->getVillageCountForUser((int)$defender_user_id) : null;
-
-        $conquestReason = $noblePresent ? 'attempt' : 'no_noble_present';
-        if ($noblePresent) {
-            $dropMin = defined('NOBLE_MIN_DROP') ? (int)NOBLE_MIN_DROP : self::LOYALTY_DROP_MIN;
-            $dropMax = defined('NOBLE_MAX_DROP') ? (int)NOBLE_MAX_DROP : self::LOYALTY_DROP_MAX;
-            $dropBase = 0;
-            $dropApplied = 0;
-
-            if ($attacker_win && !$defenderAlive) {
-                // Successful noble strike
-                $dropBase = random_int($dropMin, $dropMax);
-                $dropApplied = max(1, (int)round($dropBase * $dropMultiplier));
-                $loyalty_after = max($loyalty_floor, $loyalty_before - $dropApplied);
-                $villageConquered = ($loyalty_floor === self::LOYALTY_MIN) && $loyalty_after <= self::LOYALTY_MIN;
-
-                // Enforce conquest point-range gate (50%-150%) when not barbarian
-                $defender_points = $this->getVillagePointsWithFallback($attack['target_village_id']);
-                $attacker_points = $this->getVillagePointsWithFallback($attack['source_village_id']);
-                if ($attacker_points > 0 && $defender_points > 0) {
-                    $ratio = $defender_points / $attacker_points;
-                    if ($ratio < 0.5 || $ratio > 1.5) {
-                        $villageConquered = false; // Loyalty can drop, but cannot capture out-of-range targets
-                        $conquestReason = 'point_range_block';
-                    }
-                }
-                // Last-village protection: cannot conquer defender's final village.
-                if ($defenderVillageCount !== null && $defenderVillageCount <= 1) {
-                    $villageConquered = false;
-                    $conquestReason = 'last_village_protected';
-                }
-
-                if ($villageConquered && $captureImmune) {
-                    $villageConquered = false;
-                    $conquestReason = 'capture_cooldown';
-                    // Keep loyalty above zero while immunity is active to avoid weird 0-loyalty states.
-                    $loyalty_after = max($loyalty_after, max($loyalty_floor, 1));
-                }
-
-                if ($villageConquered) {
-                    $loyalty_after = $this->getConqueredLoyaltyReset((float)$loyalty_cap);
-                    $conquestReason = 'captured';
-                } elseif ($dropApplied > 0 && $conquestReason === 'attempt') {
-                    $conquestReason = 'drop_applied';
-                }
-            } else {
-                // Failed attempt still chips loyalty
-                $dropBase = random_int(self::LOYALTY_FAIL_DROP_MIN, self::LOYALTY_FAIL_DROP_MAX);
-                $dropApplied = max(0, (int)round($dropBase * $dropMultiplier));
-                if ($dropApplied > 0) {
-                    $loyalty_after = max($loyalty_floor, $loyalty_before - $dropApplied);
-                    $conquestReason = 'drop_on_failed_wave';
-                } else {
-                    $conquestReason = $attacker_win ? 'defender_survived' : 'attacker_lost';
-                }
-            }
-
-            $loyalty_report = [
-                'before' => $loyalty_before,
-                'after' => $loyalty_after,
-                'drop' => $dropApplied,
-                'drop_base' => $dropBase,
-                'conquered' => $villageConquered,
-                'floor' => $loyalty_floor,
-                'cap' => $loyalty_cap,
-                'drop_multiplier' => $dropMultiplier,
-                'reason' => $conquestReason,
-                'surviving_nobles' => $survivingNobles,
-                'capture_cooldown_until' => $captureCooldownUntil,
-                'capture_cooldown_active' => $captureImmune,
-                'anti_snipe_until' => $captureAftermath['anti_snipe_until'] ?? null,
-                'allegiance_floor' => $captureAftermath['allegiance_floor'] ?? null,
-                'capture_building_damage' => $captureAftermath['building_damage'] ?? null
-            ];
-
-            $logPath = __DIR__ . '/../../logs/conquest_attempts.log';
-            $logPayload = [
-                'ts' => time(),
-                'attack_id' => $attack_id,
-                'source_village_id' => $attack['source_village_id'],
-                'target_village_id' => $attack['target_village_id'],
-                'attacker_user_id' => $attacker_user_id,
-                'defender_user_id' => $defender_user_id,
-                'attacker_won' => $attacker_win,
-                'loyalty_before' => $loyalty_before,
-                'loyalty_after' => $loyalty_after,
-                'drop' => $dropApplied,
-                'drop_base' => $dropBase,
-                'conquered' => $villageConquered,
-                'reason' => $conquestReason,
-                'defender_village_count' => $defenderVillageCount,
-                'surviving_nobles' => $survivingNobles,
-                'capture_cooldown_until' => $captureCooldownUntil
-            ];
-            @file_put_contents($logPath, json_encode($logPayload) . PHP_EOL, FILE_APPEND);
+        
+        $villageConquered = $loyalty_report['captured'] ?? false;
+        $loyalty_after = $loyalty_report['after'] ?? $this->getVillageLoyalty($attack['target_village_id']);
+        
+        // Add capture aftermath data to loyalty report
+        if (isset($captureAftermath)) {
+            $loyalty_report['anti_snipe_until'] = $captureAftermath['anti_snipe_until'] ?? null;
+            $loyalty_report['allegiance_floor'] = $captureAftermath['allegiance_floor'] ?? null;
+            $loyalty_report['capture_building_damage'] = $captureAftermath['building_damage'] ?? null;
         }
 
         // --- TRANSACTION ---
