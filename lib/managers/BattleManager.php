@@ -3373,15 +3373,11 @@ class BattleManager
 
     /**
      * Hidden resources protected by the hiding place per resource type.
+     * Delegates to BuildingManager for consistent capacity calculation.
      */
     private function getHiddenResourcesPerType(int $villageId): int
     {
-        $level = $this->buildingManager->getBuildingLevel($villageId, 'hiding_place');
-        if ($level <= 0) {
-            return 0;
-        }
-
-        return (int)floor(150 * pow(1.233, $level));
+        return $this->buildingManager->getHidingPlaceCapacity($villageId);
     }
 
     /**

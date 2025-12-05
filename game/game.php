@@ -12,6 +12,7 @@ require_once __DIR__ . '/../lib/managers/EndgameManager.php';
 require_once __DIR__ . '/../lib/managers/WorldManager.php';
 require_once __DIR__ . '/../lib/managers/IntelManager.php';
 require_once __DIR__ . '/../lib/managers/TaskManager.php';
+require_once __DIR__ . '/../lib/managers/ViewRenderer.php';
 require_once __DIR__ . '/../lib/functions.php';
 
 // Instantiate managers
@@ -27,6 +28,7 @@ $endgameManager = new EndgameManager($conn);
 $worldManager = new WorldManager($conn);
 $intelManager = new IntelManager($conn);
 $taskManager = new TaskManager($conn);
+$viewRenderer = new ViewRenderer($conn, $buildingManager, $resourceManager);
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: /auth/login.php");
@@ -681,6 +683,7 @@ require '../header.php';
                     <a class="action-chip" href="/messages/messages.php"><i class="fas fa-envelope"></i> Messages</a>
                     <a class="action-chip" href="/player/ranking.php"><i class="fas fa-trophy"></i> Rankings</a>
                     <a class="action-chip" href="/help.php"><i class="fas fa-info-circle"></i> Help</a>
+                    <a class="action-chip" href="/game/game_wap.php"><i class="fas fa-mobile-alt"></i> WAP Mode</a>
                 </div>
             </div>
         </aside>

@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "GitHub Example Quality",
+  "description": "Ensure shared examples mirror quality found in well-starred PHP repos.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "examples/**/*.php",
+      "docs/**/*.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Keep examples runnable, licensed, and minimal; include setup steps; align with patterns seen on github.com/topics/php reference projects.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

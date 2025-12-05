@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "DevDocs JS Guardrails",
+  "description": "Check JS/DOM changes against DevDocs for correctness, safety, and compatibility.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "js/**/*.js",
+      "ajax/**/*.js",
+      "game/**/*.js",
+      ".kiro/steering/devdocs-js-guardrails.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Validate JS/DOM usage per DevDocs: prefer standard APIs; confirm fetch/XHR headers/credentials and CORS; use textContent to avoid XSS; batch DOM writes; use Intl/URL for parsing/formatting; note browser support/fallbacks for new APIs; clean up listeners to avoid leaks.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

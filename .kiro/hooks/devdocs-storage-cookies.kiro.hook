@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "DevDocs Storage & Cookies",
+  "description": "Validate cookie/session/localStorage usage per DevDocs.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "init.php",
+      "auth/**/*.php",
+      "js/**/*.js"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Check storage: set secure/httponly/samesite on cookies; avoid storing sensitive data in localStorage; align with DevDocs cookie APIs; document expiry and path/domain; prefer server session over client storage for auth.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

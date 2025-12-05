@@ -254,6 +254,25 @@ class BuildingConfigManager {
          return (int) round($capacity);
     }
     
+    /**
+     * Calculate Hiding Place capacity for a given level.
+     * Formula: 150 * 1.233 ^ level
+     * This determines how many resources per type are protected from plunder.
+     * 
+     * @param int $level Hiding Place level (0-10 typically)
+     * @return int Protected resources per type (wood, clay, iron)
+     */
+    public function calculateHidingPlaceCapacity(int $level): int {
+        if ($level <= 0) {
+            return 0;
+        }
+        // Formula: 150 * 1.233 ^ level
+        $base = 150;
+        $factor = 1.233;
+        $capacity = $base * pow($factor, $level);
+        return (int) floor($capacity);
+    }
+    
     // Calculate maximum population for a given farm level
     public function calculateFarmCapacity(int $level): ?int {
         $config = $this->getBuildingConfig('farm');

@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "DevDocs Encoding & i18n",
+  "description": "Ensure encoding and localization follow DevDocs guidance.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/**/*.php",
+      "lang/**/*.php",
+      "js/**/*.js"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Verify UTF-8 everywhere; set charset headers/meta; escape output; avoid mixing encodings; use DevDocs Intl APIs for formatting; keep strings externalized under lang/ and note locale fallbacks.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

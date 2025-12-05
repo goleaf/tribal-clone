@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "DevDocs Performance & Debugging",
+  "description": "Prompts for perf-aware and debuggable code aligned with DevDocs guidance.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/**/*.php",
+      "js/**/*.js",
+      "jobs/**/*.php",
+      ".kiro/steering/devdocs-perf-debug.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Apply perf/debug guardrails: prefer lazy iteration and batching I/O; reuse prepared statements/cache configs; remove noisy debug output; handle errors explicitly with typed exceptions; log without leaking secrets; document profiling steps/commands and expected baselines.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

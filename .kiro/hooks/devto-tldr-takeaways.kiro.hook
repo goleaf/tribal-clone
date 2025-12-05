@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "dev.to TL;DR & Takeaways",
+  "description": "Ensure markdown docs include TL;DR/key takeaways per dev.to style.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/**/*.md",
+      "README*.md",
+      "readme*.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Add a TL;DR or key takeaways section near the top: 3\u20135 bullets summarizing value, audience, and expected outcome. Keep concise, actionable, and aligned with dev.to style.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

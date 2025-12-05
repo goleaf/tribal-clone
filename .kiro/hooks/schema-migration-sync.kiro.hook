@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "Schema + Migration Sync",
+  "description": "Reconciles SQLite and MySQL definitions when schema or migration files change, verifies migrations are idempotent and reversible, confirms config constants remain consistent, updates docs if needed, and recommends validation steps including installer runs and test execution.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "migrations/**/*",
+      "docs/sql/**/*.sql",
+      "lib/Database.php",
+      "config/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A schema or migration file has been modified. Please perform the following analysis:\n\n1) **Schema Reconciliation**: Review the changed file(s) and verify that SQLite and MySQL definitions are consistent. Check that primary keys, defaults, indices, foreign keys, and type widths match what the managers expect (Building/Unit/Research/Battle/Message/Notification managers in lib/managers/).\n\n2) **Migration Safety**: Confirm the migration is idempotent and reversible where applicable. Call out any destructive steps (DROP, ALTER that loses data) and identify whether data backfills or manual interventions are needed.\n\n3) **Config Consistency**: Verify that config constants (DB_DRIVER, DB_PATH, connection charset in config/*.php) remain consistent and that migrations align with code paths in the relevant managers.\n\n4) **Documentation Updates**: Check if accompanying docs need updates (docs/sql/*, README.en.md, readme.md). Surface any manual steps required such as seed data insertion or admin user creation.\n\n5) **Validation Recommendations**: Recommend concrete validation steps:\n   - Should the installer (install.php) be run or tested?\n   - Which representative migrations should be executed on a test DB?\n   - Which existing tests in tests/ touch persistence and should be re-run?\n\nProvide a brief, action-oriented summary citing the touched files and next verification steps.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

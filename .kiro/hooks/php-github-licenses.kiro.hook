@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "GitHub License Consistency",
+  "description": "Ensure license and notices are consistent across docs and code.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "LICENSE",
+      "README*.md",
+      "docs/**/*.md",
+      "lib/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Confirm license headers/mentions match LICENSE; avoid mixing incompatible snippets; reference GitHub open-source norms.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

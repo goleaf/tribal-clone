@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "dev.to SEO & Metadata",
+  "description": "Validate titles/tags/canonical links and alt text for markdown docs per dev.to guidance.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/**/*.md",
+      "README*.md",
+      "readme*.md",
+      ".kiro/steering/devto-seo-metadata.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Check SEO/metadata: descriptive title (<~60 chars), concise summary, 3-5 relevant tags (no stuffing), canonical URL when cross-posting, valid internal links, alt text for images, lightweight assets, stable headings/anchors, prefer HTTPS references.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

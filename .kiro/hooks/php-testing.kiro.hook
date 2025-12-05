@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "PHP Testing Expectations",
+  "description": "Prompt for tests inspired by freecodecamp/codecademy/phpapprentice intros.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/**/*.php",
+      "ajax/**/*.php",
+      "app/**/*.php",
+      "tests/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Add/extend tests for new logic; prefer small, deterministic cases; cover edge inputs; note manual verifications; align with beginner-friendly practices from freecodecamp.org and codecademy learn-php tracks.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

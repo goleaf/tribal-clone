@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "DevDocs JSON Handling",
+  "description": "Validate JSON encode/decode per DevDocs across PHP/JS.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "ajax/**/*.php",
+      "ajax/**/*.js",
+      "lib/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Ensure robust JSON handling: set Content-Type application/json; check json_encode/json_decode errors; use associative mode deliberately; handle parse errors in JS; avoid double-encoding; sanitize/validate payloads.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "PHPApprentice Clarity",
+  "description": "Ensure clarity and gradual complexity as seen on phpapprentice.com.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/**/*.md",
+      "examples/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Keep examples incremental; define terms; avoid hidden magic; provide expected outputs; match phpapprentice teaching clarity.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

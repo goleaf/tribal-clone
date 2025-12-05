@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "DevDocs Cache Control",
+  "description": "Check HTTP caching headers and semantics per DevDocs.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "ajax/**/*.php",
+      "lib/**/*Http*.php",
+      "lib/**/*Controller*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Validate caching: set Cache-Control/ETag/Last-Modified appropriately; avoid caching sensitive responses; honor conditional requests; document TTLs; align with DevDocs HTTP caching semantics.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "enabled": true,
+  "name": "DevDocs DOM & Accessibility",
+  "description": "Guard DOM changes with accessibility and standards per DevDocs.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "game/**/*.php",
+      "game/**/*.js",
+      "map/**/*.php",
+      "map/**/*.js",
+      "templates/**/*.php",
+      ".kiro/steering/devdocs-dom-accessibility.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review DOM/accessibility: use semantic HTML and buttons over clickable divs; label form controls; ensure keyboard focus and ARIA where needed; avoid inline handlers, attach/unregister listeners properly; prefer standard DOM APIs per DevDocs; keep markup light for WAP/minimal UX.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

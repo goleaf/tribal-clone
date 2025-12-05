@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "W3Schools Form Basics",
+  "description": "Double-check basic form handling per w3schools/php.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "auth/**/*.php",
+      "ajax/**/*.php",
+      "game/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Validate required fields, sanitize inputs, limit lengths, show simple error messages; align with w3schools PHP form examples to keep beginner-friendly.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

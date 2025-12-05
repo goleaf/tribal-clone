@@ -547,20 +547,38 @@ class BuildingManager {
         }
         
         // 4. Prerequisites validation
-        // 4a. Building prerequisites
+        // 4a. Headquarters/Main Building prerequisite (Requirement 2.5)
+        // All buildings except main_building itself require main_building to be at least level 1
+        if ($internalName !== 'main_building') {
+            $mainBuildingLevel = $this->getBuildingLevel($villageId, 'main_building');
+            if ($mainBuildingLevel < 1) {
+                return [
+                    'success' => false,
+                    'message' => 'Headquarters (Main Building) must be constructed before other buildings.',
+                    'code' => 'ERR_PREREQ',
+                    'details' => [
+                        'required_building' => 'main_building',
+                        'required_level' => 1,
+                        'current_level' => $mainBuildingLevel
+                    ]
+                ];
+            }
+        }
+        
+        // 4b. Building prerequisites
         $requirementsCheck = $this->checkBuildingRequirements($internalName, $villageId);
         if (!$requirementsCheck['success']) {
             $requirementsCheck['code'] = 'ERR_PREREQ';
             return $requirementsCheck;
         }
         
-        // 4b. Research prerequisites (if applicable)
+        // 4c. Research prerequisites (if applicable)
         $researchCheck = $this->checkResearchPrerequisites($internalName, $villageId);
         if (!$researchCheck['success']) {
             return $researchCheck;
         }
         
-        // 4c. Special building uniqueness (First Church)
+        // 4d. Special building uniqueness (First Church)
         if ($userId !== null && $internalName === 'first_church') {
             if ($this->userHasBuiltFirstChurch($userId, $villageId)) {
                 return [
@@ -1377,5 +1395,123 @@ class BuildingManager {
         $stmt->close();
 
         return $success;
+    }
+    
+    /**
+     * Format building list as HTML table rows with upgrade links (WAP-style).
+     * Returns compact HTML suitable for low-bandwidth WAP interfaces.
+     * 
+     * @param array $buildings Array of building data from getVillageBuildingsViewData()
+     * @param int $villageId Village ID for upgrade links
+     * @return string HTML table rows
+     */
+    public function formatBuildingListAsTableRows(array $buildings, int $villageId): string
+    {
+        $html = '';
+        
+        foreach ($buildings as $building) {
+            $name = htmlspecialchars($building['name'] ?? 'Unknown');
+            $level = (int)($building['level'] ?? 0);
+            $maxLevel = (int)($building['max_level'] ?? 0);
+            $isUpgrading = $building['is_upgrading'] ?? false;
+            $canUpgrade = $building['can_upgrade'] ?? false;
+            $internalName = $building['internal_name'] ?? '';
+            
+            $html .= "<tr>";
+            $html .= "<td>{$name}</td>";
+            $html .= "<td>Lv {$level}/{$maxLevel}</td>";
+            
+            if ($isUpgrading) {
+                $finishTime = $building['queue_finish_time'] ?? 0;
+                $remaining = max(0, $finishTime - time());
+                $hours = floor($remaining / 3600);
+                $minutes = floor(($remaining % 3600) / 60);
+                $html .= "<td>Upgrading ({$hours}h {$minutes}m)</td>";
+            } elseif ($canUpgrade && $level < $maxLevel) {
+                $costs = $building['upgrade_costs'] ?? [];
+                $wood = $costs['wood'] ?? 0;
+                $clay = $costs['clay'] ?? 0;
+                $iron = $costs['iron'] ?? 0;
+                $time = $building['upgrade_time_seconds'] ?? 0;
+                $timeHours = floor($time / 3600);
+                $timeMinutes = floor(($time % 3600) / 60);
+                
+                $html .= "<td>";
+                $html .= "Cost: {$wood}W {$clay}C {$iron}I<br>";
+                $html .= "Time: {$timeHours}h {$timeMinutes}m<br>";
+                $html .= "<a href=\"?action=upgrade&building={$internalName}&village_id={$villageId}\">Upgrade</a>";
+                $html .= "</td>";
+            } else {
+                $reason = $building['upgrade_not_available_reason'] ?? 'Cannot upgrade';
+                $html .= "<td>" . htmlspecialchars($reason) . "</td>";
+            }
+            
+            $html .= "</tr>\n";
+        }
+        
+        return $html;
+    }
+    
+    /**
+     * Format queue display as timestamped text entries (WAP-style).
+     * Returns compact text suitable for low-bandwidth WAP interfaces.
+     * 
+     * @param array $queueItems Array of queue items from BuildingQueueManager::getVillageQueue()
+     * @return string Formatted text display
+     */
+    public function formatQueueDisplayAsText(array $queueItems): string
+    {
+        if (empty($queueItems)) {
+            return "No buildings in queue.";
+        }
+        
+        $text = "Building Queue:\n";
+        
+        foreach ($queueItems as $item) {
+            $buildingName = $this->getBuildingDisplayName($item['building_internal_name'] ?? '');
+            $level = (int)($item['level'] ?? 0);
+            $finishTime = $item['finish_time'] ?? '';
+            $status = $item['status'] ?? 'pending';
+            
+            if ($finishTime) {
+                $finishTs = strtotime($finishTime);
+                $remaining = max(0, $finishTs - time());
+                $hours = floor($remaining / 3600);
+                $minutes = floor(($remaining % 3600) / 60);
+                $seconds = $remaining % 60;
+                
+                $statusText = $status === 'active' ? 'Building' : 'Queued';
+                $text .= "- {$buildingName} to Lv {$level} ({$statusText}, {$hours}h {$minutes}m {$seconds}s)\n";
+            } else {
+                $text .= "- {$buildingName} to Lv {$level} (Pending)\n";
+            }
+        }
+        
+        return $text;
+    }
+    
+    /**
+     * Get Hiding Place capacity for a village.
+     * Returns the amount of resources per type (wood, clay, iron) protected from plunder.
+     * 
+     * @param int $villageId Village ID
+     * @return int Protected resources per type
+     */
+    public function getHidingPlaceCapacity(int $villageId): int
+    {
+        $level = $this->getBuildingLevel($villageId, 'hiding_place');
+        return $this->buildingConfigManager->calculateHidingPlaceCapacity($level);
+    }
+    
+    /**
+     * Get Hiding Place capacity by level.
+     * Returns the amount of resources per type (wood, clay, iron) protected from plunder.
+     * 
+     * @param int $level Hiding Place level
+     * @return int Protected resources per type
+     */
+    public function getHidingPlaceCapacityByLevel(int $level): int
+    {
+        return $this->buildingConfigManager->calculateHidingPlaceCapacity($level);
     }
 }

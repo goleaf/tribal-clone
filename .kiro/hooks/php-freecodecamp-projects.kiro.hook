@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "FreeCodeCamp Project Style",
+  "description": "Align project walkthroughs with freeCodeCamp project guidance.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/**/*.md",
+      "examples/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Include project goals, user stories, acceptance criteria, and tests; keep steps linear; supply starter data; match freeCodeCamp project format.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

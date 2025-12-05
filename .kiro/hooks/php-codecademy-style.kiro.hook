@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Codecademy Simplicity",
+  "description": "Keep examples and code paths beginner-comprehensible per codecademy/freecodecamp.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/**/*.md",
+      "examples/**/*.php",
+      "lib/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Favor clarity over cleverness; add small inline comments when non-obvious; show simple usage examples; connect to learn-php/ freecodecamp teaching style.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

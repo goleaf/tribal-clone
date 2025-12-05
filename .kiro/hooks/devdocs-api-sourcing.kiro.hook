@@ -1,0 +1,20 @@
+{
+  "enabled": true,
+  "name": "DevDocs API Sourcing",
+  "description": "Ensure API references match devdocs.io canonical definitions when coding.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/**/*.php",
+      "js/**/*.js",
+      "ajax/**/*.php",
+      "app/**/*.php",
+      ".kiro/steering/devdocs-api-sourcing.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Verify API usage against devdocs.io: parameter order/defaults/return types/exceptions; note browser/PHP version support; prefer stable APIs; link to DevDocs sections in docs/comments; surface deprecations or breaking changes.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

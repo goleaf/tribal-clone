@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "DevDocs URL Parsing",
+  "description": "Ensure URL parsing/building follows DevDocs APIs.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "js/**/*.js",
+      "lib/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Use standard URL/URLSearchParams (JS) or parse_url/http_build_query (PHP) per DevDocs; avoid manual string concat; handle encoding; validate origins to prevent open redirects.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

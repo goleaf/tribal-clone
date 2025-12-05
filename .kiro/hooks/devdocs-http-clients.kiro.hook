@@ -1,0 +1,20 @@
+{
+  "enabled": true,
+  "name": "DevDocs HTTP Clients",
+  "description": "Validate HTTP verb/status/header usage and payload handling against DevDocs guidance.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "ajax/**/*",
+      "lib/**/*Http*.php",
+      "lib/**/*Client*.php",
+      "js/**/*.js",
+      ".kiro/steering/devdocs-http-clients.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Check HTTP usage per DevDocs: correct verbs/status codes; proper Content-Type/charset; CORS/headers; caching semantics (ETag/If-None-Match/Cache-Control); timeouts/retry/backoff; redact secrets in logs; handle rate limits; provide actionable error messages without leaking internals.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

@@ -13,8 +13,9 @@ class BattleEngine
     private $unitData;
     
     // Configuration constants
-    private const LUCK_MIN = 0.75;
-    private const LUCK_MAX = 1.25;
+    // Requirement 6.2: Random factor in range [0.8, 1.2]
+    private const LUCK_MIN = 0.8;
+    private const LUCK_MAX = 1.2;
     private const MORALE_MIN = 0.5;
     private const MORALE_MAX = 1.5;
     private const MORALE_BASE = 0.3;
@@ -214,7 +215,8 @@ class BattleEngine
         
         foreach ($units as $unitType => $count) {
             if ($count > 0 && isset($this->unitData[$unitType])) {
-                $baseOff = $this->unitData[$unitType]['off'];
+                // Support both old format (off) and new format (attack)
+                $baseOff = $this->unitData[$unitType]['off'] ?? $this->unitData[$unitType]['attack'] ?? 0;
                 $class = self::UNIT_CLASSES[$unitType] ?? 'infantry';
                 $mult = $this->getClassAttackMultiplier($class, $defenderClassShares);
                 $totalOff += ($baseOff * $mult) * $count;
@@ -237,7 +239,12 @@ class BattleEngine
         
         foreach ($defenderUnits as $unitType => $count) {
             if ($count > 0 && isset($this->unitData[$unitType])) {
-                $unitDef = $this->unitData[$unitType]['def'];
+                // Support both old format (def) and new format (defense)
+                $unitDef = $this->unitData[$unitType]['def'] ?? $this->unitData[$unitType]['defense'] ?? null;
+                
+                if ($unitDef === null) {
+                    continue; // Skip units without defense data
+                }
                 
                 // Determine which defense value to use based on attacker composition
                 $defValue = $this->getWeightedDefense($unitDef, $attackerClasses);
@@ -310,8 +317,35 @@ class BattleEngine
     {
         $totalAttackers = array_sum($attackerClasses);
         
+        // Handle new format (defense: {infantry, cavalry, ranged})
+        if (isset($defValues['infantry']) || isset($defValues['cavalry']) || isset($defValues['ranged'])) {
+            if ($totalAttackers === 0) {
+                return $defValues['infantry'] ?? $defValues['cavalry'] ?? $defValues['ranged'] ?? 0;
+            }
+            
+            $weightedDef = 0;
+            
+            if ($attackerClasses['infantry'] > 0) {
+                $weight = $attackerClasses['infantry'] / $totalAttackers;
+                $weightedDef += ($defValues['infantry'] ?? 0) * $weight;
+            }
+            
+            if ($attackerClasses['cavalry'] > 0) {
+                $weight = $attackerClasses['cavalry'] / $totalAttackers;
+                $weightedDef += ($defValues['cavalry'] ?? 0) * $weight;
+            }
+            
+            if ($attackerClasses['archer'] > 0) {
+                $weight = $attackerClasses['archer'] / $totalAttackers;
+                $weightedDef += ($defValues['ranged'] ?? $defValues['infantry'] ?? 0) * $weight;
+            }
+            
+            return $weightedDef;
+        }
+        
+        // Handle old format (def: {gen, cav, arc})
         if ($totalAttackers === 0) {
-            return $defValues['gen'];
+            return $defValues['gen'] ?? 0;
         }
         
         $weightedDef = 0;
@@ -319,17 +353,17 @@ class BattleEngine
         // Weight defense by attacker class distribution
         if ($attackerClasses['infantry'] > 0) {
             $weight = $attackerClasses['infantry'] / $totalAttackers;
-            $weightedDef += $defValues['gen'] * $weight;
+            $weightedDef += ($defValues['gen'] ?? 0) * $weight;
         }
         
         if ($attackerClasses['cavalry'] > 0) {
             $weight = $attackerClasses['cavalry'] / $totalAttackers;
-            $weightedDef += $defValues['cav'] * $weight;
+            $weightedDef += ($defValues['cav'] ?? 0) * $weight;
         }
         
         if ($attackerClasses['archer'] > 0) {
             $weight = $attackerClasses['archer'] / $totalAttackers;
-            $weightedDef += ($defValues['arc'] ?? $defValues['gen']) * $weight;
+            $weightedDef += ($defValues['arc'] ?? $defValues['gen'] ?? 0) * $weight;
         }
         
         return $weightedDef;

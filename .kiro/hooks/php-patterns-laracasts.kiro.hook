@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "Laracasts Patterns",
+  "description": "Highlight patterns/antipatterns often covered in Laracasts.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/**/*.php",
+      "app/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Call out SRP, avoiding static helpers, preferring DI, using value objects; avoid tight coupling; note relevant Laracasts lessons.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

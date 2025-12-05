@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "DevDocs Date/Time",
+  "description": "Guard date/time handling against DevDocs recommendations.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/**/*.php",
+      "js/**/*.js",
+      "jobs/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Use timezone-safe APIs per DevDocs: prefer UTC storage; avoid mixing timestamps and DateTime without conversion; handle daylight offsets; document expected timezone; use Intl for display.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

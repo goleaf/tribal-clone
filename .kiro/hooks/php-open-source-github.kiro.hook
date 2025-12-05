@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "GitHub Open Source Hygiene",
+  "description": "Align changes with GitHub community standards and topics/php norms.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      ".github/**/*",
+      "LICENSE",
+      "README*.md",
+      "lib/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Ensure README/licensing are accurate; add badges/status where relevant; keep CONTRIBUTING hints; consider issues/templates; reference GitHub best practices seen in topics/php repos.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

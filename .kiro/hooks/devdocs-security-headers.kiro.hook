@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "DevDocs Security Headers",
+  "description": "Validate security-related headers per DevDocs HTTP guidance.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "init.php",
+      "ajax/**/*.php",
+      "lib/**/*Controller*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Check headers: Content-Security-Policy (keep minimal inline allowances), X-Frame-Options/SameSite/secure cookies, X-Content-Type-Options, Referrer-Policy. Ensure HTTPS assumptions are documented.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

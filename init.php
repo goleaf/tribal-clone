@@ -67,6 +67,12 @@ if (!file_exists('logs')) {
     mkdir('logs', 0777, true);
 }
 
+// Register optional project hooks (for logging/instrumentation)
+$hookBootstrap = __DIR__ . '/hooks/bootstrap.php';
+if (file_exists($hookBootstrap)) {
+    require_once $hookBootstrap;
+}
+
 // Check if the user is logged in and fetch their data
 $user = null;
 if (isset($_SESSION['user_id'])) {

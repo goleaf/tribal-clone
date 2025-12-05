@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "StackOverflow Repro Quality",
+  "description": "Encourage minimal reproducible examples per StackOverflow norms.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/**/*.md",
+      "tests/**/*.php",
+      "examples/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Provide minimal repros, clear error messages, expected vs actual, environment details; avoid vague descriptions; inspired by stackoverflow.com/questions/tagged/php guidance.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

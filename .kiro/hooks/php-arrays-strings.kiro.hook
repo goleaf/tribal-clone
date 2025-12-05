@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "PHP Arrays & Strings",
+  "description": "Check array/string handling against php.net docs and beginner guides.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/**/*.php",
+      "ajax/**/*.php",
+      "app/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Use multibyte-safe string functions when needed; avoid off-by-one; handle empty arrays safely; prefer strict comparisons; cite php.net string/array docs and w3schools/php references for newcomers.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

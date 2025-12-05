@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "PHP XSS Output Guard",
+  "description": "Ensure output escaping per php.net and OWASP-inspired tutorials.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "game/**/*.php",
+      "map/**/*.php",
+      "messages/**/*.php",
+      "docs/**/*.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Escape dynamic output with htmlspecialchars; avoid echoing raw user input; validate/strip HTML; reference php.net htmlspecialchars docs; note W3Schools/basic tutorials for beginners.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

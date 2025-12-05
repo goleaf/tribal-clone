@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "PHP Sessions & Auth",
+  "description": "Validate session/auth flows using php.net and phptherightway guidance.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "init.php",
+      "auth/**/*.php",
+      "lib/**/*Auth*.php",
+      "ajax/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Check session cookie flags (secure/httponly/samesite), regenerate IDs on login, avoid storing sensitive data in session, validate user ownership; cite php.net/session docs and phptherightway sessions section.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

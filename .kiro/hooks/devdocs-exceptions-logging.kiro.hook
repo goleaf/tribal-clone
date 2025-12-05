@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "DevDocs Exceptions & Logging",
+  "description": "Handle errors per DevDocs guidance with safe logging.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/**/*.php",
+      "jobs/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Use typed exceptions; avoid broad catches that swallow errors; log actionable context without secrets; rethrow or fail fast when needed; keep logs structured; align with DevDocs error-handling notes.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

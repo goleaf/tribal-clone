@@ -586,6 +586,15 @@ class VillageManager
                     );
                 }
             }
+            $this->dispatchHook('village.building.completed', [
+                'user_id' => $userId ?: null,
+                'village_id' => $village_id,
+                'queue_id' => isset($item['id']) ? (int)$item['id'] : null,
+                'building_internal' => $item['internal_name'] ?? null,
+                'building_name' => $item['name'] ?? null,
+                'level' => (int)($item['level'] ?? 0),
+                'is_demolition' => !empty($item['is_demolition']),
+            ]);
         }
 
         // 3. Complete unit recruitment tasks
@@ -610,6 +619,15 @@ class VillageManager
                         );
                     }
                 }
+                $this->dispatchHook('village.recruitment.completed', [
+                    'user_id' => $userId ?: null,
+                    'village_id' => $village_id,
+                    'queue_id' => (int)($queue['queue_id'] ?? 0),
+                    'unit_type_id' => $queue['unit_type_id'] ?? null,
+                    'unit_name' => $queue['unit_name'] ?? null,
+                    'count' => (int)($queue['count'] ?? 0),
+                    'produced_now' => (int)($queue['produced_now'] ?? 0),
+                ]);
             }
         }
          if (!empty($recruitmentUpdate['updated_queues']) && empty($recruitmentUpdate['completed_queues'])) {
@@ -642,6 +660,13 @@ class VillageManager
                         );
                     }
                 }
+                $this->dispatchHook('village.research.completed', [
+                    'user_id' => $userId ?: null,
+                    'village_id' => $village_id,
+                    'research_internal' => $research['research_internal_name'] ?? $research['research_name'] ?? null,
+                    'research_name' => $research['research_name'] ?? null,
+                    'level' => (int)($research['level'] ?? 0),
+                ]);
             }
         }
 
@@ -895,6 +920,13 @@ class VillageManager
         require_once __DIR__ . '/AchievementManager.php';
         $achievementManager = new AchievementManager($this->conn);
         $achievementManager->evaluateAutoUnlocks((int)$user_id);
+
+        $this->dispatchHook('village.created', [
+            'user_id' => (int)$user_id,
+            'village_id' => (int)$village_id,
+            'world_id' => $worldId,
+            'coords' => ['x' => $x, 'y' => $y],
+        ]);
 
         return [
             'success' => true, 
@@ -1152,4 +1184,21 @@ class VillageManager
         $pointsManager = new PointsManager($this->conn);
         return $pointsManager->updatePlayerPoints($userId, true);
     }
-} 
+
+    /**
+     * Fire a hook event while keeping the manager self-contained.
+     */
+    private function dispatchHook(string $event, array $payload): void
+    {
+        if (!class_exists('HookBus')) {
+            $hookBusPath = __DIR__ . '/../hooks/HookBus.php';
+            if (file_exists($hookBusPath)) {
+                require_once $hookBusPath;
+            }
+        }
+
+        if (class_exists('HookBus')) {
+            HookBus::dispatch($event, $payload);
+        }
+    }
+}

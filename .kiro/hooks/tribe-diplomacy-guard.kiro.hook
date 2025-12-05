@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "name": "Tribe & Diplomacy Guard",
+  "description": "Validates tribe membership flows, wars/treaties, reputation hooks, and ranking side effects when tribe code or specs change.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/managers/TribeManager.php",
+      "lib/managers/TribeWarManager.php",
+      "lib/managers/TribeDiplomacyManager.php",
+      "lib/managers/TribeIntelManager.php",
+      "lib/managers/TribeProgressionManager.php",
+      "docs/tribes-and-diplomacy*.md",
+      "docs/tribes-and-diplomacy-todos.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run a tribe/diplomacy guard review:\n\n1) Map changes to tribe specs/todos: invites/joins/kicks respect roles; leader/co-leader permissions enforced; cooldowns on join/leave to prevent hopping; tribe limits honored. Treaty state machine (ally/nap/war/neutral) transitions valid and audit logged.\n2) War handling: declarations/ends broadcast, scoring persists (kill counts, village captures), rankings update, and reputation hooks fire; safe-passage/ally exploits mitigated per todos (flip-flop cooldowns, stacked incoming debuffs if implemented).\n3) Data safety: ownership/world validation on tribe-scoped queries; prepared statements; CSRF/role checks on AJAX/forms; notifications/reports emitted where expected (invites, accept/decline, war start/end).\n4) Abuse + privacy: block duplicate invites, prevent spying via intel endpoints, respect blocked/banned users, hide private notes appropriately.\n5) Testing: suggest regression tests around join/leave cooldowns, treaty changes, war scoring, and ranking updates; include any manual verification steps (create tribe, invite, declare war, capture village) needed. Summarize findings with severity if issues are spotted.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

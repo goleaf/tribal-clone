@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "DevDocs CSS Compatibility",
+  "description": "Check CSS changes for standards alignment and compatibility per DevDocs.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "css/**/*.css",
+      "game/**/*.css",
+      "map/**/*.css"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Validate CSS against DevDocs: avoid deprecated properties, note browser support, prefer lightweight rules for WAP/minimal UI, keep specificity low, and ensure fallbacks for gradients/flex/gap as needed.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

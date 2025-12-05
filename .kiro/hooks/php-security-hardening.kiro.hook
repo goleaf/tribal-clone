@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "PHP Security Hardening",
+  "description": "Automatically scans PHP file changes for SQL injection risks, XSS/CSRF vulnerabilities, auth/session issues, file upload risks, and error leakage. Enforces prepared statements via Database.php, validates CSRF tokens in AJAX endpoints, checks auth/ownership for village/user queries, and ensures no sensitive data exposure in logs or errors.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review the changed PHP file for security vulnerabilities:\n\n1) **SQL Injection**: Verify all database queries use prepared statements via Database.php. Flag any string interpolation in SQL queries (e.g., \"$var\" in query strings). Ensure all bound parameters are properly typed and sanitized.\n\n2) **XSS/CSRF in UI endpoints** (especially ajax/ directory): Check that all user inputs are sanitized, outputs are properly encoded (htmlspecialchars), and CSRF token validation is present for forms and AJAX requests. Verify $_POST/$_GET data is validated before use.\n\n3) **Auth/Session handling**: Ensure no sensitive data (passwords, tokens, session IDs) appears in GET parameters. Verify session fixation mitigations are intact. Check that role/ownership validation exists for village-scoped and user-scoped queries (e.g., verify user owns village before allowing actions).\n\n4) **File uploads/paths**: If file operations exist, check for path traversal vulnerabilities (../../), validate MIME types and file sizes, and ensure user content is stored outside executable directories.\n\n5) **Error/Log leakage**: Verify errors use structured logging without exposing stack traces to players. Check that credentials, tokens, and sensitive data are redacted from logs. Ensure production error messages are generic.\n\n6) **Testing recommendations**: Propose specific security tests for the touched code:\n   - SQL injection payloads to test (e.g., `' OR '1'='1`)\n   - Missing CSRF token scenarios\n   - HTML/JS injection attempts\n   - Unauthorized access attempts (wrong user/village ID)\n   - Note relevant test files in tests/ directory for regression coverage\n\nProvide a concise security assessment with specific line numbers and actionable fixes. If vulnerabilities are found, rate severity (Critical/High/Medium/Low) and suggest immediate remediation.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

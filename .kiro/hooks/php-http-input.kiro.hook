@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "PHP HTTP Input Handling",
+  "description": "Validate $_GET/$_POST/headers per php.net and W3Schools forms tutorials.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "ajax/**/*.php",
+      "auth/**/*.php",
+      "game/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Sanitize/validate input, enforce allowed methods, check CSRF tokens, limit lengths, reject unexpected fields; reference php.net filter_input and w3schools/php forms examples.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

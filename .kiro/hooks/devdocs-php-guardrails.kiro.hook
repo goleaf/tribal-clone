@@ -1,0 +1,20 @@
+{
+  "enabled": true,
+  "name": "DevDocs PHP Guardrails",
+  "description": "Align PHP standard library usage with DevDocs and enforce safety practices.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/**/*.php",
+      "ajax/**/*.php",
+      "app/**/*.php",
+      "init.php",
+      ".kiro/steering/devdocs-php-guardrails.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Cross-check PHP calls with DevDocs: parameter order/returns/false cases; prefer prepared statements and escaping (`htmlspecialchars`); use `random_int`/`password_hash` over outdated APIs; handle timezones consistently; note minimum PHP version for features; add fallbacks if needed.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

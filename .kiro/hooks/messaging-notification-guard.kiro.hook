@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "name": "Messaging & Notification Guard",
+  "description": "Checks privacy, anti-spam, and UX correctness for messaging/notification flows whenever related files change.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/managers/MessageManager.php",
+      "lib/managers/NotificationManager.php",
+      "messages/**/*",
+      "ajax/messages/**/*.php",
+      "ajax/notifications/**/*.php",
+      "docs/notifications-and-reports.md",
+      "MESSAGING_FIX.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run a messaging/notification guard review:\n\n1) Authn/authz: ensure sender/receiver ownership checks on read/archive/delete; CSRF validation on mutating AJAX endpoints; prepared statements (no string interpolation).\n2) Safety: sanitize subject/body on output; enforce max lengths; defend against spam/abuse (rate limits, self-send blocks, blocked/ignored users if supported); avoid leaking other users' data when filtering tabs.\n3) State correctness: unread/archived counters accurate; mark-read/all-read queries scoped by user; deletion should not remove receiver\u2019s copy when sender deletes; pagination/order stable.\n4) Notifications/reports: add notifications for relevant actions; expire/clean logic safe; do not leak stack traces; links should point to valid in-app paths.\n5) Testing: propose targeted tests (SQL injection probes, missing CSRF, spoofed user_id, XSS payloads, rate-limit exhaustion). Provide a concise severity-tagged summary if issues are found.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

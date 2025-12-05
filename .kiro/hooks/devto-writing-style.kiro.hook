@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "dev.to Writing Style",
+  "description": "Ensure markdown/doc changes follow dev.to style: friendly, concise, actionable with code-first examples.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/**/*.md",
+      "README*.md",
+      "readme*.md",
+      ".kiro/steering/devto-writing-style.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Apply dev.to writing style: lead with value in first 3 sentences, state audience/prereqs; use short paragraphs and code blocks; include TL;DR/key takeaways; keep tone friendly and actionable. Ensure runnable snippets and copy-pastable commands; avoid filler/clickbait; end with next steps or references.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

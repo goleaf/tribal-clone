@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "dev.to Prereqs & Versions",
+  "description": "Surface audience, prerequisites, and version info early in docs.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/**/*.md",
+      "README*.md",
+      "readme*.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "State audience, required skills, and version numbers (PHP/JS/DB) within the intro. Note destructive steps and provide safe defaults or backups.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

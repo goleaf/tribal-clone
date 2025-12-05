@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "DevDocs Async & Timing",
+  "description": "Check async/await/timers against DevDocs event-loop guidance.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "js/**/*.js",
+      "game/**/*.js",
+      "map/**/*.js"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review async code: await promises correctly, avoid unhandled rejections, clear intervals/timeouts, debounce polling where possible, and respect event-loop ordering per DevDocs.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

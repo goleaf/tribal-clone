@@ -283,65 +283,30 @@ $stmt_check_queue->execute();
         throw new RecruitmentException('Not enough resources to recruit the selected units.', 'RESOURCES_LIMIT');
     }
     
-    // Deduct resources and population
-    if ($requiredCoins > 0) {
-        $stmtCoins = $conn->prepare("UPDATE villages SET coins = coins - ? WHERE id = ? AND coins >= ?");
-        $stmtCoins->bind_param('iii', $requiredCoins, $village_id, $requiredCoins);
-        $stmtCoins->execute();
-        if ($stmtCoins->affected_rows === 0) {
-            throw new RecruitmentException('Not enough coins/standards for conquest units.', 'COIN_LIMIT');
-        }
-        $stmtCoins->close();
-    }
-
-    $stmt_deduct_resources = $conn->prepare('UPDATE villages SET wood = wood - ?, clay = clay - ?, iron = iron - ?, population = population + ? WHERE id = ?');
-    $stmt_deduct_resources->bind_param('ddiii', $total_wood, $total_clay, $total_iron, $total_population, $village_id);
-    if (!$stmt_deduct_resources->execute()) {
-        throw new Exception('Error while deducting resources and adding population: ' . $stmt_deduct_resources->error);
-    }
-    $stmt_deduct_resources->close();
-
-    // Queue recruitment tasks
+    // Queue recruitment tasks using UnitManager (handles resource deduction atomically)
     $recruited_queues = [];
-    $current_time = time();
-    $last_finish_time = $current_time;
-
-    $stmt_last_queue = $conn->prepare('SELECT finish_at FROM unit_queue WHERE village_id = ? AND building_type = ? ORDER BY finish_at DESC LIMIT 1');
-    $stmt_last_queue->bind_param('is', $village_id, $queue_building_type);
-    $stmt_last_queue->execute();
-    $result_last_queue = $stmt_last_queue->get_result();
-    if ($row_last_queue = $result_last_queue->fetch_assoc()) {
-        $last_finish_time = max($last_finish_time, $row_last_queue['finish_at']);
-    }
-    $stmt_last_queue->close();
-
+    
     foreach ($units_to_recruit as $recruit_data) {
         $unit_type_id = $recruit_data['unit_type_id'];
         $count = $recruit_data['count'];
-        $training_time_per_unit = $recruit_data['training_time_per_unit'];
         
-        $total_training_time_for_batch = $training_time_per_unit * $count;
-        $started_at_this_task = $last_finish_time;
-        $finish_at_this_task = $started_at_this_task + $total_training_time_for_batch;
+        // Use UnitManager to handle recruitment (deducts resources and adds to queue)
+        $result = $unitManager->recruitUnits($village_id, $unit_type_id, $count, $building_level);
         
-        $stmt_add_queue = $conn->prepare('INSERT INTO unit_queue (village_id, unit_type_id, count, count_finished, started_at, finish_at, building_type) VALUES (?, ?, ?, 0, ?, ?, ?)');
-        $stmt_add_queue->bind_param('iiiiss', $village_id, $unit_type_id, $count, $started_at_this_task, $finish_at_this_task, $queue_building_type);
-        
-        if (!$stmt_add_queue->execute()) {
-            throw new Exception('Error while adding the recruitment task to the queue: ' . $stmt_add_queue->error);
+        if (!$result['success']) {
+            throw new RecruitmentException(
+                $result['error'] ?? 'Failed to recruit units',
+                $result['code'] ?? 'RECRUITMENT_ERROR'
+            );
         }
         
-        $last_finish_time = $finish_at_this_task;
-        
         $recruited_queues[] = [
-            'queue_id' => $conn->insert_id,
+            'queue_id' => $result['queue_id'],
             'unit_name' => $recruit_data['name'],
             'count' => $count,
-            'finish_at' => $finish_at_this_task
+            'finish_at' => $result['finish_time']
         ];
     }
-    
-    $stmt_add_queue->close();
 
     $conn->commit();
 

@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "DevDocs Streaming & I/O",
+  "description": "Guard streaming/file I/O against DevDocs best practices.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/**/*.php",
+      "jobs/**/*.php",
+      "tools/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Batch I/O and stream where possible; close handles; handle errors; validate paths to avoid traversal; keep memory bounds reasonable; prefer standard PHP stream APIs per DevDocs.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

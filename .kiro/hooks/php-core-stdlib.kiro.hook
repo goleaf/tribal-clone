@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "PHP Core Stdlib (php.net)",
+  "description": "Cross-check PHP stdlib usage against php.net/manual and php.net/docs.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/**/*.php",
+      "ajax/**/*.php",
+      "app/**/*.php",
+      "init.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Verify functions/classes against php.net/manual: parameter order, defaults, return types/false, edge cases; handle warnings; prefer built-ins over ad-hoc code; include links to relevant php.net docs if needed.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

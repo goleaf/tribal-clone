@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "StackOverflow Answer Quality",
+  "description": "Encourage clear answers and pitfalls coverage like top SO PHP posts.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/**/*.md",
+      "README*.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "State the question/problem, show minimal solution, explain why it works, list common pitfalls, and link to authoritative sources (php.net/stackoverflow).\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "enabled": true,
+  "name": "Resource System Guard Check",
+  "description": "Triggers comprehensive resource system validation when files in lib/managers/ResourceManager.php, lib/managers/BuildingManager.php, lib/managers/PopulationManager.php, lib/managers/BuildingQueueManager.php, lib/utils/ProductionHelper.php, or related resource/building/queue files are modified. Cross-checks changes against .kiro/specs/resource-system requirements and design docs, validates production formulas, capacity enforcement, queue integrity, and WAP-minimal UI constraints.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/managers/ResourceManager.php",
+      "lib/managers/BuildingManager.php",
+      "lib/managers/PopulationManager.php",
+      "lib/managers/BuildingQueueManager.php",
+      "lib/utils/ProductionHelper.php",
+      "lib/managers/CatchupManager.php",
+      "buildings/*.php",
+      "ajax/buildings/*.php",
+      "ajax/units/recruit.php",
+      "units/recruit_units.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A file in the resource system has been modified. Perform a comprehensive resource system guard check:\n\n1) **Spec Cross-Check**: Review the changes against `.kiro/specs/resource-system/requirements.md` and `design.md`. Identify which requirement IDs (Req 1\u20139) are impacted and which correctness properties must still hold:\n   - Property 2: production formula (base * growth^(level-1) * world_speed * building_speed)\n   - Property 3: capacity enforcement (warehouse cap, farm population)\n   - Property 4/6: building state transitions and queue integrity\n   - Property 7: recruitment resource/population deductions\n   - Property 14\u201315: production rate effects and hiding-place mechanics\n\n2) **Production Math Re-evaluation**: Confirm the production formula is preserved. For any affected resource buildings (wood/clay/iron), show before/after hourly rates and verify increases are monotonic with level. Check that world_speed and building_speed multipliers are correctly applied.\n\n3) **Warehouse/Farm Capacity Verification**: Ensure resources cap at warehouse capacity after offline catch-up and that spending operations refuse when insufficient resources exist. Verify no code path bypasses `BuildingManager::getWarehouseCapacityByLevel` or equivalent capacity checks.\n\n4) **Queue Flow Validation**: Confirm building upgrades deduct resources exactly once, enqueue once, and immediately recalculate production on completion. Verify recruitment deducts resources + population and enqueues training items correctly. Check for race conditions or duplicate deductions.\n\n5) **UI Output Validation**: Ensure all resource displays remain WAP-minimal: text-only resource bars/counters in format `[Resource]: [Amount] (+[Rate]/hr)`, queue timers via server-side countdown or meta-refresh, no heavy JS/CSS additions.\n\n6) **Combat/Conquest Logic Preservation**: When changes touch combat or conquest flows, verify nobleman effects (20\u201335 loyalty drop), report completeness fields, and village ownership transfer keeps building/unit state intact.\n\n7) **Test Suggestions**: Recommend targeted PHPUnit or property tests for the modified functions. Point to existing relevant test files in `tests/` (e.g., resource_population_validation_test.php, building_upgrade_validation_test.php, queue_test.php, economy_test.php, combat-related tests).\n\nProvide a concise summary with:\n- Impacted requirement IDs and properties\n- Any formula/capacity/queue violations found\n- Suggested test coverage additions\n- Manual verification steps if needed\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

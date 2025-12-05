@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "Codecademy Exercise Style",
+  "description": "Ensure exercises/examples are approachable and incremental.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "examples/**/*.php",
+      "docs/**/*.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Break tasks into small steps; provide starter and expected output; avoid big leaps; consistent with codecademy learn-php exercise style.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

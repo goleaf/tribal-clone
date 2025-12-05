@@ -451,4 +451,111 @@ class ResourceManager {
         }
         return max(0.1, $multiplier);
     }
+
+    /**
+     * Format resource display for WAP-style interface.
+     * Returns format: "[Resource]: [Amount] (+[Rate]/hr)"
+     * 
+     * @param string $resourceName Name of the resource (e.g., "Wood", "Clay", "Iron")
+     * @param int|float $amount Current amount of the resource
+     * @param float $rate Hourly production rate
+     * @return string Formatted display string
+     */
+    public function formatResourceDisplay(string $resourceName, $amount, float $rate): string
+    {
+        $amount = (int)$amount;
+        $rate = round($rate, 1);
+        return sprintf("%s: %d (+%.1f/hr)", $resourceName, $amount, $rate);
+    }
+
+    /**
+     * Check if village has sufficient resources for an operation.
+     * 
+     * @param int $villageId Village ID
+     * @param array $required Required resources ['wood' => int, 'clay' => int, 'iron' => int]
+     * @return bool True if village has sufficient resources, false otherwise
+     */
+    public function hasResources(int $villageId, array $required): bool
+    {
+        $required = [
+            'wood' => (int)($required['wood'] ?? 0),
+            'clay' => (int)($required['clay'] ?? 0),
+            'iron' => (int)($required['iron'] ?? 0),
+        ];
+
+        $stmt = $this->conn->prepare("SELECT wood, clay, iron FROM villages WHERE id = ?");
+        if ($stmt === false) {
+            return false;
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $res = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$res) {
+            return false;
+        }
+
+        return $res['wood'] >= $required['wood'] 
+            && $res['clay'] >= $required['clay'] 
+            && $res['iron'] >= $required['iron'];
+    }
+
+    /**
+     * Enforce warehouse capacity on village resources.
+     * Ensures resources never exceed warehouse capacity.
+     * 
+     * @param int $villageId Village ID
+     * @return array Result with success status and updated resources
+     */
+    public function enforceWarehouseCapacity(int $villageId): array
+    {
+        $warehouse_level = $this->buildingManager->getBuildingLevel($villageId, 'warehouse');
+        $warehouse_capacity = $this->buildingManager->getWarehouseCapacityByLevel($warehouse_level);
+
+        $stmt = $this->conn->prepare("SELECT wood, clay, iron FROM villages WHERE id = ?");
+        if ($stmt === false) {
+            return ['success' => false, 'message' => 'Cannot load village resources.'];
+        }
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $res = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$res) {
+            return ['success' => false, 'message' => 'Village not found.'];
+        }
+
+        // Clamp resources to warehouse capacity
+        $wood = min((int)$res['wood'], $warehouse_capacity);
+        $clay = min((int)$res['clay'], $warehouse_capacity);
+        $iron = min((int)$res['iron'], $warehouse_capacity);
+
+        $stmtUpdate = $this->conn->prepare("
+            UPDATE villages
+            SET wood = ?, clay = ?, iron = ?
+            WHERE id = ?
+        ");
+        if ($stmtUpdate === false) {
+            return ['success' => false, 'message' => 'Failed to prepare resource update.'];
+        }
+        $stmtUpdate->bind_param("iiii", $wood, $clay, $iron, $villageId);
+        $ok = $stmtUpdate->execute();
+        $stmtUpdate->close();
+
+        if (!$ok) {
+            return ['success' => false, 'message' => 'Failed to update resources.'];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Resources clamped to warehouse capacity.',
+            'resources' => [
+                'wood' => $wood,
+                'clay' => $clay,
+                'iron' => $iron
+            ],
+            'capacity' => $warehouse_capacity
+        ];
+    }
 }

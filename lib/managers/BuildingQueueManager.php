@@ -76,6 +76,16 @@ class BuildingQueueManager
                 throw new Exception("{$buildingInternalName} is already at max level ({$maxLevel}).");
             }
             
+            // Check headquarters prerequisite (Requirement 2.5)
+            // All buildings except main_building require main_building to be at least level 1
+            if ($buildingInternalName !== 'main_building') {
+                $mainBuildingLevel = $this->getBuildingLevel($villageId, 'main_building');
+                if ($mainBuildingLevel < 1) {
+                    $errorCode = 'ERR_PREREQ';
+                    throw new Exception("Headquarters (Main Building) must be constructed before other buildings.");
+                }
+            }
+            
             // Calculate costs and time
             $costs = $this->configManager->calculateUpgradeCost($buildingInternalName, $currentLevel);
             $hqLevel = $this->getBuildingLevel($villageId, 'main_building');

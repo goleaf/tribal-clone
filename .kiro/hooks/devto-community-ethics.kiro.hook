@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "dev.to Community & Ethics",
+  "description": "Check posts for attribution, inclusivity, licensing, and transparent communication per dev.to norms.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/**/*.md",
+      "README*.md",
+      "readme*.md",
+      ".kiro/steering/devto-community-ethics.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Apply dev.to community ethics: credit sources and include canonical links; avoid plagiarism/AI filler; inclusive language; compatible licenses for code snippets; warn about risks/rollbacks; encourage safe experimentation; update/changelog when behavior changes.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

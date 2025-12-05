@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "dev.to Article Checklist",
+  "description": "Enforce dev.to article fundamentals: audience, prerequisites, reproducibility, and references.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/**/*.md",
+      "README*.md",
+      "readme*.md",
+      ".kiro/steering/devto-article-checklist.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run the dev.to article checklist: identify audience/outcome early; state prerequisites/versions; provide repro steps or sample repo; include copy-pastable commands and call out destructive actions; link to canonical APIs on devdocs.io; keep assets lightweight; close with further reading and feedback request.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

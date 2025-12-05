@@ -342,6 +342,13 @@ class MessageManager
         if ($stmt->execute()) {
             $messageId = $this->conn->insert_id;
             $stmt->close();
+            $this->dispatchHook('message.sent', [
+                'message_id' => $messageId,
+                'sender_id' => $senderId,
+                'receiver_id' => $receiverId,
+                'subject' => $subject,
+                'body_length' => strlen($body),
+            ]);
             return ['success' => true, 'message_id' => $messageId];
         } else {
             $error = $stmt->error;
@@ -352,6 +359,20 @@ class MessageManager
 
     // Methods for actions (delete, archive, unarchive) will be added here later
 
+
+    private function dispatchHook(string $event, array $payload): void
+    {
+        if (!class_exists('HookBus')) {
+            $hookBusPath = __DIR__ . '/../hooks/HookBus.php';
+            if (file_exists($hookBusPath)) {
+                require_once $hookBusPath;
+            }
+        }
+
+        if (class_exists('HookBus')) {
+            HookBus::dispatch($event, $payload);
+        }
+    }
 }
 
 ?> 

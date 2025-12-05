@@ -32,6 +32,7 @@ class Autoloader
         $paths = [
             'lib/',
             'lib/managers/',
+            'lib/hooks/',
             'lib/models/',
             'lib/utils/',
             'app/core/',

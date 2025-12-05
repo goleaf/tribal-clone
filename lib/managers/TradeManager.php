@@ -415,12 +415,24 @@ class TradeManager {
                 }
 
                 $this->conn->commit();
+                if ($hasPayload) {
+                    $this->dispatchHook('village.trade.delivered', [
+                        'route_id' => (int)$route['id'],
+                        'source_village_id' => (int)$route['source_village_id'],
+                        'target_village_id' => (int)$route['target_village_id'],
+                        'wood' => (int)$route['wood'],
+                        'clay' => (int)$route['clay'],
+                        'iron' => (int)$route['iron'],
+                        'arrival_time' => $route['arrival_time'] ?? null,
+                    ]);
+                }
             } catch (Exception $e) {
                 $this->conn->rollback();
             }
         }
 
         $stmt->close();
+
         return $messages;
     }
 
@@ -1673,5 +1685,19 @@ class TradeManager {
         }
 
         return $overloaded;
+    }
+
+    private function dispatchHook(string $event, array $payload): void
+    {
+        if (!class_exists('HookBus')) {
+            $hookBusPath = __DIR__ . '/../hooks/HookBus.php';
+            if (file_exists($hookBusPath)) {
+                require_once $hookBusPath;
+            }
+        }
+
+        if (class_exists('HookBus')) {
+            HookBus::dispatch($event, $payload);
+        }
     }
 }

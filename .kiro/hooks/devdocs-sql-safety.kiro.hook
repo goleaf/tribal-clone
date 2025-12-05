@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "DevDocs SQL Safety",
+  "description": "Check SQL usage against DevDocs and safety practices.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/**/*.php",
+      "ajax/**/*.php",
+      "migrations/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Use prepared statements; avoid string interpolation; validate identifiers; check transaction boundaries; keep queries portable (SQLite/MySQL); align with DevDocs SQL syntax and data type expectations.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

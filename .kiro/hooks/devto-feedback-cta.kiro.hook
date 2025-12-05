@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "dev.to Feedback & CTA",
+  "description": "Close docs with calls to action and feedback invites per dev.to guidance.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/**/*.md",
+      "README*.md",
+      "readme*.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Add a closing section with next steps (further reading, related posts, repo link) and an explicit request for feedback/questions. Keep tone friendly and concise.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

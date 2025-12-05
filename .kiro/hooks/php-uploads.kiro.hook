@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "PHP Upload Handling",
+  "description": "Ensure upload flows follow php.net and security best practices.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "ajax/**/*upload*.php",
+      "lib/**/*Upload*.php",
+      "app/**/*Upload*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Check file size/type validation, use move_uploaded_file, randomize names, store outside webroot, scan/deny php extensions, handle errors; cite php.net/features.file-upload and common tutorials.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

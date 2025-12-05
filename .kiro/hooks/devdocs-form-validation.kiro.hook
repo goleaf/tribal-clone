@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "DevDocs Form Validation",
+  "description": "Check server/client validation against DevDocs form guidance.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "auth/**/*.php",
+      "ajax/**/*.php",
+      "game/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Validate inputs server-side: required/min/max/regex; escape output; return clear errors; keep client-side checks aligned; ensure CSRF tokens present; follow DevDocs form input semantics.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

@@ -608,12 +608,27 @@ class UnitManager
         $this->conn->begin_transaction();
 
         try {
+            // Deduct standard resources (wood, clay, iron)
+            $stmtResources = $this->conn->prepare("
+                UPDATE villages 
+                SET wood = wood - ?, clay = clay - ?, iron = iron - ?, population = population + ?
+                WHERE id = ?
+            ");
+            if (!$stmtResources) {
+                throw new Exception("Failed to prepare resource deduction");
+            }
+            $stmtResources->bind_param("iiiii", $wood_cost, $clay_cost, $iron_cost, $pendingPop, $village_id);
+            if (!$stmtResources->execute()) {
+                throw new Exception("Failed to deduct resources");
+            }
+            $stmtResources->close();
+            
             // Deduct conquest resources if applicable
             if ($isConquestUnit) {
                 $resourceField = in_array($internal, ['noble', 'nobleman'], true) ? 'noble_coins' : 'standards';
                 $stmtDeduct = $this->conn->prepare("UPDATE villages SET $resourceField = $resourceField - ? WHERE id = ?");
                 if (!$stmtDeduct) {
-                    throw new Exception("Failed to prepare resource deduction");
+                    throw new Exception("Failed to prepare conquest resource deduction");
                 }
                 $stmtDeduct->bind_param("ii", $count, $village_id);
                 if (!$stmtDeduct->execute()) {
@@ -649,7 +664,13 @@ class UnitManager
                 'success' => true,
                 'message' => "Started recruiting $count units. Finishes at " . date('H:i:s d.m.Y', $finish_time),
                 'queue_id' => $queue_id,
-                'finish_time' => $finish_time
+                'finish_time' => $finish_time,
+                'resources_deducted' => [
+                    'wood' => $wood_cost,
+                    'clay' => $clay_cost,
+                    'iron' => $iron_cost
+                ],
+                'population_added' => $pendingPop
             ];
 
         } catch (Exception $e) {

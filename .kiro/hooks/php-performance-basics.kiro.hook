@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "PHP Performance Basics",
+  "description": "Check perf considerations referencing php.net and phptherightway.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/**/*.php",
+      "jobs/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Avoid unnecessary I/O; cache configs; reuse prepared statements; measure hotspots; mind N+1 queries; cite phptherightway performance tips.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

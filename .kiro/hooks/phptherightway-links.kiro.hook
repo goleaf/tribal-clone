@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "PHP The Right Way Links",
+  "description": "Remind to link to phptherightway.com sections when relevant.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/**/*.md",
+      "README*.md",
+      "lib/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Where appropriate, cite phptherightway.com sections (security, style, dependencies, databases) to anchor best practices.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

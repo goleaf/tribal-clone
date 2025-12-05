@@ -1,0 +1,25 @@
+{
+  "enabled": true,
+  "name": "Queue & Cron Health Check",
+  "description": "Validates queue/state processors for buildings, recruitment, research, trade, and cron jobs to prevent double-processing or resource drift.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "jobs/**/*.php",
+      "lib/managers/VillageManager.php",
+      "lib/managers/BuildingQueueManager.php",
+      "lib/managers/UnitManager.php",
+      "lib/managers/ResearchManager.php",
+      "lib/managers/TradeManager.php",
+      "BUILDING_UPGRADE_REFACTOR.md",
+      "IMPLEMENTATION_COMPLETE.md",
+      "UPGRADE_SYSTEM_GUIDE.md",
+      "docs/core-gameplay-loop.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run a queue/cron health check:\n\n1) Ensure offline resource catch-up runs before queue processing; queue states stay `pending/active/completed`; completion is idempotent (sets target level/count, status guarded) and promotes next pending.\n2) Recruitment/research/trade queues: deduct resources+pop once, update progress timestamps correctly, clean finished rows, handle cancellations with refunds in transactions.\n3) Cron/idempotence: processors safe to rerun; time filters use server time consistently; transactions wrap multi-step updates; logs/metrics present without leaking sensitive data.\n4) Capacity and limits: respect warehouse/farm caps, queue slot limits by HQ level, merchant limits, and world-config speed multipliers; avoid N+1 in per-item loops.\n5) Testing/manual: suggest focused tests or scripts to validate completion/retry scenarios and race conditions (e.g., double trigger, overdue items). Summarize any risks with severity if issues are detected.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

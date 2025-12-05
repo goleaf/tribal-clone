@@ -1,0 +1,27 @@
+{
+  "enabled": true,
+  "name": "Combat + Conquest Guard",
+  "description": "Enforces combat/resolution consistency, RPS modifiers, siege/wall effects, plunder, and allegiance/capture rules whenever combat code or specs change.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/managers/BattleManager.php",
+      "lib/managers/BattleEngine.php",
+      "lib/managers/BattleResolverCore.php",
+      "lib/managers/CombatCalculator.php",
+      "lib/managers/SiegeHandler.php",
+      "lib/managers/ConquestHandler.php",
+      "combat/**/*",
+      "ajax/attacks/**/*.php",
+      "COMBAT_IMPLEMENTATION_PLAN.md",
+      "docs/combat-system-implementation.md",
+      "docs/todo/combat_and_battles.md",
+      "docs/todo/village_conquest_and_control.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run a combat + conquest guard review:\n\n1) Cross-check against `docs/combat-system-implementation.md`, `COMBAT_IMPLEMENTATION_PLAN.md`, and conquest todos: ensure RPS modifiers (cav>ranged, pike>cav, ranger>siege, wall ranged bonus) and randomness ranges are preserved; wall/ram/catapult effects still apply; morale/resolve (if used) intact.\n2) Verify battle resolution flow: travel time uses slowest unit speed, casualties apply once, survivors/loot are consistent; hiding place protection enforced; support troops and tribe relations respected; reports remain complete (attacker/defender, losses, wall level, plunder, loyalty change).\n3) Conquest rules: allegiance drop only on attacker win + surviving conquest unit; drop range 20\u201335 (or world-config value); honor anti-snipe floor, capture cooldowns, post-capture allegiance seeds; ownership transfer preserves buildings/units/resources; blocked states return clear reason codes.\n4) Data and safety: prepared statements for battle inserts/updates; ownership/world checks for commands; CSRF/auth on AJAX endpoints; no leaked stack traces; timers should be idempotent if re-run (cron or page load).\n5) Testing: propose concrete tests (unit or integration) around battle resolution edge cases, siege vs wall, loyalty floor/capture, and report fields; mention any manual checks (simulate attack with rams/catapults, conquest attempt on protected village). Provide a concise, action-oriented summary with severities if issues found.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

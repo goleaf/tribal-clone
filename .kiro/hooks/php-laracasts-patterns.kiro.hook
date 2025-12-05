@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "Laracasts Pattern Reminder",
+  "description": "Encourage clean code patterns inspired by laracasts.com.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/**/*.php",
+      "app/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Favor readable methods, extract classes for behaviors, avoid God objects; keep controllers/endpoints thin; add docblocks/comments sparingly; nod to laracasts clean-code lessons.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

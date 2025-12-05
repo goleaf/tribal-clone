@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "DevDocs Fetch Error Handling",
+  "description": "Guard JS fetch/XHR usage with proper status/error handling per DevDocs.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "js/**/*.js",
+      "ajax/**/*.js",
+      "game/**/*.js"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Validate fetch/XHR per DevDocs: check `response.ok`/status ranges, handle network errors and JSON parse failures, set appropriate headers/credentials, and surface user-friendly messages without leaking stack traces.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

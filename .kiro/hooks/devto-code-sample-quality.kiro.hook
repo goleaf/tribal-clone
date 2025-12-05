@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "dev.to Code Sample Quality",
+  "description": "Keep code snippets runnable, minimal, and labeled with language fences per dev.to norms.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/**/*.md",
+      "README*.md",
+      "readme*.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Ensure code samples are runnable/minimal, use fenced blocks with language tags, avoid dead code, and provide copy-pastable commands. Mention prerequisites/versions in the snippet context.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

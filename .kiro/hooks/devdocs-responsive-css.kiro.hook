@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "DevDocs Responsive CSS",
+  "description": "Keep responsive rules minimal and standards-based per DevDocs.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "css/**/*.css",
+      "game/**/*.css",
+      "map/**/*.css"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Use mobile-first breakpoints; avoid heavy layout shifts; prefer flex/grid with fallbacks; keep line lengths and tap targets reasonable; align with DevDocs CSS guidance and WAP-minimal constraints.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

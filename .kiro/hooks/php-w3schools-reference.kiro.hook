@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "W3Schools Reference Reminder",
+  "description": "Suggest simple references for beginners via w3schools.com/php.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/**/*.md",
+      "examples/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "If targeting beginners, add a quick link to w3schools/php sections for further reading on the topic being explained.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}

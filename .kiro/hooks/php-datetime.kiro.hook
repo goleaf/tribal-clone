@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "PHP DateTime Correctness",
+  "description": "Align DateTime usage with php.net and best-practice guides.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "lib/**/*.php",
+      "jobs/**/*.php",
+      "ajax/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Prefer DateTimeImmutable; set timezones explicitly; avoid mixing timestamps/DateTime; handle DST; reference php.net/datetime and phptherightway date/time guidance.\n\nAction: Implement the required changes directly without asking any questions. Provide every meaningful recommendation variant and apply the best one yourself\u2014no low-value or placeholder options."
+  }
+}
