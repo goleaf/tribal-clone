@@ -459,3 +459,7 @@ Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/t
 #1 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/building_manager_property_test.php(165): PropertyTest::forAll(Object(Closure), Object(Closure), 'Property 4: Bui...')
 #2 {main}
 --------------------------------------------------------------------------------
+[2025-12-05 04:03:26] EXCEPTION: Failed to insert village: SQLSTATE[23000]: Integrity constraint violation: 19 UNIQUE constraint failed: villages.x_coord, villages.y_coord, villages.world_id in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/conquest_loyalty_property_test.php line 43
+Trace: #0 /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/conquest_loyalty_property_test.php(182): createTestVillage(Object(SQLiteAdapter), 11480, 68, 9)
+#1 {main}
+--------------------------------------------------------------------------------
