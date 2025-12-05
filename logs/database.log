@@ -78178,3 +78178,3381 @@
     WHERE status IS NOT NULL 
       AND status NOT IN ('active', 'pending', 'completed', 'canceled')
  | Params: []
+[2025-12-05 04:53:45] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:45] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:45] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:45] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:45] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:45] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:45] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:48] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:48] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:48] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:48] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:48] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:48] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:48] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:48] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:48] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:49] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:49] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:49] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:49] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:49] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:49] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:50] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:50] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:50] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:50] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:50] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:50] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:50] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:50] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:50] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:51] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:51] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:51] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:51] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:51] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:51] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:51] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:51] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:51] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:54] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:54] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:55] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:56] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:56] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:57] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:57] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:58] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:58] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:58] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:59] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:59] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:53:59] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:00] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:00] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:00] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:01] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:01] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:01] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:01] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:01] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:02] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:02] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:02] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:02] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:02] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:02] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:02] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:02] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:03] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:03] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:03] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:03] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:03] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:03] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:03] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:03] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:03] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:03] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:03] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:04] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:04] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:04] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:04] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:04] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:04] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:04] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:04] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:05] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:05] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:05] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:05] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:05] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:05] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:05] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:06] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:06] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:06] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:06] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:06] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:06] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:06] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:06] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:07] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:07] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:07] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:07] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:07] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:07] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:07] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:07] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:08] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:08] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:08] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:08] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:08] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:08] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:08] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:08] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:08] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:08] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:09] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:09] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:09] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:09] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:10] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:10] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:10] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:10] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:10] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:10] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:10] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:11] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:11] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:11] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:11] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:11] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:11] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:11] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:12] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:12] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:12] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:12] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:12] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:12] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:12] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:12] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:13] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:13] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:13] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:13] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:13] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:13] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:13] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:14] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:14] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:14] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:14] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:14] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:14] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:14] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:14] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:15] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:15] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:15] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:15] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:15] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:15] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:15] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:15] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:16] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:16] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:16] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:16] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:16] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:16] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:16] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:17] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:17] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:17] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:18] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:18] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:18] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:18] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:18] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:19] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:19] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:19] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:19] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:19] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:19] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:20] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:20] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:21] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:21] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:21] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:22] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:22] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:22] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:22] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:22] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:22] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:22] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:22] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:22] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:23] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:23] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:23] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:23] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:23] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:23] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:23] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:23] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:24] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:24] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:24] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:24] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:24] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:25] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:25] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:25] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:25] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:25] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:25] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:25] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:25] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:25] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:26] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:26] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:26] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:26] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:26] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:26] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:26] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:26] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:26] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:26] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:26] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:26] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:27] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:27] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:27] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:27] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:27] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:27] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:27] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:27] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:27] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:28] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:28] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:28] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:28] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:28] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:28] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:28] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:28] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:29] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:29] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:29] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:29] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:29] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:29] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:30] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:30] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:30] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:30] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:30] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:31] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:31] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:31] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:31] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:31] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:31] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:31] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:32] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:32] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:32] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:32] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:32] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:32] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:32] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:32] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:32] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:32] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:33] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:33] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:33] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:33] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:33] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:33] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:33] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:33] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:33] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:33] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:34] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:34] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:34] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:34] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:34] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:34] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:34] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:34] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:34] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:35] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:35] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:35] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:35] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:35] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:35] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:35] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:35] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:35] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:36] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:36] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:36] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:36] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:36] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:36] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:36] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:36] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:36] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:36] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:36] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:37] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:37] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:37] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:37] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:37] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:37] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:37] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:37] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:37] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:37] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:38] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:38] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:38] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:38] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:38] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:38] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:38] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:38] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:39] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:39] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:39] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:39] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:39] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:39] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:39] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:39] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:39] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:40] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:40] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:41] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:41] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:41] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:41] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:42] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:42] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:42] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:42] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:42] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:42] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:42] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:43] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:43] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:43] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:43] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:43] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:43] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:43] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:43] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:44] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:44] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:44] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:44] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:44] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:44] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:44] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:45] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:45] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:46] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:47] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:48] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:48] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:48] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:48] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:48] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:48] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:48] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:49] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:49] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:49] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:49] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:49] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:49] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:49] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:49] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:49] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:50] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:50] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:50] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:50] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:50] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:50] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:50] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:51] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:51] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:51] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:51] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:51] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:51] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:52] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:53] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:54] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:54] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:54] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:54] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:54] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:54] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:54] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:54] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:54] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:54] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:54] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:55] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:55] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:55] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:55] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:55] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:55] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:55] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:55] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:55] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:55] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:56] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:56] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:56] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:56] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:56] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:56] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:56] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:56] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:56] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:57] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:57] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:57] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:57] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:57] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:57] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:57] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:57] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:57] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:57] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:57] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:57] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:57] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:58] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:58] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:58] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:58] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:58] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:58] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:58] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:58] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:58] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:58] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:58] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:58] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:59] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:59] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:59] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:59] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:59] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:59] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:59] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:59] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:59] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:59] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:54:59] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:55:00] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:55:00] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:55:00] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:55:00] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:55:00] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:55:00] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:55:00] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:55:00] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:55:00] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:55:00] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:55:00] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:55:01] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:55:01] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:55:01] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:55:01] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
+[2025-12-05 04:55:01] SQLSTATE[HY000]: General error: 1 no such table: building_queue | SQL: 
+    SELECT DISTINCT status 
+    FROM building_queue 
+    WHERE status IS NOT NULL 
+      AND status NOT IN ('active', 'pending', 'completed', 'canceled')
+ | Params: []
