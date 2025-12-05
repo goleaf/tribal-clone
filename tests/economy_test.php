@@ -27,6 +27,7 @@ if (!defined('TRADE_LOADCHECK_TTL_SEC')) {
 }
 
 require_once __DIR__ . '/../lib/Database.php';
+require_once __DIR__ . '/../lib/functions.php';
 require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingManager.php';
 require_once __DIR__ . '/../lib/managers/ResourceManager.php';
@@ -366,8 +367,8 @@ $runner->add('TradeManager blocks power-delta pushes to protected/low-point targ
     $conn->query("INSERT INTO users (id, username, points, created_at, is_protected) VALUES (1, 'strong', 10000, '" . date('Y-m-d H:i:s', strtotime('-10 days')) . "', 0)");
     $conn->query("INSERT INTO users (id, username, points, created_at, is_protected) VALUES (2, 'rookie', 100, '" . date('Y-m-d H:i:s', strtotime('-1 day')) . "', 1)");
     $conn->query("INSERT INTO worlds (id, name) VALUES (1, 'TradeWorld')");
-    seedVillageWithWorld($conn, 1, 1, $buildingTypeMap, ['wood' => 5000, 'clay' => 5000, 'iron' => 5000], ['market' => 3], 1, '-15 minutes');
-    seedVillageWithWorld($conn, 2, 2, $buildingTypeMap, ['wood' => 500, 'clay' => 500, 'iron' => 500], ['market' => 1], 1, '-5 minutes');
+    seedVillageWithWorld($conn, 1, 1, $buildingTypeMap, ['wood' => 5000, 'clay' => 5000, 'iron' => 5000], ['market' => 3], 1, '-15 minutes', null, 500, 500);
+    seedVillageWithWorld($conn, 2, 2, $buildingTypeMap, ['wood' => 500, 'clay' => 500, 'iron' => 500], ['market' => 1], 1, '-5 minutes', null, 500, 505);
 
     $tm = new TradeManager($conn);
     $result = $tm->sendResources(1, 1, '500|505', ['wood' => 300]);
@@ -385,8 +386,8 @@ $runner->add('TradeManager load shedding blocks new sends when routes/offers exc
     $conn->query("INSERT INTO users (id, username, points) VALUES (1, 'sender', 2000)");
     $conn->query("INSERT INTO users (id, username, points) VALUES (2, 'receiver', 1500)");
     $conn->query("INSERT INTO worlds (id, name) VALUES (1, 'TradeWorld')");
-    seedVillageWithWorld($conn, 1, 1, $buildingTypeMap, ['wood' => 5000, 'clay' => 5000, 'iron' => 5000], ['market' => 3], 1, '-10 minutes');
-    seedVillageWithWorld($conn, 2, 2, $buildingTypeMap, ['wood' => 500, 'clay' => 500, 'iron' => 500], ['market' => 1], 1, '-5 minutes');
+    seedVillageWithWorld($conn, 1, 1, $buildingTypeMap, ['wood' => 5000, 'clay' => 5000, 'iron' => 5000], ['market' => 3], 1, '-10 minutes', null, 500, 500);
+    seedVillageWithWorld($conn, 2, 2, $buildingTypeMap, ['wood' => 500, 'clay' => 500, 'iron' => 500], ['market' => 1], 1, '-5 minutes', null, 500, 505);
 
     $tm = new TradeManager($conn);
     // Insert two active routes to exceed the soft limit of 1.
