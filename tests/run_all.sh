@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PHP_FLAGS="-d display_startup_errors=0 -d error_reporting=22527"
 
 echo "Resetting log files..."
-php "${SCRIPT_DIR}/clear_logs.php"
+php ${PHP_FLAGS} "${SCRIPT_DIR}/clear_logs.php"
 
 echo "Running queue tests..."
 php ${PHP_FLAGS} "${SCRIPT_DIR}/queue_test.php"
