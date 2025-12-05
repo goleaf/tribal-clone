@@ -178,7 +178,7 @@ class TradeManager {
         $stmt->close();
 
         if (!$village || (int)$village['user_id'] !== $userId) {
-            return ['success' => false, 'message' => 'You do not control this village.', 'code' => EconomyError::ERR_ALT_BLOCK];
+            return ['success' => false, 'message' => 'You do not control this village.', 'code' => 'ERR_ALT_BLOCK'];
         }
 
         if ($village['wood'] < $resources['wood'] || $village['clay'] < $resources['clay'] || $village['iron'] < $resources['iron']) {
@@ -621,7 +621,7 @@ class TradeManager {
 
         $village = $this->getVillageWithOwner($villageId);
         if (!$village || (int)$village['user_id'] !== $userId) {
-            return ['success' => false, 'message' => 'You do not control this village.', 'code' => EconomyError::ERR_ALT_BLOCK];
+            return ['success' => false, 'message' => 'You do not control this village.', 'code' => 'ERR_ALT_BLOCK'];
         }
 
         $marketLevel = $this->getMarketLevel($villageId);
@@ -838,13 +838,13 @@ class TradeManager {
 
         $acceptingVillage = $this->getVillageWithOwner($acceptingVillageId);
         if (!$acceptingVillage || (int)$acceptingVillage['user_id'] !== $userId) {
-            return ['success' => false, 'message' => 'You do not control this village.', 'code' => EconomyError::ERR_ALT_BLOCK];
+            return ['success' => false, 'message' => 'You do not control this village.', 'code' => 'ERR_ALT_BLOCK'];
         }
         if ((int)$acceptingVillage['id'] === (int)$offer['source_village_id']) {
-            return ['success' => false, 'message' => 'You cannot accept your own offer.', 'code' => EconomyError::ERR_ALT_BLOCK];
+            return ['success' => false, 'message' => 'You cannot accept your own offer.', 'code' => 'ERR_ALT_BLOCK'];
         }
         if ((int)$offer['source_user_id'] === $userId) {
-            return ['success' => false, 'message' => 'You cannot accept your own offer from another village.', 'code' => EconomyError::ERR_ALT_BLOCK];
+            return ['success' => false, 'message' => 'You cannot accept your own offer from another village.', 'code' => 'ERR_ALT_BLOCK'];
         }
 
         // Anti-push: prevent linked/flagged or extreme power-gap trades to protected accounts
