@@ -28,8 +28,10 @@ $testsFailed = 0;
 function createTestVillage($conn, int $userId, int $allegiance, int $wallLevel = 0): int
 {
     $name = "Test Village " . uniqid();
-    $x = rand(1, 100);
-    $y = rand(1, 100);
+    // Use larger coordinate range to avoid collisions
+    // Use negative coordinates to avoid conflicts with real game data
+    $x = rand(-10000, -1000);
+    $y = rand(-10000, -1000);
     $worldId = TEST_WORLD_ID;
     
     $stmt = $conn->prepare("
