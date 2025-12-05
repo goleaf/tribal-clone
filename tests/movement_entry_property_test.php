@@ -190,10 +190,10 @@ PropertyTest::forAll(
         // Create unique test users and villages
         $uniqueId = uniqid('move_', true);
         
-        // Create attacker user
+        // Create attacker user (use simple password for test performance)
         $stmt = $conn->prepare("INSERT INTO users (username, password, email, is_protected, points) VALUES (?, ?, ?, 0, 1000)");
         $attackerUsername = 'attacker_' . $uniqueId;
-        $password = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
+        $password = 'test_password_hash'; // Skip expensive password_hash in tests
         $email = $attackerUsername . '@test.local';
         $stmt->bind_param("sss", $attackerUsername, $password, $email);
         $stmt->execute();
@@ -201,10 +201,10 @@ PropertyTest::forAll(
         $stmt->close();
         $testCleanup['user_ids'][] = $attackerUserId;
         
-        // Create defender user
+        // Create defender user (use simple password for test performance)
         $stmt = $conn->prepare("INSERT INTO users (username, password, email, is_protected, points) VALUES (?, ?, ?, 0, 1000)");
         $defenderUsername = 'defender_' . $uniqueId;
-        $password = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
+        $password = 'test_password_hash'; // Skip expensive password_hash in tests
         $email = $defenderUsername . '@test.local';
         $stmt->bind_param("sss", $defenderUsername, $password, $email);
         $stmt->execute();
