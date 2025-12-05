@@ -1,0 +1,3 @@
+[2025-12-05 20:54:29] EXCEPTION: Call to undefined method Database::getInstance() in /Users/andrejprus/Library/CloudStorage/Dropbox/projects/tribal-clone/tests/building_queue_performance_test.php line 34
+Trace: #0 {main}
+--------------------------------------------------------------------------------

@@ -30,6 +30,11 @@ class Router
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         $requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+        
+        // Strip /index.php from path if present
+        if ($requestPath === '/index.php') {
+            $requestPath = '/';
+        }
 
         if (!isset($this->routes[$method][$requestPath])) {
             http_response_code(404);

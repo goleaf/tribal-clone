@@ -1,32 +1,32 @@
 # Implementation Plan
 
-- [-] 1. Database schema and migrations
+- [x] 1. Database schema and migrations
   - Create or verify building_queue table with status column
   - Add indexes for performance (village_id, status, finish_time)
   - Create building_requirements table if not exists
   - Verify building_types and village_buildings tables
   - _Requirements: 1.1, 2.1, 7.1, 8.1, 8.2_
 
-- [ ] 1.1 Write property test for database schema integrity
+- [x] 1.1 Write property test for database schema integrity
   - **Property: Schema Consistency**
   - **Validates: Requirements 8.1, 8.2**
 
-- [ ] 2. Implement BuildingConfigManager core functionality
+- [x] 2. Implement BuildingConfigManager core functionality
   - Implement calculateUpgradeCost() with exponential scaling
   - Implement calculateUpgradeTime() with HQ bonus formula
   - Implement getBuildingRequirements() for prerequisite lookup
   - Add caching for configurations, costs, and times
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 9.1_
 
-- [ ] 2.1 Write property test for build time formula
+- [x] 2.1 Write property test for build time formula
   - **Property 16: Build Time Formula Application**
   - **Validates: Requirements 5.1**
 
-- [ ] 2.2 Write property test for cost calculation
+- [x] 2.2 Write property test for cost calculation
   - **Property: Cost Scaling**
   - **Validates: Requirements 1.1**
 
-- [ ] 3. Implement BuildingQueueManager - enqueue functionality
+- [x] 3. Implement BuildingQueueManager - enqueue functionality ✅
   - Implement enqueueBuild() with transaction handling
   - Add village row locking (SELECT FOR UPDATE / BEGIN IMMEDIATE)
   - Implement immediate resource deduction
@@ -34,16 +34,17 @@
   - Calculate finish times based on queue state
   - Validate queue capacity limits
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 7.1, 7.2_
+  - _Completed: BuildingQueueManager fully implements enqueue with all requirements_
 
-- [ ] 3.1 Write property test for immediate resource deduction
+- [x] 3.1 Write property test for immediate resource deduction
   - **Property 1: Immediate Resource Deduction**
   - **Validates: Requirements 1.1**
 
-- [ ] 3.2 Write property test for active status on empty queue
+- [x] 3.2 Write property test for active status on empty queue
   - **Property 2: Active Status for Empty Queue**
   - **Validates: Requirements 1.2**
 
-- [ ] 3.3 Write property test for pending status on non-empty queue
+- [x] 3.3 Write property test for pending status on non-empty queue
   - **Property 3: Pending Status for Non-Empty Queue**
   - **Validates: Requirements 1.3**
 
@@ -141,7 +142,7 @@
   - **Property 14: Active Status Precondition**
   - **Validates: Requirements 4.2**
 
-- [ ] 8. Implement BuildingManager validation
+- [x] 8. Implement BuildingManager validation
   - Implement canUpgradeBuilding() comprehensive validation
   - Add checkProtectionStatus() for protection mode blocking
   - Add checkResearchPrerequisites() for research validation
@@ -152,15 +153,15 @@
   - Validate population capacity
   - _Requirements: 9.1, 9.2, 9.3, 9.4_
 
-- [ ] 8.1 Write property test for prerequisite validation
+- [x] 8.1 Write property test for prerequisite validation
   - **Property 25: Prerequisite Validation**
   - **Validates: Requirements 9.1**
 
-- [ ] 8.2 Write property test for level jump validation
+- [x] 8.2 Write property test for level jump validation
   - **Property 26: Level Jump Validation**
   - **Validates: Requirements 9.3**
 
-- [ ] 9. Implement notification system integration
+- [x] 9. Implement notification system integration
   - Create notifications on build completion
   - Include building name and new level in notification
   - Link notification to village overview
@@ -168,19 +169,19 @@
   - Create separate notifications for each completion
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
 
-- [ ] 9.1 Write property test for notification creation on completion
+- [x] 9.1 Write property test for notification creation on completion
   - **Property 27: Notification Creation on Completion**
   - **Validates: Requirements 10.1**
 
-- [ ] 9.2 Write property test for notification content completeness
+- [x] 9.2 Write property test for notification content completeness
   - **Property 28: Notification Content Completeness**
   - **Validates: Requirements 10.2**
 
-- [ ] 9.3 Write property test for multiple build notification independence
+- [x] 9.3 Write property test for multiple build notification independence
   - **Property 29: Multiple Build Notification Independence**
   - **Validates: Requirements 10.4**
 
-- [ ] 10. Implement logging and metrics
+- [x] 10. Implement logging and metrics
   - Add logQueueEvent() for audit log
   - Add logQueueMetric() for metrics log
   - Log all enqueue, complete, cancel events
@@ -188,13 +189,13 @@
   - Use JSONL format for easy parsing
   - _Requirements: 4.4, 8.5_
 
-- [ ] 10.1 Write unit tests for logging functionality
+- [x] 10.1 Write unit tests for logging functionality
   - Test log file creation
   - Test JSONL format
   - Test error logging
   - _Requirements: 4.4, 8.5_
 
-- [ ] 11. Create AJAX endpoints
+- [x] 11. Create AJAX endpoints
   - Create ajax/buildings/upgrade_building.php
   - Create ajax/buildings/cancel_upgrade.php
   - Create ajax/buildings/get_queue.php
@@ -203,7 +204,7 @@
   - Return structured JSON responses with error codes
   - _Requirements: 1.1, 3.1, 6.1, 7.1, 8.4_
 
-- [ ] 11.1 Write integration tests for AJAX endpoints
+- [x] 11.1 Write integration tests for AJAX endpoints
   - Test upgrade_building.php flow
   - Test cancel_upgrade.php flow
   - Test get_queue.php response format
@@ -218,61 +219,61 @@
   - Return appropriate error code (ERR_QUEUE_CAP)
   - _Requirements: 1.4_
 
-- [ ] 12.1 Write property test for HQ level capture at queue time
+- [x] 12.1 Write property test for HQ level capture at queue time
   - **Property 17: HQ Level Capture at Queue Time**
   - **Validates: Requirements 5.2**
 
-- [ ] 12.2 Write property test for HQ level recalculation on promotion
+- [-] 12.2 Write property test for HQ level recalculation on promotion
   - **Property 20: HQ Level Recalculation on Promotion**
   - **Validates: Requirements 5.5**
 
-- [ ] 13. Implement world speed multiplier support
+- [x] 13. Implement world speed multiplier support
   - Integrate WorldManager for world-specific settings
   - Apply world_speed and build_speed_multiplier in calculations
   - Cache world settings to avoid repeated queries
   - _Requirements: 5.3_
 
-- [ ] 13.1 Write property test for world speed multiplier application
+- [x] 13.1 Write property test for world speed multiplier application
   - **Property 18: World Speed Multiplier Application**
   - **Validates: Requirements 5.3**
 
-- [ ] 14. Implement build time rounding
+- [x] 14. Implement build time rounding
   - Ensure calculateUpgradeTime() returns integers
   - Round to nearest second (ceil for safety)
   - _Requirements: 5.4_
 
-- [ ] 14.1 Write property test for build time integer rounding
+- [x] 14.1 Write property test for build time integer rounding
   - **Property 19: Build Time Integer Rounding**
   - **Validates: Requirements 5.4**
 
-- [ ] 15. Add error handling and transaction rollback
+- [x] 15. Add error handling and transaction rollback
   - Wrap all operations in try-catch blocks
   - Use database transactions with BEGIN/COMMIT/ROLLBACK
   - Return structured error responses with codes
   - Log errors without exposing sensitive data
   - _Requirements: 7.4, 8.5_
 
-- [ ] 15.1 Write unit tests for transaction rollback
+- [x] 15.1 Write unit tests for transaction rollback
   - Test rollback on resource deduction failure
   - Test rollback on queue insert failure
   - Test rollback on completion failure
   - _Requirements: 7.4_
 
-- [ ] 16. Implement database abstraction for SQLite/MySQL
+- [x] 16. Implement database abstraction for SQLite/MySQL
   - Detect database type (SQLite vs MySQL)
   - Use BEGIN IMMEDIATE for SQLite transactions
   - Use SELECT FOR UPDATE for MySQL row locking
   - Test with both database types
   - _Requirements: 8.1, 8.2, 8.3_
 
-- [ ] 16.1 Write integration tests for both database types
+- [x] 16.1 Write integration tests for both database types
   - Test enqueue with SQLite
   - Test enqueue with MySQL
   - Test completion with SQLite
   - Test completion with MySQL
   - _Requirements: 8.1, 8.2, 8.3_
 
-- [ ] 17. Add performance optimizations
+- [-] 17. Add performance optimizations
   - Add database indexes (village_id, status, finish_time)
   - Implement configuration caching in BuildingConfigManager
   - Implement cost/time caching
@@ -280,7 +281,7 @@
   - Minimize transaction scope
   - _Requirements: 7.1, 7.2, 7.3_
 
-- [ ] 17.1 Write performance tests
+- [-] 17.1 Write performance tests
   - Test query performance with indexes
   - Test cache hit rates
   - Test transaction duration

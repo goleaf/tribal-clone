@@ -10,28 +10,47 @@
  * SECURITY: This test only reads schema information and does not modify data.
  */
 
-// Define test database path before loading config
-if (!defined('DB_PATH')) {
-    define('DB_PATH', __DIR__ . '/../data/test_tribal_wars.sqlite');
-}
-
-require_once __DIR__ . '/../Database.php';
-
-// SECURITY: Prevent running against production database
-if (strpos(DB_PATH, 'test') === false) {
-    die("ERROR: This test must run against a test database only. DB_PATH must include 'test' in the path.\n");
-}
-
 echo "=== Building Queue Schema Property Test ===\n\n";
 
-$db = Database::getInstance();
+// Use PDO directly to avoid singleton issues
+$dbPath = __DIR__ . '/../data/test_tribal_wars.sqlite';
+
+// SECURITY: Prevent running against production database
+if (strpos($dbPath, 'test') === false) {
+    die("ERROR: This test must run against a test database only. Path must include 'test'.\n");
+}
+
+try {
+    $pdo = new PDO('sqlite:' . $dbPath);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("ERROR: Could not connect to test database: " . $e->getMessage() . "\n");
+}
+
+// Helper functions
+function fetchAll($pdo, $sql) {
+    $stmt = $pdo->query($sql);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function fetchOne($pdo, $sql) {
+    $stmt = $pdo->query($sql);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result ?: null;
+}
+
+function execute($pdo, $sql, $params = []) {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->rowCount();
+}
 $allTestsPassed = true;
 
 /**
  * Test 1: Verify building_queue table exists with required columns
  */
 echo "Test 1: Verify building_queue table structure\n";
-$columns = $db->fetchAll("PRAGMA table_info(building_queue)");
+$columns = fetchAll($pdo, "PRAGMA table_info(building_queue)");
 
 $requiredColumns = [
     'id' => ['type' => 'INTEGER', 'pk' => 1],
@@ -98,7 +117,7 @@ echo "\n";
  * Test 2: Verify required indexes exist for performance
  */
 echo "Test 2: Verify performance indexes\n";
-$indexes = $db->fetchAll("SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name='building_queue'");
+$indexes = fetchAll($pdo, "SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name='building_queue'");
 
 $requiredIndexes = [
     'idx_building_queue_village_status' => 'village_id.*status',
@@ -146,7 +165,7 @@ echo "\n";
  * Test 3: Verify foreign key constraints
  */
 echo "Test 3: Verify foreign key constraints\n";
-$foreignKeys = $db->fetchAll("PRAGMA foreign_key_list(building_queue)");
+$foreignKeys = fetchAll($pdo, "PRAGMA foreign_key_list(building_queue)");
 
 $requiredFKs = [
     'villages' => 'village_id',
@@ -191,13 +210,13 @@ echo "\n";
  * Test 4: Verify building_requirements table exists
  */
 echo "Test 4: Verify building_requirements table\n";
-$tableExists = $db->fetchOne("SELECT name FROM sqlite_master WHERE type='table' AND name='building_requirements'");
+$tableExists = fetchOne($pdo, "SELECT name FROM sqlite_master WHERE type='table' AND name='building_requirements'");
 
 if (!$tableExists) {
     echo "✗ FAIL: building_requirements table does not exist\n";
     $allTestsPassed = false;
 } else {
-    $reqColumns = $db->fetchAll("PRAGMA table_info(building_requirements)");
+    $reqColumns = fetchAll($pdo, "PRAGMA table_info(building_requirements)");
     $reqColumnNames = array_column($reqColumns, 'name');
     
     $requiredReqColumns = ['id', 'building_type_id', 'required_building', 'required_level'];
@@ -216,13 +235,13 @@ echo "\n";
  * Test 5: Verify building_types table exists
  */
 echo "Test 5: Verify building_types table\n";
-$tableExists = $db->fetchOne("SELECT name FROM sqlite_master WHERE type='table' AND name='building_types'");
+$tableExists = fetchOne($pdo, "SELECT name FROM sqlite_master WHERE type='table' AND name='building_types'");
 
 if (!$tableExists) {
     echo "✗ FAIL: building_types table does not exist\n";
     $allTestsPassed = false;
 } else {
-    $typeColumns = $db->fetchAll("PRAGMA table_info(building_types)");
+    $typeColumns = fetchAll($pdo, "PRAGMA table_info(building_types)");
     $typeColumnNames = array_column($typeColumns, 'name');
     
     $requiredTypeColumns = [
@@ -245,13 +264,13 @@ echo "\n";
  * Test 6: Verify village_buildings table exists
  */
 echo "Test 6: Verify village_buildings table\n";
-$tableExists = $db->fetchOne("SELECT name FROM sqlite_master WHERE type='table' AND name='village_buildings'");
+$tableExists = fetchOne($pdo, "SELECT name FROM sqlite_master WHERE type='table' AND name='village_buildings'");
 
 if (!$tableExists) {
     echo "✗ FAIL: village_buildings table does not exist\n";
     $allTestsPassed = false;
 } else {
-    $vbColumns = $db->fetchAll("PRAGMA table_info(village_buildings)");
+    $vbColumns = fetchAll($pdo, "PRAGMA table_info(village_buildings)");
     $vbColumnNames = array_column($vbColumns, 'name');
     
     $requiredVBColumns = ['id', 'village_id', 'building_type_id', 'level'];
@@ -299,7 +318,7 @@ echo "\n";
  * Test 8: Verify status values are valid
  */
 echo "Test 8: Verify status values in existing data\n";
-$invalidStatuses = $db->fetchAll("
+$invalidStatuses = fetchAll($pdo, "
     SELECT DISTINCT status 
     FROM building_queue 
     WHERE status IS NOT NULL 
@@ -331,15 +350,15 @@ $failed = 0;
 for ($i = 0; $i < $iterations; $i++) {
     try {
         // Get schema before operation
-        $schemaBefore = $db->fetchAll("PRAGMA table_info(building_queue)");
-        $indexesBefore = $db->fetchAll("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='building_queue'");
+        $schemaBefore = fetchAll($pdo, "PRAGMA table_info(building_queue)");
+        $indexesBefore = fetchAll($pdo, "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='building_queue'");
         
         // Perform a dummy operation (this doesn't actually modify schema, but tests consistency)
-        $db->execute("SELECT COUNT(*) FROM building_queue WHERE status = ?", ['active']);
+        execute($pdo, "SELECT COUNT(*) FROM building_queue WHERE status = ?", ['active']);
         
         // Get schema after operation
-        $schemaAfter = $db->fetchAll("PRAGMA table_info(building_queue)");
-        $indexesAfter = $db->fetchAll("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='building_queue'");
+        $schemaAfter = fetchAll($pdo, "PRAGMA table_info(building_queue)");
+        $indexesAfter = fetchAll($pdo, "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='building_queue'");
         
         // Verify schema unchanged
         if (count($schemaBefore) !== count($schemaAfter)) {

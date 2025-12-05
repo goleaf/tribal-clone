@@ -33,27 +33,32 @@ class BuildingConfigManager {
     // Fetch configuration of a single building type.
     // Prefers cache but falls back to DB when missing.
     public function getBuildingConfig(string $internalName): ?array {
-        if (isset($this->buildingConfigs[$internalName])) {
-            return $this->buildingConfigs[$internalName];
-        }
+        try {
+            if (isset($this->buildingConfigs[$internalName])) {
+                return $this->buildingConfigs[$internalName];
+            }
 
-        $stmt = $this->conn->prepare("SELECT *, population_cost FROM building_types WHERE internal_name = ? LIMIT 1");
-        if ($stmt === false) {
-            error_log("Prepare failed: " . $this->conn->error);
+            $stmt = $this->conn->prepare("SELECT *, population_cost FROM building_types WHERE internal_name = ? LIMIT 1");
+            if ($stmt === false) {
+                error_log("BuildingConfigManager: Prepare failed for getBuildingConfig: " . $this->conn->error);
+                return null;
+            }
+            $stmt->bind_param("s", $internalName);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $config = $result->fetch_assoc();
+            $stmt->close();
+
+            if ($config) {
+                $this->buildingConfigs[$internalName] = $config; // Cache the result
+                return $config;
+            }
+
+            return null; // Building type not found
+        } catch (Exception $e) {
+            error_log("BuildingConfigManager: Exception in getBuildingConfig: " . $e->getMessage());
             return null;
         }
-        $stmt->bind_param("s", $internalName);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $config = $result->fetch_assoc();
-        $stmt->close();
-
-        if ($config) {
-            $this->buildingConfigs[$internalName] = $config; // Cache the result
-            return $config;
-        }
-
-        return null; // Building type not found
     }
 
     /**
@@ -91,35 +96,40 @@ class BuildingConfigManager {
 
     // Calculate upgrade/build cost to the next level
     public function calculateUpgradeCost(string $internalName, int $currentLevel): ?array {
-        $config = $this->getBuildingConfig($internalName);
+        try {
+            $config = $this->getBuildingConfig($internalName);
 
-        if (!$config) {
-            return null; // Building config not found
+            if (!$config) {
+                return null; // Building config not found
+            }
+
+            $maxLevel = $this->getMaxLevel($internalName);
+            if ($maxLevel !== null && $currentLevel >= $maxLevel) {
+                return null; // Already at cap
+            }
+
+            // Cost for level $currentLevel + 1
+            if (isset($this->costCache[$internalName][$currentLevel])) {
+                return $this->costCache[$internalName][$currentLevel];
+            }
+
+            $nextLevel = $currentLevel + 1; // kept for readability if/when level-specific logic is expanded
+            $costFactor = $this->clampCostFactor((float)$config['cost_factor']);
+            $costWood = round($config['cost_wood_initial'] * ($costFactor ** $currentLevel));
+            $costClay = round($config['cost_clay_initial'] * ($costFactor ** $currentLevel));
+            $costIron = round($config['cost_iron_initial'] * ($costFactor ** $currentLevel));
+
+            $costs = [
+                'wood' => (int)$costWood,
+                'clay' => (int)$costClay,
+                'iron' => (int)$costIron
+            ];
+            $this->costCache[$internalName][$currentLevel] = $costs;
+            return $costs;
+        } catch (Exception $e) {
+            error_log("BuildingConfigManager: Exception in calculateUpgradeCost: " . $e->getMessage());
+            return null;
         }
-
-        $maxLevel = $this->getMaxLevel($internalName);
-        if ($maxLevel !== null && $currentLevel >= $maxLevel) {
-            return null; // Already at cap
-        }
-
-        // Cost for level $currentLevel + 1
-        if (isset($this->costCache[$internalName][$currentLevel])) {
-            return $this->costCache[$internalName][$currentLevel];
-        }
-
-        $nextLevel = $currentLevel + 1; // kept for readability if/when level-specific logic is expanded
-        $costFactor = $this->clampCostFactor((float)$config['cost_factor']);
-        $costWood = round($config['cost_wood_initial'] * ($costFactor ** $currentLevel));
-        $costClay = round($config['cost_clay_initial'] * ($costFactor ** $currentLevel));
-        $costIron = round($config['cost_iron_initial'] * ($costFactor ** $currentLevel));
-
-        $costs = [
-            'wood' => $costWood,
-            'clay' => $costClay,
-            'iron' => $costIron
-        ];
-        $this->costCache[$internalName][$currentLevel] = $costs;
-        return $costs;
     }
 
     // Calculate build/upgrade time to the next level

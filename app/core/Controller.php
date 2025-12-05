@@ -14,6 +14,7 @@ abstract class Controller
     {
         extract($data);
         $pageTitle = $data['title'] ?? 'Tribal Wars';
+        $conn = $this->conn; // Make $conn available to header/footer
 
         require __DIR__ . '/../../header.php';
         require __DIR__ . '/../views/' . $view . '.php';

@@ -20,11 +20,17 @@ class BuildingQueueManager
     private int $maxSlots;
     private string $logFile;
     private string $metricsFile;
+    private bool $isSQLite;
+    private bool $isMySQL;
 
     public function __construct($conn, BuildingConfigManager $configManager)
     {
         $this->conn = $conn;
         $this->configManager = $configManager;
+        
+        // Detect database type (Requirements 8.1, 8.2, 8.3)
+        $this->isSQLite = $conn instanceof SQLiteAdapter;
+        $this->isMySQL = $conn instanceof mysqli;
         $this->maxQueueItems = defined('BUILDING_QUEUE_MAX_ITEMS') ? (int)BUILDING_QUEUE_MAX_ITEMS : 10;
         $this->baseSlots = defined('BUILDING_BASE_QUEUE_SLOTS') ? (int)BUILDING_BASE_QUEUE_SLOTS : 1;
         $this->hqMilestoneStep = defined('BUILDING_HQ_MILESTONE_STEP') ? (int)BUILDING_HQ_MILESTONE_STEP : 5;
@@ -42,17 +48,31 @@ class BuildingQueueManager
      */
     public function enqueueBuild(int $villageId, string $buildingInternalName, int $userId): array
     {
+        $transactionStarted = false;
+        $errorCode = null;
+        
         try {
-            $this->conn->begin_transaction();
-            $errorCode = null;
+            // Begin transaction with appropriate locking strategy (Requirements 8.1, 8.2)
+            if ($this->isSQLite) {
+                // Use BEGIN IMMEDIATE for SQLite to prevent lock escalation
+                $this->conn->query('BEGIN IMMEDIATE');
+            } else {
+                $this->conn->begin_transaction();
+            }
+            $transactionStarted = true;
 
-            // Lock village row for update
-            $stmt = $this->conn->prepare("
+            // Lock village row for update (Requirements 7.1, 8.1, 8.2)
+            $sql = "
                 SELECT v.*, u.is_protected 
                 FROM villages v 
                 JOIN users u ON u.id = v.user_id
                 WHERE v.id = ? AND v.user_id = ?
-            ");
+            ";
+            // Add row-level locking for MySQL (FOR UPDATE)
+            // SQLite uses BEGIN IMMEDIATE for transaction-level locking
+            $sql = $this->addRowLock($sql);
+            
+            $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("ii", $villageId, $userId);
             $stmt->execute();
             $village = $stmt->get_result()->fetch_assoc();
@@ -201,14 +221,17 @@ class BuildingQueueManager
             ];
 
         } catch (Exception $e) {
-            $this->conn->rollback();
+            if ($transactionStarted) {
+                $this->conn->rollback();
+            }
             $safeHqLevel = $hqLevel ?? null;
             $safeSlotLimit = $slotLimit ?? null;
             $safeQueueCount = $queueCount ?? null;
+            $safeCurrentLevel = $currentLevel ?? null;
             $this->logQueueEvent('enqueue_failed', [
                 'village_id' => $villageId,
                 'building' => $buildingInternalName,
-                'level' => $currentLevel,
+                'level' => $safeCurrentLevel,
                 'hq_level' => $safeHqLevel,
                 'slot_limit' => $safeSlotLimit,
                 'queue_count' => $safeQueueCount,
@@ -220,7 +243,7 @@ class BuildingQueueManager
                 'village_id' => $villageId,
                 'user_id' => $userId,
                 'building' => $buildingInternalName,
-                'level' => $currentLevel,
+                'level' => $safeCurrentLevel,
                 'hq_level' => $safeHqLevel,
                 'queue_count' => $safeQueueCount,
                 'slot_limit' => $safeSlotLimit,
@@ -239,18 +262,29 @@ class BuildingQueueManager
      */
     public function onBuildComplete(int $queueItemId): array
     {
+        $transactionStarted = false;
+        
         try {
-            $this->conn->begin_transaction();
+            // Begin transaction with appropriate locking strategy (Requirements 8.1, 8.2)
+            if ($this->isSQLite) {
+                // Use BEGIN IMMEDIATE for SQLite to prevent lock escalation
+                $this->conn->query('BEGIN IMMEDIATE');
+            } else {
+                $this->conn->begin_transaction();
+            }
+            $transactionStarted = true;
 
-            // Get queue item
-            $stmt = $this->conn->prepare("SELECT * FROM building_queue WHERE id = ?");
+            // Get queue item with row-level locking (Requirements 7.3, 8.1, 8.2)
+            $sql = "SELECT * FROM building_queue WHERE id = ?";
+            $sql = $this->addRowLock($sql);
+            
+            $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("i", $queueItemId);
             $stmt->execute();
             $item = $stmt->get_result()->fetch_assoc();
             $stmt->close();
             
             if (!$item) {
-                $this->conn->rollback();
                 throw new Exception("Queue item not found.");
             }
 
@@ -302,6 +336,20 @@ class BuildingQueueManager
             $stmt->execute();
             $stmt->close();
 
+            // Get building name and village owner for notification
+            $buildingName = $this->getBuildingNameById($item['building_type_id']);
+            $villageOwnerId = $this->getVillageOwnerId($item['village_id']);
+            
+            // Create notification for build completion (Requirements 10.1, 10.2, 10.3)
+            if ($villageOwnerId && $buildingName) {
+                $this->createBuildCompletionNotification(
+                    $villageOwnerId,
+                    $buildingName,
+                    $item['level'],
+                    $item['village_id']
+                );
+            }
+
             // Promote and resequence any remaining queue
             $this->rebalanceQueue($item['village_id']);
 
@@ -326,7 +374,9 @@ class BuildingQueueManager
             ];
 
         } catch (Exception $e) {
-            $this->conn->rollback();
+            if ($transactionStarted) {
+                $this->conn->rollback();
+            }
             $this->logQueueEvent('complete_failed', [
                 'queue_item_id' => $queueItemId,
                 'error' => $e->getMessage()
@@ -347,10 +397,23 @@ class BuildingQueueManager
      */
     public function cancelBuild(int $queueItemId, int $userId): array
     {
+        $transactionStarted = false;
+        
         try {
-            $this->conn->begin_transaction();
+            // Begin transaction with appropriate locking strategy (Requirements 8.1, 8.2)
+            if ($this->isSQLite) {
+                // Use BEGIN IMMEDIATE for SQLite to prevent lock escalation
+                $this->conn->query('BEGIN IMMEDIATE');
+            } else {
+                $this->conn->begin_transaction();
+            }
+            $transactionStarted = true;
 
-            $stmt = $this->conn->prepare("SELECT * FROM building_queue WHERE id = ?");
+            // Get queue item with row-level locking (Requirements 7.2, 8.1, 8.2)
+            $sql = "SELECT * FROM building_queue WHERE id = ?";
+            $sql = $this->addRowLock($sql);
+            
+            $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("i", $queueItemId);
             $stmt->execute();
             $item = $stmt->get_result()->fetch_assoc();
@@ -360,8 +423,11 @@ class BuildingQueueManager
                 throw new Exception("Queue item not found.");
             }
 
-            // Verify ownership
-            $stmt = $this->conn->prepare("SELECT * FROM villages WHERE id = ? AND user_id = ?");
+            // Verify ownership with row-level locking
+            $sql = "SELECT * FROM villages WHERE id = ? AND user_id = ?";
+            $sql = $this->addRowLock($sql);
+            
+            $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("ii", $item['village_id'], $userId);
             $stmt->execute();
             $village = $stmt->get_result()->fetch_assoc();
@@ -419,7 +485,9 @@ class BuildingQueueManager
             return ['success' => true, 'refund' => $refund];
 
         } catch (Exception $e) {
-            $this->conn->rollback();
+            if ($transactionStarted) {
+                $this->conn->rollback();
+            }
             $this->logQueueEvent('cancel_failed', [
                 'queue_item_id' => $queueItemId,
                 'user_id' => $userId,
@@ -669,6 +737,51 @@ class BuildingQueueManager
         return $result ? $result['internal_name'] : null;
     }
 
+    private function getBuildingNameById(int $buildingTypeId): ?string
+    {
+        $stmt = $this->conn->prepare("SELECT name FROM building_types WHERE id = ?");
+        $stmt->bind_param("i", $buildingTypeId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $result ? $result['name'] : null;
+    }
+
+    private function getVillageOwnerId(int $villageId): ?int
+    {
+        $stmt = $this->conn->prepare("SELECT user_id FROM villages WHERE id = ?");
+        $stmt->bind_param("i", $villageId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $result ? (int)$result['user_id'] : null;
+    }
+
+    /**
+     * Create a notification for build completion
+     * Requirements 10.1, 10.2, 10.3, 10.4
+     */
+    private function createBuildCompletionNotification(int $userId, string $buildingName, int $level, int $villageId): void
+    {
+        // Requirement 10.2: Include building name and new level
+        $message = "{$buildingName} upgraded to level {$level}";
+        
+        // Requirement 10.3: Link to village overview
+        $link = "game/game.php?village_id={$villageId}";
+        
+        // Create notification (Requirement 10.1)
+        // Each completion creates a separate notification (Requirement 10.4)
+        $stmt = $this->conn->prepare("
+            INSERT INTO notifications (user_id, message, type, link, is_read, created_at, expires_at) 
+            VALUES (?, ?, 'success', ?, 0, NOW(), ?)
+        ");
+        
+        $expiresAt = time() + (7 * 24 * 60 * 60); // 7 days
+        $stmt->bind_param("issi", $userId, $message, $link, $expiresAt);
+        $stmt->execute();
+        $stmt->close();
+    }
+
     private function insertQueueItem(array $data): int
     {
         $stmt = $this->conn->prepare("
@@ -721,6 +834,27 @@ class BuildingQueueManager
         
         $stmt->close();
         return $processed;
+    }
+
+    /**
+     * Add row-level locking to a SELECT query based on database type
+     * 
+     * For SQLite: Returns query as-is (locking handled by BEGIN IMMEDIATE)
+     * For MySQL: Appends FOR UPDATE clause if not present
+     * 
+     * @param string $sql The SELECT query
+     * @return string The modified query with appropriate locking
+     */
+    private function addRowLock(string $sql): string
+    {
+        if ($this->isMySQL) {
+            // Add FOR UPDATE for MySQL row-level locking (Requirement 8.2)
+            if (stripos($sql, 'FOR UPDATE') === false) {
+                $sql = rtrim($sql, "; \t\n\r\0\x0B") . ' FOR UPDATE';
+            }
+        }
+        // SQLite uses BEGIN IMMEDIATE, so no modification needed (Requirement 8.1)
+        return $sql;
     }
 
     /**

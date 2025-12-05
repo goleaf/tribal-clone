@@ -23,6 +23,33 @@ class Database {
         $this->connect();
     }
 
+    /**
+     * Get the database driver type
+     * 
+     * @return string 'sqlite' or 'mysql'
+     */
+    public function getDriver(): string {
+        return $this->driver;
+    }
+
+    /**
+     * Check if the database is SQLite
+     * 
+     * @return bool
+     */
+    public function isSQLite(): bool {
+        return $this->driver === 'sqlite';
+    }
+
+    /**
+     * Check if the database is MySQL
+     * 
+     * @return bool
+     */
+    public function isMySQL(): bool {
+        return $this->driver === 'mysql';
+    }
+
     private function connect(): void {
         if ($this->driver === 'sqlite') {
             $dbPath = defined('DB_PATH') ? DB_PATH : ($this->dbname ?: __DIR__ . '/../data/tribal_wars.sqlite');
@@ -65,6 +92,66 @@ class Database {
         return method_exists($this->getConnection(), 'real_escape_string')
             ? $this->getConnection()->real_escape_string($string)
             : $string;
+    }
+
+    /**
+     * Begin a transaction with appropriate locking for the database type
+     * 
+     * For SQLite: Uses BEGIN IMMEDIATE to prevent lock escalation
+     * For MySQL: Uses standard BEGIN
+     * 
+     * @return bool
+     */
+    public function begin_transaction(): bool {
+        if ($this->isSQLite()) {
+            // Use BEGIN IMMEDIATE for SQLite to prevent lock escalation (Requirement 8.1)
+            return $this->getConnection()->query('BEGIN IMMEDIATE') !== false;
+        }
+        
+        // MySQL uses standard transaction begin
+        if ($this->conn instanceof mysqli) {
+            return $this->conn->begin_transaction();
+        }
+        
+        return false;
+    }
+
+    /**
+     * Commit the current transaction
+     * 
+     * @return bool
+     */
+    public function commit(): bool {
+        return $this->getConnection()->commit();
+    }
+
+    /**
+     * Rollback the current transaction
+     * 
+     * @return bool
+     */
+    public function rollback(): bool {
+        return $this->getConnection()->rollback();
+    }
+
+    /**
+     * Prepare a SELECT query with row-level locking for the database type
+     * 
+     * For SQLite: Returns query as-is (locking handled by BEGIN IMMEDIATE)
+     * For MySQL: Appends FOR UPDATE clause if not present
+     * 
+     * @param string $sql The SELECT query
+     * @return string The modified query with appropriate locking
+     */
+    public function addRowLock(string $sql): string {
+        if ($this->isMySQL()) {
+            // Add FOR UPDATE for MySQL row-level locking (Requirement 8.2)
+            if (stripos($sql, 'FOR UPDATE') === false) {
+                $sql = rtrim($sql, "; \t\n\r\0\x0B") . ' FOR UPDATE';
+            }
+        }
+        // SQLite uses BEGIN IMMEDIATE, so no modification needed
+        return $sql;
     }
 }
 
@@ -140,6 +227,8 @@ class SQLiteAdapter {
     }
 
     public function begin_transaction(): bool {
+        // SQLite should use BEGIN IMMEDIATE to prevent lock escalation
+        // This is handled by the Database class wrapper
         return $this->getPdo()->beginTransaction();
     }
 
