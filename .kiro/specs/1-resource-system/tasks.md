@@ -174,7 +174,7 @@ This implementation plan covers the resource and village management system for t
   - Ensure all reports are text-based with minimal graphics
   - _Requirements: 6.4, 6.5, 6.6_
 
-- [-] 12. Final checkpoint - Ensure all tests pass
+- [x] 12. Final checkpoint - Ensure all tests pass
   - Run all property-based tests with minimum 100 iterations each
   - Verify all unit tests pass
   - Test complete upgrade workflow: check → deduct → queue → complete
