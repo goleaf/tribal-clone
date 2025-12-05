@@ -7,6 +7,10 @@
 
 echo "=== Running All Property-Based Tests ===\n\n";
 
+require_once __DIR__ . '/clear_logs.php';
+$cleared = clearProjectLogs(__DIR__ . '/..');
+echo "Reset logs before running tests (" . count($cleared) . " file" . (count($cleared) === 1 ? '' : 's') . ").\n\n";
+
 $testFiles = [
     'resource_manager_property_test.php',
     'building_manager_property_test.php',
