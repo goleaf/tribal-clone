@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Database schema and migrations
+- [-] 1. Database schema and migrations
   - Create or verify building_queue table with status column
   - Add indexes for performance (village_id, status, finish_time)
   - Create building_requirements table if not exists
