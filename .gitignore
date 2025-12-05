@@ -1,9 +1,72 @@
 .codex-autocommit/
-# Local Node/Lint caches
-.eslintcache
-.stylelintcache
+
+# System files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+
+# Editor/IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.orig
+*.bak
+*~
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+.env.test
+.env.production
+!.env.example
+
+# Dependencies
+node_modules/
+vendor/
+composer.phar
+
+# Logs and runtime data
+*.log
+logs/
+*/logs/
+*.out
+tmp/
+temp/
+*.pid
+*.seed
+*.pid.lock
+
+# Build and coverage output
+dist/
+build/
+public/build/
+coverage/
+.nyc_output/
+.cache/
+.babel-cache/
+.sass-cache/
 /.parcel-cache
 /.turbo
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
 
-# PHPStorm/IDEA
-.idea/
+# Testing artifacts
+.phpunit.result.cache
+coverage-final.json
+
+# Database and dumps
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+dump.rdb
+
+# Archives and packed files
+*.tgz
+*.gz
+*.zip
+*.tar
