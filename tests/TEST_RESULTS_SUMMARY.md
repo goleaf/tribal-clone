@@ -19,12 +19,12 @@
 | `combat_calculator_property_test.php` | Combat damage | ✅ PASS | Damage bounds verified |
 | `conquest_handler_property_test.php` | Conquest mechanics | ✅ PASS | Cooldown and validation working |
 
-### ⚠️ Tests with Issues
+### ✅ Previously Failing Tests - Now Fixed
 
-| Test File | Property | Issue | Recommendation |
-|-----------|----------|-------|----------------|
-| `movement_entry_property_test.php` | Property 8 | Hangs/times out during execution | Needs investigation - possible database deadlock or infinite loop |
-| `conquest_loyalty_property_test.php` | Properties 12-13 | Coordinate constraint violations | Test data generation needs unique coordinate handling |
+| Test File | Property | Issue | Fix Applied |
+|-----------|----------|-------|-------------|
+| `movement_entry_property_test.php` | Property 8 | Was hanging due to slow password hashing | Replaced password_hash with simple string in tests |
+| `conquest_loyalty_property_test.php` | Properties 12-13 | Coordinate constraint violations | Expanded coordinate range to -10000 to -1000 |
 
 ## Unit Tests
 
@@ -36,9 +36,9 @@
 
 ### ⚠️ Tests with Failures
 
-- `economy_test.php` - 5 passed, 2 failed
-  - Trade manager power-delta blocking needs fix
-  - Load shedding rate limiting needs fix
+- `economy_test.php` - 6 passed, 1 failed
+  - ✅ Trade manager power-delta blocking - FIXED
+  - ⚠️ Load shedding rate limiting - Logic not fully implemented (business logic issue, not test issue)
 
 ## Integration Tests
 
@@ -55,37 +55,50 @@ Not run in this checkpoint (would require full system deployment).
 ✅ Property 5: Headquarters Prerequisite  
 ✅ Property 6: Building Completion Effects  
 ✅ Property 7: Recruitment Resource Deduction  
-⚠️ Property 8: Movement Entry Creation (test hangs)  
+✅ Property 8: Movement Entry Creation (FIXED)  
 ✅ Property 9: Combat Damage Bounds  
 ✅ Property 10: Unit Type Advantage Cycle  
 ✅ Property 11: Battle Report Completeness  
-⚠️ Property 12: Nobleman Loyalty Reduction Bounds (coordinate conflicts)  
-⚠️ Property 13: Village Conquest Preservation (coordinate conflicts)  
+✅ Property 12: Nobleman Loyalty Reduction Bounds (FIXED)  
+✅ Property 13: Village Conquest Preservation (FIXED)  
 ✅ Property 14: Production Building Effects  
 ✅ Property 15: Hiding Place Protection  
 
 ### Coverage Statistics
 
-- **Property Tests:** 11/15 passing (73%)
-- **Unit Tests:** ~90% passing
+- **Property Tests:** 15/15 passing (100%) ✅
+- **Unit Tests:** ~95% passing (6/7 economy tests passing)
 - **Integration Tests:** Not run
 
-## Recommendations
+## Fixes Applied
 
-1. **Movement Entry Test (Property 8):**
-   - Debug the hanging issue
-   - Check for database connection leaks
-   - Consider adding timeout handling in the test itself
+1. **Movement Entry Test (Property 8):** ✅
+   - Replaced expensive `password_hash()` calls with simple test strings
+   - Test now completes in ~5 seconds instead of timing out
 
-2. **Conquest Loyalty Tests (Properties 12-13):**
-   - Fix coordinate generation to avoid UNIQUE constraint violations
-   - Use larger coordinate ranges or check for existing coordinates before insertion
+2. **Conquest Loyalty Tests (Properties 12-13):** ✅
+   - Expanded coordinate range from (1-100) to (-10000 to -1000)
+   - Eliminates UNIQUE constraint violations
 
-3. **Economy Tests:**
-   - Fix trade manager error code handling
-   - Verify rate limiting logic
+3. **Economy Tests:** ✅ (Partial)
+   - Fixed error code constants (ERR_INPUT → EconomyError::ERR_VALIDATION)
+   - Fixed error code constants (ERR_ALT_BLOCK → EconomyError::ERR_ALT_BLOCK)
+   - Fixed test coordinate setup for proper village targeting
+   - Added missing `lib/functions.php` include
+   - 6/7 tests now passing (load shedding logic needs implementation)
 
-4. **Integration Testing:**
+4. **TradeManager Code Quality:** ✅
+   - Replaced string literals with EconomyError constants throughout
+   - Improved error handling consistency
+
+## Remaining Work
+
+1. **Economy Test - Load Shedding:**
+   - The load shedding/rate limiting logic in TradeManager needs to be implemented
+   - This is a business logic gap, not a test issue
+   - Test is correctly written and will pass once the feature is implemented
+
+2. **Integration Testing:**
    - Set up end-to-end workflow tests
    - Test complete upgrade workflow: check → deduct → queue → complete
    - Test combat resolution with actual database state
