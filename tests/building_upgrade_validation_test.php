@@ -4,7 +4,7 @@
  * Tests the complete validation flow as per task 2.1
  */
 
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../lib/managers/BuildingManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php';
 require_once __DIR__ . '/../lib/managers/PopulationManager.php';

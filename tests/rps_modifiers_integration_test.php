@@ -4,7 +4,7 @@
  * Tests cavalry vs ranged, pike vs cavalry, ranger vs siege, and ranged wall bonuses
  */
 
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../lib/managers/BattleManager.php';
 require_once __DIR__ . '/../lib/managers/VillageManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingManager.php';

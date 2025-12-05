@@ -3,7 +3,7 @@
  * Test feature flag validation for unit recruitment
  */
 
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../lib/managers/UnitManager.php';
 
 echo "Testing feature flag validation...\n\n";

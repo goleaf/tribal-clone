@@ -5,7 +5,7 @@
  * Validates Requirements: 10.1, 10.2, 15.5
  */
 
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../lib/managers/UnitManager.php';
 require_once __DIR__ . '/../lib/managers/WorldManager.php';
 

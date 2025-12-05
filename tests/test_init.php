@@ -10,4 +10,4 @@ if (!defined('DB_PATH')) {
 }
 
 // Now load the main init
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';

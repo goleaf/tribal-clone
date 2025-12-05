@@ -4,7 +4,7 @@
  * Validates Requirements 6.4, 6.5, 6.6
  */
 
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../lib/managers/VillageManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingManager.php';

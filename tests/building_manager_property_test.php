@@ -14,7 +14,7 @@ if (!defined('DB_PATH')) {
     define('DB_PATH', __DIR__ . '/../data/test_tribal_wars.sqlite');
 }
 
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../lib/managers/BuildingManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingQueueManager.php';

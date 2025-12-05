@@ -8,7 +8,7 @@
  * Each property test runs minimum 100 iterations.
  */
 
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../lib/managers/BuildingManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php';
 require_once __DIR__ . '/../lib/managers/PlunderCalculator.php';

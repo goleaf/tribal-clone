@@ -11,7 +11,7 @@
  * the corresponding resource production rate SHALL be greater than the rate at level L-1.
  */
 
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../lib/managers/BuildingManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php';
 

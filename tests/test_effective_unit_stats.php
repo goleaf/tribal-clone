@@ -5,7 +5,7 @@
  * Validates: Requirements 11.1, 11.2, 11.3, 11.4
  */
 
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../lib/managers/UnitManager.php';
 require_once __DIR__ . '/../lib/managers/WorldManager.php';
 

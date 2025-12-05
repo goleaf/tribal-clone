@@ -6,7 +6,7 @@
  * Requirements: 10.1, 10.2, 10.4
  */
 
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../lib/managers/UnitManager.php';
 
 $conn = $GLOBALS['conn'] ?? null;

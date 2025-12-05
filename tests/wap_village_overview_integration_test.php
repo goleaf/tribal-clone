@@ -13,7 +13,7 @@
  * - Text-only interface suitable for WAP constraints
  */
 
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../lib/managers/BuildingManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php';
 require_once __DIR__ . '/../lib/managers/VillageManager.php';

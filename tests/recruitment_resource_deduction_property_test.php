@@ -9,7 +9,7 @@
  * AND the unit queue SHALL contain the recruitment entry.
  */
 
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../lib/managers/UnitManager.php';
 require_once __DIR__ . '/../lib/managers/VillageManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingManager.php';

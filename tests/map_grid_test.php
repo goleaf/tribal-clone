@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Tests spawn placement, distance calculation, and barbarian seeding
  */
 
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../lib/managers/MapGridManager.php';
 require_once __DIR__ . '/../lib/managers/SpawnManager.php';
 

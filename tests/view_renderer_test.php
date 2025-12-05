@@ -6,7 +6,7 @@
  * Validates Requirements 3.1, 3.2, 3.3, 3.4, 3.5.
  */
 
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../lib/managers/ViewRenderer.php';
 require_once __DIR__ . '/../lib/managers/ResourceManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingManager.php';

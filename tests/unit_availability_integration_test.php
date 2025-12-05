@@ -5,7 +5,7 @@
  * Validates that feature flags properly block recruitment
  */
 
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../lib/managers/UnitManager.php';
 
 class UnitAvailabilityIntegrationTest

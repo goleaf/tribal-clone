@@ -6,7 +6,7 @@
  * Requirements: 10.4, 9.2, 15.4, 15.5
  */
 
-require_once __DIR__ . '/../init.php';
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../lib/managers/UnitManager.php';
 
 class CheckRecruitRequirementsTest
