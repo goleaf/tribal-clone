@@ -9,6 +9,11 @@
  * SECURITY: This test creates isolated test data and cleans up on completion.
  */
 
+// Define test database path before loading config
+if (!defined('DB_PATH')) {
+    define('DB_PATH', __DIR__ . '/../data/test_tribal_wars.sqlite');
+}
+
 require_once __DIR__ . '/../init.php';
 require_once __DIR__ . '/../lib/managers/BuildingManager.php';
 require_once __DIR__ . '/../lib/managers/BuildingConfigManager.php';
@@ -16,8 +21,8 @@ require_once __DIR__ . '/../lib/managers/BuildingQueueManager.php';
 require_once __DIR__ . '/../lib/managers/ResourceManager.php';
 
 // SECURITY: Prevent running against production database
-if (!defined('DB_PATH') || strpos(DB_PATH, 'test') === false) {
-    die("ERROR: This test must run against a test database only. Set DB_PATH to include 'test' in the path.\n");
+if (strpos(DB_PATH, 'test') === false) {
+    die("ERROR: This test must run against a test database only. DB_PATH must include 'test' in the path.\n");
 }
 
 // Simple property-based testing helper
